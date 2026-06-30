@@ -474,11 +474,12 @@ class ProcessingPipeline:
 
                 chunk = self._agc.process(chunk)
 
+                self._spec_pre_frames.append(chunk.copy())   # pre-bandpass: ancho de banda real
+
                 with self._lock:
                     filtered = self._bandpass.process(chunk) if self._bandpass_pre_enabled else chunk
 
                 filtered = self._anf.process(filtered)
-                self._spec_pre_frames.append(filtered.copy())
                 filtered = self._noise_profiler.process(filtered)
 
                 if self._squelch_enabled and self._noise_profiler.has_profile:

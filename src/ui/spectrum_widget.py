@@ -22,7 +22,7 @@ class SpectrumWidget(QWidget):
 
     FFT_SIZE    = 2048
     SAMPLE_RATE = 48_000
-    MAX_FREQ_HZ = 8_000
+    MAX_FREQ_HZ = 12_000
     DB_MIN      = -80.0
     DB_MAX      =   0.0
     ALPHA       = 0.35    # suavizado EMA
@@ -325,7 +325,7 @@ class SpectrumWidget(QWidget):
             p.drawLine(ml, y, ml + pw, y)
 
         freq_per_bin = self.SAMPLE_RATE / self.FFT_SIZE
-        for khz in range(1, 9):
+        for khz in range(1, 13):
             bin_idx = int(khz * 1000 / freq_per_bin)
             if bin_idx >= self._max_bin:
                 break
@@ -349,7 +349,7 @@ class SpectrumWidget(QWidget):
                        str(db))
 
         freq_per_bin = self.SAMPLE_RATE / self.FFT_SIZE
-        for khz in range(1, 9):
+        for khz in range(1, 13):
             bin_idx = int(khz * 1000 / freq_per_bin)
             if bin_idx >= self._max_bin:
                 break
