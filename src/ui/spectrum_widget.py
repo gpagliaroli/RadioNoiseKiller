@@ -2,8 +2,8 @@ from __future__ import annotations
 import numpy as np
 from collections import deque
 from PySide6.QtWidgets import QWidget
-from PySide6.QtCore import Qt, QTimer, QRectF
-from PySide6.QtGui import QPainter, QPainterPath, QColor, QPen, QFont
+from PySide6.QtCore import Qt, QTimer, QRectF, QPointF
+from PySide6.QtGui import QPainter, QPainterPath, QColor, QPen, QFont, QPolygonF, QBrush
 
 
 class SpectrumWidget(QWidget):
@@ -63,7 +63,7 @@ class SpectrumWidget(QWidget):
         self._floor_learning = False
 
         self._timer = QTimer(self)
-        self._timer.setInterval(40)   # 25 fps
+        self._timer.setInterval(67)   # ~15 fps — reduce GIL contention con el thread de audio
         self._timer.timeout.connect(self._tick)
 
     # ------------------------------------------------------------------
@@ -136,6 +136,8 @@ class SpectrumWidget(QWidget):
     # ------------------------------------------------------------------
 
     def _tick(self) -> None:
+        if not self.isVisible():
+            return
         changed = False
 
         if self._show_pre or self._show_cancelled or self._floor_learning:
@@ -231,102 +233,92 @@ class SpectrumWidget(QWidget):
         p.end()
 
     # ------------------------------------------------------------------
-    # Helpers de coordenadas
+    # Helpers de coordenadas (vectorizados con numpy — GIL libre en el cómputo)
     # ------------------------------------------------------------------
 
     def _db_to_y(self, db: float, ph: int, mt: int) -> float:
         frac = (db - self.DB_MIN) / (self._db_max - self.DB_MIN)
         return mt + ph * (1.0 - frac)
 
-    def _bin_to_x(self, bin_idx: int, ml: int, pw: int) -> float:
-        return ml + pw * bin_idx / max(self._max_bin - 1, 1)
+    def _compute_xy(self, bins: np.ndarray, ml: int, mt: int,
+                    pw: int, ph: int) -> tuple[np.ndarray, np.ndarray]:
+        """Devuelve (xs, ys) como arrays float32; el cómputo numpy libera el GIL."""
+        n   = len(bins)
+        xs  = ml + pw * (np.arange(n, dtype=np.float32) / max(self._max_bin - 1, 1))
+        frac = np.clip(
+            (bins.astype(np.float32) - self.DB_MIN) / (self._db_max - self.DB_MIN),
+            0.0, 1.0
+        )
+        ys  = (mt + ph * (1.0 - frac)).astype(np.float32)
+        return xs, ys
+
+    @staticmethod
+    def _to_polyline(xs: np.ndarray, ys: np.ndarray) -> QPolygonF:
+        return QPolygonF([QPointF(float(x), float(y)) for x, y in zip(xs, ys)])
 
     # ------------------------------------------------------------------
-    # Primitivas de dibujo
+    # Primitivas de dibujo  (QPolygonF en lugar de QPainterPath/lineTo)
     # ------------------------------------------------------------------
 
     def _draw_curve(self, p: QPainter,
                     db_arr: np.ndarray,
                     fill_color: QColor, line_color: QColor,
                     ml: int, mt: int, pw: int, ph: int) -> None:
-        bins   = db_arr[:self._max_bin]
-        n      = len(bins)
-        bottom = mt + ph
+        bins = db_arr[:self._max_bin]
+        xs, ys = self._compute_xy(bins, ml, mt, pw, ph)
+        bottom = float(mt + ph)
 
-        fill = QPainterPath()
-        x0   = self._bin_to_x(0, ml, pw)
-        y0   = self._db_to_y(float(bins[0]), ph, mt)
-        fill.moveTo(x0, bottom)
-        fill.lineTo(x0, y0)
-        for i in range(1, n):
-            fill.lineTo(self._bin_to_x(i, ml, pw),
-                        self._db_to_y(float(bins[i]), ph, mt))
-        fill.lineTo(self._bin_to_x(n - 1, ml, pw), bottom)
-        fill.closeSubpath()
-        p.fillPath(fill, fill_color)
+        # Relleno — sin antialiasing (no se nota en áreas planas)
+        fill_pts = ([QPointF(float(xs[0]), bottom)]
+                    + [QPointF(float(x), float(y)) for x, y in zip(xs, ys)]
+                    + [QPointF(float(xs[-1]), bottom)])
+        p.setRenderHint(QPainter.Antialiasing, False)
+        p.setBrush(QBrush(fill_color))
+        p.setPen(Qt.NoPen)
+        p.drawPolygon(QPolygonF(fill_pts))
 
-        line = QPainterPath()
-        line.moveTo(x0, y0)
-        for i in range(1, n):
-            line.lineTo(self._bin_to_x(i, ml, pw),
-                        self._db_to_y(float(bins[i]), ph, mt))
+        # Línea con antialiasing
+        p.setRenderHint(QPainter.Antialiasing, True)
+        p.setBrush(Qt.NoBrush)
         p.setPen(QPen(line_color, 1.2))
-        p.drawPath(line)
+        p.drawPolyline(self._to_polyline(xs, ys))
 
     def _draw_line_only(self, p: QPainter,
                         db_arr: np.ndarray,
                         color: QColor,
                         ml: int, mt: int, pw: int, ph: int) -> None:
         bins = db_arr[:self._max_bin]
-        n    = len(bins)
-        path = QPainterPath()
-        path.moveTo(self._bin_to_x(0, ml, pw),
-                    self._db_to_y(float(bins[0]), ph, mt))
-        for i in range(1, n):
-            path.lineTo(self._bin_to_x(i, ml, pw),
-                        self._db_to_y(float(bins[i]), ph, mt))
+        xs, ys = self._compute_xy(bins, ml, mt, pw, ph)
+        p.setRenderHint(QPainter.Antialiasing, True)
         p.setPen(QPen(color, 1.2))
-        p.drawPath(path)
+        p.drawPolyline(self._to_polyline(xs, ys))
 
     def _draw_cancelled(self, p: QPainter,
                          ml: int, mt: int, pw: int, ph: int) -> None:
-        """Rellena el área entre pre y post donde pre > post (lo que se canceló)."""
         bins_pre  = self._db_pre[:self._max_bin]
         bins_post = self._db_post[:self._max_bin]
-        n = len(bins_pre)
-
-        path = QPainterPath()
-        # Borde superior: curva pre (de izquierda a derecha)
-        path.moveTo(self._bin_to_x(0, ml, pw),
-                    self._db_to_y(float(bins_pre[0]), ph, mt))
-        for i in range(1, n):
-            path.lineTo(self._bin_to_x(i, ml, pw),
-                        self._db_to_y(float(bins_pre[i]), ph, mt))
+        xs, ys_pre  = self._compute_xy(bins_pre,  ml, mt, pw, ph)
+        _,  ys_post = self._compute_xy(bins_post, ml, mt, pw, ph)
         # Borde inferior: max(y_pre, y_post) en coords pantalla
-        # = min(dB_pre, dB_post) = post donde hubo cancelación, pre donde no
-        # El área resultante solo es visible donde pre_dB > post_dB
-        for i in range(n - 1, -1, -1):
-            y_pre  = self._db_to_y(float(bins_pre[i]),  ph, mt)
-            y_post = self._db_to_y(float(bins_post[i]), ph, mt)
-            path.lineTo(self._bin_to_x(i, ml, pw), max(y_pre, y_post))
-        path.closeSubpath()
-        p.fillPath(path, QColor(255, 112, 67, 100))   # naranja semi-transparente
+        ys_bot = np.maximum(ys_pre, ys_post)
+        # Polígono: curva pre (izq→der) + borde inferior (der→izq)
+        pts = ([QPointF(float(x), float(y)) for x, y in zip(xs, ys_pre)]
+               + [QPointF(float(x), float(y)) for x, y in zip(reversed(xs), reversed(ys_bot))])
+        p.setRenderHint(QPainter.Antialiasing, False)
+        p.setBrush(QBrush(QColor(255, 112, 67, 100)))
+        p.setPen(Qt.NoPen)
+        p.drawPolygon(QPolygonF(pts))
 
     def _draw_floor_line(self, p: QPainter,
                           db_floor: np.ndarray,
                           ml: int, mt: int, pw: int, ph: int) -> None:
-        """Línea punteada ámbar — piso de ruido aprendido."""
-        n    = len(db_floor)
-        pen  = QPen(QColor(255, 213, 79), 1.5)
+        bins = db_floor[:self._max_bin]
+        xs, ys = self._compute_xy(bins, ml, mt, pw, ph)
+        pen = QPen(QColor(255, 213, 79), 1.5)
         pen.setStyle(Qt.DashLine)
+        p.setRenderHint(QPainter.Antialiasing, True)
         p.setPen(pen)
-        path = QPainterPath()
-        path.moveTo(self._bin_to_x(0, ml, pw),
-                    self._db_to_y(float(db_floor[0]), ph, mt))
-        for i in range(1, n):
-            path.lineTo(self._bin_to_x(i, ml, pw),
-                        self._db_to_y(float(db_floor[i]), ph, mt))
-        p.drawPath(path)
+        p.drawPolyline(self._to_polyline(xs, ys))
 
     def _draw_grid(self, p: QPainter,
                    ml: int, mt: int, pw: int, ph: int) -> None:
