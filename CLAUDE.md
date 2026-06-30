@@ -2,75 +2,97 @@
 
 ## Descripción del proyecto
 
-Software standalone de reducción de ruido con IA para radio AM/SSB (ham radio).
-Stack: Python 3.14, PySide6, sounddevice, onnxruntime, scipy.
+Software standalone de reducción de ruido para radio AM/SSB (ham radio).
+Stack: Python 3.10+, PySide6, sounddevice, scipy, numpy.
+Todo el DSP es numpy/scipy puro — sin dependencias de IA, ONNX ni modelos externos.
 
 ## Cómo ejecutar
 
 ```bash
-# Desarrollo
+# Desarrollo (Windows)
 .venv\Scripts\python.exe src\main.py
 
-# Tests individuales
-.venv\Scripts\python.exe tests\test_devices.py
-.venv\Scripts\python.exe tests\test_dsp.py
-.venv\Scripts\python.exe tests\test_model.py
-.venv\Scripts\python.exe tests\test_pipeline.py
+# Desarrollo (Linux / Raspberry Pi)
+.venv/bin/python src/main.py
 
-# Empaquetar
+# Tests individuales
+.venv\Scripts\python.exe tests\test_devices.py   # Windows
+.venv/bin/python        tests/test_devices.py    # Linux/Pi
+
+# Empaquetar (Windows — genera dist/ReductorRuidoRadio/)
 .venv\Scripts\python.exe -m PyInstaller reductor.spec --clean --noconfirm
+
+# Empaquetar (Linux x86_64 o Raspberry Pi ARM64 — mismo spec)
+.venv/bin/python -m PyInstaller reductor-linux.spec --clean --noconfirm
 ```
+
+## Setup en Raspberry Pi (primera vez)
+
+```bash
+# Prerrequisitos del sistema
+sudo apt update
+sudo apt install python3.11 python3.11-venv python3-pip libportaudio2 libxcb-xinerama0
+
+# Entorno virtual
+python3.11 -m venv .venv
+.venv/bin/pip install --upgrade pip
+.venv/bin/pip install sounddevice numpy scipy PySide6 pyinstaller
+
+# Ejecutar directamente (sin bundle)
+.venv/bin/python src/main.py
+
+# O empaquetar como bundle autónomo
+.venv/bin/python -m PyInstaller reductor-linux.spec --clean --noconfirm
+```
+
+> **Nota display Pi:** si usás VNC o SSH con reenvío X11, asegurarse de que `DISPLAY`
+> esté definido (`export DISPLAY=:0` para VNC local, o usar `DISPLAY=localhost:10.0` en SSH -X).
 
 ## Estructura clave
 
 ```
 src/
 ├── main.py              # Entrada: QApplication → MainWindow
-├── config.py            # AppConfig (AudioConfig, DSPConfig, ModelConfig, GainConfig)
-├── pipeline.py          # ProcessingPipeline: orquesta audio I/O + DSP + modelo
+├── config.py            # AppConfig (AudioConfig, DSPConfig, GainConfig, WindowConfig)
+├── pipeline.py          # ProcessingPipeline: orquesta audio I/O + DSP
 ├── utils.py             # resource_path() y settings_path()
 ├── audio/
-│   ├── devices.py       # list_devices() → solo WASAPI + WDM-KS, sin duplicados
+│   ├── devices.py       # list_devices() → filtra por API según OS (WASAPI/WDM en Win, ALSA en Linux)
 │   └── stream.py        # AudioStream: wrapper sounddevice con callback
 ├── dsp/
-│   ├── filters.py       # BandpassFilter (Butterworth IIR, stateful)
+│   ├── agc.py           # AGC (control automático de ganancia)
+│   ├── anf.py           # AdaptiveNotchFilter (cancela heterodinos/tonos)
+│   ├── exciter.py       # AuralExciter (armónicos tanh)
+│   ├── filters.py       # BandpassFilter + PresenceFilter (Butterworth IIR, stateful)
+│   ├── freq_shift.py    # FrequencyShifter (corrección de pitch SSB)
 │   ├── gain.py          # GainLimiter (peak follower, ataque instantáneo)
-│   └── level.py         # LevelMeter (RMS con decaimiento)
-├── models/
-│   └── deepfilternet.py # DeepFilterNet3: inferencia ONNX con ventana deslizante
+│   ├── level.py         # LevelMeter (RMS con decaimiento)
+│   └── noise_profiler.py # NoiseProfiler (Wiener DD espectral adaptativo)
 └── ui/
-    ├── main_window.py   # QTabWidget: Principal + Avanzada
+    ├── main_window.py   # QTabWidget: Principal + Avanzada Audio + Avanzada Ruido + Espectro
     ├── advanced_tab.py  # Sliders de configuración avanzada
     ├── slider_row.py    # Widget: label + QSlider escalado a float + unidad
-    └── vu_meter.py      # Widget VU meter custom (QPainter)
-models/
-├── enc.onnx             # Encoder DeepFilterNet3
-├── erb_dec.onnx         # Decoder ERB (máscara espectral)
-├── df_dec.onnx          # Decoder DF (filtrado profundo)
-└── config.ini           # Hiperparámetros del modelo (sr=48000, hop=480, etc.)
+    ├── vu_meter.py      # VU meter custom (QPainter), texto doble-clip oscuro/claro
+    └── spectrum_widget.py  # Visualizador de espectro en tiempo real (FFT + EMA, 15 fps)
 ```
 
 ## Decisiones de arquitectura importantes
 
-### Modelo ONNX directo (sin pip install deepfilternet)
-`deepfilternet` en PyPI requiere compilar `deepfilterlib` con Rust/Cargo.
-Se usan los archivos ONNX pre-exportados directamente con `onnxruntime`.
-Los modelos están en `models/` y se incluyen en el bundle PyInstaller via `reductor.spec`.
-
 ### Rutas de recursos con resource_path()
 En bundle PyInstaller los archivos están en `sys._MEIPASS`, no en el CWD.
-Siempre usar `from utils import resource_path` para rutas a `models/`.
+Usar `from utils import resource_path` para cualquier recurso empaquetado.
 Para settings.json usar `settings_path()` (escribe junto al .exe, no en _MEIPASS).
 
-### Deduplicación de dispositivos de audio
+### Deduplicación de dispositivos de audio (Windows)
 PortAudio expone cada dispositivo físico 4 veces (MME, DirectSound, WASAPI, WDM-KS).
 `audio/devices.py` filtra: WASAPI primero, WDM-KS solo para dispositivos sin WASAPI.
 Importante: "Mezcla estéreo" (Stereo Mix) solo existe en WDM-KS — no descartarlo.
+En Linux (incluyendo Raspberry Pi) PortAudio usa ALSA — `devices.py` debe detectar el OS
+y no aplicar el filtro WASAPI/WDM en ese caso.
 
 ### Pipeline thread-safety
 El callback de sounddevice corre en hilo de audio separado (alta prioridad).
 Usar `self._lock` en pipeline.py para todos los accesos a `_bandpass` y `_limiter`.
-El modelo DeepFilterNet3 NO usa el lock (es stateful y single-threaded por diseño).
 `_input_gain` es float — escritura atómica en Python, no necesita lock.
 
 ### Resiliencia del hilo procesador (_run_processor)
@@ -95,32 +117,15 @@ subsiguientes vía el overlap-add, pudiendo producir NaN o excepciones en el Wie
 
 ### Sliders live vs. requieren reinicio
 - Live (se aplican inmediatamente): filtros DSP, ganancia entrada/salida, límite de picos
-- Requieren reinicio: block_size (audio buffer), window_frames (buffer del modelo)
+- Requieren reinicio: block_size (audio buffer)
 - `AdvancedTab.set_processing_active(True)` deshabilita solo los de reinicio.
-
-### Ventana de procesamiento del modelo
-El modelo no es streaming nativo. Se acumulan `window_frames` (default 10 = 100ms)
-frames de 10ms, se procesa la ventana completa, y se emite el primer frame.
-Latencia resultante: window_frames × 10ms + latencia de sounddevice (~40–80ms total).
-
-## Parámetros del modelo (models/config.ini)
-
-| Parámetro | Valor | Uso en código |
-|-----------|-------|---------------|
-| sr | 48000 | AudioConfig.sample_rate |
-| hop_size | 480 | AudioConfig.block_size, ModelConfig.hop_size |
-| fft_size | 960 | ModelConfig.fft_size |
-| nb_erb | 32 | ModelConfig.nb_erb |
-| nb_df | 96 | ModelConfig.nb_df |
-| df_order | 5 | ModelConfig.df_order |
-| df_lookahead | 2 | DeepFilterNet3.LOOKAHEAD |
 
 ## Configuración persistente
 
 `AppConfig.save()` / `AppConfig.load()` → `settings.json`
 Guardado automático con debounce de 800ms en `MainWindow._save_timer`.
 En dev: `<raíz_proyecto>/settings.json`
-En bundle: junto al `.exe`
+En bundle: junto al `.exe` / `.bin`
 
 ## Tests disponibles
 
@@ -129,15 +134,30 @@ En bundle: junto al `.exe`
 | `tests/test_devices.py` | Enumeración y deduplicación de dispositivos |
 | `tests/test_hostapis.py` | Listado completo por API (diagnóstico) |
 | `tests/test_dsp.py` | BandpassFilter, GainLimiter, LevelMeter |
-| `tests/test_model.py` | Carga ONNX, inferencia, benchmark de latencia |
 | `tests/test_pipeline.py` | Pipeline completo simulado sin hardware |
 
 ## Estado del proyecto
 
-**Fase 1 completa** — todas las funcionalidades MVP operativas y empaquetadas.
-Distribuible: `dist\ReductorRuidoRadio_v1.0.zip` (88 MB) con `MANUAL_ReductorRuidoRadio_v1.0.pdf` incluido.
+**Fase 1 + Espectro completos** — todas las funcionalidades MVP operativas, más el visualizador de espectro.
+Distribuible v1.0: `dist\ReductorRuidoRadio_v1.0.zip` con `MANUAL_ReductorRuidoRadio_v1.0.pdf`.
+Manual actualizado en `MANUAL.md` (fuente) — regenerar PDF para la próxima distribución (v1.1).
+
+### Visualizador de espectro — decisiones de implementación
+
+**Captura de spec_pre en pipeline:** `spec_pre_frames` se llena después del bandpass+ANF y antes del
+cancelador de ruido. Así la curva "Entrada" muestra exactamente lo que ve el Wiener, con el mismo
+ancho de banda que la curva "Salida" — evita que la entrada aparezca más alta que la salida.
+
+**Piso de ruido (línea amarilla):** se toma un snapshot de `_ema_pre` al llamar `stop_floor_learning()`,
+no un acumulado. Con ALPHA=0.35 y 5 segundos el EMA está completamente convergido.
+
+**GIL y CPU:** el timer corre a 15 fps (67ms). `_tick()` devuelve inmediatamente si `isVisible()` es
+False (tab no activo). Las curvas se dibujan con `QPolygonF` + `drawPolyline`/`drawPolygon` en lugar de
+N llamadas `lineTo()` sobre `QPainterPath`, eliminando la contención de GIL con el hilo de audio.
+
+**WindowConfig:** `spectrum_db_max` y `spectrum_max_freq_hz` se persisten en `settings.json`
+bajo la clave `"window"` junto con la posición de la ventana.
 
 Pendiente para Fase 2:
-- Visualizador de espectro en tiempo real
-- Integración completa del `df_dec` (filtrado profundo, actualmente solo ERB mask)
-- Soporte Linux
+- Validar build en Pi real (ARM64 Raspberry Pi OS Bookworm)
+- Soporte de múltiples canales de audio

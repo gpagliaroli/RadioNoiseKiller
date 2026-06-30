@@ -240,6 +240,9 @@ class SpectrumWidget(QWidget):
         frac = (db - self.DB_MIN) / (self._db_max - self.DB_MIN)
         return mt + ph * (1.0 - frac)
 
+    def _bin_to_x(self, bin_idx: int, ml: int, pw: int) -> float:
+        return ml + pw * bin_idx / max(self._max_bin - 1, 1)
+
     def _compute_xy(self, bins: np.ndarray, ml: int, mt: int,
                     pw: int, ph: int) -> tuple[np.ndarray, np.ndarray]:
         """Devuelve (xs, ys) como arrays float32; el cómputo numpy libera el GIL."""

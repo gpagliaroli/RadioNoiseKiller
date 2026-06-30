@@ -419,12 +419,72 @@ Controla los niveles de entrada y salida, y protege contra picos de audio. Los m
 
 ---
 
+## Capítulo 12 — Visualizador de Espectro
+
+**Ubicación:** Pestaña Espectro
+
+### Descripción
+
+Muestra en tiempo real la distribución de energía por frecuencia (espectrograma) de la señal de entrada y de salida del pipeline. Permite ver de un vistazo cuánto ruido está siendo eliminado en cada banda de frecuencia y verificar que la voz no está siendo afectada.
+
+El visualizador opera a ~15 cuadros por segundo. Para reducir el costo de CPU, se pausa automáticamente cuando la pestaña Espectro no está visible.
+
+### Curvas disponibles
+
+| Curva | Color | Descripción |
+|-------|-------|-------------|
+| **Entrada** | Azul | Señal antes del cancelador de ruido (después del filtro de paso de banda y el ANF). |
+| **Salida** | Verde | Señal final procesada, tal como sale al dispositivo de audio. |
+| **Lo cancelado** | Naranja (relleno) | Área entre la curva de entrada y la de salida — energía que el cancelador está restando. Cuanto mayor el área naranja, más ruido está siendo eliminado. |
+| **Piso de ruido** | Amarillo punteado | Perfil espectral aprendido por el cancelador. Aparece al aprender el perfil desde la pestaña Principal. Representa "cómo suena el ruido de fondo" bin a bin. |
+
+Cada curva puede mostrarse u ocultarse de forma independiente con las casillas de la barra superior.
+
+### Controles
+
+**Casillas de visibilidad (barra superior)**
+
+Activan o desactivan cada curva sin afectar el procesamiento de audio.
+
+**Aprender / borrar el piso de ruido**
+
+El piso amarillo se captura desde el botón **⏺ Aprender ruido** de la pestaña Principal. Al detener el aprendizaje, la línea queda fija mostrando el perfil activo. El botón **Borrar perfil** también borra la línea del espectro.
+
+**Sliders de zoom**
+
+| Control | Rango | Default | Descripción |
+|---------|-------|---------|-------------|
+| **Máx Y** | -60 dBFS a 0 dBFS | 0 dBFS | Ajusta el techo del eje vertical. Bajar (ej. -20 dBFS) comprime la escala y hace más visibles las diferencias entre curvas cuando la señal es débil. El valor se guarda automáticamente. |
+| **Máx X** | 1 kHz a 12 kHz | 12 kHz | Ajusta el límite derecho del eje de frecuencias. Reducir a 3–4 kHz hace zoom en la zona vocal y permite ver mejor los detalles en esa banda. El valor se guarda automáticamente. |
+
+### Interpretación práctica
+
+**Reducción visible pero voz limpia:**
+- El área naranja cubre principalmente las frecuencias de ruido de fondo (distribución uniforme en toda la banda).
+- La curva verde queda por debajo de la azul en zonas de ruido, pero las dos convergen en los picos de voz.
+
+**El cancelador está suprimiendo voz (demasiado agresivo):**
+- El área naranja es grande incluso en los picos de voz.
+- Reducir **Intensidad** o subir **Piso espectral** en la pestaña Avanzada Ruido.
+
+**El cancelador no está haciendo nada:**
+- Las curvas azul y verde se solapan completamente — sin área naranja.
+- Verificar que hay perfil de ruido aprendido y que el módulo **Cancelador de ruido estacionario** está activo.
+
+**Verificar el preview "escuchar ruido eliminado":**
+- Activar el checkbox **Preview: escuchar ruido eliminado** (pestaña Principal) y observar el espectro.
+- Lo que se escucha debe coincidir con el área naranja. Si se ven picos de voz en el área naranja, el cancelador está tocando la voz — subir el **Piso espectral**.
+
+---
+
 ## Persistencia de configuración
 
 Todos los ajustes se guardan automáticamente al cerrar la aplicación y se restauran al volver a abrirla. El archivo `settings.json` se crea junto al ejecutable. Para volver a los valores de fábrica, simplemente borrar ese archivo.
 
 Cada pestaña avanzada tiene un botón **"↺ Restaurar valores por defecto"** que reinicia solo los controles de esa pestaña sin afectar el resto de la configuración.
 
+Los valores de los sliders **Máx Y** y **Máx X** del visualizador de espectro también se guardan en `settings.json` junto con el resto de la configuración.
+
 ---
 
-*Reductor de Ruido Radio — versión 1.0*
+*Reductor de Ruido Radio — versión 1.1*

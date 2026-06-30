@@ -1,9 +1,10 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-PyInstaller spec para Linux (x86_64).
-Detecta libportaudio automáticamente y la incluye en el bundle.
+PyInstaller spec para Linux — x86_64 y ARM64 (Raspberry Pi).
+Detecta libportaudio automáticamente via ldconfig; fallback por arquitectura.
 """
 import os
+import platform
 import subprocess
 from pathlib import Path
 
@@ -11,6 +12,8 @@ block_cipher = None
 
 ROOT = Path(SPECPATH)
 SRC  = ROOT / "src"
+
+ARCH = platform.machine()   # "x86_64", "aarch64", "armv7l", …
 
 
 def find_shared_lib(name: str) -> str | None:
@@ -26,9 +29,16 @@ def find_shared_lib(name: str) -> str | None:
                     return path
     except FileNotFoundError:
         pass
-    # Fallback: rutas comunes
+
+    # Fallback según arquitectura
+    arch_dir = {
+        "x86_64":  "x86_64-linux-gnu",
+        "aarch64": "aarch64-linux-gnu",
+        "armv7l":  "arm-linux-gnueabihf",
+    }.get(ARCH, ARCH + "-linux-gnu")
+
     for candidate in [
-        f"/usr/lib/x86_64-linux-gnu/{name}.so.2",
+        f"/usr/lib/{arch_dir}/{name}.so.2",
         f"/usr/lib/{name}.so.2",
         f"/usr/local/lib/{name}.so.2",
     ]:
@@ -41,8 +51,9 @@ extra_binaries = []
 portaudio = find_shared_lib("libportaudio")
 if portaudio:
     extra_binaries.append((portaudio, "."))
+    print(f"INFO: libportaudio encontrado en {portaudio} ({ARCH})")
 else:
-    print("WARNING: libportaudio no encontrado — el audio puede no funcionar")
+    print(f"WARNING: libportaudio no encontrado para {ARCH} — el audio puede no funcionar")
 
 a = Analysis(
     [str(SRC / "main.py")],
