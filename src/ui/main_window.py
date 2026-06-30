@@ -339,50 +339,51 @@ class MainWindow(QMainWindow):
         ctrl.addWidget(lbl_hint)
 
         layout.addLayout(ctrl)
-        layout.addWidget(self._spectrum_widget)
+        layout.addWidget(self._spectrum_widget, 1)   # stretch: el gráfico toma todo el espacio libre
 
-        # Slider de máximo del eje Y
-        range_row = QHBoxLayout()
-        range_lbl = QLabel("Máx Y:")
-        range_lbl.setStyleSheet("color: #607d8b; font-size: 8pt;")
-        self._lbl_db_range = QLabel("0 dBFS")
-        self._lbl_db_range.setStyleSheet("color: #90a4ae; font-size: 8pt;")
-        self._lbl_db_range.setFixedWidth(52)
-        self._sld_db_range = QSlider(Qt.Horizontal)
-        self._sld_db_range.setMinimum(-60)
-        self._sld_db_range.setMaximum(0)
-        self._sld_db_range.setSingleStep(5)
-        self._sld_db_range.setPageStep(10)
-        self._sld_db_range.setValue(self._config.window.spectrum_db_max)
-        self._sld_db_range.setTickInterval(10)
-        self._sld_db_range.setTickPosition(QSlider.TicksBelow)
-        self._sld_db_range.valueChanged.connect(self._on_db_range_changed)
-        range_row.addWidget(range_lbl)
-        range_row.addWidget(self._sld_db_range)
-        range_row.addWidget(self._lbl_db_range)
-        layout.addLayout(range_row)
+        # Controles de zoom — widget compacto sin espacio extra
+        zoom_widget = QWidget()
+        zoom_widget.setFixedHeight(44)
+        zoom_layout = QVBoxLayout(zoom_widget)
+        zoom_layout.setContentsMargins(0, 2, 0, 2)
+        zoom_layout.setSpacing(2)
 
-        # Slider de máximo del eje X
-        freq_row = QHBoxLayout()
-        freq_lbl = QLabel("Máx X:")
-        freq_lbl.setStyleSheet("color: #607d8b; font-size: 8pt;")
-        self._lbl_freq_range = QLabel("12 kHz")
-        self._lbl_freq_range.setStyleSheet("color: #90a4ae; font-size: 8pt;")
-        self._lbl_freq_range.setFixedWidth(52)
-        self._sld_freq_range = QSlider(Qt.Horizontal)
-        self._sld_freq_range.setMinimum(1)
-        self._sld_freq_range.setMaximum(12)
-        self._sld_freq_range.setSingleStep(1)
-        self._sld_freq_range.setPageStep(2)
-        self._sld_freq_range.setValue(self._config.window.spectrum_max_freq_hz // 1000)
-        self._sld_freq_range.setTickInterval(1)
-        self._sld_freq_range.setTickPosition(QSlider.TicksBelow)
-        self._sld_freq_range.valueChanged.connect(self._on_freq_range_changed)
-        freq_row.addWidget(freq_lbl)
-        freq_row.addWidget(self._sld_freq_range)
-        freq_row.addWidget(self._lbl_freq_range)
-        layout.addLayout(freq_row)
+        def _slider_row(label_text, lbl_attr, sld_attr, mn, mx, step, page, val, lbl_text, lbl_w, handler):
+            row = QHBoxLayout()
+            row.setContentsMargins(0, 0, 0, 0)
+            lbl = QLabel(label_text)
+            lbl.setStyleSheet("color: #607d8b; font-size: 8pt;")
+            lbl.setFixedWidth(40)
+            val_lbl = QLabel(lbl_text)
+            val_lbl.setStyleSheet("color: #90a4ae; font-size: 8pt;")
+            val_lbl.setFixedWidth(lbl_w)
+            sld = QSlider(Qt.Horizontal)
+            sld.setMinimum(mn); sld.setMaximum(mx)
+            sld.setSingleStep(step); sld.setPageStep(page)
+            sld.setValue(val)
+            sld.setMaximumHeight(18)
+            sld.valueChanged.connect(handler)
+            row.addWidget(lbl)
+            row.addWidget(sld)
+            row.addWidget(val_lbl)
+            setattr(self, lbl_attr, val_lbl)
+            setattr(self, sld_attr, sld)
+            return row
 
+        zoom_layout.addLayout(_slider_row(
+            "Máx Y:", "_lbl_db_range", "_sld_db_range",
+            -60, 0, 5, 10, self._config.window.spectrum_db_max,
+            f"{self._config.window.spectrum_db_max} dBFS", 52,
+            self._on_db_range_changed,
+        ))
+        zoom_layout.addLayout(_slider_row(
+            "Máx X:", "_lbl_freq_range", "_sld_freq_range",
+            1, 12, 1, 2, self._config.window.spectrum_max_freq_hz // 1000,
+            f"{self._config.window.spectrum_max_freq_hz // 1000} kHz", 40,
+            self._on_freq_range_changed,
+        ))
+
+        layout.addWidget(zoom_widget)
         return tab
 
     def _build_start_button(self) -> QPushButton:
