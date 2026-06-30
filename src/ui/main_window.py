@@ -341,20 +341,20 @@ class MainWindow(QMainWindow):
         layout.addLayout(ctrl)
         layout.addWidget(self._spectrum_widget)
 
-        # Slider de rango Y
+        # Slider de máximo del eje Y
         range_row = QHBoxLayout()
-        range_lbl = QLabel("Rango Y:")
+        range_lbl = QLabel("Máx Y:")
         range_lbl.setStyleSheet("color: #607d8b; font-size: 8pt;")
-        self._lbl_db_range = QLabel("80 dB")
+        self._lbl_db_range = QLabel("0 dBFS")
         self._lbl_db_range.setStyleSheet("color: #90a4ae; font-size: 8pt;")
-        self._lbl_db_range.setFixedWidth(42)
+        self._lbl_db_range.setFixedWidth(52)
         self._sld_db_range = QSlider(Qt.Horizontal)
-        self._sld_db_range.setMinimum(20)
-        self._sld_db_range.setMaximum(80)
+        self._sld_db_range.setMinimum(-60)
+        self._sld_db_range.setMaximum(0)
         self._sld_db_range.setSingleStep(5)
         self._sld_db_range.setPageStep(10)
-        self._sld_db_range.setValue(80)
-        self._sld_db_range.setTickInterval(20)
+        self._sld_db_range.setValue(0)
+        self._sld_db_range.setTickInterval(10)
         self._sld_db_range.setTickPosition(QSlider.TicksBelow)
         self._sld_db_range.valueChanged.connect(self._on_db_range_changed)
         range_row.addWidget(range_lbl)
@@ -537,8 +537,8 @@ class MainWindow(QMainWindow):
 
     def _on_db_range_changed(self, value: int) -> None:
         snapped = round(value / 5) * 5
-        self._lbl_db_range.setText(f"{snapped} dB")
-        self._spectrum_widget.set_db_range(snapped)
+        self._lbl_db_range.setText(f"{snapped} dBFS")
+        self._spectrum_widget.set_db_max(snapped)
 
     def _on_clear_noise_profile(self) -> None:
         self._pipeline.clear_noise_profile()

@@ -23,7 +23,7 @@ class SpectrumWidget(QWidget):
     FFT_SIZE    = 2048
     SAMPLE_RATE = 48_000
     MAX_FREQ_HZ = 12_000
-    DB_MAX      =   0.0
+    DB_MIN      = -80.0
     ALPHA       = 0.35    # suavizado EMA
 
     _ML = 42   # margen izquierdo (etiquetas dB)
@@ -39,11 +39,11 @@ class SpectrumWidget(QWidget):
         self.pre_frames:  deque[np.ndarray] = deque(maxlen=8)
         self.post_frames: deque[np.ndarray] = deque(maxlen=8)
 
-        self._db_min   = -80.0   # controlado por el slider de rango Y
+        self._db_max   =   0.0   # controlado por el slider Máx Y
 
         n_bins = self.FFT_SIZE // 2 + 1
-        self._db_pre   = np.full(n_bins, self._db_min, dtype=np.float32)
-        self._db_post  = np.full(n_bins, self._db_min, dtype=np.float32)
+        self._db_pre   = np.full(n_bins, self.DB_MIN, dtype=np.float32)
+        self._db_post  = np.full(n_bins, self.DB_MIN, dtype=np.float32)
         self._db_floor: np.ndarray | None = None
         self._ema_pre  = None
         self._ema_post = None
@@ -81,8 +81,8 @@ class SpectrumWidget(QWidget):
         self._timer.stop()
         self._active   = False
         n = self.FFT_SIZE // 2 + 1
-        self._db_pre   = np.full(n, self._db_min, dtype=np.float32)
-        self._db_post  = np.full(n, self._db_min, dtype=np.float32)
+        self._db_pre   = np.full(n, self.DB_MIN, dtype=np.float32)
+        self._db_post  = np.full(n, self.DB_MIN, dtype=np.float32)
         self._db_floor = None
         self._ema_pre  = None
         self._ema_post = None
@@ -118,8 +118,8 @@ class SpectrumWidget(QWidget):
         self._floor_learning = False
         self.update()
 
-    def set_db_range(self, range_db: int) -> None:
-        self._db_min = -float(range_db)
+    def set_db_max(self, db_max: int) -> None:
+        self._db_max = float(db_max)
         self.update()
 
     # ------------------------------------------------------------------
@@ -160,7 +160,7 @@ class SpectrumWidget(QWidget):
         mag = np.abs(np.fft.rfft(samples * self._window))
         mag = np.maximum(mag, 1e-10)
         db  = 20.0 * np.log10(mag / (self.FFT_SIZE / 2.0))
-        return np.clip(db, self._db_min, self.DB_MAX).astype(np.float32)
+        return np.clip(db, self.DB_MIN, 0.0).astype(np.float32)
 
     # ------------------------------------------------------------------
     # Pintado
@@ -226,7 +226,7 @@ class SpectrumWidget(QWidget):
     # ------------------------------------------------------------------
 
     def _db_to_y(self, db: float, ph: int, mt: int) -> float:
-        frac = (db - self._db_min) / (self.DB_MAX - self._db_min)
+        frac = (db - self.DB_MIN) / (self._db_max - self.DB_MIN)
         return mt + ph * (1.0 - frac)
 
     def _bin_to_x(self, bin_idx: int, ml: int, pw: int) -> float:
@@ -326,9 +326,10 @@ class SpectrumWidget(QWidget):
         p.setPen(pen)
 
         db = -20
-        while db > self._db_min:
-            y = int(self._db_to_y(db, ph, mt))
-            p.drawLine(ml, y, ml + pw, y)
+        while db >= self.DB_MIN:
+            y = int(self._db_to_y(float(db), ph, mt))
+            if mt <= y <= mt + ph:
+                p.drawLine(ml, y, ml + pw, y)
             db -= 20
 
         freq_per_bin = self.SAMPLE_RATE / self.FFT_SIZE
@@ -349,14 +350,15 @@ class SpectrumWidget(QWidget):
         p.drawRect(ml, mt, pw, ph)
 
         p.setPen(QColor("#607d8b"))
-        step = 20
-        db = 0
-        while db >= self._db_min:
-            y = int(self._db_to_y(db, ph, mt))
-            p.drawText(QRectF(0, y - 8, ml - 3, 16),
-                       Qt.AlignRight | Qt.AlignVCenter,
-                       str(int(db)))
-            db -= step
+        # etiquetas desde el máximo visible hacia abajo, cada 20 dB
+        db = int(self._db_max // 20) * 20   # múltiplo de 20 más cercano por debajo del techo
+        while db >= self.DB_MIN:
+            y = int(self._db_to_y(float(db), ph, mt))
+            if mt - 8 <= y <= mt + ph + 8:
+                p.drawText(QRectF(0, y - 8, ml - 3, 16),
+                           Qt.AlignRight | Qt.AlignVCenter,
+                           str(db))
+            db -= 20
 
         freq_per_bin = self.SAMPLE_RATE / self.FFT_SIZE
         for khz in range(1, 13):
