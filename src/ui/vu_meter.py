@@ -46,6 +46,17 @@ class VuMeter(QWidget):
         if font.pointSize() <= 0:
             font.setPointSize(8)
             p.setFont(font)
-        p.setPen(QColor("#ddd"))
         db_str = f"{self._label} {self._level_db:+.1f} dB"
-        p.drawText(QRect(4, 0, w - 8, h), Qt.AlignVCenter | Qt.AlignLeft, db_str)
+        text_rect = QRect(4, 0, w - 8, h)
+        flags = Qt.AlignVCenter | Qt.AlignLeft
+        # Sobre el relleno: texto oscuro; sobre el fondo oscuro: texto claro
+        p.save()
+        p.setClipRect(0, 0, fill_w, h)
+        p.setPen(QColor("#111"))
+        p.drawText(text_rect, flags, db_str)
+        p.restore()
+        p.save()
+        p.setClipRect(fill_w, 0, w - fill_w, h)
+        p.setPen(QColor("#ccc"))
+        p.drawText(text_rect, flags, db_str)
+        p.restore()
