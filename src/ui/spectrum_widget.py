@@ -39,7 +39,8 @@ class SpectrumWidget(QWidget):
         self.pre_frames:  deque[np.ndarray] = deque(maxlen=8)
         self.post_frames: deque[np.ndarray] = deque(maxlen=8)
 
-        self._db_max   =   0.0   # controlado por el slider Máx Y
+        self._db_max      =   0.0          # controlado por el slider Máx Y
+        self._max_freq_hz = self.MAX_FREQ_HZ  # controlado por el slider Máx X
 
         n_bins = self.FFT_SIZE // 2 + 1
         self._db_pre   = np.full(n_bins, self.DB_MIN, dtype=np.float32)
@@ -49,10 +50,9 @@ class SpectrumWidget(QWidget):
         self._ema_post = None
         self._window   = np.hanning(self.FFT_SIZE).astype(np.float32)
 
-        freq_per_bin  = self.SAMPLE_RATE / self.FFT_SIZE
-        self._max_bin = min(n_bins, int(self.MAX_FREQ_HZ / freq_per_bin) + 1)
-        # Frecuencias del display para interpolación del piso de ruido
-        self._display_freqs = np.arange(self._max_bin, dtype=np.float32) * freq_per_bin
+        self._freq_per_bin = self.SAMPLE_RATE / self.FFT_SIZE
+        self._n_bins       = n_bins
+        self._update_max_bin()
 
         self._active         = False
         self._show_pre       = True
@@ -121,6 +121,15 @@ class SpectrumWidget(QWidget):
     def set_db_max(self, db_max: int) -> None:
         self._db_max = float(db_max)
         self.update()
+
+    def set_max_freq_hz(self, hz: int) -> None:
+        self._max_freq_hz = max(1000, min(hz, self.MAX_FREQ_HZ))
+        self._update_max_bin()
+        self.update()
+
+    def _update_max_bin(self) -> None:
+        self._max_bin = min(self._n_bins,
+                            int(self._max_freq_hz / self._freq_per_bin) + 1)
 
     # ------------------------------------------------------------------
     # Actualización (hilo UI)
@@ -332,9 +341,8 @@ class SpectrumWidget(QWidget):
                 p.drawLine(ml, y, ml + pw, y)
             db -= 20
 
-        freq_per_bin = self.SAMPLE_RATE / self.FFT_SIZE
         for khz in range(1, 13):
-            bin_idx = int(khz * 1000 / freq_per_bin)
+            bin_idx = int(khz * 1000 / self._freq_per_bin)
             if bin_idx >= self._max_bin:
                 break
             x = int(self._bin_to_x(bin_idx, ml, pw))
@@ -360,9 +368,8 @@ class SpectrumWidget(QWidget):
                            str(db))
             db -= 20
 
-        freq_per_bin = self.SAMPLE_RATE / self.FFT_SIZE
         for khz in range(1, 13):
-            bin_idx = int(khz * 1000 / freq_per_bin)
+            bin_idx = int(khz * 1000 / self._freq_per_bin)
             if bin_idx >= self._max_bin:
                 break
             x = int(self._bin_to_x(bin_idx, ml, pw))

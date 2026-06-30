@@ -362,6 +362,27 @@ class MainWindow(QMainWindow):
         range_row.addWidget(self._lbl_db_range)
         layout.addLayout(range_row)
 
+        # Slider de máximo del eje X
+        freq_row = QHBoxLayout()
+        freq_lbl = QLabel("Máx X:")
+        freq_lbl.setStyleSheet("color: #607d8b; font-size: 8pt;")
+        self._lbl_freq_range = QLabel("12 kHz")
+        self._lbl_freq_range.setStyleSheet("color: #90a4ae; font-size: 8pt;")
+        self._lbl_freq_range.setFixedWidth(52)
+        self._sld_freq_range = QSlider(Qt.Horizontal)
+        self._sld_freq_range.setMinimum(1)
+        self._sld_freq_range.setMaximum(12)
+        self._sld_freq_range.setSingleStep(1)
+        self._sld_freq_range.setPageStep(2)
+        self._sld_freq_range.setValue(self._config.window.spectrum_max_freq_hz // 1000)
+        self._sld_freq_range.setTickInterval(1)
+        self._sld_freq_range.setTickPosition(QSlider.TicksBelow)
+        self._sld_freq_range.valueChanged.connect(self._on_freq_range_changed)
+        freq_row.addWidget(freq_lbl)
+        freq_row.addWidget(self._sld_freq_range)
+        freq_row.addWidget(self._lbl_freq_range)
+        layout.addLayout(freq_row)
+
         return tab
 
     def _build_start_button(self) -> QPushButton:
@@ -540,6 +561,12 @@ class MainWindow(QMainWindow):
         self._lbl_db_range.setText(f"{snapped} dBFS")
         self._spectrum_widget.set_db_max(snapped)
         self._config.window.spectrum_db_max = snapped
+        self._schedule_save()
+
+    def _on_freq_range_changed(self, value: int) -> None:
+        self._lbl_freq_range.setText(f"{value} kHz")
+        self._spectrum_widget.set_max_freq_hz(value * 1000)
+        self._config.window.spectrum_max_freq_hz = value * 1000
         self._schedule_save()
 
     def _on_clear_noise_profile(self) -> None:
