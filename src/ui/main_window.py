@@ -1,0 +1,633 @@
+from PySide6.QtWidgets import (
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QLabel, QComboBox, QSlider, QPushButton, QStatusBar,
+    QGroupBox, QCheckBox, QTabWidget, QApplication,
+)
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QFont
+
+from audio.devices import list_devices, AudioDevice
+from config import AppConfig, RadioMode
+from pipeline import ProcessingPipeline
+from ui.vu_meter import VuMeter
+from ui.advanced_tab import AdvancedAudioTab, AdvancedNoiseTab
+from ui.slider_row import SliderRow
+from utils import settings_path
+
+
+class MainWindow(QMainWindow):
+
+    def __init__(self):
+        super().__init__()
+        self._config = AppConfig()
+        self._config.load(settings_path())
+
+        self._pipeline = ProcessingPipeline(self._config)
+
+        self._level_timer = QTimer()
+        self._level_timer.setInterval(33)
+        self._level_timer.timeout.connect(self._tick_levels)
+
+        self._save_timer = QTimer()
+        self._save_timer.setSingleShot(True)
+        self._save_timer.setInterval(800)
+        self._save_timer.timeout.connect(self._save_settings)
+
+        self._setup_pipeline_callbacks()
+        self._build_ui()
+        self._saved_input_device  = self._config.audio.input_device
+        self._saved_output_device = self._config.audio.output_device
+        self._populate_devices()
+        self._apply_loaded_config()
+
+        self._btn_start.setEnabled(True)
+        self._status_bar.showMessage("Listo. Presiona ACTIVAR para iniciar.")
+        self._restore_or_center()
+
+    # ------------------------------------------------------------------
+    # Construcción de la UI
+    # ------------------------------------------------------------------
+
+    def _build_ui(self) -> None:
+        self.setWindowTitle("Reductor de Ruido Radio  v0.2")
+        self.setMinimumWidth(500)
+        self.setMaximumWidth(600)
+
+        central = QWidget()
+        self.setCentralWidget(central)
+        root = QVBoxLayout(central)
+        root.setContentsMargins(8, 8, 8, 8)
+        root.setSpacing(6)
+
+        self._tabs = QTabWidget()
+        self._tabs.addTab(self._build_main_tab(), "Principal")
+
+        self._adv_audio_tab = AdvancedAudioTab(self._config, self._pipeline)
+        self._adv_noise_tab = AdvancedNoiseTab(self._config, self._pipeline)
+        self._tabs.addTab(self._adv_audio_tab, "Avanzada Audio")
+        self._tabs.addTab(self._adv_noise_tab, "Avanzada Ruido")
+        self._tabs.currentChanged.connect(self._on_tab_changed)
+
+        root.addWidget(self._tabs)
+        root.addWidget(self._build_start_button())
+
+        self._status_bar = QStatusBar()
+        self.setStatusBar(self._status_bar)
+
+        self._apply_dark_style()
+
+    def _build_main_tab(self) -> QWidget:
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setSpacing(10)
+        layout.setContentsMargins(4, 8, 4, 4)
+        layout.addWidget(self._build_device_group())
+        layout.addWidget(self._build_control_group())
+        layout.addWidget(self._build_modules_group())
+        layout.addWidget(self._build_noise_group())
+        layout.addWidget(self._build_level_group())
+        return tab
+
+    def _build_device_group(self) -> QGroupBox:
+        group = QGroupBox("Dispositivos de Audio")
+        layout = QVBoxLayout(group)
+        self._combo_in  = QComboBox()
+        self._combo_out = QComboBox()
+        layout.addLayout(self._labeled_row("Entrada:", self._combo_in))
+        layout.addLayout(self._labeled_row("Salida:", self._combo_out))
+        return group
+
+    def _build_control_group(self) -> QGroupBox:
+        group = QGroupBox("Control")
+        layout = QVBoxLayout(group)
+
+        self._combo_mode = QComboBox()
+        for mode in RadioMode:
+            self._combo_mode.addItem(mode.value, mode)
+        self._combo_mode.currentIndexChanged.connect(self._on_mode_changed)
+        mode_row = self._labeled_row("Modo:", self._combo_mode)
+        mode_spacer = QLabel("")
+        mode_spacer.setFixedWidth(60)
+        mode_row.addWidget(mode_spacer)
+        layout.addLayout(mode_row)
+
+        agc_row = QHBoxLayout()
+        agc_lbl = QLabel("AGC:")
+        agc_lbl.setFixedWidth(70)
+        agc_row.addWidget(agc_lbl)
+        self._combo_agc = QComboBox()
+        for label, preset in [
+            ("Desactivado", "off"),
+            ("Rápido",      "fast"),
+            ("Medio",       "medium"),
+            ("Lento",       "slow"),
+        ]:
+            self._combo_agc.addItem(label, preset)
+        self._combo_agc.setCurrentIndex(0)
+        self._combo_agc.currentIndexChanged.connect(self._on_agc_changed)
+        agc_row.addWidget(self._combo_agc)
+        self._label_agc_gain = QLabel("")
+        self._label_agc_gain.setFixedWidth(60)
+        self._label_agc_gain.setStyleSheet("color: #90caf9; font-size: 8pt;")
+        agc_row.addWidget(self._label_agc_gain)
+        layout.addLayout(agc_row)
+
+        self._check_bypass = QCheckBox("Bypass (sin procesamiento)")
+        self._check_bypass.toggled.connect(self._pipeline.set_bypass)
+        layout.addWidget(self._check_bypass)
+        return group
+
+    def _build_modules_group(self) -> QGroupBox:
+        group = QGroupBox("Módulos activos")
+        layout = QVBoxLayout(group)
+
+        def _chk(label: str, tooltip: str) -> QCheckBox:
+            cb = QCheckBox(label)
+            cb.setToolTip(tooltip)
+            layout.addWidget(cb)
+            return cb
+
+        self._chk_blanker = _chk(
+            "Supresor de impulsos",
+            "Elimina QRN, frituras y descargas atmosféricas cortas.",
+        )
+        self._chk_bandpass_pre = _chk(
+            "Filtro de paso de banda  (pre)",
+            "Butterworth IIR antes del cancelador de ruido — limita el espectro que aprende el perfil.",
+        )
+        self._chk_bandpass_post = _chk(
+            "Filtro de paso de banda  (post)",
+            "Butterworth IIR después del cancelador de ruido — elimina fugas espectrales del STFT.",
+        )
+        self._chk_anf = _chk(
+            "ANF — Cancela heterodinos y tonos interferentes",
+            "Detecta bins espectrales que sobresalen sobre el ruido vecino y los atenúa.",
+        )
+        self._chk_noise = _chk(
+            "Cancelador de ruido estacionario",
+            "Filtro de Wiener espectral. Requiere perfil aprendido.",
+        )
+        self._chk_presence = _chk(
+            "EQ Presencia",
+            "Pico de realce vocal configurable en pestaña Avanzada.",
+        )
+        self._chk_squelch = _chk(
+            "Squelch de voz  (con música no utilizar!)",
+            "Silencia la salida cuando no hay voz detectada. Requiere perfil de ruido aprendido.",
+        )
+        self._chk_exciter = _chk(
+            "Excitador armónico",
+            "Genera armónicos en 1–4 kHz para recuperar presencia y ataque de consonantes.",
+        )
+
+        self._chk_blanker.toggled.connect(lambda v: self._on_module_toggled("blanker_enabled", self._pipeline.set_blanker_enabled, v))
+        self._chk_bandpass_pre.toggled.connect(lambda v: self._on_module_toggled("bandpass_pre_enabled", self._pipeline.set_bandpass_pre_enabled, v))
+        self._chk_bandpass_post.toggled.connect(lambda v: self._on_module_toggled("bandpass_post_enabled", self._pipeline.set_bandpass_post_enabled, v))
+        self._chk_anf.toggled.connect(lambda v: self._on_module_toggled("anf_enabled", self._pipeline.set_anf_enabled, v))
+        self._chk_noise.toggled.connect(lambda v: self._on_module_toggled("noise_enabled", self._pipeline.set_noise_enabled, v))
+        self._chk_presence.toggled.connect(lambda v: self._on_module_toggled("presence_enabled", self._pipeline.set_presence_enabled, v))
+        self._chk_squelch.toggled.connect(lambda v: self._on_module_toggled("squelch_enabled", self._pipeline.set_squelch_enabled, v))
+        self._chk_exciter.toggled.connect(lambda v: self._on_module_toggled("exciter_enabled", self._pipeline.set_exciter_enabled, v))
+
+        return group
+
+    def _build_noise_group(self) -> QGroupBox:
+        group = QGroupBox("Cancelación de Ruido Estacionario")
+        layout = QVBoxLayout(group)
+
+        btn_row = QHBoxLayout()
+        self._btn_learn = QPushButton("⏺  Aprender ruido")
+        self._btn_learn.setCheckable(True)
+        self._btn_learn.setEnabled(False)
+        self._btn_learn.toggled.connect(self._on_learn_toggled)
+        btn_row.addWidget(self._btn_learn)
+
+        self._btn_clear_noise = QPushButton("Borrar perfil")
+        self._btn_clear_noise.setEnabled(False)
+        self._btn_clear_noise.clicked.connect(self._on_clear_noise_profile)
+        btn_row.addWidget(self._btn_clear_noise)
+        layout.addLayout(btn_row)
+
+        intensity_row = QHBoxLayout()
+        intensity_lbl = QLabel("Intensidad:")
+        intensity_lbl.setMinimumWidth(80)
+        intensity_row.addWidget(intensity_lbl)
+        self._slider_noise = QSlider(Qt.Horizontal)
+        self._slider_noise.setRange(0, 100)
+        init_pct = round(self._config.dsp.noise_alpha * 100)
+        self._slider_noise.setValue(init_pct)
+        self._slider_noise.valueChanged.connect(self._on_noise_intensity_changed)
+        intensity_row.addWidget(self._slider_noise)
+        self._label_noise_pct = QLabel(f"{init_pct}%")
+        self._label_noise_pct.setMinimumWidth(36)
+        intensity_row.addWidget(self._label_noise_pct)
+        layout.addLayout(intensity_row)
+
+        self._learn_countdown: int = 0
+        self._learn_timer = QTimer()
+        self._learn_timer.setInterval(1000)
+        self._learn_timer.timeout.connect(self._on_learn_tick)
+
+        db_row = QHBoxLayout()
+        db_row.addWidget(QLabel("Reducción activa:"))
+        self._lbl_noise_db = QLabel("—")
+        self._lbl_noise_db.setStyleSheet("color: #888; font-weight: bold;")
+        db_row.addWidget(self._lbl_noise_db)
+        db_row.addStretch()
+        self._chk_noise_preview = QCheckBox("Preview: escuchar ruido eliminado")
+        self._chk_noise_preview.setToolTip(
+            "Emite el ruido que está siendo restado.\n"
+            "Si suena como voz, bajar la Intensidad."
+        )
+        self._chk_noise_preview.toggled.connect(self._pipeline.set_noise_preview)
+        db_row.addWidget(self._chk_noise_preview)
+        layout.addLayout(db_row)
+
+        self._label_noise = QLabel("Sin perfil — activar procesamiento y presionar Aprender")
+        self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
+        layout.addWidget(self._label_noise)
+
+        self._noise_db_timer = QTimer(self)
+        self._noise_db_timer.setInterval(500)
+        self._noise_db_timer.timeout.connect(self._update_noise_db)
+        self._noise_db_timer.start()
+
+        return group
+
+    def _build_level_group(self) -> QGroupBox:
+        group = QGroupBox("Niveles y Ganancia")
+        layout = QVBoxLayout(group)
+        self._vu_in  = VuMeter("IN ")
+        self._vu_out = VuMeter("OUT")
+        layout.addWidget(self._vu_in)
+        layout.addWidget(self._vu_out)
+        self._label_latency = QLabel("Latencia: --")
+        self._label_latency.setAlignment(Qt.AlignRight)
+        layout.addWidget(self._label_latency)
+
+        self._s_gain_in = SliderRow(
+            "Entrada:",
+            min_val=-20.0, max_val=20.0,
+            default=self._config.gain.input_gain_db,
+            step=0.5, unit="dB", fmt="{:+.1f}",
+        )
+        self._s_gain_out = SliderRow(
+            "Salida:",
+            min_val=-20.0, max_val=20.0,
+            default=self._config.gain.output_gain_db,
+            step=0.5, unit="dB", fmt="{:+.1f}",
+        )
+        self._s_peak = SliderRow(
+            "Límite de picos:",
+            min_val=-20.0, max_val=0.0,
+            default=self._config.gain.peak_limit_db,
+            step=0.5, unit="dBFS", fmt="{:+.1f}",
+        )
+        self._s_gain_in.valueChanged.connect(self._on_gain_in_changed)
+        self._s_gain_out.valueChanged.connect(self._on_gain_out_changed)
+        self._s_peak.valueChanged.connect(self._on_peak_changed)
+        layout.addWidget(self._s_gain_in)
+        layout.addWidget(self._s_gain_out)
+        layout.addWidget(self._s_peak)
+        return group
+
+    def _build_start_button(self) -> QPushButton:
+        self._btn_start = QPushButton("▶  ACTIVAR")
+        self._btn_start.setMinimumHeight(44)
+        self._btn_start.setEnabled(False)
+        self._btn_start.setCheckable(True)
+        self._btn_start.clicked.connect(self._on_toggle_processing)
+        font = QFont()
+        font.setPointSize(11)
+        font.setBold(True)
+        self._btn_start.setFont(font)
+        return self._btn_start
+
+    # ------------------------------------------------------------------
+    # Dispositivos y config guardada
+    # ------------------------------------------------------------------
+
+    def _populate_devices(self) -> None:
+        devices = list_devices()
+        for combo in (self._combo_in, self._combo_out):
+            combo.clear()
+        for dev in devices:
+            if dev.supports_input():
+                self._combo_in.addItem(dev.display_name(), dev)
+            if dev.supports_output():
+                self._combo_out.addItem(dev.display_name(), dev)
+
+        self._combo_in.currentIndexChanged.connect(self._on_input_device_changed)
+        self._combo_out.currentIndexChanged.connect(self._on_output_device_changed)
+        self._on_input_device_changed(0)
+        self._on_output_device_changed(0)
+
+    def _apply_loaded_config(self) -> None:
+        for cb, key, setter in [
+            (self._chk_blanker,  "blanker_enabled",  self._pipeline.set_blanker_enabled),
+            (self._chk_bandpass_pre,  "bandpass_pre_enabled",  self._pipeline.set_bandpass_pre_enabled),
+            (self._chk_bandpass_post, "bandpass_post_enabled", self._pipeline.set_bandpass_post_enabled),
+            (self._chk_anf,      "anf_enabled",      self._pipeline.set_anf_enabled),
+            (self._chk_noise,    "noise_enabled",     self._pipeline.set_noise_enabled),
+            (self._chk_presence, "presence_enabled",  self._pipeline.set_presence_enabled),
+            (self._chk_squelch,  "squelch_enabled",   self._pipeline.set_squelch_enabled),
+            (self._chk_exciter,  "exciter_enabled",   self._pipeline.set_exciter_enabled),
+        ]:
+            val = getattr(self._config.dsp, key)
+            cb.blockSignals(True)
+            cb.setChecked(val)
+            cb.blockSignals(False)
+            setter(val)
+
+        for i in range(self._combo_mode.count()):
+            if self._combo_mode.itemData(i) == self._config.dsp.mode:
+                self._combo_mode.setCurrentIndex(i)
+                break
+
+        for i in range(self._combo_agc.count()):
+            if self._combo_agc.itemData(i) == self._config.dsp.agc_preset:
+                self._combo_agc.setCurrentIndex(i)
+                break
+
+        if self._saved_input_device is not None:
+            for i in range(self._combo_in.count()):
+                dev: AudioDevice = self._combo_in.itemData(i)
+                if dev and dev.index == self._saved_input_device:
+                    self._combo_in.setCurrentIndex(i)
+                    break
+        if self._saved_output_device is not None:
+            for i in range(self._combo_out.count()):
+                dev: AudioDevice = self._combo_out.itemData(i)
+                if dev and dev.index == self._saved_output_device:
+                    self._combo_out.setCurrentIndex(i)
+                    break
+
+    # ------------------------------------------------------------------
+    # Eventos de la UI
+    # ------------------------------------------------------------------
+
+    def _on_input_device_changed(self, idx: int) -> None:
+        dev: AudioDevice | None = self._combo_in.itemData(idx)
+        self._pipeline.set_input_device(dev)
+        self._schedule_save()
+
+    def _on_output_device_changed(self, idx: int) -> None:
+        dev: AudioDevice | None = self._combo_out.itemData(idx)
+        self._pipeline.set_output_device(dev)
+        self._schedule_save()
+
+    def _on_mode_changed(self, idx: int) -> None:
+        mode: RadioMode = self._combo_mode.itemData(idx)
+        self._pipeline.set_mode(mode)
+        self._schedule_save()
+
+    def _on_agc_changed(self, idx: int) -> None:
+        preset = self._combo_agc.itemData(idx)
+        self._config.dsp.agc_preset = preset
+        self._pipeline.set_agc_preset(preset)
+        if preset == "off":
+            self._label_agc_gain.setText("")
+        self._schedule_save()
+
+    def _on_module_toggled(self, key: str, setter, checked: bool) -> None:
+        setattr(self._config.dsp, key, checked)
+        setter(checked)
+        self._schedule_save()
+
+    def _on_gain_in_changed(self, val: float) -> None:
+        self._config.gain.input_gain_db = val
+        self._pipeline.set_input_gain_db(val)
+        self._schedule_save()
+
+    def _on_gain_out_changed(self, val: float) -> None:
+        self._config.gain.output_gain_db = val
+        self._pipeline.set_output_gain_db(val)
+        self._schedule_save()
+
+    def _on_peak_changed(self, val: float) -> None:
+        self._config.gain.peak_limit_db = val
+        self._pipeline.set_peak_limit_db(val)
+        self._schedule_save()
+
+    def _on_noise_intensity_changed(self, value: int) -> None:
+        alpha = value / 100.0
+        self._label_noise_pct.setText(f"{value}%")
+        self._config.dsp.noise_alpha = alpha
+        self._pipeline.set_noise_alpha(alpha)
+        self._schedule_save()
+
+    def _on_learn_toggled(self, checked: bool) -> None:
+        if checked:
+            self._learn_countdown = 5
+            self._pipeline.start_noise_learning()
+            self._btn_learn.setText(f"⏹  Aprendiendo... {self._learn_countdown}s")
+            self._label_noise.setText("Aprendiendo ruido — mantener silencio en la banda")
+            self._label_noise.setStyleSheet("color: #ffd600; font-size: 8pt;")
+            self._learn_timer.start()
+        else:
+            self._learn_timer.stop()
+            self._pipeline.stop_noise_learning()
+            self._btn_learn.setText("⏺  Aprender ruido")
+            if self._pipeline.noise_has_profile:
+                dur = self._pipeline.noise_duration_ms / 1000.0
+                self._label_noise.setText(f"Perfil activo: {dur:.1f}s aprendidos — sustracción ON")
+                self._label_noise.setStyleSheet("color: #69f0ae; font-size: 8pt;")
+                self._btn_clear_noise.setEnabled(True)
+            else:
+                self._label_noise.setText("Sin perfil (muy pocos frames, intentar de nuevo)")
+                self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
+
+    def _on_learn_tick(self) -> None:
+        self._learn_countdown -= 1
+        if self._learn_countdown > 0:
+            self._btn_learn.setText(f"⏹  Aprendiendo... {self._learn_countdown}s")
+        else:
+            self._btn_learn.setChecked(False)
+
+    def _update_noise_db(self) -> None:
+        if not self._pipeline.is_running() or not self._pipeline.noise_has_profile:
+            self._lbl_noise_db.setText("—")
+            self._lbl_noise_db.setStyleSheet("color: #888; font-weight: bold;")
+            return
+        db = self._pipeline.noise_reduction_db
+        if db >= -0.5:
+            self._lbl_noise_db.setText("~0 dB  (sin ruido detectable)")
+            self._lbl_noise_db.setStyleSheet("color: #888; font-weight: bold;")
+        elif db >= -3.0:
+            self._lbl_noise_db.setText(f"{db:.1f} dB")
+            self._lbl_noise_db.setStyleSheet("color: #fff176; font-weight: bold;")
+        else:
+            self._lbl_noise_db.setText(f"{db:.1f} dB")
+            self._lbl_noise_db.setStyleSheet("color: #69f0ae; font-weight: bold;")
+
+    def _on_clear_noise_profile(self) -> None:
+        self._pipeline.clear_noise_profile()
+        self._btn_clear_noise.setEnabled(False)
+        self._label_noise.setText("Perfil borrado — sin cancelación activa")
+        self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
+
+    def _on_toggle_processing(self, checked: bool) -> None:
+        if checked:
+            try:
+                self._pipeline.start()
+                self._btn_start.setText("⏹  DETENER")
+                self._level_timer.start()
+                self._status_bar.showMessage("Procesando...")
+                self._adv_audio_tab.set_processing_active(True)
+                self._btn_learn.setEnabled(True)
+            except Exception as e:
+                self._btn_start.setChecked(False)
+                self._status_bar.showMessage(f"Error: {e}")
+        else:
+            if self._pipeline.noise_is_learning:
+                self._btn_learn.setChecked(False)
+            self._btn_learn.setEnabled(False)
+            self._pipeline.stop()
+            self._level_timer.stop()
+            self._btn_start.setText("▶  ACTIVAR")
+            self._vu_in.set_level(-60)
+            self._vu_out.set_level(-60)
+            self._label_latency.setText("Latencia: --")
+            self._status_bar.showMessage("Detenido.")
+            self._adv_audio_tab.set_processing_active(False)
+
+    def _on_tab_changed(self, idx: int) -> None:
+        if idx >= 1:
+            self._schedule_save()
+
+    # ------------------------------------------------------------------
+    # Niveles y settings
+    # ------------------------------------------------------------------
+
+    def _setup_pipeline_callbacks(self) -> None:
+        self._pipeline.set_error_callback(
+            lambda msg: self._status_bar.showMessage(f"Error: {msg}") if hasattr(self, '_status_bar') else None
+        )
+
+    def _tick_levels(self) -> None:
+        self._vu_in.set_level(self._pipeline.db_in)
+        self._vu_out.set_level(self._pipeline.db_out)
+        lat = self._pipeline.latency_ms
+        self._label_latency.setText(f"Latencia: {lat:.0f} ms" if lat > 0 else "Latencia: --")
+        if self._combo_agc.currentData() != "off":
+            self._label_agc_gain.setText(f"{self._pipeline.agc_gain_db:+.0f} dB")
+
+    def _restore_or_center(self) -> None:
+        if self._config.window.x is not None:
+            self.move(self._config.window.x, self._config.window.y)
+        else:
+            screen = QApplication.primaryScreen().availableGeometry()
+            self.move(
+                screen.x() + (screen.width()  - self.sizeHint().width())  // 2,
+                screen.y() + (screen.height() - self.sizeHint().height()) // 2,
+            )
+
+    def _schedule_save(self) -> None:
+        self._save_timer.start()
+
+    def _save_settings(self) -> None:
+        try:
+            self._config.save(settings_path())
+        except Exception:
+            pass
+
+    # ------------------------------------------------------------------
+    # Cierre
+    # ------------------------------------------------------------------
+
+    def closeEvent(self, event) -> None:
+        self._config.window.x = self.pos().x()
+        self._config.window.y = self.pos().y()
+        self._pipeline.stop()
+        self._save_settings()
+        event.accept()
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _labeled_row(label: str, widget: QWidget) -> QHBoxLayout:
+        row = QHBoxLayout()
+        lbl = QLabel(label)
+        lbl.setFixedWidth(70)
+        row.addWidget(lbl)
+        row.addWidget(widget)
+        return row
+
+    def _apply_dark_style(self) -> None:
+        self.setStyleSheet("""
+            QMainWindow, QWidget {
+                background-color: #1a1a2e;
+                color: #e0e0e0;
+                font-size: 9pt;
+            }
+            QTabWidget::pane {
+                border: 1px solid #444;
+                border-radius: 4px;
+            }
+            QTabBar::tab {
+                background: #16213e;
+                color: #aaa;
+                padding: 6px 18px;
+                border: 1px solid #444;
+                border-bottom: none;
+                border-radius: 4px 4px 0 0;
+            }
+            QTabBar::tab:selected {
+                background: #1a1a2e;
+                color: #90caf9;
+                font-weight: bold;
+            }
+            QGroupBox {
+                border: 1px solid #444;
+                border-radius: 6px;
+                margin-top: 6px;
+                padding-top: 8px;
+                font-weight: bold;
+                color: #90caf9;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+            }
+            QComboBox, QSlider {
+                background-color: #16213e;
+                border: 1px solid #555;
+                border-radius: 4px;
+                padding: 2px 6px;
+                color: #e0e0e0;
+            }
+            QComboBox::drop-down { border: none; }
+            QSlider::groove:horizontal {
+                height: 4px;
+                background: #333;
+                border-radius: 2px;
+            }
+            QSlider::handle:horizontal {
+                background: #90caf9;
+                width: 14px;
+                height: 14px;
+                margin: -5px 0;
+                border-radius: 7px;
+            }
+            QSlider::sub-page:horizontal {
+                background: #1565c0;
+                border-radius: 2px;
+            }
+            QSlider::handle:horizontal:disabled {
+                background: #555;
+            }
+            QPushButton {
+                background-color: #0f3460;
+                color: #e0e0e0;
+                border: 1px solid #1a6ba8;
+                border-radius: 6px;
+                padding: 6px;
+            }
+            QPushButton:hover  { background-color: #1a4a7a; }
+            QPushButton:checked { background-color: #c62828; border-color: #ef5350; }
+            QPushButton:disabled { background-color: #333; color: #666; }
+            QScrollArea { border: none; }
+            QStatusBar { background-color: #111; color: #aaa; font-size: 8pt; }
+        """)

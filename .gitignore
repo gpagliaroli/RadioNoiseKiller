@@ -1,0 +1,38 @@
+# Entorno virtual
+.venv/
+venv/
+env/
+
+# Build / distribución
+dist/
+build/
+*.zip
+*.egg-info/
+
+# PyInstaller
+*.spec.bak
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+
+# Configuración de usuario (no compartir)
+settings.json
+
+# Archivos generados (se regeneran desde MANUAL.md)
+MANUAL_*.pdf
+
+# Modelos ONNX grandes (descargar por separado)
+*.onnx
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

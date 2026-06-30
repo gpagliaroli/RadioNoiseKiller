@@ -1,0 +1,12 @@
+# Audio I/O
+sounddevice>=0.4.6
+numpy>=1.26.0
+
+# DSP
+scipy>=1.13.0
+
+# GUI
+PySide6>=6.7.0
+
+# Packaging (dev only)
+pyinstaller>=6.8.0
