@@ -1,270 +1,140 @@
-# Reductor de Ruido Radio
+# RadioNoiseKiller
 
-Software standalone de reducción de ruido en tiempo real para señales de radio AM y SSB (ham radio), usando inteligencia artificial. Funciona con la placa de sonido de la PC como entrada y salida.
+Software standalone de reducción de ruido en tiempo real para radio AM/SSB (ham radio).
+Procesa el audio ya demodulado entre el receptor y los parlantes/auriculares.
+
+**Plataformas:** Windows 10/11 · Linux (build automático vía GitHub Actions)
 
 ---
 
 ## Características
 
-- **Reducción de ruido con IA**: modelo DeepFilterNet3 corriendo localmente vía ONNX Runtime (sin GPU, sin internet)
-- **Tiempo real**: latencia total ~40–80 ms, adecuada para monitoreo
-- **Modos de radio**: AM, SSB-USB y SSB-LSB con filtros bandpass específicos por modo
-- **Standalone**: ejecutable `.exe` sin necesidad de instalar Python
-- **Configuración persistente**: todos los parámetros se guardan en `settings.json`
-- **Pestaña Avanzada**: control fino de filtros, ganancia y parámetros del modelo mediante sliders
+- **Cancelador de ruido estacionario** — estimador DD Wiener con suavizado OMLSA: ancla bins de ruido al floor evitando el gorgojeo (musical noise)
+- **Supresor de impulsos** — dos niveles en cascada (10ms y 0,67ms) para QRN atmosférico
+- **ANF** — filtro de muesca espectral adaptativo para heterodinos y portadoras AM
+- **AGC** — control automático de ganancia (slow / medium / fast)
+- **Squelch de voz** — silencia la salida entre transmisiones SSB, con hold time configurable
+- **EQ de presencia** — realce de consonantes en la zona de legibilidad
+- **Excitador armónico** — genera armónicos en 1–4 kHz para recuperar brillo post-filtrado
+- **Filtro de paso de banda** — independiente pre y post cancelador, por modo (AM / SSB)
+- **Standalone** — sin instalación de Python, sin internet, sin GPU
 
 ---
 
-## Capturas
+## Pipeline de procesamiento
 
 ```
-┌─────────────────────────────────────────────┐
-│  Reductor de Ruido Radio  v0.1              │
-│  [ Principal ] [ Avanzada ]                 │
-├─────────────────────────────────────────────┤
-│ Dispositivos de Audio                       │
-│  Entrada: [ Micrófono (Logi) [WASAPI] ▼ ]  │
-│  Salida:  [ Altavoces (Realtek) [WASAPI] ▼ ]│
-├─────────────────────────────────────────────┤
-│ Control                                     │
-│  Modo:       [ SSB-USB ▼ ]                  │
-│  Supresión:  ●──────────────────○  75%      │
-│  □ Bypass (sin procesamiento IA)            │
-├─────────────────────────────────────────────┤
-│ Niveles                                     │
-│  IN  ████████░░░░░░░░  -12 dB               │
-│  OUT ██████░░░░░░░░░░  -15 dB               │
-│                         Latencia: 42 ms     │
-├─────────────────────────────────────────────┤
-│  [ ▶ ACTIVAR ]                              │
-└─────────────────────────────────────────────┘
+Audio entrada (48kHz, mono, float32)
+  → Ganancia de entrada
+  → Supresor de impulsos (frame 10ms + mini-frame 0,67ms)
+  → AGC
+  → Filtro de paso de banda PRE  (opcional)
+  → ANF — Filtro de muesca espectral
+  → Cancelador de ruido DD Wiener + OMLSA
+  → Squelch de voz  (opcional)
+  → Filtro de paso de banda POST (opcional)
+  → EQ de presencia
+  → Excitador armónico  (opcional)
+  → GainLimiter
+Audio salida
 ```
 
 ---
 
-## Requisitos
+## Uso
 
-- **SO**: Windows 10/11 (64-bit) — Linux en planificación (Fase 2)
-- **CPU**: cualquier CPU de 2+ núcleos (sin GPU requerida)
-- **RAM**: ~500 MB en uso
-- **Audio**: placa de sonido con entrada de línea o micrófono
+1. Conectar la salida de audio del receptor a la entrada de la PC (o usar un cable de audio virtual para SDR por software)
+2. Seleccionar **dispositivo de entrada** y **salida** en la aplicación
+3. Elegir el modo: **AM** o **SSB**
+4. Presionar **ACTIVAR**
+5. Aprender el perfil de ruido: pulsar **⏺ Aprender ruido** durante 3–5 segundos sin señal, luego **⏹ Detener**
 
----
-
-## Instalación y uso (ejecutable)
-
-1. Descargar y descomprimir la carpeta `ReductorRuidoRadio/`
-2. Ejecutar `ReductorRuidoRadio.exe`
-3. Seleccionar dispositivos de entrada y salida de audio
-4. Elegir el modo de radio (AM / SSB-USB / SSB-LSB)
-5. Ajustar el slider de Supresión
-6. Presionar **ACTIVAR**
-
-> La primera vez tarda ~3–5 segundos en cargar el modelo IA antes de habilitar el botón ACTIVAR.
+Para Windows: ejecutar `ReductorRuidoRadio.exe`  
+Para Linux: dar permisos y ejecutar:
+```bash
+chmod +x ReductorRuidoRadio
+./ReductorRuidoRadio
+```
 
 ---
 
 ## Instalación en desarrollo
 
-### Prerrequisitos
-
-- Python 3.11+ (recomendado 3.11 o 3.12 para mayor compatibilidad de paquetes)
-- Git
-
-### Pasos
-
 ```bash
-git clone <repo>
-cd Reductor_Ruido_Radio
+git clone https://github.com/gpagliaroli/RadioNoiseKiller.git
+cd RadioNoiseKiller
 
-# Crear entorno virtual
 python -m venv .venv
 .venv\Scripts\activate          # Windows
-# source .venv/bin/activate     # Linux/macOS
+# source .venv/bin/activate     # Linux
 
-# Instalar dependencias
 pip install -r requirements.txt
-
-# Ejecutar
 python src/main.py
 ```
 
-> **Nota**: el paquete `deepfilternet` de PyPI requiere Rust/Cargo para compilar.
-> Este proyecto usa los modelos ONNX pre-exportados directamente (en `models/`),
-> evitando esa dependencia. No instalar `deepfilternet` por pip.
-
-### Empaquetar en .exe
+### Empaquetar
 
 ```bash
+# Windows
 python -m PyInstaller reductor.spec --clean --noconfirm
-# Resultado en dist/ReductorRuidoRadio/
+
+# Linux
+python -m PyInstaller reductor-linux.spec --clean --noconfirm
 ```
+
+El build de Linux también corre automáticamente en GitHub Actions con cada push a `main` o `master`.
 
 ---
 
-## Arquitectura
+## Estructura del proyecto
 
 ```
 src/
-├── main.py              # Punto de entrada (QApplication)
-├── config.py            # Dataclasses de configuración + save/load JSON
-├── pipeline.py          # Orquestador del flujo de audio en tiempo real
-├── utils.py             # resource_path() y settings_path() para bundle PyInstaller
-│
+├── main.py              # Entrada: QApplication → MainWindow
+├── config.py            # AppConfig — dataclasses + save/load JSON
+├── pipeline.py          # Orquestador del flujo DSP en tiempo real
+├── utils.py             # resource_path() y settings_path()
 ├── audio/
-│   ├── devices.py       # Enumeración de dispositivos (deduplicada por API: WASAPI > WDM-KS)
-│   └── stream.py        # AudioStream: callback de sounddevice en tiempo real
-│
+│   ├── devices.py       # Enumeración multiplataforma (WASAPI/WDM-KS en Windows, ALSA/PulseAudio en Linux)
+│   └── stream.py        # AudioStream: callback sounddevice
 ├── dsp/
-│   ├── filters.py       # BandpassFilter: Butterworth IIR por modo (AM/SSB-USB/SSB-LSB)
-│   ├── gain.py          # GainLimiter: ganancia + peak limiter de ataque instantáneo
-│   └── level.py         # LevelMeter: RMS con decaimiento para VU meter
-│
-├── models/
-│   └── deepfilternet.py # Wrapper ONNX Runtime para DeepFilterNet3
-│
+│   ├── noise_profiler.py# DD Wiener + OMLSA + OLA
+│   ├── anf.py           # Filtro de muesca espectral adaptativo
+│   ├── filters.py       # BandpassFilter (Butterworth IIR) + PresenceFilter (peaking EQ)
+│   ├── exciter.py       # AuralExciter (tanh + HPF 1kHz)
+│   ├── gain.py          # GainLimiter (peak follower)
+│   ├── level.py         # LevelMeter (RMS con decaimiento)
+│   └── agc.py           # Control automático de ganancia
 └── ui/
-    ├── main_window.py   # Ventana principal con QTabWidget
-    ├── advanced_tab.py  # Pestaña Avanzada con sliders de configuración
-    ├── slider_row.py    # Widget reutilizable: label + QSlider + valor
-    └── vu_meter.py      # Widget VU meter con gradiente verde→amarillo→rojo
+    ├── main_window.py   # Ventana principal con tabs
+    ├── advanced_tab.py  # Tabs Avanzada Audio y Avanzada Ruido
+    ├── slider_row.py    # Widget label + QSlider + unidad
+    └── vu_meter.py      # VU meter custom (QPainter)
 ```
-
-### Flujo de procesamiento
-
-```
-[Placa de sonido - Entrada]  48kHz, mono, float32
-        │
-        ▼
-[InputGain]               Ganancia de entrada en dB (live)
-        │
-        ▼
-[BandpassFilter]          Butterworth IIR orden 4
-        │                 AM:  300–3400 Hz
-        │                 SSB: 200–3000 Hz  (ajustable en pestaña Avanzada)
-        ▼
-[DeepFilterNet3]          Inferencia ONNX: enc → erb_dec → df_dec
-        │                 Ventana: 10 frames × 10ms = 100ms
-        │                 Latencia algorítmica: ~40ms
-        ▼
-[GainLimiter]             Ganancia de salida + peak limiter (-1 dBFS por defecto)
-        │
-        ▼
-[Placa de sonido - Salida]
-```
-
-### Modelo IA: DeepFilterNet3
-
-El modelo se divide en tres redes ONNX:
-
-| Archivo | Rol | Tamaño |
-|---------|-----|--------|
-| `models/enc.onnx` | Encoder: extrae embeddings del espectrograma | 1.9 MB |
-| `models/erb_dec.onnx` | Decoder ERB: genera máscara espectral | 3.1 MB |
-| `models/df_dec.onnx` | Decoder DF: coeficientes de filtrado profundo | 3.2 MB |
-
-Parámetros internos del modelo (de `models/config.ini`):
-
-| Parámetro | Valor |
-|-----------|-------|
-| Sample rate | 48000 Hz |
-| FFT size | 960 muestras |
-| Hop size | 480 muestras (10 ms) |
-| Bandas ERB | 32 |
-| Bins DF | 96 |
-
-### Gestión de dispositivos de audio
-
-En Windows, PortAudio expone el mismo dispositivo físico bajo cuatro APIs (MME, DirectSound, WASAPI, WDM-KS). El módulo `audio/devices.py` deduplica la lista mostrando solo:
-- **WASAPI** (prioridad, menor latencia)
-- **WDM-KS** para dispositivos sin equivalente WASAPI (ej: *Mezcla estéreo*, útil para capturar audio de software SDR)
 
 ---
 
-## Configuración avanzada
+## Dependencias
 
-La pestaña **Avanzada** expone los siguientes parámetros mediante sliders:
-
-### Audio *(requiere reiniciar el procesamiento)*
-
-| Parámetro | Rango | Default | Descripción |
-|-----------|-------|---------|-------------|
-| Tamaño de bloque | 240–1920 muestras | 480 (10 ms) | Buffer de audio. Menor = menor latencia, más CPU |
-
-### Filtros DSP *(en tiempo real)*
-
-| Parámetro | Rango | Descripción |
-|-----------|-------|-------------|
-| AM – Hz inferior | 50–1000 Hz | Corte bajo del bandpass en modo AM |
-| AM – Hz superior | 1000–6000 Hz | Corte alto del bandpass en modo AM |
-| SSB-USB/LSB – Hz inferior | 50–1000 Hz | Corte bajo en modos SSB |
-| SSB-USB/LSB – Hz superior | 1000–6000 Hz | Corte alto en modos SSB |
-| Orden del filtro | 2 / 4 / 6 / 8 | Mayor orden = corte más abrupto, más CPU |
-
-### Modelo IA *(requiere reiniciar el procesamiento)*
-
-| Parámetro | Rango | Default | Descripción |
-|-----------|-------|---------|-------------|
-| Ventana de proceso | 5–30 frames | 10 (100 ms) | Mayor ventana = mejor calidad, mayor latencia |
-
-### Ganancia *(en tiempo real)*
-
-| Parámetro | Rango | Default | Descripción |
-|-----------|-------|---------|-------------|
-| Ganancia entrada | -20 a +20 dB | 0 dB | Amplificación antes del filtro y del modelo |
-| Ganancia salida | -20 a +20 dB | 0 dB | Amplificación después del modelo |
-| Límite de picos | -20 a 0 dBFS | -1 dBFS | Techo del peak limiter de salida |
-
----
-
-## Persistencia de configuración
-
-Al cerrar la aplicación (o con debounce de 800 ms al cambiar valores), se guarda `settings.json` en:
-
-- **Ejecutable standalone**: junto al `.exe` en `dist/ReductorRuidoRadio/settings.json`
-- **Desarrollo**: raíz del proyecto `settings.json`
-
----
-
-## Dependencias principales
-
-| Paquete | Versión | Uso |
-|---------|---------|-----|
-| `sounddevice` | ≥0.5.5 | Audio I/O via PortAudio |
-| `numpy` | ≥2.0 | Procesamiento numérico |
-| `scipy` | ≥1.13 | Filtros IIR (Butterworth) |
-| `onnxruntime` | ≥1.18 | Inferencia del modelo IA |
-| `PySide6` | ≥6.7 | Interfaz gráfica (Qt6) |
-| `pyinstaller` | ≥6.8 | Empaquetado standalone |
+| Paquete | Uso |
+|---------|-----|
+| `sounddevice` | Audio I/O via PortAudio |
+| `numpy` | Procesamiento numérico |
+| `scipy` | Filtros IIR (Butterworth, biquad) |
+| `PySide6` | Interfaz gráfica (Qt6) |
+| `pyinstaller` | Empaquetado standalone |
 
 ---
 
 ## Notas para operadores de radio
 
-- **Conexión**: conectar la salida de audio del receptor al Line-In de la placa de sonido, y la salida de la aplicación a los auriculares/altavoces
-- **SDR software**: usar el dispositivo *Mezcla estéreo* (Stereo Mix / What U Hear) como entrada para capturar el audio de SDR# u otro software SDR sin cable físico
-- **Modo Bypass**: permite comparar la señal con y sin procesamiento manteniendo el ruteo de audio activo
-- **Ajuste de ganancia**: si la señal de entrada es débil, subir la Ganancia de entrada antes que el volumen del receptor para optimizar la relación señal/ruido que ve el modelo
-- **SSB-USB vs SSB-LSB**: el procesamiento de audio es idéntico en ambos modos; la diferencia está en las frecuencias de corte del bandpass que se pueden ajustar independientemente
-
----
-
-## Roadmap
-
-### Fase 1 ✅ (actual)
-- Pipeline completo AM/SSB en tiempo real
-- UI con pestañas Principal y Avanzada
-- Ejecutable Windows standalone
-
-### Fase 2 (planificada)
-- Visualizador de espectro en tiempo real (antes/después)
-- Integración completa del filtrado profundo (`df_dec`)
-- Soporte Linux (PipeWire/ALSA)
-- Packaging Linux (AppImage)
+- **SDR software**: usar *Mezcla estéreo* (Stereo Mix) como entrada para capturar el audio de SDR#, HDSDR, etc. sin cable físico
+- **Squelch**: solo para transmisiones de voz SSB/AM — no usar con música (produce bombeo)
+- **Aprender ruido**: hacerlo cuando la estación no transmite para capturar el ruido real de la banda
+- **Bypass**: permite comparar la señal con y sin procesamiento en tiempo real
 
 ---
 
 ## Licencia
 
-Los modelos de DeepFilterNet3 están bajo licencia **MIT**.
-El código de este proyecto está bajo licencia **MIT**.
+MIT
