@@ -340,6 +340,28 @@ class MainWindow(QMainWindow):
 
         layout.addLayout(ctrl)
         layout.addWidget(self._spectrum_widget)
+
+        # Slider de rango Y
+        range_row = QHBoxLayout()
+        range_lbl = QLabel("Rango Y:")
+        range_lbl.setStyleSheet("color: #607d8b; font-size: 8pt;")
+        self._lbl_db_range = QLabel("80 dB")
+        self._lbl_db_range.setStyleSheet("color: #90a4ae; font-size: 8pt;")
+        self._lbl_db_range.setFixedWidth(42)
+        self._sld_db_range = QSlider(Qt.Horizontal)
+        self._sld_db_range.setMinimum(20)
+        self._sld_db_range.setMaximum(80)
+        self._sld_db_range.setSingleStep(5)
+        self._sld_db_range.setPageStep(10)
+        self._sld_db_range.setValue(80)
+        self._sld_db_range.setTickInterval(20)
+        self._sld_db_range.setTickPosition(QSlider.TicksBelow)
+        self._sld_db_range.valueChanged.connect(self._on_db_range_changed)
+        range_row.addWidget(range_lbl)
+        range_row.addWidget(self._sld_db_range)
+        range_row.addWidget(self._lbl_db_range)
+        layout.addLayout(range_row)
+
         return tab
 
     def _build_start_button(self) -> QPushButton:
@@ -512,6 +534,11 @@ class MainWindow(QMainWindow):
         else:
             self._lbl_noise_db.setText(f"{db:.1f} dB")
             self._lbl_noise_db.setStyleSheet("color: #69f0ae; font-weight: bold;")
+
+    def _on_db_range_changed(self, value: int) -> None:
+        snapped = round(value / 5) * 5
+        self._lbl_db_range.setText(f"{snapped} dB")
+        self._spectrum_widget.set_db_range(snapped)
 
     def _on_clear_noise_profile(self) -> None:
         self._pipeline.clear_noise_profile()

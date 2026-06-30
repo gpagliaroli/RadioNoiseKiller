@@ -23,7 +23,6 @@ class SpectrumWidget(QWidget):
     FFT_SIZE    = 2048
     SAMPLE_RATE = 48_000
     MAX_FREQ_HZ = 12_000
-    DB_MIN      = -80.0
     DB_MAX      =   0.0
     ALPHA       = 0.35    # suavizado EMA
 
@@ -40,9 +39,11 @@ class SpectrumWidget(QWidget):
         self.pre_frames:  deque[np.ndarray] = deque(maxlen=8)
         self.post_frames: deque[np.ndarray] = deque(maxlen=8)
 
+        self._db_min   = -80.0   # controlado por el slider de rango Y
+
         n_bins = self.FFT_SIZE // 2 + 1
-        self._db_pre   = np.full(n_bins, self.DB_MIN, dtype=np.float32)
-        self._db_post  = np.full(n_bins, self.DB_MIN, dtype=np.float32)
+        self._db_pre   = np.full(n_bins, self._db_min, dtype=np.float32)
+        self._db_post  = np.full(n_bins, self._db_min, dtype=np.float32)
         self._db_floor: np.ndarray | None = None
         self._ema_pre  = None
         self._ema_post = None
@@ -80,8 +81,8 @@ class SpectrumWidget(QWidget):
         self._timer.stop()
         self._active   = False
         n = self.FFT_SIZE // 2 + 1
-        self._db_pre   = np.full(n, self.DB_MIN, dtype=np.float32)
-        self._db_post  = np.full(n, self.DB_MIN, dtype=np.float32)
+        self._db_pre   = np.full(n, self._db_min, dtype=np.float32)
+        self._db_post  = np.full(n, self._db_min, dtype=np.float32)
         self._db_floor = None
         self._ema_pre  = None
         self._ema_post = None
@@ -115,6 +116,10 @@ class SpectrumWidget(QWidget):
     def clear_floor(self) -> None:
         self._db_floor       = None
         self._floor_learning = False
+        self.update()
+
+    def set_db_range(self, range_db: int) -> None:
+        self._db_min = -float(range_db)
         self.update()
 
     # ------------------------------------------------------------------
@@ -155,7 +160,7 @@ class SpectrumWidget(QWidget):
         mag = np.abs(np.fft.rfft(samples * self._window))
         mag = np.maximum(mag, 1e-10)
         db  = 20.0 * np.log10(mag / (self.FFT_SIZE / 2.0))
-        return np.clip(db, self.DB_MIN, self.DB_MAX).astype(np.float32)
+        return np.clip(db, self._db_min, self.DB_MAX).astype(np.float32)
 
     # ------------------------------------------------------------------
     # Pintado
@@ -221,7 +226,7 @@ class SpectrumWidget(QWidget):
     # ------------------------------------------------------------------
 
     def _db_to_y(self, db: float, ph: int, mt: int) -> float:
-        frac = (db - self.DB_MIN) / (self.DB_MAX - self.DB_MIN)
+        frac = (db - self._db_min) / (self.DB_MAX - self._db_min)
         return mt + ph * (1.0 - frac)
 
     def _bin_to_x(self, bin_idx: int, ml: int, pw: int) -> float:
@@ -320,9 +325,11 @@ class SpectrumWidget(QWidget):
         pen.setStyle(Qt.DotLine)
         p.setPen(pen)
 
-        for db in (-20, -40, -60):
+        db = -20
+        while db > self._db_min:
             y = int(self._db_to_y(db, ph, mt))
             p.drawLine(ml, y, ml + pw, y)
+            db -= 20
 
         freq_per_bin = self.SAMPLE_RATE / self.FFT_SIZE
         for khz in range(1, 13):
@@ -342,11 +349,14 @@ class SpectrumWidget(QWidget):
         p.drawRect(ml, mt, pw, ph)
 
         p.setPen(QColor("#607d8b"))
-        for db in (0, -20, -40, -60, -80):
+        step = 20
+        db = 0
+        while db >= self._db_min:
             y = int(self._db_to_y(db, ph, mt))
             p.drawText(QRectF(0, y - 8, ml - 3, 16),
                        Qt.AlignRight | Qt.AlignVCenter,
-                       str(db))
+                       str(int(db)))
+            db -= step
 
         freq_per_bin = self.SAMPLE_RATE / self.FFT_SIZE
         for khz in range(1, 13):
