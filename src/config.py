@@ -65,6 +65,7 @@ class GainConfig:
 class WindowConfig:
     x: int | None = None
     y: int | None = None
+    spectrum_db_max: int = 0
 
 
 @dataclass
@@ -122,6 +123,7 @@ class AppConfig:
             "window": {
                 "x": self.window.x,
                 "y": self.window.y,
+                "spectrum_db_max": self.window.spectrum_db_max,
             },
         }
         with open(path, "w", encoding="utf-8") as f:
@@ -193,3 +195,4 @@ class AppConfig:
             self.window.x = int(w["x"])
         if w.get("y") is not None:
             self.window.y = int(w["y"])
+        self.window.spectrum_db_max = int(w.get("spectrum_db_max", self.window.spectrum_db_max))

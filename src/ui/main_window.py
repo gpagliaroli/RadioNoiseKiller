@@ -353,7 +353,7 @@ class MainWindow(QMainWindow):
         self._sld_db_range.setMaximum(0)
         self._sld_db_range.setSingleStep(5)
         self._sld_db_range.setPageStep(10)
-        self._sld_db_range.setValue(0)
+        self._sld_db_range.setValue(self._config.window.spectrum_db_max)
         self._sld_db_range.setTickInterval(10)
         self._sld_db_range.setTickPosition(QSlider.TicksBelow)
         self._sld_db_range.valueChanged.connect(self._on_db_range_changed)
@@ -539,6 +539,8 @@ class MainWindow(QMainWindow):
         snapped = round(value / 5) * 5
         self._lbl_db_range.setText(f"{snapped} dBFS")
         self._spectrum_widget.set_db_max(snapped)
+        self._config.window.spectrum_db_max = snapped
+        self._schedule_save()
 
     def _on_clear_noise_profile(self) -> None:
         self._pipeline.clear_noise_profile()
