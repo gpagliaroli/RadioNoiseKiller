@@ -272,3 +272,16 @@ class NoiseProfiler:
     @property
     def last_reduction_db(self) -> float:
         return self._last_reduction_db
+
+    @property
+    def noise_floor_db(self) -> np.ndarray | None:
+        """Piso de ruido aprendido en dB (~dBFS). Shape: (fft_n//2 + 1,). None si no hay perfil."""
+        if self._noise_mag is None:
+            return None
+        return (20.0 * np.log10(
+            np.maximum(self._noise_mag, 1e-10) / (self._fft_n / 2.0)
+        )).astype(np.float32)
+
+    @property
+    def noise_fft_n(self) -> int:
+        return self._fft_n

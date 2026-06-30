@@ -12,6 +12,7 @@ from pipeline import ProcessingPipeline
 from ui.vu_meter import VuMeter
 from ui.advanced_tab import AdvancedAudioTab, AdvancedNoiseTab
 from ui.slider_row import SliderRow
+from ui.spectrum_widget import SpectrumWidget
 from utils import settings_path
 
 
@@ -51,7 +52,11 @@ class MainWindow(QMainWindow):
     def _build_ui(self) -> None:
         self.setWindowTitle("Reductor de Ruido Radio  v0.2")
         self.setMinimumWidth(500)
-        self.setMaximumWidth(600)
+        self.setMaximumWidth(700)
+
+        self._spectrum_widget = SpectrumWidget()
+        self._spectrum_widget.pre_frames  = self._pipeline.spectrum_pre_frames
+        self._spectrum_widget.post_frames = self._pipeline.spectrum_post_frames
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -66,6 +71,7 @@ class MainWindow(QMainWindow):
         self._adv_noise_tab = AdvancedNoiseTab(self._config, self._pipeline)
         self._tabs.addTab(self._adv_audio_tab, "Avanzada Audio")
         self._tabs.addTab(self._adv_noise_tab, "Avanzada Ruido")
+        self._tabs.addTab(self._build_spectrum_tab(), "Espectro")
         self._tabs.currentChanged.connect(self._on_tab_changed)
 
         root.addWidget(self._tabs)
@@ -291,6 +297,51 @@ class MainWindow(QMainWindow):
         layout.addWidget(self._s_peak)
         return group
 
+    def _build_spectrum_tab(self) -> QWidget:
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(4, 8, 4, 4)
+        layout.setSpacing(6)
+
+        ctrl = QHBoxLayout()
+
+        self._chk_spec_pre = QCheckBox("Entrada")
+        self._chk_spec_pre.setChecked(True)
+        self._chk_spec_pre.setStyleSheet("color: #42a5f5; font-weight: bold;")
+        self._chk_spec_pre.toggled.connect(self._spectrum_widget.set_show_pre)
+
+        self._chk_spec_post = QCheckBox("Salida")
+        self._chk_spec_post.setChecked(True)
+        self._chk_spec_post.setStyleSheet("color: #69f0ae; font-weight: bold;")
+        self._chk_spec_post.toggled.connect(self._spectrum_widget.set_show_post)
+
+        self._chk_spec_cancelled = QCheckBox("Lo cancelado")
+        self._chk_spec_cancelled.setChecked(True)
+        self._chk_spec_cancelled.setStyleSheet("color: #ff7043; font-weight: bold;")
+        self._chk_spec_cancelled.toggled.connect(self._spectrum_widget.set_show_cancelled)
+
+        self._chk_spec_floor = QCheckBox("Piso de ruido")
+        self._chk_spec_floor.setChecked(True)
+        self._chk_spec_floor.setStyleSheet("color: #ffd54f; font-weight: bold;")
+        self._chk_spec_floor.toggled.connect(self._spectrum_widget.set_show_floor)
+
+        ctrl.addWidget(self._chk_spec_pre)
+        ctrl.addSpacing(12)
+        ctrl.addWidget(self._chk_spec_post)
+        ctrl.addSpacing(12)
+        ctrl.addWidget(self._chk_spec_cancelled)
+        ctrl.addSpacing(12)
+        ctrl.addWidget(self._chk_spec_floor)
+        ctrl.addStretch()
+
+        lbl_hint = QLabel("dBFS")
+        lbl_hint.setStyleSheet("color: #607d8b; font-size: 7pt;")
+        ctrl.addWidget(lbl_hint)
+
+        layout.addLayout(ctrl)
+        layout.addWidget(self._spectrum_widget)
+        return tab
+
     def _build_start_button(self) -> QPushButton:
         self._btn_start = QPushButton("▶  ACTIVAR")
         self._btn_start.setMinimumHeight(44)
@@ -420,6 +471,7 @@ class MainWindow(QMainWindow):
         if checked:
             self._learn_countdown = 5
             self._pipeline.start_noise_learning()
+            self._spectrum_widget.start_floor_learning()
             self._btn_learn.setText(f"⏹  Aprendiendo... {self._learn_countdown}s")
             self._label_noise.setText("Aprendiendo ruido — mantener silencio en la banda")
             self._label_noise.setStyleSheet("color: #ffd600; font-size: 8pt;")
@@ -427,6 +479,7 @@ class MainWindow(QMainWindow):
         else:
             self._learn_timer.stop()
             self._pipeline.stop_noise_learning()
+            self._spectrum_widget.stop_floor_learning()
             self._btn_learn.setText("⏺  Aprender ruido")
             if self._pipeline.noise_has_profile:
                 dur = self._pipeline.noise_duration_ms / 1000.0
@@ -462,6 +515,7 @@ class MainWindow(QMainWindow):
 
     def _on_clear_noise_profile(self) -> None:
         self._pipeline.clear_noise_profile()
+        self._spectrum_widget.clear_floor()
         self._btn_clear_noise.setEnabled(False)
         self._label_noise.setText("Perfil borrado — sin cancelación activa")
         self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
@@ -472,6 +526,7 @@ class MainWindow(QMainWindow):
                 self._pipeline.start()
                 self._btn_start.setText("⏹  DETENER")
                 self._level_timer.start()
+                self._spectrum_widget.start()
                 self._status_bar.showMessage("Procesando...")
                 self._adv_audio_tab.set_processing_active(True)
                 self._btn_learn.setEnabled(True)
@@ -484,6 +539,7 @@ class MainWindow(QMainWindow):
             self._btn_learn.setEnabled(False)
             self._pipeline.stop()
             self._level_timer.stop()
+            self._spectrum_widget.stop()
             self._btn_start.setText("▶  ACTIVAR")
             self._vu_in.set_level(-60)
             self._vu_out.set_level(-60)

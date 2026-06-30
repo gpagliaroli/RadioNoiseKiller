@@ -1,5 +1,6 @@
 import threading
 import queue
+from collections import deque
 import numpy as np
 from config import AppConfig, RadioMode
 from audio.stream import AudioStream
@@ -92,6 +93,10 @@ class ProcessingPipeline:
         self._in_queue:    queue.Queue = queue.Queue(maxsize=30)
         self._out_queue:   queue.Queue = queue.Queue(maxsize=60)
         self._proc_thread: threading.Thread | None = None
+
+        # Buffers para el visualizador de espectro (leídos desde el hilo UI)
+        self._spec_pre_frames:  deque = deque(maxlen=8)
+        self._spec_post_frames: deque = deque(maxlen=8)
 
     # ------------------------------------------------------------------
     # API pública — configuración general
@@ -298,6 +303,35 @@ class ProcessingPipeline:
         self._blanker_hits = 0
         return h
 
+    @property
+    def spectrum_pre_frames(self) -> deque:
+        return self._spec_pre_frames
+
+    @property
+    def spectrum_post_frames(self) -> deque:
+        return self._spec_post_frames
+
+    def get_noise_floor_data(self) -> "tuple[np.ndarray, np.ndarray] | None":
+        """Retorna (freqs_hz, db) calibrado para coincidir con la escala del SpectrumWidget."""
+        db = self._noise_profiler.noise_floor_db
+        if db is None:
+            return None
+        fft_n = self._noise_profiler.noise_fft_n
+        freqs = np.arange(fft_n // 2 + 1, dtype=np.float32) * (48000.0 / fft_n)
+
+        # El noise_profiler usa sqrt(hanning(fft_n)), normalizado por fft_n/2.
+        # El display usa hanning(2048), normalizado por 2048/2.
+        # Para ruido estacionario, el factor RMS por bin es:
+        #   display:  sqrt(sum(hann(2048)^2)) / 1024  = sqrt(3*2048/8) / 1024
+        #   profiler: sqrt(sum(hann(fft_n)))  / (fft_n/2) = sqrt(fft_n/2) / (fft_n/2)
+        # La corrección alinea ambas escalas.
+        DISPLAY_FFT_N   = 2048
+        display_factor  = np.sqrt(3.0 * DISPLAY_FFT_N / 8) / (DISPLAY_FFT_N / 2)
+        profiler_factor = np.sqrt(fft_n / 2.0) / (fft_n / 2.0)
+        correction_db   = float(20.0 * np.log10(display_factor / profiler_factor))
+
+        return freqs, (db + correction_db).astype(np.float32)
+
     # ------------------------------------------------------------------
     # Ciclo de vida del stream
     # ------------------------------------------------------------------
@@ -392,6 +426,8 @@ class ProcessingPipeline:
                     q.get_nowait()
                 except queue.Empty:
                     break
+        self._spec_pre_frames.clear()
+        self._spec_post_frames.clear()
 
     def _run_processor(self) -> None:
         energy_hist = 1e-8
@@ -442,6 +478,7 @@ class ProcessingPipeline:
                     filtered = self._bandpass.process(chunk) if self._bandpass_pre_enabled else chunk
 
                 filtered = self._anf.process(filtered)
+                self._spec_pre_frames.append(filtered.copy())
                 filtered = self._noise_profiler.process(filtered)
 
                 if self._squelch_enabled and self._noise_profiler.has_profile:
@@ -464,6 +501,7 @@ class ProcessingPipeline:
                     out_frame = self._limiter.process(mixed, self._config.audio.sample_rate)
 
                 out_frame = self._freq_shifter.process(out_frame)
+                self._spec_post_frames.append(out_frame.copy())
 
                 try:
                     self._out_queue.put_nowait(out_frame)
