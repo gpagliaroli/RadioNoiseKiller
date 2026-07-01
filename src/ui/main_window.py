@@ -54,8 +54,8 @@ class MainWindow(QMainWindow):
 
     def _build_ui(self) -> None:
         self.setWindowTitle("Reductor de Ruido Radio  v0.2")
-        self.setMinimumWidth(500)
-        self.setMaximumWidth(700)
+        self.setMinimumWidth(800)
+        self.setMaximumWidth(1100)
 
         self._spectrum_widget = SpectrumWidget()
         self._spectrum_widget.pre_frames  = self._pipeline.spectrum_pre_frames
@@ -216,13 +216,13 @@ class MainWindow(QMainWindow):
             "del cancelador de ruido. Útil para señales SSB débiles enterradas en ruido.\n"
             "Sensibilidad configurable en pestaña Avanzada Ruido.",
         )
+        self._chk_squelch = _chk_sub(
+            "Squelch de voz  (con música no utilizar!)",
+            "Silencia la salida cuando no hay voz detectada. Requiere perfil de ruido aprendido.",
+        )
         self._chk_presence = _chk(
             "EQ Presencia",
             "Pico de realce vocal configurable en pestaña Avanzada.",
-        )
-        self._chk_squelch = _chk(
-            "Squelch de voz  (con música no utilizar!)",
-            "Silencia la salida cuando no hay voz detectada. Requiere perfil de ruido aprendido.",
         )
         self._chk_exciter = _chk(
             "Excitador armónico",
