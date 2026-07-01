@@ -685,6 +685,7 @@ class MainWindow(QMainWindow):
         is_static = mode == "static"
         self._btn_learn.setVisible(is_static)
         self._btn_clear_noise.setVisible(is_static)
+        self._btn_learn.setEnabled(is_static and self._pipeline.is_running())
         if is_static:
             self._label_noise.setText("Sin perfil — activar procesamiento y presionar Aprender")
         else:
