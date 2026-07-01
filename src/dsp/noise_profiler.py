@@ -49,11 +49,12 @@ class NoiseProfiler:
     _PITCH_SIGMA:    float = 1.5    # sigma (bins) de la máscara gaussiana por armónico
 
     # Parámetros MCRA
-    _MCRA_ALPHA_S:  float = 0.9    # suavizado espectral
-    _MCRA_ALPHA_D0: float = 0.85   # velocidad de actualización del ruido (sin habla)
-    _MCRA_DELTA:    float = 1.67   # umbral ratio S_f/S_min para detectar habla
-    _MCRA_B:        int   = 4      # número de subtramas
-    _MCRA_M:        int   = 20     # frames por subtrama → ventana total = B×M = 80 frames ≈ 800ms
+    _MCRA_ALPHA_S:       float = 0.9    # suavizado espectral
+    _MCRA_ALPHA_D0:      float = 0.85   # velocidad de actualización del ruido (sin habla)
+    _MCRA_DELTA:         float = 1.67   # umbral ratio S_f/S_min para detectar habla
+    _MCRA_B:             int   = 4      # número de subtramas
+    _MCRA_M:             int   = 20     # frames por subtrama → ventana total = B×M = 80 frames ≈ 800ms
+    _MCRA_SQUELCH_RATIO: float = 0.05  # congelar si potencia_frame < 5% del piso estimado (-13 dB)
 
     def __init__(self, hop_size: int = 480):
         self._hop   = hop_size
@@ -353,6 +354,17 @@ class NoiseProfiler:
             self._mcra_subs    = np.full((self._MCRA_B, self._nb), np.inf)
             self._mcra_cur_min = power.copy()
             self._mcra_sub_count = 1
+            return None
+
+        # Detección de squelch de portadora: si la energía del frame es mucho
+        # menor que el piso de ruido estimado, la portadora desapareció.
+        # Congelar TODO el estado MCRA para que al volver la señal se retome
+        # desde el perfil de ruido memorizado (sin perder el aprendizaje).
+        frame_mean = float(np.mean(power))
+        noise_mean = float(np.mean(self._mcra_ld))
+        if frame_mean < noise_mean * self._MCRA_SQUELCH_RATIO:
+            if self._mcra_frames >= self._MCRA_M:
+                return np.sqrt(self._mcra_ld).astype(np.float32)
             return None
 
         # 1. Suavizado de potencia espectral
