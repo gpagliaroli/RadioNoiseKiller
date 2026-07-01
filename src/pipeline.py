@@ -124,6 +124,7 @@ class ProcessingPipeline:
             self._bandpass_out.set_mode(mode)
 
     def set_agc_preset(self, preset: str) -> None:
+        self._config.dsp.agc_preset = preset
         self._agc.set_preset(preset)
 
     def set_presence_db(self, db: float) -> None:
@@ -187,6 +188,71 @@ class ProcessingPipeline:
             self._bandpass_out.set_order(order)
 
     # ------------------------------------------------------------------
+    # API pública — carga de preset completo en caliente
+    # ------------------------------------------------------------------
+
+    def apply_config(self, config: AppConfig) -> None:
+        """Aplica todos los parametros DSP+Gain en caliente.
+        Thread-safe: delega en los mismos setters publicos que usan los sliders."""
+        dsp  = config.dsp
+        gain = config.gain
+
+        self.set_mode(dsp.mode)
+        self.set_agc_preset(dsp.agc_preset)
+
+        self.set_blanker_enabled(dsp.blanker_enabled)
+        self.set_blanker_frame(dsp.blanker_frame)
+        self.set_blanker_mini(dsp.blanker_mini)
+
+        self.set_bandpass_pre_enabled(dsp.bandpass_pre_enabled)
+        self.set_bandpass_post_enabled(dsp.bandpass_post_enabled)
+        for mode, (lo, hi) in dsp.bandpass_limits.items():
+            self.set_bandpass_limits(mode, int(lo), int(hi))
+        self.set_filter_order(dsp.filter_order)
+
+        self.set_anf_enabled(dsp.anf_enabled)
+        self.set_anf_threshold(dsp.anf_threshold)
+        self.set_anf_depth(dsp.anf_depth)
+
+        self.set_noise_enabled(dsp.noise_enabled)
+        self.set_noise_mode(dsp.noise_mode)
+        self.set_noise_alpha(dsp.noise_alpha)
+        self.set_noise_floor(dsp.noise_floor)
+        self.set_noise_smooth(dsp.noise_smooth)
+        self.set_noise_attack(dsp.noise_attack)
+
+        self.set_squelch_enabled(dsp.squelch_enabled)
+        self.set_squelch_threshold(dsp.squelch_threshold)
+        self.set_squelch_hold_ms(dsp.squelch_hold_ms)
+
+        self.set_exciter_enabled(dsp.exciter_enabled)
+        self.set_exciter_drive(dsp.exciter_drive)
+        self.set_exciter_mix(dsp.exciter_mix)
+
+        self.set_presence_enabled(dsp.presence_enabled)
+        self.set_presence_freq(dsp.presence_freq)
+        self.set_presence_db(dsp.presence_db)
+        self.set_presence_q(dsp.presence_q)
+
+        self.set_pitch_shift(dsp.pitch_shift_hz)
+
+        self.set_perceptual_floor_enabled(dsp.perceptual_floor_enabled)
+        self.set_pf_boost(dsp.perceptual_floor_boost)
+        self.set_pf_center(dsp.perceptual_floor_center)
+        self.set_pf_rolloff_hz(dsp.perceptual_floor_rolloff_hz)
+        self.set_pf_rolloff_depth(dsp.perceptual_floor_rolloff_depth)
+
+        self.set_post_filter_enabled(dsp.post_filter_enabled)
+        self.set_post_filter_strength(dsp.post_filter_strength)
+
+        self.set_pitch_enhance_enabled(dsp.pitch_enhance_enabled)
+        self.set_pitch_enhance_strength(dsp.pitch_enhance_strength)
+
+        self.set_input_gain_db(gain.input_gain_db)
+        self.set_output_gain_db(gain.output_gain_db)
+        self.set_peak_limit_db(gain.peak_limit_db)
+
+    # ------------------------------------------------------------------
     # API pública — cancelación de ruido estacionario
     # ------------------------------------------------------------------
 
@@ -200,9 +266,11 @@ class ProcessingPipeline:
         self._noise_profiler.clear_profile()
 
     def set_noise_alpha(self, alpha: float) -> None:
+        self._config.dsp.noise_alpha = float(alpha)
         self._noise_profiler.set_alpha(alpha)
 
     def set_noise_floor(self, floor: float) -> None:
+        self._config.dsp.noise_floor = max(0.05, float(floor))
         self._noise_profiler.set_floor(floor)
 
     def set_noise_smooth(self, smooth: float) -> None:
@@ -326,7 +394,9 @@ class ProcessingPipeline:
         self._config.dsp.blanker_mini = threshold
         self._blanker_mini = float(threshold)
 
-    def set_blanker_enabled(self,  v: bool) -> None: self._blanker_enabled  = bool(v)
+    def set_blanker_enabled(self, v: bool) -> None:
+        self._config.dsp.blanker_enabled = bool(v)
+        self._blanker_enabled = bool(v)
     def set_bandpass_pre_enabled(self, v: bool) -> None:
         self._config.dsp.bandpass_pre_enabled = bool(v)
         self._bandpass_pre_enabled = bool(v)
@@ -334,10 +404,14 @@ class ProcessingPipeline:
     def set_bandpass_post_enabled(self, v: bool) -> None:
         self._config.dsp.bandpass_post_enabled = bool(v)
         self._bandpass_post_enabled = bool(v)
-    def set_noise_enabled(self,    v: bool) -> None:
+    def set_noise_enabled(self, v: bool) -> None:
+        self._config.dsp.noise_enabled = bool(v)
         self._noise_enabled = bool(v)
         self._noise_profiler.set_enabled(bool(v))
-    def set_presence_enabled(self, v: bool) -> None: self._presence_enabled = bool(v)
+
+    def set_presence_enabled(self, v: bool) -> None:
+        self._config.dsp.presence_enabled = bool(v)
+        self._presence_enabled = bool(v)
 
     def set_exciter_enabled(self, v: bool) -> None:
         self._config.dsp.exciter_enabled = bool(v)

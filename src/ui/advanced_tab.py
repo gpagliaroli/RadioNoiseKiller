@@ -305,6 +305,10 @@ class AdvancedAudioTab(QWidget):
         self._config.dsp.exciter_mix = val
         self._pipeline.set_exciter_mix(val)
 
+    def reload(self) -> None:
+        """Recarga todos los sliders desde el config (llamado al cargar un preset)."""
+        self._load_values()
+
     def set_processing_active(self, active: bool) -> None:
         self._s_block.set_enabled(not active)
 
@@ -768,6 +772,10 @@ class AdvancedNoiseTab(QWidget):
     def _on_post_filter_strength(self, val: float) -> None:
         self._config.dsp.post_filter_strength = val
         self._pipeline.set_post_filter_strength(val)
+
+    def reload(self) -> None:
+        """Recarga todos los sliders desde el config (llamado al cargar un preset)."""
+        self._load_values()
 
     def _on_pf_boost(self, val: float) -> None:
         self._config.dsp.perceptual_floor_boost = val

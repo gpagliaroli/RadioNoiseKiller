@@ -11,9 +11,11 @@ from config import AppConfig, RadioMode
 from pipeline import ProcessingPipeline
 from ui.vu_meter import VuMeter
 from ui.advanced_tab import AdvancedAudioTab, AdvancedNoiseTab
+from ui.presets_tab import PresetsTab
 from ui.slider_row import SliderRow
 from ui.spectrum_widget import SpectrumWidget
-from utils import settings_path
+from presets import PresetManager
+from utils import settings_path, presets_dir
 
 
 class MainWindow(QMainWindow):
@@ -24,6 +26,7 @@ class MainWindow(QMainWindow):
         self._config.load(settings_path())
 
         self._pipeline = ProcessingPipeline(self._config)
+        self._preset_manager = PresetManager(presets_dir())
 
         self._level_timer = QTimer()
         self._level_timer.setInterval(33)
@@ -72,6 +75,11 @@ class MainWindow(QMainWindow):
         self._tabs.addTab(self._adv_audio_tab, "Avanzada Audio")
         self._tabs.addTab(self._adv_noise_tab, "Avanzada Ruido")
         self._tabs.addTab(self._build_spectrum_tab(), "Espectro")
+        self._presets_tab = PresetsTab(
+            self._config, self._pipeline, self._preset_manager
+        )
+        self._presets_tab.preset_loaded.connect(self.refresh_from_config)
+        self._tabs.addTab(self._presets_tab, "Presets")
         self._tabs.currentChanged.connect(self._on_tab_changed)
 
         root.addWidget(self._tabs)
@@ -540,6 +548,79 @@ class MainWindow(QMainWindow):
                 if dev and dev.index == self._saved_output_device:
                     self._combo_out.setCurrentIndex(i)
                     break
+
+    def refresh_from_config(self) -> None:
+        """Actualiza toda la UI con los valores actuales de self._config.
+        Llamado tras cargar un preset en caliente. No toca los combos de dispositivos."""
+        cfg = self._config.dsp
+
+        # --- Checkboxes de módulos ---
+        for cb, key, setter in [
+            (self._chk_blanker,           "blanker_enabled",           self._pipeline.set_blanker_enabled),
+            (self._chk_bandpass_pre,      "bandpass_pre_enabled",      self._pipeline.set_bandpass_pre_enabled),
+            (self._chk_bandpass_post,     "bandpass_post_enabled",     self._pipeline.set_bandpass_post_enabled),
+            (self._chk_anf,               "anf_enabled",               self._pipeline.set_anf_enabled),
+            (self._chk_noise,             "noise_enabled",             self._pipeline.set_noise_enabled),
+            (self._chk_perceptual_floor,  "perceptual_floor_enabled",  self._pipeline.set_perceptual_floor_enabled),
+            (self._chk_post_filter,       "post_filter_enabled",       self._pipeline.set_post_filter_enabled),
+            (self._chk_pitch_enhance,     "pitch_enhance_enabled",     self._pipeline.set_pitch_enhance_enabled),
+            (self._chk_presence,          "presence_enabled",          self._pipeline.set_presence_enabled),
+            (self._chk_squelch,           "squelch_enabled",           self._pipeline.set_squelch_enabled),
+            (self._chk_exciter,           "exciter_enabled",           self._pipeline.set_exciter_enabled),
+        ]:
+            val = getattr(cfg, key)
+            cb.blockSignals(True)
+            cb.setChecked(val)
+            cb.blockSignals(False)
+            setter(val)
+
+        # --- Modo AM/SSB ---
+        for i in range(self._combo_mode.count()):
+            if self._combo_mode.itemData(i) == cfg.mode:
+                self._combo_mode.blockSignals(True)
+                self._combo_mode.setCurrentIndex(i)
+                self._combo_mode.blockSignals(False)
+                self._pipeline.set_mode(cfg.mode)
+                break
+
+        # --- AGC ---
+        for i in range(self._combo_agc.count()):
+            if self._combo_agc.itemData(i) == cfg.agc_preset:
+                self._combo_agc.blockSignals(True)
+                self._combo_agc.setCurrentIndex(i)
+                self._combo_agc.blockSignals(False)
+                break
+
+        # --- Modo de ruido ---
+        for i in range(self._combo_noise_mode.count()):
+            if self._combo_noise_mode.itemData(i) == cfg.noise_mode:
+                self._combo_noise_mode.blockSignals(True)
+                self._combo_noise_mode.setCurrentIndex(i)
+                self._combo_noise_mode.blockSignals(False)
+                break
+        is_static = cfg.noise_mode == "static"
+        self._btn_learn.setVisible(is_static)
+        self._btn_clear_noise.setVisible(is_static)
+        if not is_static:
+            self._label_noise.setText("Adaptativo (MCRA) — estimando en tiempo real")
+
+        # --- Slider de intensidad de ruido ---
+        pct = round(cfg.noise_alpha * 100)
+        self._slider_noise.blockSignals(True)
+        self._slider_noise.setValue(pct)
+        self._slider_noise.blockSignals(False)
+        self._label_noise_pct.setText(f"{pct}%")
+
+        # --- Sliders de ganancia ---
+        self._s_gain_in.set_value(self._config.gain.input_gain_db)
+        self._s_gain_out.set_value(self._config.gain.output_gain_db)
+        self._s_peak.set_value(self._config.gain.peak_limit_db)
+
+        # --- Pestanas avanzadas ---
+        self._adv_audio_tab.reload()
+        self._adv_noise_tab.reload()
+
+        self._schedule_save()
 
     # ------------------------------------------------------------------
     # Eventos de la UI
