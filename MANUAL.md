@@ -58,6 +58,8 @@ El audio recorre los siguientes procesos en orden. Cada etapa puede activarse o 
                            │
          [ Cancelador de Ruido Estacionario ]
            Filtro Wiener espectral adaptativo
+          ├─ sub: Refuerzo de pitch SSB (opcional)
+          └─ sub: Post-filtro espectral  (opcional)
                            │
                [ Squelch de Voz  (opcional) ]
           Silencia la salida entre transmisiones
@@ -140,6 +142,8 @@ Cada casilla de verificación activa o desactiva un módulo del pipeline de form
 | **Filtro de paso de banda (post)** | Casi siempre activo junto con el pre. Limpia artefactos del procesamiento espectral. |
 | **ANF — Cancela heterodinos y tonos** | Activar cuando se escuchen tonos constantes (pito, zumbido). Desactivar con señales de datos/digitales (PSK, FT8) ya que los tomaría por interferencia. |
 | **Cancelador de ruido estacionario** | El módulo principal. Activar una vez aprendido el perfil de ruido. |
+| &nbsp;&nbsp;&nbsp;↳ **Post-filtro espectral** | Sub-módulo del cancelador. Elimina el "ruido musical" (pitidos intermitentes) que el Wiener deja como residuo. Activar cuando se note ese artefacto. Agresividad configurable en Avanzada Ruido. |
+| &nbsp;&nbsp;&nbsp;↳ **Refuerzo de pitch SSB** | Sub-módulo del cancelador. Para señales SSB muy débiles: detecta el tono fundamental de la voz y protege sus armónicos de ser suprimidos. Activar solo si la voz suena "fantasmal" con el cancelador al máximo. Sensibilidad configurable en Avanzada Ruido. |
 | **EQ Presencia** | Activar para mejorar la claridad de la voz con señales debilitadas o muy filtradas. |
 | **Squelch de voz (con música no utilizar!)** | Solo para transmisiones de voz SSB/AM. Silencia el ruido entre transmisiones. **No usar con música** — produce subidas y bajadas de nivel indeseadas. |
 | **Excitador armónico** | Para señales de voz opacas, sin brillo. Añade presencia. Comparar con y sin para decidir. |
@@ -290,6 +294,40 @@ Estos dos parámetros interactúan. La regla práctica:
 
 Con **piso bajo + anti-gorgojeo bajo** el resultado es gorgojeo inevitable. Subir primero el piso y luego ajustar el anti-gorgojeo.
 
+### Post-filtro espectral
+
+**Activar:** Módulos Activos → casilla "Post-filtro espectral (ruido musical residual)"  
+**Ajustar:** Pestaña Avanzada Ruido → slider "Post-filtro (ruido musical)"
+
+El filtro de Wiener, incluso bien configurado, puede dejar un tipo de artefacto muy particular llamado **ruido musical**: en lugar del ruido de fondo uniforme original, aparecen pitidos cortos intermitentes que varían aleatoriamente de bin en bin. Es el residuo de los bins que el VAD marcó como ruido pero que no fueron suprimidos del todo por el piso espectral.
+
+El post-filtro aplica una segunda pasada sobre esos bins usando la misma información de probabilidad de voz: en los bins donde hay ruido residual (`p_speech ≈ 0`) la ganancia se reduce adicionalmente; en los bins de voz (`p_speech ≈ 1`) no se aplica ningún cambio.
+
+| Control | Rango | Default | Descripción |
+|---------|-------|---------|-------------|
+| **Post-filtro (ruido musical)** | 0,0 – 3,0 | 1,0 | Agresividad de la segunda pasada. **0** = desactivado (aunque el checkbox esté activo). **1** = moderado: los bins de ruido puro reciben `gain²` (duplica la reducción en dB). **2** = agresivo: `gain³`. Empezar en 1,0 y subir solo si el ruido musical persiste. |
+
+> **Nota:** Valores altos (>2,0) con señales de SNR muy bajo pueden producir supresión excesiva en los bordes de las transiciones de voz. Si la voz empieza a sonar recortada, reducir a 0,5–1,0.
+
+### Refuerzo de pitch SSB
+
+**Activar:** Módulos Activos → casilla "Refuerzo de pitch SSB (detección por autocorrelación)"  
+**Ajustar:** Pestaña Avanzada Ruido → slider "Protección de armónicos"
+
+En señales SSB muy débiles enterradas en ruido, el cancelador de Wiener puede suprimir los armónicos de la voz junto con el ruido porque el VAD no logra distinguirlos. El resultado es una voz que suena "fantasmal", de tono cambiante o con pérdida de naturalidad.
+
+Este módulo detecta en tiempo real el **tono fundamental** (f0) de la voz mediante autocorrelación sobre una ventana de 42ms, busca f0 en el rango 80–400 Hz, y levanta la probabilidad de voz (`p_speech`) en todos los bins que corresponden a armónicos de ese f0. El cancelador entonces los trata como voz y los deja pasar.
+
+- La detección funciona con un **umbral de confianza**: si la señal no es suficientemente periódica (no hay voz clara), no modifica nada.
+- **Hold de 3 frames:** ante breves gaps de detección, el último f0 válido se mantiene para evitar fluctuaciones.
+- **Solo para SSB.** En AM con ruido, el ensanchamiento de banda hace que la detección de f0 sea poco fiable.
+
+| Control | Rango | Default | Descripción |
+|---------|-------|---------|-------------|
+| **Protección de armónicos** | 0% – 100% | 70% | Cuánto se eleva `p_speech` en los bins armónicos. **70%** es el punto de equilibrio: protege la voz sin degradar la supresión del ruido. **>85%**: bins de armónicos casi nunca se suprimen — útil para señales muy débiles. **<40%**: efecto mínimo. |
+
+> **Cuándo activarlo:** cuando la voz suena "fantasmal" o "robótica" con el cancelador en modo MCRA o con intensidad alta, y la señal es SSB DX débil. En condiciones normales, dejarlo desactivado.
+
 ---
 
 ## Capítulo 8 — Squelch de Voz
@@ -419,6 +457,8 @@ Debajo del slider **Límite de picos** aparece un indicador en tiempo real:
 | Filtro paso de banda post | ✅ Activo | Igual que pre |
 | ANF | ✅ Activo | Sensibilidad 3,0×, profundidad 90% |
 | Cancelador de ruido | ✅ Activo | Aprender perfil primero |
+| ↳ Post-filtro espectral | ⬜ Opcional | Activar si se escuchan pitidos intermitentes residuales |
+| ↳ Refuerzo de pitch SSB | ⬜ Opcional | Solo para señales SSB DX muy débiles |
 | Squelch | ✅ Activo | Umbral 0,20, retención 300 ms |
 | EQ Presencia | ✅ Activo | +4 dB a 2000 Hz |
 | Excitador armónico | ⬜ Opcional | Drive 2,0×, mezcla 25% |
@@ -432,6 +472,8 @@ Debajo del slider **Límite de picos** aparece un indicador en tiempo real:
 | Filtro paso de banda post | ✅ Activo | Igual que pre |
 | ANF | ⬜ Opcional | Solo si hay heterodinos audibles |
 | Cancelador de ruido | ✅ Activo | Aprender perfil primero |
+| ↳ Post-filtro espectral | ⬜ Opcional | Activar si quedan pitidos residuales |
+| ↳ Refuerzo de pitch SSB | ❌ No usar | No fiable con la banda ancha de AM |
 | Squelch | ❌ No usar | Produce bombeo con música |
 | EQ Presencia | ⬜ Opcional | Solo si la voz suena apagada |
 | Excitador armónico | ⬜ Opcional | Con moderación |

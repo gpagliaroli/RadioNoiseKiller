@@ -67,7 +67,7 @@ src/
 │   ├── freq_shift.py    # FrequencyShifter (corrección de pitch SSB)
 │   ├── gain.py          # GainLimiter (peak follower, ataque instantáneo, expone last_reduction_db)
 │   ├── level.py         # LevelMeter (RMS con decaimiento)
-│   └── noise_profiler.py # NoiseProfiler (Log-MMSE DD + MCRA adaptativo, dos modos seleccionables)
+│   └── noise_profiler.py # NoiseProfiler (Log-MMSE DD + MCRA adaptativo + pitch enhance SSB)
 └── ui/
     ├── main_window.py   # QTabWidget: Principal + Avanzada Audio + Avanzada Ruido + Espectro
     ├── advanced_tab.py  # Sliders de configuración avanzada
@@ -158,6 +158,28 @@ noise_mag = sqrt(λ_d)
 Ambos modos alimentan el mismo bloque Log-MMSE + OMLSA; solo cambia la fuente de `noise_mag`.
 `config.py`: campo `noise_mode: str = "static"|"mcra"` en `DSPConfig`, persistido en settings.json.
 
+### Pitch enhancement SSB (autocorrelación + máscara armónica)
+Feature opcional para señales SSB débiles. Funciona sobre `p_speech` justo antes de OMLSA:
+- Buffer rolling de 2048 muestras (~42ms) siempre actualizado, detección lazy.
+- `_detect_pitch()`: autocorrelación normalizada vía FFT (4096-point), búsqueda en lag=120..600 (80–400 Hz).
+  Retorna f0 solo si el pico de autocorr ≥ 0.30 (umbral de confianza).
+- `_harmonic_mask(f0)`: Gaussiana (σ=1.5 bins) centrada en cada k·f0, clipeada a [0,1].
+- Integración: `p_speech = max(p_speech, hmask · strength)` — solo eleva, nunca baja.
+  Esto previene que el cancelador suprima bins de armónicos en señales con SNR muy bajo.
+- Hold de 3 frames: el último f0 válido se conserva 3 frames ante gaps de detección.
+- Sin efecto si f0 no detectado o pitch disabled (passthrough).
+- `pitch_enhance_enabled / pitch_enhance_strength` en DSPConfig; checkbox en `MainWindow._build_modules_group()` (sub-módulo indentado bajo el cancelador), slider de sensibilidad en `AdvancedNoiseTab`.
+
+### Post-filtro espectral (ruido musical residual)
+Segunda pasada sobre los bins de ruido después de OMLSA+alpha para eliminar el ruido musical
+("pitidos fantasma") que el Wiener deja cuando el VAD marcó el bin como ruido pero no lo suprimió
+del todo. Fórmula: `gain_post[k] = gain[k]^(1 + strength·(1 − p_speech[k]))`.
+- Bins de voz pura (`p_speech=1`): sin cambio — el exponente es 1, gain no cambia.
+- Bins de ruido puro (`p_speech=0`): `gain^(1+strength)` → mayor supresión cuanto mayor sea `strength`.
+- Bins intermedios: supresión gradual proporcional a `1 - p_speech[k]`.
+- Aplicado después del suavizado en frecuencia y del paso alpha, antes de `spec_out = gain·spec`.
+- `post_filter_enabled / post_filter_strength` en DSPConfig; checkbox en `MainWindow._build_modules_group()` (sub-módulo indentado bajo el cancelador), slider en `AdvancedNoiseTab`.
+
 ## Configuración persistente
 
 `AppConfig.save()` / `AppConfig.load()` → `settings.json`
@@ -184,6 +206,9 @@ Cambios v1.2 (pendiente de release):
 - Log-MMSE: reemplaza MMSE-STSA en el estimador de ganancia DD (voz más natural)
 - Piso MCRA en espectro: línea amarilla se actualiza cada 500ms con el estimado adaptativo
 - Indicador del limitador de picos: label en tiempo real junto al slider (naranja/rojo cuando activo)
+- Pitch enhancement SSB: detección de f0 por autocorrelación + máscara gaussiana de armónicos
+- Post-filtro espectral: segunda pasada sobre bins de ruido contra ruido musical residual
+- Reorganización UI: ambos sub-módulos del cancelador indentados en Módulos Activos (pestaña Principal)
 
 ### Visualizador de espectro — decisiones de implementación
 

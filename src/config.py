@@ -47,6 +47,10 @@ class DSPConfig:
     presence_db:     float = 0.0    # dB, ganancia del pico de presencia
     presence_q:      float = 0.7    # Q del pico de presencia
     pitch_shift_hz:  float = 0.0    # Hz, corrección de tono SSB (-500 a +500)
+    post_filter_enabled:    bool  = False  # post-filtro espectral contra ruido musical residual
+    post_filter_strength:   float = 1.0   # agresividad del post-filtro (0=off, 1=moderado, 2=agresivo)
+    pitch_enhance_enabled:  bool  = False  # refuerzo de armónicos SSB via autocorrelación
+    pitch_enhance_strength: float = 0.7    # qué tanto elevar p_speech en bins de armónicos (0-1)
     bandpass_limits: dict = field(default_factory=lambda: {
         RadioMode.AM:  (300, 5000),
         RadioMode.SSB: (200, 3000),
@@ -112,6 +116,10 @@ class AppConfig:
                 "presence_db":    self.dsp.presence_db,
                 "presence_q":     self.dsp.presence_q,
                 "pitch_shift_hz": self.dsp.pitch_shift_hz,
+                "post_filter_enabled":    self.dsp.post_filter_enabled,
+                "post_filter_strength":   self.dsp.post_filter_strength,
+                "pitch_enhance_enabled":  self.dsp.pitch_enhance_enabled,
+                "pitch_enhance_strength": self.dsp.pitch_enhance_strength,
                 "filter_order": self.dsp.filter_order,
                 "bandpass_limits": {
                     m.value: list(v)
@@ -182,6 +190,10 @@ class AppConfig:
         self.dsp.presence_db    = d.get("presence_db",    self.dsp.presence_db)
         self.dsp.presence_q     = d.get("presence_q",     self.dsp.presence_q)
         self.dsp.pitch_shift_hz = d.get("pitch_shift_hz", self.dsp.pitch_shift_hz)
+        self.dsp.post_filter_enabled    = bool(d.get("post_filter_enabled",    self.dsp.post_filter_enabled))
+        self.dsp.post_filter_strength   = float(d.get("post_filter_strength",   self.dsp.post_filter_strength))
+        self.dsp.pitch_enhance_enabled  = bool(d.get("pitch_enhance_enabled",  self.dsp.pitch_enhance_enabled))
+        self.dsp.pitch_enhance_strength = float(d.get("pitch_enhance_strength", self.dsp.pitch_enhance_strength))
         self.dsp.filter_order = d.get("filter_order", self.dsp.filter_order)
         for mode_str, limits in d.get("bandpass_limits", {}).items():
             if mode_str in ("SSB-USB", "SSB-LSB"):

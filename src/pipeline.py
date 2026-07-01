@@ -57,6 +57,10 @@ class ProcessingPipeline:
         self._noise_profiler = NoiseProfiler(config.audio.block_size)
         self._noise_profiler.set_smooth(config.dsp.noise_smooth)
         self._noise_profiler.set_attack(config.dsp.noise_attack)
+        self._noise_profiler.set_post_filter_enabled(config.dsp.post_filter_enabled)
+        self._noise_profiler.set_post_filter_strength(config.dsp.post_filter_strength)
+        self._noise_profiler.set_pitch_enabled(config.dsp.pitch_enhance_enabled)
+        self._noise_profiler.set_pitch_strength(config.dsp.pitch_enhance_strength)
         self._squelch_enabled:   bool  = config.dsp.squelch_enabled
         self._squelch_threshold: float = config.dsp.squelch_threshold
         self._squelch_hold_ms:   float = config.dsp.squelch_hold_ms
@@ -221,6 +225,22 @@ class ProcessingPipeline:
     def set_noise_mode(self, mode: str) -> None:
         self._config.dsp.noise_mode = mode
         self._noise_profiler.set_mode(mode)
+
+    def set_post_filter_enabled(self, v: bool) -> None:
+        self._config.dsp.post_filter_enabled = bool(v)
+        self._noise_profiler.set_post_filter_enabled(bool(v))
+
+    def set_post_filter_strength(self, v: float) -> None:
+        self._config.dsp.post_filter_strength = float(v)
+        self._noise_profiler.set_post_filter_strength(float(v))
+
+    def set_pitch_enhance_enabled(self, v: bool) -> None:
+        self._config.dsp.pitch_enhance_enabled = bool(v)
+        self._noise_profiler.set_pitch_enabled(bool(v))
+
+    def set_pitch_enhance_strength(self, v: float) -> None:
+        self._config.dsp.pitch_enhance_strength = float(v)
+        self._noise_profiler.set_pitch_strength(float(v))
 
     @property
     def noise_mode(self) -> str:

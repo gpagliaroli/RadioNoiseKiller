@@ -153,6 +153,18 @@ class MainWindow(QMainWindow):
             layout.addWidget(cb)
             return cb
 
+        def _chk_sub(label: str, tooltip: str) -> QCheckBox:
+            """Checkbox indentado — sub-módulo del ítem anterior."""
+            cb = QCheckBox(label)
+            cb.setToolTip(tooltip)
+            row = QWidget()
+            row_layout = QHBoxLayout(row)
+            row_layout.setContentsMargins(22, 0, 0, 0)
+            row_layout.setSpacing(0)
+            row_layout.addWidget(cb)
+            layout.addWidget(row)
+            return cb
+
         self._chk_blanker = _chk(
             "Supresor de impulsos",
             "Elimina QRN, frituras y descargas atmosféricas cortas.",
@@ -173,6 +185,18 @@ class MainWindow(QMainWindow):
             "Cancelador de ruido estacionario",
             "Filtro de Wiener espectral. Requiere perfil aprendido.",
         )
+        self._chk_post_filter = _chk_sub(
+            "Post-filtro espectral  (ruido musical residual)",
+            "Segunda pasada sobre bins de ruido para eliminar el 'ruido musical'\n"
+            "(pitidos intermitentes) que deja el Wiener. Requiere cancelador activo.\n"
+            "Agresividad configurable en pestaña Avanzada Ruido.",
+        )
+        self._chk_pitch_enhance = _chk_sub(
+            "Refuerzo de pitch SSB  (detección por autocorrelación)",
+            "Detecta el tono fundamental de la voz SSB y protege sus armónicos\n"
+            "del cancelador de ruido. Útil para señales SSB débiles enterradas en ruido.\n"
+            "Sensibilidad configurable en pestaña Avanzada Ruido.",
+        )
         self._chk_presence = _chk(
             "EQ Presencia",
             "Pico de realce vocal configurable en pestaña Avanzada.",
@@ -191,6 +215,8 @@ class MainWindow(QMainWindow):
         self._chk_bandpass_post.toggled.connect(lambda v: self._on_module_toggled("bandpass_post_enabled", self._pipeline.set_bandpass_post_enabled, v))
         self._chk_anf.toggled.connect(lambda v: self._on_module_toggled("anf_enabled", self._pipeline.set_anf_enabled, v))
         self._chk_noise.toggled.connect(lambda v: self._on_module_toggled("noise_enabled", self._pipeline.set_noise_enabled, v))
+        self._chk_post_filter.toggled.connect(lambda v: self._on_module_toggled("post_filter_enabled", self._pipeline.set_post_filter_enabled, v))
+        self._chk_pitch_enhance.toggled.connect(lambda v: self._on_module_toggled("pitch_enhance_enabled", self._pipeline.set_pitch_enhance_enabled, v))
         self._chk_presence.toggled.connect(lambda v: self._on_module_toggled("presence_enabled", self._pipeline.set_presence_enabled, v))
         self._chk_squelch.toggled.connect(lambda v: self._on_module_toggled("squelch_enabled", self._pipeline.set_squelch_enabled, v))
         self._chk_exciter.toggled.connect(lambda v: self._on_module_toggled("exciter_enabled", self._pipeline.set_exciter_enabled, v))
@@ -454,8 +480,10 @@ class MainWindow(QMainWindow):
             (self._chk_bandpass_pre,  "bandpass_pre_enabled",  self._pipeline.set_bandpass_pre_enabled),
             (self._chk_bandpass_post, "bandpass_post_enabled", self._pipeline.set_bandpass_post_enabled),
             (self._chk_anf,      "anf_enabled",      self._pipeline.set_anf_enabled),
-            (self._chk_noise,    "noise_enabled",     self._pipeline.set_noise_enabled),
-            (self._chk_presence, "presence_enabled",  self._pipeline.set_presence_enabled),
+            (self._chk_noise,        "noise_enabled",        self._pipeline.set_noise_enabled),
+            (self._chk_post_filter,   "post_filter_enabled",   self._pipeline.set_post_filter_enabled),
+            (self._chk_pitch_enhance, "pitch_enhance_enabled", self._pipeline.set_pitch_enhance_enabled),
+            (self._chk_presence,      "presence_enabled",      self._pipeline.set_presence_enabled),
             (self._chk_squelch,  "squelch_enabled",   self._pipeline.set_squelch_enabled),
             (self._chk_exciter,  "exciter_enabled",   self._pipeline.set_exciter_enabled),
         ]:

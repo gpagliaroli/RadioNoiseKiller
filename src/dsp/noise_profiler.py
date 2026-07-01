@@ -41,6 +41,13 @@ class NoiseProfiler:
 
     _VAD_THRESHOLD: float = 0.80
 
+    # Parámetros pitch enhancement (SSB)
+    _PITCH_BUF_N:    int   = 2048   # muestras de audio para autocorrelación (~42ms @ 48kHz)
+    _PITCH_LAG_MIN:  int   = 120    # lag mínimo → 400 Hz
+    _PITCH_LAG_MAX:  int   = 600    # lag máximo →  80 Hz
+    _PITCH_CONF_THR: float = 0.30   # umbral de confianza de la autocorrelación
+    _PITCH_SIGMA:    float = 1.5    # sigma (bins) de la máscara gaussiana por armónico
+
     # Parámetros MCRA
     _MCRA_ALPHA_S:  float = 0.9    # suavizado espectral
     _MCRA_ALPHA_D0: float = 0.85   # velocidad de actualización del ruido (sin habla)
@@ -83,6 +90,17 @@ class NoiseProfiler:
 
         # Modo de operación
         self._mode: str = "static"
+
+        # Post-filtro espectral (ruido musical residual)
+        self._post_filter_enabled:  bool  = False
+        self._post_filter_strength: float = 1.0
+
+        # Pitch enhancement (SSB)
+        self._pitch_enabled:  bool  = False
+        self._pitch_strength: float = 0.7
+        self._pitch_buf = np.zeros(self._PITCH_BUF_N, dtype=np.float32)
+        self._pitch_f0:       float | None = None
+        self._pitch_f0_hold:  int = 0   # frames a mantener el último f0 cuando la autocorr falla
 
         # Estado MCRA
         self._mcra_Sf:        np.ndarray | None = None
@@ -152,6 +170,9 @@ class NoiseProfiler:
         return self._n_frames
 
     def clear_profile(self) -> None:
+        self._pitch_buf[:]  = 0.0
+        self._pitch_f0      = None
+        self._pitch_f0_hold = 0
         if self._mode == "mcra":
             self._reset_mcra()
             self._gain_prev     = None
@@ -193,6 +214,67 @@ class NoiseProfiler:
 
     def set_enabled(self, enabled: bool) -> None:
         self._enabled = bool(enabled)
+
+    def set_post_filter_enabled(self, v: bool) -> None:
+        self._post_filter_enabled = bool(v)
+
+    def set_post_filter_strength(self, v: float) -> None:
+        self._post_filter_strength = float(np.clip(v, 0.0, 3.0))
+
+    def set_pitch_enabled(self, v: bool) -> None:
+        self._pitch_enabled = bool(v)
+        if not v:
+            self._pitch_f0      = None
+            self._pitch_f0_hold = 0
+
+    def set_pitch_strength(self, v: float) -> None:
+        self._pitch_strength = float(np.clip(v, 0.0, 1.0))
+
+    # ------------------------------------------------------------------
+    # Pitch enhancement — autocorrelación + máscara armónica
+    # ------------------------------------------------------------------
+
+    def _detect_pitch(self) -> "float | None":
+        """Detecta f0 por autocorrelación normalizada sobre _pitch_buf.
+        Retorna Hz si la señal es periódica con confianza ≥ _PITCH_CONF_THR, None si no."""
+        x = self._pitch_buf.astype(np.float64)
+        x -= x.mean()
+        e0 = float(np.dot(x, x))
+        if e0 < 1e-8:
+            return None
+
+        # Autocorrelación vía FFT (rápida y exacta)
+        n    = len(x)
+        nfft = 1 << (2 * n - 1).bit_length()
+        X    = np.fft.rfft(x, n=nfft)
+        acf  = np.fft.irfft(X * np.conj(X))[:n]
+        acf /= (acf[0] + 1e-10)
+
+        search   = acf[self._PITCH_LAG_MIN : self._PITCH_LAG_MAX + 1]
+        if len(search) == 0:
+            return None
+
+        peak_idx = int(np.argmax(search))
+        peak_val = float(search[peak_idx])
+
+        if peak_val < self._PITCH_CONF_THR:
+            return None
+
+        return 48000.0 / (peak_idx + self._PITCH_LAG_MIN)
+
+    def _harmonic_mask(self, f0: float) -> np.ndarray:
+        """Máscara gaussiana centrada en cada armónico de f0 (en bins FFT)."""
+        freq_per_bin = 48000.0 / self._fft_n
+        mask = np.zeros(self._nb, dtype=np.float32)
+        bins = np.arange(self._nb, dtype=np.float32)
+        h = 1
+        while True:
+            center = h * f0 / freq_per_bin
+            if center >= self._nb:
+                break
+            mask += np.exp(-0.5 * ((bins - center) / self._PITCH_SIGMA) ** 2).astype(np.float32)
+            h += 1
+        return np.minimum(mask, 1.0)
 
     # ------------------------------------------------------------------
     # MCRA — estimación adaptativa de ruido
@@ -254,6 +336,20 @@ class NoiseProfiler:
 
     def process(self, chunk: np.ndarray) -> np.ndarray:
         hop = len(chunk)
+
+        # Buffer rolling para pitch (siempre activo, detección lazy cuando está habilitado)
+        self._pitch_buf[:-hop] = self._pitch_buf[hop:]
+        self._pitch_buf[-hop:] = chunk
+
+        if self._pitch_enabled:
+            f0 = self._detect_pitch()
+            if f0 is not None:
+                self._pitch_f0      = f0
+                self._pitch_f0_hold = 3          # mantener 3 frames ante gaps de detección
+            elif self._pitch_f0_hold > 0:
+                self._pitch_f0_hold -= 1
+                if self._pitch_f0_hold == 0:
+                    self._pitch_f0 = None
 
         # Frame OLA: [bloque anterior | bloque actual]
         frame       = np.empty(self._fft_n, dtype=np.float32)
@@ -329,6 +425,12 @@ class NoiseProfiler:
 
             # --- OMLSA: anclar bins de ruido al floor ---
             p_speech = np.minimum(g_detect / self._VAD_THRESHOLD, 1.0).astype(np.float32)
+
+            # --- Refuerzo armónico SSB: elevar p_speech en bins de armónicos del f0 ---
+            if self._pitch_enabled and self._pitch_f0 is not None:
+                hmask    = self._harmonic_mask(self._pitch_f0)
+                p_speech = np.maximum(p_speech, hmask * np.float32(self._pitch_strength))
+
             gain_out = (gain_dd ** p_speech) * (self._floor ** (1.0 - p_speech))
 
             # --- Suavizado de gain en frecuencia ---
@@ -339,6 +441,17 @@ class NoiseProfiler:
             # Intensidad: gain^alpha → alpha=0 passthrough, alpha=1 reducción plena
             if self._alpha < 1.0:
                 gain_out = np.power(gain_out, self._alpha).astype(np.float32)
+
+            # Post-filtro espectral: supresión adicional en bins de ruido residual
+            # gain_post[k] = gain[k] ^ (1 + strength * (1 - p_speech[k]))
+            # Bins de voz (p_speech=1): sin cambio. Bins de ruido (p_speech=0): gain^(1+strength)
+            if self._post_filter_enabled and self._post_filter_strength > 0.0:
+                p_noise  = np.float32(1.0) - p_speech
+                gain_out = np.power(
+                    gain_out,
+                    np.float32(1.0) + np.float32(self._post_filter_strength) * p_noise,
+                ).astype(np.float32)
+                gain_out = np.maximum(gain_out, np.float32(self._floor))
 
             self._last_reduction_db = 20.0 * np.log10(max(float(np.mean(gain_out)), 1e-6))
 

@@ -562,6 +562,54 @@ class AdvancedNoiseTab(QWidget):
         note6 = QLabel("  ↳ Tiempo que el gate permanece abierto tras perder la voz. Evita cortes entre palabras. Default 300 ms.")
         note6.setStyleSheet("color: #888; font-size: 8pt;")
         layout.addWidget(note6)
+
+        sep_pf = QFrame()
+        sep_pf.setFrameShape(QFrame.Shape.HLine)
+        sep_pf.setStyleSheet("color: #444;")
+        layout.addWidget(sep_pf)
+
+        self._s_post_filter = SliderRow(
+            "Post-filtro (ruido musical):",
+            min_val=0.0, max_val=3.0,
+            default=self._config.dsp.post_filter_strength,
+            step=0.1, unit="", fmt="{:.1f}",
+        )
+        self._s_post_filter._update_label = lambda v: self._s_post_filter._val_lbl.setText(
+            f"{v:.1f}  ({'desactivado' if v == 0 else 'suave' if v < 0.8 else 'normal' if v < 1.8 else 'agresivo'})"
+        )
+        self._s_post_filter._val_lbl.setFixedWidth(110)
+        self._s_post_filter.valueChanged.connect(self._on_post_filter_strength)
+        layout.addWidget(self._s_post_filter)
+
+        note_pf = QLabel("  ↳ Supresión extra en bins de ruido para eliminar 'pitidos fantasma'. 0=off, 1=moderado, 2=agresivo.")
+        note_pf.setStyleSheet("color: #888; font-size: 8pt;")
+        layout.addWidget(note_pf)
+
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine)
+        sep.setStyleSheet("color: #444;")
+        layout.addWidget(sep)
+
+        pitch_lbl = QLabel("Refuerzo de pitch SSB  —  activar en pestaña Principal → Módulos activos")
+        pitch_lbl.setStyleSheet("color: #888; font-size: 8pt; font-style: italic;")
+        layout.addWidget(pitch_lbl)
+
+        self._s_pitch_strength = SliderRow(
+            "Protección de armónicos:",
+            min_val=0.0, max_val=1.0,
+            default=self._config.dsp.pitch_enhance_strength,
+            step=0.05, unit="", fmt="{:.2f}",
+        )
+        self._s_pitch_strength._update_label = lambda v: self._s_pitch_strength._val_lbl.setText(
+            f"{v*100:.0f}%  ({'suave' if v < 0.4 else 'normal' if v < 0.75 else 'fuerte'})"
+        )
+        self._s_pitch_strength._val_lbl.setFixedWidth(110)
+        self._s_pitch_strength.valueChanged.connect(self._on_pitch_strength)
+        layout.addWidget(self._s_pitch_strength)
+
+        note_ps = QLabel("  ↳ Cuánto eleva la probabilidad de voz en bins de armónicos. 70%=recomendado.")
+        note_ps.setStyleSheet("color: #888; font-size: 8pt;")
+        layout.addWidget(note_ps)
         return group
 
     # ------------------------------------------------------------------
@@ -579,6 +627,8 @@ class AdvancedNoiseTab(QWidget):
         self._s_noise_attack.set_value(cfg.noise_attack)
         self._s_squelch_threshold.set_value(cfg.squelch_threshold)
         self._s_squelch_hold.set_value(cfg.squelch_hold_ms)
+        self._s_post_filter.set_value(cfg.post_filter_strength)
+        self._s_pitch_strength.set_value(cfg.pitch_enhance_strength)
 
     def _reset_defaults(self) -> None:
         defaults = DSPConfig()
@@ -600,6 +650,10 @@ class AdvancedNoiseTab(QWidget):
         self._pipeline.set_squelch_threshold(defaults.squelch_threshold)
         self._config.dsp.squelch_hold_ms = defaults.squelch_hold_ms
         self._pipeline.set_squelch_hold_ms(defaults.squelch_hold_ms)
+        self._config.dsp.post_filter_strength   = defaults.post_filter_strength
+        self._pipeline.set_post_filter_strength(defaults.post_filter_strength)
+        self._config.dsp.pitch_enhance_strength = defaults.pitch_enhance_strength
+        self._pipeline.set_pitch_enhance_strength(defaults.pitch_enhance_strength)
         self._load_values()
 
     # ------------------------------------------------------------------
@@ -621,3 +675,11 @@ class AdvancedNoiseTab(QWidget):
     def _on_squelch_hold(self, val: float) -> None:
         self._config.dsp.squelch_hold_ms = val
         self._pipeline.set_squelch_hold_ms(val)
+
+    def _on_post_filter_strength(self, val: float) -> None:
+        self._config.dsp.post_filter_strength = val
+        self._pipeline.set_post_filter_strength(val)
+
+    def _on_pitch_strength(self, val: float) -> None:
+        self._config.dsp.pitch_enhance_strength = val
+        self._pipeline.set_pitch_enhance_strength(val)
