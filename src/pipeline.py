@@ -698,7 +698,13 @@ class ProcessingPipeline:
 
         self._db_out = self._level_out.process(out)
         if self._stream:
-            self._latency_ms = self._stream.latency_ms
+            hop_ms = self._config.audio.block_size / self._config.audio.sample_rate * 1000
+            algo_hops = 1  # pipeline queue + callback cycle
+            if self._config.dsp.anf_enabled:
+                algo_hops += 1  # ANF OLA: 1 hop
+            if self._config.dsp.noise_enabled:
+                algo_hops += 1  # NoiseProfiler OLA: 1 hop
+            self._latency_ms = self._stream.latency_ms + algo_hops * hop_ms
 
         if self._on_level_update:
             self._on_level_update(self._db_in, self._db_out, self._latency_ms)

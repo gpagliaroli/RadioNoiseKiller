@@ -5,7 +5,7 @@ Combina una etiqueta, un QSlider horizontal y una etiqueta de valor con unidad.
 Internamente trabaja con enteros (QSlider) y escala a float según step y min/max.
 Soporta cualquier rango y paso flotante (ej: -20 a +20 dB con step 0.5).
 """
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QSlider
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QSlider, QMenu
 from PySide6.QtCore import Qt, Signal
 
 
@@ -33,6 +33,7 @@ class SliderRow(QWidget):
         super().__init__(parent)
         self._min = min_val
         self._max = max_val
+        self._default = default
         self._step = step
         self._unit = unit
         self._fmt = fmt
@@ -50,6 +51,8 @@ class SliderRow(QWidget):
         self._slider.setRange(0, self._n_steps)
         self._slider.setValue(self._to_int(default))
         self._slider.valueChanged.connect(self._on_slider_changed)
+        self._slider.setContextMenuPolicy(Qt.CustomContextMenu)
+        self._slider.customContextMenuRequested.connect(self._show_context_menu)
         layout.addWidget(self._slider, stretch=1)
 
         self._val_lbl = QLabel()
@@ -94,3 +97,12 @@ class SliderRow(QWidget):
 
     def _update_label(self, val: float) -> None:
         self._val_lbl.setText(self._fmt.format(val) + (" " + self._unit if self._unit else ""))
+
+    def _show_context_menu(self, pos) -> None:
+        default_str = self._fmt.format(self._default)
+        if self._unit:
+            default_str += f" {self._unit}"
+        menu = QMenu(self)
+        action = menu.addAction(f"↺  Restaurar por defecto  ({default_str})")
+        if menu.exec(self._slider.mapToGlobal(pos)) == action:
+            self.set_value(self._default, emit=True)
