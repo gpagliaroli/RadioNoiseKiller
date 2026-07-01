@@ -306,6 +306,11 @@ class ProcessingPipeline:
         self._config.dsp.exciter_mix = mix
         self._exciter.set_mix(mix)
 
+    @property
+    def peak_reduction_db(self) -> float:
+        """Reducción aplicada por el limitador en el último frame. 0.0 = sin actividad."""
+        return self._limiter.last_reduction_db
+
     def pop_blanker_hits(self) -> int:
         h = self._blanker_hits
         self._blanker_hits = 0

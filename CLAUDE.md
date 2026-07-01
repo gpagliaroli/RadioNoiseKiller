@@ -65,7 +65,7 @@ src/
 │   ├── exciter.py       # AuralExciter (armónicos tanh)
 │   ├── filters.py       # BandpassFilter + PresenceFilter (Butterworth IIR, stateful)
 │   ├── freq_shift.py    # FrequencyShifter (corrección de pitch SSB)
-│   ├── gain.py          # GainLimiter (peak follower, ataque instantáneo)
+│   ├── gain.py          # GainLimiter (peak follower, ataque instantáneo, expone last_reduction_db)
 │   ├── level.py         # LevelMeter (RMS con decaimiento)
 │   └── noise_profiler.py # NoiseProfiler (Log-MMSE DD + MCRA adaptativo, dos modos seleccionables)
 └── ui/
@@ -182,6 +182,8 @@ Distribuible v1.1 en GitHub Releases. Manual fuente en `MANUAL.md` — regenerar
 Cambios v1.2 (pendiente de release):
 - MCRA: estimación adaptativa de ruido, seleccionable vs. perfil estático en la UI
 - Log-MMSE: reemplaza MMSE-STSA en el estimador de ganancia DD (voz más natural)
+- Piso MCRA en espectro: línea amarilla se actualiza cada 500ms con el estimado adaptativo
+- Indicador del limitador de picos: label en tiempo real junto al slider (naranja/rojo cuando activo)
 
 ### Visualizador de espectro — decisiones de implementación
 

@@ -23,6 +23,7 @@ class GainLimiter:
         self._coef      = None           # precalculado en el primer proceso
         self._coefs_n   = None           # longitud del array precalculado
         self._cached_sr = None
+        self._last_reduction_db: float = 0.0
 
     def set_gain_db(self, db: float) -> None:
         self._gain = 10 ** (db / 20.0)
@@ -57,4 +58,13 @@ class GainLimiter:
         # Aplicar limitación: gain_env = min(1, limit/envelope)
         with np.errstate(divide="ignore", invalid="ignore"):
             gain_env = np.minimum(1.0, self._limit / (envelope + 1e-12))
+
+        min_gain = float(np.min(gain_env))
+        self._last_reduction_db = 20.0 * np.log10(min_gain) if min_gain < 1.0 else 0.0
+
         return (audio * gain_env).astype(np.float32)
+
+    @property
+    def last_reduction_db(self) -> float:
+        """Reducción aplicada en el último frame. 0.0 = sin limitación activa."""
+        return self._last_reduction_db

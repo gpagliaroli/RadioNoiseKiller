@@ -392,6 +392,14 @@ Controla los niveles de entrada y salida, y protege contra picos de audio. Los m
 | **Salida** | -20 dB a +20 dB | 0 dB | Amplifica o atenúa la salida del pipeline. Útil para compensar la reducción de nivel que produce el cancelador de ruido — al suprimir el ruido, el audio percibido baja porque el ruido ya no suma al nivel total. Subir 3–6 dB para compensar. |
 | **Límite de picos** | -12 dB a 0 dB | -1 dB | Nivel máximo permitido a la salida. Evita distorsión por saturación. -1 dB es suficiente para evitar clipping sin comprimir el audio. |
 
+### Indicador del limitador de picos
+
+Debajo del slider **Límite de picos** aparece un indicador en tiempo real:
+
+- **—** (gris): el limitador no está actuando — el nivel de salida está por debajo del umbral configurado.
+- **ACTIVO  -X.X dB** (naranja): el limitador está reduciendo picos leves (menos de 3 dB de reducción).
+- **ACTIVO  -X.X dB** (rojo): el limitador está trabajando intensamente (más de 3 dB de reducción) — considerar bajar la ganancia de salida o el límite de picos.
+
 ### Medidores VU
 
 - **Verde** (-20 a -6 dB): nivel óptimo.

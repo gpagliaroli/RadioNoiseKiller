@@ -313,6 +313,19 @@ class MainWindow(QMainWindow):
         layout.addWidget(self._s_gain_in)
         layout.addWidget(self._s_gain_out)
         layout.addWidget(self._s_peak)
+
+        peak_row = QHBoxLayout()
+        peak_row.setContentsMargins(0, 0, 0, 0)
+        lbl_peak_title = QLabel("Limitador de picos:")
+        lbl_peak_title.setStyleSheet("color: #607d8b; font-size: 8pt;")
+        lbl_peak_title.setFixedWidth(120)
+        self._lbl_peak_active = QLabel("—")
+        self._lbl_peak_active.setStyleSheet("color: #555; font-size: 8pt; font-weight: bold;")
+        peak_row.addWidget(lbl_peak_title)
+        peak_row.addWidget(self._lbl_peak_active)
+        peak_row.addStretch()
+        layout.addLayout(peak_row)
+
         return group
 
     def _build_spectrum_tab(self) -> QWidget:
@@ -554,6 +567,7 @@ class MainWindow(QMainWindow):
         else:
             self._label_noise.setText("Adaptativo (MCRA) — activar procesamiento para calibrar")
         self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
+        self._spectrum_widget.clear_floor()
         self._schedule_save()
 
     def _on_learn_toggled(self, checked: bool) -> None:
@@ -611,6 +625,10 @@ class MainWindow(QMainWindow):
                     self._lbl_noise_db.setStyleSheet("color: #69f0ae; font-weight: bold;")
                 self._label_noise.setText("Adaptativo (MCRA) — estimando en tiempo real")
                 self._label_noise.setStyleSheet("color: #69f0ae; font-size: 8pt;")
+                # Actualizar piso de ruido en el espectro con el estimado MCRA actual
+                floor_data = self._pipeline.get_noise_floor_data()
+                if floor_data is not None:
+                    self._spectrum_widget.set_noise_floor_from_hz(*floor_data)
             else:
                 self._lbl_noise_db.setText("—")
                 self._lbl_noise_db.setStyleSheet("color: #888; font-weight: bold;")
@@ -702,6 +720,15 @@ class MainWindow(QMainWindow):
         self._label_latency.setText(f"Latencia: {lat:.0f} ms" if lat > 0 else "Latencia: --")
         if self._combo_agc.currentData() != "off":
             self._label_agc_gain.setText(f"{self._pipeline.agc_gain_db:+.0f} dB")
+
+        red = self._pipeline.peak_reduction_db
+        if red < -0.1:
+            self._lbl_peak_active.setText(f"ACTIVO  {red:.1f} dB")
+            color = "#ef5350" if red < -3.0 else "#ffa726"
+            self._lbl_peak_active.setStyleSheet(f"color: {color}; font-size: 8pt; font-weight: bold;")
+        else:
+            self._lbl_peak_active.setText("—")
+            self._lbl_peak_active.setStyleSheet("color: #555; font-size: 8pt; font-weight: bold;")
 
     def _restore_or_center(self) -> None:
         if self._config.window.x is not None:

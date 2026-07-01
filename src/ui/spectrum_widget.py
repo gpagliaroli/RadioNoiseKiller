@@ -118,6 +118,13 @@ class SpectrumWidget(QWidget):
         self._floor_learning = False
         self.update()
 
+    def set_noise_floor_from_hz(self, freqs_hz: np.ndarray, db: np.ndarray) -> None:
+        """Actualiza el piso de ruido desde datos (freqs_hz, db) — usado por el modo MCRA."""
+        widget_freqs = np.arange(self._n_bins, dtype=np.float32) * self._freq_per_bin
+        interpolated = np.interp(widget_freqs, freqs_hz, db).astype(np.float32)
+        self._db_floor = np.clip(interpolated, self.DB_MIN, 0.0)
+        self.update()
+
     def set_db_max(self, db_max: int) -> None:
         self._db_max = float(db_max)
         self.update()
