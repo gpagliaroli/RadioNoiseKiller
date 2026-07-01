@@ -218,6 +218,14 @@ class ProcessingPipeline:
         hop_ms = self._config.audio.block_size / self._config.audio.sample_rate * 1000.0
         self._squelch_hold_frames = max(0, round(ms / hop_ms))
 
+    def set_noise_mode(self, mode: str) -> None:
+        self._config.dsp.noise_mode = mode
+        self._noise_profiler.set_mode(mode)
+
+    @property
+    def noise_mode(self) -> str:
+        return self._config.dsp.noise_mode
+
     def set_noise_preview(self, enabled: bool) -> None:
         self._noise_profiler.set_preview_mode(enabled)
 

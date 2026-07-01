@@ -32,6 +32,7 @@ class DSPConfig:
     anf_depth:       float = 0.9   # profundidad de atenuación del tono detectado (0=nada, 1=máximo)
     blanker_frame:   float = 15.0  # umbral frame 10ms (× piso de ruido). 5=agresivo, 50=suave, 100=muy suave
     blanker_mini:    float = 8.0   # umbral mini-frame 0.67ms (× piso de ruido). 3=agresivo, 15=suave
+    noise_mode:   str   = "static"  # "static" = perfil manual | "mcra" = adaptativo continuo
     noise_alpha:  float = 0.7   # reducción Wiener en bins de ruido puro (0=off, 0.7=70%, 1.0=máximo)
     noise_floor:  float = 0.1   # ganancia mínima por bin (≥0.05 para evitar gorgojeo con floor bajo)
     noise_smooth:    float = 0.97   # beta_release DD asimétrico (0.94-0.98=sin gorgojeo, bajo=reactivo)
@@ -96,6 +97,7 @@ class AppConfig:
                 "anf_depth":     self.dsp.anf_depth,
                 "blanker_frame": self.dsp.blanker_frame,
                 "blanker_mini":  self.dsp.blanker_mini,
+                "noise_mode":    self.dsp.noise_mode,
                 "noise_alpha":    self.dsp.noise_alpha,
                 "noise_floor":   self.dsp.noise_floor,
                 "noise_smooth":  self.dsp.noise_smooth,
@@ -164,6 +166,8 @@ class AppConfig:
         self.dsp.anf_depth     = float(d.get("anf_depth",     self.dsp.anf_depth))
         self.dsp.blanker_frame = float(d.get("blanker_frame", self.dsp.blanker_frame))
         self.dsp.blanker_mini  = float(d.get("blanker_mini",  self.dsp.blanker_mini))
+        _nm = d.get("noise_mode", self.dsp.noise_mode)
+        self.dsp.noise_mode = _nm if _nm in ("static", "mcra") else "static"
         self.dsp.noise_alpha    = d.get("noise_alpha",    self.dsp.noise_alpha)
         self.dsp.noise_floor    = max(0.05, float(d.get("noise_floor", self.dsp.noise_floor)))
         self.dsp.noise_smooth   = d.get("noise_smooth",  self.dsp.noise_smooth)

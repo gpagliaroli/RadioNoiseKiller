@@ -201,6 +201,22 @@ class MainWindow(QMainWindow):
         group = QGroupBox("Cancelación de Ruido Estacionario")
         layout = QVBoxLayout(group)
 
+        # Selector de modo de estimación de ruido
+        mode_row = QHBoxLayout()
+        mode_lbl = QLabel("Modo:")
+        mode_lbl.setFixedWidth(70)
+        self._combo_noise_mode = QComboBox()
+        self._combo_noise_mode.addItem("Perfil estático",   "static")
+        self._combo_noise_mode.addItem("Adaptativo (MCRA)", "mcra")
+        self._combo_noise_mode.setToolTip(
+            "Perfil estático: aprendizaje manual de 5s.\n"
+            "Adaptativo (MCRA): estima el ruido automáticamente en tiempo real,\n"
+            "  se adapta a cambios de banda sin intervención del usuario."
+        )
+        mode_row.addWidget(mode_lbl)
+        mode_row.addWidget(self._combo_noise_mode)
+        layout.addLayout(mode_row)
+
         btn_row = QHBoxLayout()
         self._btn_learn = QPushButton("⏺  Aprender ruido")
         self._btn_learn.setCheckable(True)
@@ -213,6 +229,8 @@ class MainWindow(QMainWindow):
         self._btn_clear_noise.clicked.connect(self._on_clear_noise_profile)
         btn_row.addWidget(self._btn_clear_noise)
         layout.addLayout(btn_row)
+
+        self._combo_noise_mode.currentIndexChanged.connect(self._on_noise_mode_changed)
 
         intensity_row = QHBoxLayout()
         intensity_lbl = QLabel("Intensidad:")
@@ -444,6 +462,20 @@ class MainWindow(QMainWindow):
                 self._combo_agc.setCurrentIndex(i)
                 break
 
+        # Restaurar modo de ruido y visibilidad de controles
+        for i in range(self._combo_noise_mode.count()):
+            if self._combo_noise_mode.itemData(i) == self._config.dsp.noise_mode:
+                self._combo_noise_mode.blockSignals(True)
+                self._combo_noise_mode.setCurrentIndex(i)
+                self._combo_noise_mode.blockSignals(False)
+                break
+        self._pipeline.set_noise_mode(self._config.dsp.noise_mode)
+        is_static = self._config.dsp.noise_mode == "static"
+        self._btn_learn.setVisible(is_static)
+        self._btn_clear_noise.setVisible(is_static)
+        if not is_static:
+            self._label_noise.setText("Adaptativo (MCRA) — activar procesamiento para calibrar")
+
         if self._saved_input_device is not None:
             for i in range(self._combo_in.count()):
                 dev: AudioDevice = self._combo_in.itemData(i)
@@ -511,6 +543,19 @@ class MainWindow(QMainWindow):
         self._pipeline.set_noise_alpha(alpha)
         self._schedule_save()
 
+    def _on_noise_mode_changed(self, idx: int) -> None:
+        mode = self._combo_noise_mode.itemData(idx)
+        self._pipeline.set_noise_mode(mode)
+        is_static = mode == "static"
+        self._btn_learn.setVisible(is_static)
+        self._btn_clear_noise.setVisible(is_static)
+        if is_static:
+            self._label_noise.setText("Sin perfil — activar procesamiento y presionar Aprender")
+        else:
+            self._label_noise.setText("Adaptativo (MCRA) — activar procesamiento para calibrar")
+        self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
+        self._schedule_save()
+
     def _on_learn_toggled(self, checked: bool) -> None:
         if checked:
             self._learn_countdown = 5
@@ -542,7 +587,39 @@ class MainWindow(QMainWindow):
             self._btn_learn.setChecked(False)
 
     def _update_noise_db(self) -> None:
-        if not self._pipeline.is_running() or not self._pipeline.noise_has_profile:
+        mode = self._pipeline.noise_mode
+
+        if not self._pipeline.is_running():
+            self._lbl_noise_db.setText("—")
+            self._lbl_noise_db.setStyleSheet("color: #888; font-weight: bold;")
+            if mode == "mcra":
+                self._label_noise.setText("Adaptativo (MCRA) — activar procesamiento para calibrar")
+                self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
+            return
+
+        if mode == "mcra":
+            if self._pipeline.noise_has_profile:
+                db = self._pipeline.noise_reduction_db
+                if db >= -0.5:
+                    self._lbl_noise_db.setText("~0 dB")
+                    self._lbl_noise_db.setStyleSheet("color: #888; font-weight: bold;")
+                elif db >= -3.0:
+                    self._lbl_noise_db.setText(f"{db:.1f} dB")
+                    self._lbl_noise_db.setStyleSheet("color: #fff176; font-weight: bold;")
+                else:
+                    self._lbl_noise_db.setText(f"{db:.1f} dB")
+                    self._lbl_noise_db.setStyleSheet("color: #69f0ae; font-weight: bold;")
+                self._label_noise.setText("Adaptativo (MCRA) — estimando en tiempo real")
+                self._label_noise.setStyleSheet("color: #69f0ae; font-size: 8pt;")
+            else:
+                self._lbl_noise_db.setText("—")
+                self._lbl_noise_db.setStyleSheet("color: #888; font-weight: bold;")
+                self._label_noise.setText("Adaptativo (MCRA) — calibrando (~200ms)...")
+                self._label_noise.setStyleSheet("color: #ffd600; font-size: 8pt;")
+            return
+
+        # Modo estático
+        if not self._pipeline.noise_has_profile:
             self._lbl_noise_db.setText("—")
             self._lbl_noise_db.setStyleSheet("color: #888; font-weight: bold;")
             return
@@ -586,7 +663,8 @@ class MainWindow(QMainWindow):
                 self._spectrum_widget.start()
                 self._status_bar.showMessage("Procesando...")
                 self._adv_audio_tab.set_processing_active(True)
-                self._btn_learn.setEnabled(True)
+                is_static = self._config.dsp.noise_mode == "static"
+                self._btn_learn.setEnabled(is_static)
             except Exception as e:
                 self._btn_start.setChecked(False)
                 self._status_bar.showMessage(f"Error: {e}")

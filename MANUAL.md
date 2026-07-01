@@ -236,19 +236,30 @@ El indicador **Actividad** muestra cuántos tonos están siendo muescados en est
 
 ### Descripción
 
-Es el módulo central de la aplicación. Implementa un **filtro de Wiener espectral** con estimador DD (Decision-Directed) que reduce el ruido estacionario de fondo — estático de banda, ruido blanco, ruido de propagación — preservando la voz.
+Es el módulo central de la aplicación. Implementa un **filtro de Wiener Log-MMSE espectral** con estimador DD (Decision-Directed) que reduce el ruido estacionario de fondo — estático de banda, ruido blanco, ruido de propagación — preservando la voz.
 
-A diferencia de un simple EQ o un gate, este algoritmo aprende el *perfil espectral* del ruido (cómo se distribuye la energía del ruido en cada frecuencia) y calcula en tiempo real qué parte de la señal es ruido y qué parte es voz. La reducción se aplica bin a bin, lo que permite atenuar el ruido incluso en las frecuencias donde coexiste con la voz.
+El estimador Log-MMSE (Ephraim & Malah, 1985) calcula la ganancia óptima bin a bin minimizando la distorsión en escala logarítmica, que se alinea con la percepción auditiva. Esto produce menos "metalicidad" residual en la voz respecto al Wiener clásico, especialmente en señales débiles.
 
-**Requiere un perfil de ruido aprendido.** Sin perfil, el módulo está activo pero no hace nada.
+### Modos de estimación de ruido
 
-### Flujo de trabajo
+El cancelador ofrece dos modos, seleccionables desde el selector **Modo:** en la pestaña Principal:
 
-1. **Buscar un momento sin señal** — cuando la estación no está transmitiendo y solo se escucha el ruido de fondo de la banda.
-2. Pulsar **⏺ Aprender ruido** y esperar 3–5 segundos (mínimo 2 segundos recomendado).
-3. Pulsar **⏹ Detener** — el perfil queda guardado y se aplica automáticamente.
-4. Si las condiciones de propagación cambian mucho, repetir el proceso.
-5. **Borrar perfil** elimina el perfil aprendido y desactiva la reducción hasta aprender uno nuevo.
+**Perfil estático** (modo manual)
+El algoritmo aprende una "foto" del ruido de fondo durante unos segundos y la usa como referencia fija. Ideal cuando el ruido de banda es muy estable.
+
+1. **Buscar un momento sin señal** — cuando la estación no está transmitiendo.
+2. Pulsar **⏺ Aprender ruido** y esperar 3–5 segundos.
+3. Pulsar **⏹ Detener** — el perfil queda guardado y se aplica.
+4. Si las condiciones cambian mucho, repetir el proceso.
+5. **Borrar perfil** reinicia la referencia.
+
+**Adaptativo (MCRA)** (modo automático)
+El algoritmo estima el piso de ruido continuamente en tiempo real, sin necesidad de aprendizaje manual. Se calibra en ~200ms al activar el procesamiento y se adapta automáticamente cuando cambian las condiciones de propagación, aparece QRM o varía el ruido de banda.
+
+- No requiere intervención del usuario — funciona solo.
+- Los botones Aprender/Borrar no aparecen (no aplican en este modo).
+- El indicador de estado cambia de "calibrando..." a "estimando en tiempo real" una vez listo.
+- **Recomendado** para sesiones largas de escucha donde las condiciones de banda varían.
 
 ### Indicadores en tiempo real (Avanzada Ruido)
 
@@ -262,7 +273,7 @@ A diferencia de un simple EQ o un gate, este algoritmo aprende el *perfil espect
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
-| **Intensidad** | 0% – 100% | 70% | Qué tan agresivamente se escala el perfil de ruido en el cálculo. 70% es un buen punto de partida. Al 100% la supresión es máxima pero pueden aparecer pequeños artefactos en señales con mucho ruido variable. |
+| **Intensidad** | 0% – 100% | 70% | Cuánta reducción se aplica sobre los gains calculados. **0%** = sin reducción (audio pasa sin cambios). **100%** = reducción plena. La escala es no lineal: valores medios (50–70%) ya producen una reducción perceptible, mientras que los bins de voz se ven mínimamente afectados en cualquier posición. Comenzar en 70% y subir según el nivel de ruido. |
 | **Piso espectral** | 0,05 – 0,30 | 0,10 | Ganancia mínima que se aplica a cualquier bin, incluso el más ruidoso. 0,10 significa que nunca se silencia más del 90% de la energía de un bin. **Nunca bajar de 0,05** — valores muy bajos con Anti-gorgojeo alto producen gorgojeo severo. |
 | **Anti-gorgojeo (β)** | 0% – 98% | 97% | Velocidad con que los gains retornan al piso después de detectar voz. Alto (97–98%) = transiciones suaves, sin gorgojeo. Bajo (<90%) = más reactivo pero con riesgo de gorgojeo audible. **No bajar de 90% salvo en casos excepcionales.** |
 | **Velocidad de ataque** | 50% – 92% | 80% | Velocidad con que el cancelador "abre" los bins de voz cuando detecta una señal. Bajo (50–70%) = ataque rápido, consonantes más nítidas. Alto (>85%) = ataque suave, menos artefactos en transiciones. |
@@ -487,4 +498,4 @@ Los valores de los sliders **Máx Y** y **Máx X** del visualizador de espectro 
 
 ---
 
-*Reductor de Ruido Radio — versión 1.1*
+*Reductor de Ruido Radio — versión 1.2*

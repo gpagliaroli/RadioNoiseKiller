@@ -1,39 +1,52 @@
 import numpy as np
+from scipy.special import exp1 as _exp1
 
 
 class NoiseProfiler:
     """
     Reducción de ruido estacionario — DD Wiener + VAD adaptativo + OLA.
 
-    Ganancia DD (Ephraim-Malah):
-        SNR_post[k] = |Y[k]|² / (α·noise[k])²
+    Dos modos de operación:
+      "static" — perfil aprendido manualmente (comportamiento original)
+      "mcra"   — estimación adaptativa continua (MCRA, Cohen & Berdugo 2002)
+                 no requiere aprendizaje manual; se calibra en ~200ms y se
+                 adapta en tiempo real a los cambios del ruido de banda.
+
+    Ganancia Log-MMSE (Ephraim-Malah 1985):
+        SNR_post[k] = |Y[k]|² / noise[k]²
         inst[k]     = max(SNR_post[k] − 1, 0)
         SNR_prior[k] = (1−β_eff)·inst[k] + β_eff·gain_prev[k]²·SNR_post_prev[k]
-        gain[k]     = max( SNR_prior[k]/(SNR_prior[k]+1), floor )
+        g_wiener[k] = SNR_prior[k] / (SNR_prior[k] + 1)          (ganancia Wiener base)
+        v[k]        = g_wiener[k] · SNR_post[k]                  (parámetro E₁)
+        gain_dd[k]  = clip( g_wiener[k] · exp(½·E₁(v[k])), floor, 1 )
+        → para SNR bajo: gain_dd > gain_wiener (menos supresión en bins de voz débil)
+        → para SNR alto: exp(½·E₁(v)) → 1, recupera el Wiener clásico
 
-    La fórmula DD converge a floor en ruido puro con β simétrico alto:
-        Con β=0.97: SNR_prior(ruido) ≈ 0.051 → gain ≈ 0.049 < floor → suprimido
+    OMLSA + control de intensidad:
+        p_speech[k] = min(g_detect[k] / 0.80, 1)
+        gain_omlsa  = gain_dd^p_speech · floor^(1−p_speech)
+        gain_out    = gain_omlsa^alpha     (alpha=0 passthrough, alpha=1 pleno)
 
-    Asimetría controlada por VAD:
-        g_detect[k] = max(1 − noise_mag[k]² / |Y[k]|², 0)
-            ≈ 0  para bins de ruido  (P(g_detect>0.80) ≈ 0.67%)
-            → 1  para bins de voz con SNR > 6 dB
-
-        β_attack  = β_release × (1−voice_prob) + β_fast × voice_prob   (configurable, rápido)
-        use_fast  = (bin subiendo) AND (g_detect > 0.80)
-        β_eff[k]  = β_attack si use_fast[k], β_release de lo contrario
-
-    Resultado:
-        - Ruido puro: β simétrico → sin gorgojeo; gains convergen a floor
-        - Voz: bins de voz suben rápido (65% en 10ms, 94% en 50ms) sin afectar bins de ruido
-        - Control "Anti-gorgojeo" (β_release): actúa en todos los bins durante el ruido
+    MCRA (estimación adaptativa de noise_mag):
+        S_f[k]     = α_s·S_f_prev + (1−α_s)·|Y[k]|²     (suavizado potencia)
+        S_min[k]   = mín de S_f en ventana deslizante B·M frames (~800ms)
+        I_min[k]   = S_f[k]/S_min[k] > δ  →  1 si hay habla, 0 si ruido
+        α_d[k]     = α_d0 + (1−α_d0)·I_min[k]            (actualiza lento con habla)
+        λ_d[k]     = α_d·λ_d_prev + (1−α_d)·|Y[k]|²     (estimado de ruido)
+        noise_mag  = sqrt(λ_d)
 
     OLA:
         Overlap-Add con ventana sqrt-Hann al 50% (1 hop de latencia extra).
-        Elimina discontinuidades en bordes de bloque.
     """
 
-    _VAD_THRESHOLD: float = 0.80  # g_detect > umbral → bin claramente de voz
+    _VAD_THRESHOLD: float = 0.80
+
+    # Parámetros MCRA
+    _MCRA_ALPHA_S:  float = 0.9    # suavizado espectral
+    _MCRA_ALPHA_D0: float = 0.85   # velocidad de actualización del ruido (sin habla)
+    _MCRA_DELTA:    float = 1.67   # umbral ratio S_f/S_min para detectar habla
+    _MCRA_B:        int   = 4      # número de subtramas
+    _MCRA_M:        int   = 20     # frames por subtrama → ventana total = B×M = 80 frames ≈ 800ms
 
     def __init__(self, hop_size: int = 480):
         self._hop   = hop_size
@@ -45,17 +58,17 @@ class NoiseProfiler:
         self._ola_prev = np.zeros(hop_size, dtype=np.float32)
         self._ola_acc  = np.zeros(self._fft_n, dtype=np.float32)
 
-        # Perfil de ruido
-        self._noise_mag: np.ndarray | None = None
+        # Perfil estático
+        self._noise_mag:  np.ndarray | None = None
         self._is_learning = False
         self._accum       = np.zeros(self._nb, dtype=np.float64)
         self._n_frames    = 0
 
         # Parámetros controlados por sliders
-        self._alpha:     float = 0.7   # intensidad de sustracción (0=off, 1=máximo)
-        self._floor:     float = 0.1   # ganancia mínima por bin
-        self._beta:      float = 0.97  # β_release: alto = sin gorgojeo al retornar al ruido
-        self._beta_fast: float = 0.80  # β_attack: bajo = onset de voz más rápido (bajo riesgo con floor≥0.05)
+        self._alpha:     float = 0.7
+        self._floor:     float = 0.1
+        self._beta:      float = 0.97
+        self._beta_fast: float = 0.80
 
         # Estado DD inter-frame
         self._gain_prev:     np.ndarray | None = None
@@ -68,8 +81,43 @@ class NoiseProfiler:
         self._preview_mode: bool = False
         self._enabled:      bool = True
 
+        # Modo de operación
+        self._mode: str = "static"
+
+        # Estado MCRA
+        self._mcra_Sf:        np.ndarray | None = None
+        self._mcra_ld:        np.ndarray | None = None
+        self._mcra_subs:      np.ndarray | None = None  # (B, nb) subframe minimums
+        self._mcra_cur_min:   np.ndarray | None = None
+        self._mcra_sub_count: int = 0
+        self._mcra_sub_idx:   int = 0
+        self._mcra_frames:    int = 0
+
     # ------------------------------------------------------------------
-    # Control de aprendizaje
+    # Control de modo
+    # ------------------------------------------------------------------
+
+    def set_mode(self, mode: str) -> None:
+        if mode not in ("static", "mcra"):
+            return
+        self._mode = mode
+        self._gain_prev     = None
+        self._snr_post_prev = None
+        self._voice_prob    = 0.0
+        if mode == "mcra":
+            self._reset_mcra()
+
+    def _reset_mcra(self) -> None:
+        self._mcra_Sf        = None
+        self._mcra_ld        = None
+        self._mcra_subs      = None
+        self._mcra_cur_min   = None
+        self._mcra_sub_count = 0
+        self._mcra_sub_idx   = 0
+        self._mcra_frames    = 0
+
+    # ------------------------------------------------------------------
+    # Control de aprendizaje (modo estático)
     # ------------------------------------------------------------------
 
     def reset(self, hop_size: int | None = None) -> None:
@@ -86,6 +134,8 @@ class NoiseProfiler:
         self._gain_prev     = None
         self._snr_post_prev = None
         self._voice_prob    = 0.0
+        if self._mode == "mcra":
+            self._reset_mcra()
 
     def start_learning(self) -> None:
         self._accum[:]    = 0.0
@@ -102,6 +152,15 @@ class NoiseProfiler:
         return self._n_frames
 
     def clear_profile(self) -> None:
+        if self._mode == "mcra":
+            self._reset_mcra()
+            self._gain_prev     = None
+            self._snr_post_prev = None
+            self._voice_prob    = 0.0
+            self._last_reduction_db = 0.0
+            self._ola_prev = np.zeros(self._hop,   dtype=np.float32)
+            self._ola_acc  = np.zeros(self._fft_n, dtype=np.float32)
+            return
         self._is_learning       = False
         self._noise_mag         = None
         self._accum[:]          = 0.0
@@ -124,13 +183,9 @@ class NoiseProfiler:
         self._floor = float(np.clip(floor, 0.0, 0.5))
 
     def set_smooth(self, smooth: float) -> None:
-        """β_release: cuán lento decaen los gains al retornar al ruido.
-        Alto (0.97-0.98) = sin gorgojeo. Default 0.97."""
         self._beta = float(np.clip(smooth, 0.0, 0.99))
 
     def set_attack(self, attack: float) -> None:
-        """β_fast: velocidad de ataque para bins de voz confirmados.
-        Bajo (0.50-0.70) = onset rápido, consonantes nítidas. Default 0.80."""
         self._beta_fast = float(np.clip(attack, 0.0, 0.99))
 
     def set_preview_mode(self, enabled: bool) -> None:
@@ -138,6 +193,60 @@ class NoiseProfiler:
 
     def set_enabled(self, enabled: bool) -> None:
         self._enabled = bool(enabled)
+
+    # ------------------------------------------------------------------
+    # MCRA — estimación adaptativa de ruido
+    # ------------------------------------------------------------------
+
+    def _mcra_update(self, spec: np.ndarray) -> "np.ndarray | None":
+        """Actualiza el estimador MCRA y retorna noise_mag. None durante warmup inicial."""
+        power = (np.abs(spec) ** 2 + 1e-12).astype(np.float64)
+        self._mcra_frames += 1
+
+        # Inicialización en el primer frame
+        if self._mcra_Sf is None:
+            self._mcra_Sf      = power.copy()
+            self._mcra_ld      = power.copy()
+            self._mcra_subs    = np.full((self._MCRA_B, self._nb), np.inf)
+            self._mcra_cur_min = power.copy()
+            self._mcra_sub_count = 1
+            return None
+
+        # 1. Suavizado de potencia espectral
+        self._mcra_Sf = (self._MCRA_ALPHA_S * self._mcra_Sf
+                         + (1.0 - self._MCRA_ALPHA_S) * power)
+
+        # 2. Seguimiento de mínimos por subtramas
+        self._mcra_cur_min = np.minimum(self._mcra_cur_min, self._mcra_Sf)
+        self._mcra_sub_count += 1
+
+        if self._mcra_sub_count >= self._MCRA_M:
+            self._mcra_subs[self._mcra_sub_idx] = self._mcra_cur_min.copy()
+            self._mcra_sub_idx   = (self._mcra_sub_idx + 1) % self._MCRA_B
+            self._mcra_cur_min   = self._mcra_Sf.copy()
+            self._mcra_sub_count = 0
+
+        # Esperamos al menos una subtrama completa antes de aplicar el Wiener
+        if self._mcra_frames < self._MCRA_M:
+            self._mcra_ld = 0.95 * self._mcra_ld + 0.05 * power
+            return None
+
+        # 3. Mínimo global = min de subtramas ya llenadas + subtrama actual
+        S_min = np.minimum(np.min(self._mcra_subs, axis=0), self._mcra_cur_min)
+        # Si alguna subtrama aún no tiene datos (inf), usar la actual como fallback
+        S_min = np.where(S_min == np.inf, self._mcra_cur_min, S_min)
+
+        # 4. Indicador de presencia de habla por bin
+        ratio = self._mcra_Sf / (S_min + 1e-12)
+        I_min = (ratio > self._MCRA_DELTA).astype(np.float64)
+
+        # 5. α_d adaptativo: actualiza lento cuando hay habla, rápido en silencio
+        alpha_d = self._MCRA_ALPHA_D0 + (1.0 - self._MCRA_ALPHA_D0) * I_min
+
+        # 6. Actualizar estimado de potencia de ruido
+        self._mcra_ld = alpha_d * self._mcra_ld + (1.0 - alpha_d) * power
+
+        return np.sqrt(self._mcra_ld).astype(np.float32)
 
     # ------------------------------------------------------------------
     # Procesamiento
@@ -154,46 +263,46 @@ class NoiseProfiler:
 
         spec = np.fft.rfft(frame * self._ola_win, n=self._fft_n)
 
-        if self._is_learning:
+        # Acumulación para perfil estático
+        if self._is_learning and self._mode == "static":
             self._accum    += np.abs(spec) ** 2
             self._n_frames += 1
 
-        noise_mag = self._noise_mag
+        # Obtener noise_mag según el modo
+        if self._mode == "mcra":
+            noise_mag = self._mcra_update(spec)
+        else:
+            noise_mag = self._noise_mag
+
         if noise_mag is None or not self._enabled:
             out_frame = np.fft.irfft(spec, n=self._fft_n).astype(np.float32) * self._ola_win
         else:
             sig_power   = np.abs(spec).astype(np.float32) ** 2 + 1e-12
-            noise_power = (self._alpha * noise_mag) ** 2 + 1e-12
+            noise_power = noise_mag.astype(np.float32) ** 2 + 1e-12
             noise_prof2 = noise_mag.astype(np.float64) ** 2 + 1e-12
 
             # --- SNR a posteriori y componente instantánea DD ---
             snr_post = (sig_power / noise_power).astype(np.float32)
             inst     = np.maximum(snr_post - 1.0, 0.0)
 
-            # --- Detector de bins de voz (con α=1 implícito, sin escalar por alpha) ---
-            # g_detect[k] ≈ 0 para bins de ruido, → 1 para bins dominados por voz
-            # P(g_detect > 0.80) ≈ 0.67% en ruido puro → falsos positivos mínimos
+            # --- Detector de bins de voz ---
             g_detect  = np.maximum(1.0 - noise_prof2 / sig_power.astype(np.float64),
                                    0.0).astype(np.float32)
             voice_bin = g_detect > self._VAD_THRESHOLD
 
             # --- VAD frame-level ---
-            # En ruido puro: mean_sig / mean(noise_mag²) ≈ 1.0 → voice_prob → 0
-            # Con voz:       ratio >> 1.0 → voice_prob → 1.0
             mean_sig        = float(np.mean(sig_power))
             mean_noise_prof = float(np.mean(noise_prof2))
             snr_ratio       = mean_sig / mean_noise_prof
             vp_raw          = float(np.clip(snr_ratio - 1.0, 0.0, 1.0))
 
             if vp_raw > self._voice_prob:
-                self._voice_prob = 0.4 * self._voice_prob + 0.6 * vp_raw  # ataque: ~2 frames
+                self._voice_prob = 0.4 * self._voice_prob + 0.6 * vp_raw
             else:
-                self._voice_prob *= 0.97                                    # release: ~330 ms
+                self._voice_prob *= 0.97
             self._voice_prob = float(np.clip(self._voice_prob, 0.0, 1.0))
 
             # --- β efectivo por bin ---
-            # β_release = slider (alto → sin gorgojeo)
-            # β_attack  = (β_release → 0) según voice_prob — solo actúa en bins claramente de voz
             beta_r        = np.float32(self._beta)
             vp            = np.float32(self._voice_prob)
             beta_fast_eff = np.float32(beta_r * (1.0 - vp) + self._beta_fast * vp)
@@ -203,30 +312,33 @@ class NoiseProfiler:
                 snr_prior = inst.copy()
             else:
                 rising   = snr_post > self._snr_post_prev
-                # Ataque rápido solo para bins claramente de voz en frames de voz
                 use_fast = rising & voice_bin
                 beta_eff = np.where(use_fast, beta_fast_eff, beta_r)
                 snr_prior = ((1.0 - beta_eff) * inst
                              + beta_eff * self._gain_prev ** 2 * self._snr_post_prev)
 
-            # --- Gain DD (estado interno) ---
-            # gain_dd alimenta el estimador DD en el próximo frame (no modificado)
-            gain_dd = np.maximum(snr_prior / (snr_prior + 1.0), self._floor).astype(np.float32)
+            # --- Gain Log-MMSE (Ephraim-Malah 1985) ---
+            g_wiener = snr_prior / (snr_prior + 1.0)
+            v        = np.maximum(g_wiener * snr_post, 1e-10)
+            gain_dd  = np.clip(
+                g_wiener * np.exp(0.5 * _exp1(v)),
+                self._floor, 1.0
+            ).astype(np.float32)
             self._gain_prev     = gain_dd
             self._snr_post_prev = snr_post
 
-            # --- OMLSA: anclar bins de ruido exactamente al floor ---
-            # p_speech[k] = 0 → bin de ruido confirmado → gain_out = floor (sin fluctuación)
-            # p_speech[k] = 1 → bin de voz confirmado  → gain_out = gain_dd (sin cambio)
-            # La mezcla geométrica es suave en la transición y preserva la escala log.
+            # --- OMLSA: anclar bins de ruido al floor ---
             p_speech = np.minimum(g_detect / self._VAD_THRESHOLD, 1.0).astype(np.float32)
             gain_out = (gain_dd ** p_speech) * (self._floor ** (1.0 - p_speech))
 
-            # --- Suavizado de gain en frecuencia (elimina picos bin-aislados) ---
-            # Un bin aislado con gain alto rodeado de floor es el patrón típico del gorgojeo.
+            # --- Suavizado de gain en frecuencia ---
             kernel   = np.array([0.25, 0.50, 0.25], dtype=np.float32)
             gain_out = np.convolve(gain_out, kernel, mode='same')
             gain_out = np.maximum(gain_out, self._floor).astype(np.float32)
+
+            # Intensidad: gain^alpha → alpha=0 passthrough, alpha=1 reducción plena
+            if self._alpha < 1.0:
+                gain_out = np.power(gain_out, self._alpha).astype(np.float32)
 
             self._last_reduction_db = 20.0 * np.log10(max(float(np.mean(gain_out)), 1e-6))
 
@@ -255,6 +367,8 @@ class NoiseProfiler:
 
     @property
     def has_profile(self) -> bool:
+        if self._mode == "mcra":
+            return self._mcra_frames >= self._MCRA_M
         return self._noise_mag is not None
 
     @property
@@ -274,12 +388,21 @@ class NoiseProfiler:
         return self._last_reduction_db
 
     @property
-    def noise_floor_db(self) -> np.ndarray | None:
-        """Piso de ruido aprendido en dB (~dBFS). Shape: (fft_n//2 + 1,). None si no hay perfil."""
-        if self._noise_mag is None:
-            return None
+    def mcra_ready(self) -> bool:
+        return self._mode == "mcra" and self._mcra_frames >= self._MCRA_M
+
+    @property
+    def noise_floor_db(self) -> "np.ndarray | None":
+        if self._mode == "mcra":
+            if self._mcra_ld is None:
+                return None
+            mag = np.sqrt(self._mcra_ld).astype(np.float32)
+        else:
+            if self._noise_mag is None:
+                return None
+            mag = self._noise_mag
         return (20.0 * np.log10(
-            np.maximum(self._noise_mag, 1e-10) / (self._fft_n / 2.0)
+            np.maximum(mag, 1e-10) / (self._fft_n / 2.0)
         )).astype(np.float32)
 
     @property

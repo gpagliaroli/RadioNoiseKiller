@@ -67,7 +67,7 @@ src/
 │   ├── freq_shift.py    # FrequencyShifter (corrección de pitch SSB)
 │   ├── gain.py          # GainLimiter (peak follower, ataque instantáneo)
 │   ├── level.py         # LevelMeter (RMS con decaimiento)
-│   └── noise_profiler.py # NoiseProfiler (Wiener DD espectral adaptativo)
+│   └── noise_profiler.py # NoiseProfiler (Log-MMSE DD + MCRA adaptativo, dos modos seleccionables)
 └── ui/
     ├── main_window.py   # QTabWidget: Principal + Avanzada Audio + Avanzada Ruido + Espectro
     ├── advanced_tab.py  # Sliders de configuración avanzada
@@ -120,6 +120,44 @@ subsiguientes vía el overlap-add, pudiendo producir NaN o excepciones en el Wie
 - Requieren reinicio: block_size (audio buffer)
 - `AdvancedTab.set_processing_active(True)` deshabilita solo los de reinicio.
 
+### Control de Intensidad del cancelador (noise_alpha)
+`alpha` se aplica como `gain_out = gain_omlsa ** alpha` al final del proceso, no dentro del
+estimador DD. Motivo: si `alpha` escala `noise_power` en el DD, la etapa OMLSA ancla los bins
+de ruido a `floor` de todas formas, haciendo el slider casi inaudible. Con la fórmula potencial:
+- `alpha=0` → passthrough (gain=1 para todos los bins)
+- `alpha=1` → reducción plena (comportamiento OMLSA sin modificar)
+- Bins de voz con gain≈0.9: `0.9^0.7 ≈ 0.93` → impacto mínimo en la voz
+- Bins de ruido con gain≈0.1: `0.1^0.7 ≈ 0.17` → reducción notable incluso a valores medios
+El estimador DD trabaja sobre el SNR real (sin escalar por alpha), mejorando la precisión del VAD.
+
+### Estimador Log-MMSE (Ephraim-Malah 1985)
+El bloque de ganancia usa el estimador de mínima distorsión log-espectral, no el MMSE clásico:
+```
+g_wiener[k] = SNR_prior[k] / (SNR_prior[k] + 1)
+v[k]        = g_wiener[k] · SNR_post[k]
+gain_dd[k]  = clip( g_wiener[k] · exp(½·E₁(v[k])), floor, 1.0 )
+```
+- Para SNR bajo (bins de voz débil): `gain_dd >> g_wiener` → menos supresión en voz
+- Para SNR alto (voz clara): `exp(½·E₁(v)) → 1` → idéntico al Wiener clásico
+- Implementado con `scipy.special.exp1`; overhead ~76µs por frame (< 1% a 10ms/frame)
+
+### MCRA — estimación adaptativa de ruido
+Modo alternativo al perfil estático, seleccionable en la UI sin reinicio del stream.
+No requiere aprendizaje manual; estima el piso de ruido continuamente usando mínimos
+espectrales en ventana deslizante.
+
+Parámetros: B=4 subtramas × M=20 frames/subtrama → ventana ~800ms; warmup ~200ms.
+```
+S_f[k]   = 0.9·S_f_prev + 0.1·|Y[k]|²          (suavizado)
+S_min[k] = mín de B·M frames de S_f             (seguimiento de mínimos)
+I_min[k] = S_f[k]/S_min[k] > 1.67               (indicador de habla)
+α_d[k]   = 0.85 + 0.15·I_min[k]                 (α=0.85 sin habla → actualiza; α=1.0 con habla → congela)
+λ_d[k]   = α_d·λ_d_prev + (1−α_d)·|Y[k]|²      (estimado de ruido)
+noise_mag = sqrt(λ_d)
+```
+Ambos modos alimentan el mismo bloque Log-MMSE + OMLSA; solo cambia la fuente de `noise_mag`.
+`config.py`: campo `noise_mode: str = "static"|"mcra"` en `DSPConfig`, persistido en settings.json.
+
 ## Configuración persistente
 
 `AppConfig.save()` / `AppConfig.load()` → `settings.json`
@@ -138,9 +176,12 @@ En bundle: junto al `.exe` / `.bin`
 
 ## Estado del proyecto
 
-**Fase 1 + Espectro completos** — todas las funcionalidades MVP operativas, más el visualizador de espectro.
-Distribuible v1.0: `dist\ReductorRuidoRadio_v1.0.zip` con `MANUAL_ReductorRuidoRadio_v1.0.pdf`.
-Manual actualizado en `MANUAL.md` (fuente) — regenerar PDF para la próxima distribución (v1.1).
+**Fase 1 + Espectro + mejoras DSP completos** — todas las funcionalidades MVP operativas.
+Distribuible v1.1 en GitHub Releases. Manual fuente en `MANUAL.md` — regenerar PDF para v1.2.
+
+Cambios v1.2 (pendiente de release):
+- MCRA: estimación adaptativa de ruido, seleccionable vs. perfil estático en la UI
+- Log-MMSE: reemplaza MMSE-STSA en el estimador de ganancia DD (voz más natural)
 
 ### Visualizador de espectro — decisiones de implementación
 
