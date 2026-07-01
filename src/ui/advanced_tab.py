@@ -563,6 +563,83 @@ class AdvancedNoiseTab(QWidget):
         note6.setStyleSheet("color: #888; font-size: 8pt;")
         layout.addWidget(note6)
 
+        sep_pf_curve = QFrame()
+        sep_pf_curve.setFrameShape(QFrame.Shape.HLine)
+        sep_pf_curve.setStyleSheet("color: #444;")
+        layout.addWidget(sep_pf_curve)
+
+        pf_curve_lbl = QLabel("Piso espectral perceptual  —  forma de la curva  (activo solo con el checkbox del mismo nombre):")
+        pf_curve_lbl.setStyleSheet("color: #888; font-size: 8pt; font-style: italic;")
+        layout.addWidget(pf_curve_lbl)
+
+        self._s_pf_boost = SliderRow(
+            "Amplitud boost vocal:",
+            min_val=0.0, max_val=1.5,
+            default=self._config.dsp.perceptual_floor_boost,
+            step=0.05, unit="", fmt="{:.2f}",
+        )
+        self._s_pf_boost._update_label = lambda v: self._s_pf_boost._val_lbl.setText(
+            f"+{v*100:.0f}%  ({'sin boost' if v < 0.05 else 'suave' if v < 0.5 else 'normal' if v < 1.0 else 'fuerte'})"
+        )
+        self._s_pf_boost._val_lbl.setFixedWidth(110)
+        self._s_pf_boost.valueChanged.connect(self._on_pf_boost)
+        layout.addWidget(self._s_pf_boost)
+
+        note_pf_boost = QLabel("  ↳ Cuanto se eleva el piso en la zona vocal. 75%=default. 0=sin boost.")
+        note_pf_boost.setStyleSheet("color: #888; font-size: 8pt;")
+        layout.addWidget(note_pf_boost)
+
+        self._s_pf_center = SliderRow(
+            "Centro del boost:",
+            min_val=200.0, max_val=1200.0,
+            default=self._config.dsp.perceptual_floor_center,
+            step=25.0, unit="Hz", fmt="{:.0f}",
+        )
+        self._s_pf_center._update_label = lambda v: self._s_pf_center._val_lbl.setText(
+            f"{v:.0f} Hz  ({'grave' if v < 350 else 'vocal' if v < 700 else 'medio'})"
+        )
+        self._s_pf_center._val_lbl.setFixedWidth(110)
+        self._s_pf_center.valueChanged.connect(self._on_pf_center)
+        layout.addWidget(self._s_pf_center)
+
+        note_pf_center = QLabel("  ↳ Frecuencia de maximo boost. 500 Hz=AM/SSB tipico. 350 Hz=SSB muy grave.")
+        note_pf_center.setStyleSheet("color: #888; font-size: 8pt;")
+        layout.addWidget(note_pf_center)
+
+        self._s_pf_rolloff_hz = SliderRow(
+            "Inicio del rolloff:",
+            min_val=1000.0, max_val=6000.0,
+            default=self._config.dsp.perceptual_floor_rolloff_hz,
+            step=100.0, unit="Hz", fmt="{:.0f}",
+        )
+        self._s_pf_rolloff_hz._update_label = lambda v: self._s_pf_rolloff_hz._val_lbl.setText(
+            f"{v:.0f} Hz  ({'pronto' if v < 2000 else 'normal' if v < 4000 else 'tarde'})"
+        )
+        self._s_pf_rolloff_hz._val_lbl.setFixedWidth(110)
+        self._s_pf_rolloff_hz.valueChanged.connect(self._on_pf_rolloff_hz)
+        layout.addWidget(self._s_pf_rolloff_hz)
+
+        note_pf_rolloff = QLabel("  ↳ A partir de que frecuencia baja el piso. 3000 Hz=default (sobre la voz AM).")
+        note_pf_rolloff.setStyleSheet("color: #888; font-size: 8pt;")
+        layout.addWidget(note_pf_rolloff)
+
+        self._s_pf_rolloff_depth = SliderRow(
+            "Profundidad del rolloff:",
+            min_val=0.0, max_val=0.70,
+            default=self._config.dsp.perceptual_floor_rolloff_depth,
+            step=0.05, unit="", fmt="{:.2f}",
+        )
+        self._s_pf_rolloff_depth._update_label = lambda v: self._s_pf_rolloff_depth._val_lbl.setText(
+            f"-{v*100:.0f}%  ({'sin rolloff' if v < 0.05 else 'suave' if v < 0.3 else 'normal' if v < 0.55 else 'fuerte'})"
+        )
+        self._s_pf_rolloff_depth._val_lbl.setFixedWidth(110)
+        self._s_pf_rolloff_depth.valueChanged.connect(self._on_pf_rolloff_depth)
+        layout.addWidget(self._s_pf_rolloff_depth)
+
+        note_pf_depth = QLabel("  ↳ Cuanto cae el piso en altas frecuencias. 55%=default. 0=sin rolloff.")
+        note_pf_depth.setStyleSheet("color: #888; font-size: 8pt;")
+        layout.addWidget(note_pf_depth)
+
         sep_pf = QFrame()
         sep_pf.setFrameShape(QFrame.Shape.HLine)
         sep_pf.setStyleSheet("color: #444;")
@@ -627,6 +704,10 @@ class AdvancedNoiseTab(QWidget):
         self._s_noise_attack.set_value(cfg.noise_attack)
         self._s_squelch_threshold.set_value(cfg.squelch_threshold)
         self._s_squelch_hold.set_value(cfg.squelch_hold_ms)
+        self._s_pf_boost.set_value(cfg.perceptual_floor_boost)
+        self._s_pf_center.set_value(cfg.perceptual_floor_center)
+        self._s_pf_rolloff_hz.set_value(cfg.perceptual_floor_rolloff_hz)
+        self._s_pf_rolloff_depth.set_value(cfg.perceptual_floor_rolloff_depth)
         self._s_post_filter.set_value(cfg.post_filter_strength)
         self._s_pitch_strength.set_value(cfg.pitch_enhance_strength)
 
@@ -650,6 +731,14 @@ class AdvancedNoiseTab(QWidget):
         self._pipeline.set_squelch_threshold(defaults.squelch_threshold)
         self._config.dsp.squelch_hold_ms = defaults.squelch_hold_ms
         self._pipeline.set_squelch_hold_ms(defaults.squelch_hold_ms)
+        self._config.dsp.perceptual_floor_boost        = defaults.perceptual_floor_boost
+        self._config.dsp.perceptual_floor_center       = defaults.perceptual_floor_center
+        self._config.dsp.perceptual_floor_rolloff_hz   = defaults.perceptual_floor_rolloff_hz
+        self._config.dsp.perceptual_floor_rolloff_depth = defaults.perceptual_floor_rolloff_depth
+        self._pipeline.set_pf_boost(defaults.perceptual_floor_boost)
+        self._pipeline.set_pf_center(defaults.perceptual_floor_center)
+        self._pipeline.set_pf_rolloff_hz(defaults.perceptual_floor_rolloff_hz)
+        self._pipeline.set_pf_rolloff_depth(defaults.perceptual_floor_rolloff_depth)
         self._config.dsp.post_filter_strength   = defaults.post_filter_strength
         self._pipeline.set_post_filter_strength(defaults.post_filter_strength)
         self._config.dsp.pitch_enhance_strength = defaults.pitch_enhance_strength
@@ -679,6 +768,22 @@ class AdvancedNoiseTab(QWidget):
     def _on_post_filter_strength(self, val: float) -> None:
         self._config.dsp.post_filter_strength = val
         self._pipeline.set_post_filter_strength(val)
+
+    def _on_pf_boost(self, val: float) -> None:
+        self._config.dsp.perceptual_floor_boost = val
+        self._pipeline.set_pf_boost(val)
+
+    def _on_pf_center(self, val: float) -> None:
+        self._config.dsp.perceptual_floor_center = val
+        self._pipeline.set_pf_center(val)
+
+    def _on_pf_rolloff_hz(self, val: float) -> None:
+        self._config.dsp.perceptual_floor_rolloff_hz = val
+        self._pipeline.set_pf_rolloff_hz(val)
+
+    def _on_pf_rolloff_depth(self, val: float) -> None:
+        self._config.dsp.perceptual_floor_rolloff_depth = val
+        self._pipeline.set_pf_rolloff_depth(val)
 
     def _on_pitch_strength(self, val: float) -> None:
         self._config.dsp.pitch_enhance_strength = val

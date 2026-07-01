@@ -47,7 +47,11 @@ class DSPConfig:
     presence_db:     float = 0.0    # dB, ganancia del pico de presencia
     presence_q:      float = 0.7    # Q del pico de presencia
     pitch_shift_hz:  float = 0.0    # Hz, corrección de tono SSB (-500 a +500)
-    perceptual_floor_enabled: bool = False  # piso espectral variable por curva de enmascaramiento auditivo
+    perceptual_floor_enabled:       bool  = False  # piso espectral variable por curva de enmascaramiento auditivo
+    perceptual_floor_boost:         float = 0.75   # amplitud del boost vocal (0–1.5)
+    perceptual_floor_center:        float = 500.0  # Hz, centro del pico de boost
+    perceptual_floor_rolloff_hz:    float = 3000.0 # Hz, inicio del rolloff de alta frecuencia
+    perceptual_floor_rolloff_depth: float = 0.55   # profundidad máxima del rolloff (0–0.7)
     post_filter_enabled:    bool  = False  # post-filtro espectral contra ruido musical residual
     post_filter_strength:   float = 1.0   # agresividad del post-filtro (0=off, 1=moderado, 2=agresivo)
     pitch_enhance_enabled:  bool  = False  # refuerzo de armónicos SSB via autocorrelación
@@ -117,7 +121,11 @@ class AppConfig:
                 "presence_db":    self.dsp.presence_db,
                 "presence_q":     self.dsp.presence_q,
                 "pitch_shift_hz": self.dsp.pitch_shift_hz,
-                "perceptual_floor_enabled": self.dsp.perceptual_floor_enabled,
+                "perceptual_floor_enabled":        self.dsp.perceptual_floor_enabled,
+                "perceptual_floor_boost":          self.dsp.perceptual_floor_boost,
+                "perceptual_floor_center":         self.dsp.perceptual_floor_center,
+                "perceptual_floor_rolloff_hz":     self.dsp.perceptual_floor_rolloff_hz,
+                "perceptual_floor_rolloff_depth":  self.dsp.perceptual_floor_rolloff_depth,
                 "post_filter_enabled":    self.dsp.post_filter_enabled,
                 "post_filter_strength":   self.dsp.post_filter_strength,
                 "pitch_enhance_enabled":  self.dsp.pitch_enhance_enabled,
@@ -192,7 +200,11 @@ class AppConfig:
         self.dsp.presence_db    = d.get("presence_db",    self.dsp.presence_db)
         self.dsp.presence_q     = d.get("presence_q",     self.dsp.presence_q)
         self.dsp.pitch_shift_hz = d.get("pitch_shift_hz", self.dsp.pitch_shift_hz)
-        self.dsp.perceptual_floor_enabled = bool(d.get("perceptual_floor_enabled", self.dsp.perceptual_floor_enabled))
+        self.dsp.perceptual_floor_enabled       = bool(d.get("perceptual_floor_enabled",       self.dsp.perceptual_floor_enabled))
+        self.dsp.perceptual_floor_boost         = float(d.get("perceptual_floor_boost",         self.dsp.perceptual_floor_boost))
+        self.dsp.perceptual_floor_center        = float(d.get("perceptual_floor_center",        self.dsp.perceptual_floor_center))
+        self.dsp.perceptual_floor_rolloff_hz    = float(d.get("perceptual_floor_rolloff_hz",    self.dsp.perceptual_floor_rolloff_hz))
+        self.dsp.perceptual_floor_rolloff_depth = float(d.get("perceptual_floor_rolloff_depth", self.dsp.perceptual_floor_rolloff_depth))
         self.dsp.post_filter_enabled    = bool(d.get("post_filter_enabled",    self.dsp.post_filter_enabled))
         self.dsp.post_filter_strength   = float(d.get("post_filter_strength",   self.dsp.post_filter_strength))
         self.dsp.pitch_enhance_enabled  = bool(d.get("pitch_enhance_enabled",  self.dsp.pitch_enhance_enabled))

@@ -58,6 +58,10 @@ class ProcessingPipeline:
         self._noise_profiler.set_smooth(config.dsp.noise_smooth)
         self._noise_profiler.set_attack(config.dsp.noise_attack)
         self._noise_profiler.set_perceptual_floor_enabled(config.dsp.perceptual_floor_enabled)
+        self._noise_profiler.set_pf_boost(config.dsp.perceptual_floor_boost)
+        self._noise_profiler.set_pf_center(config.dsp.perceptual_floor_center)
+        self._noise_profiler.set_pf_rolloff_hz(config.dsp.perceptual_floor_rolloff_hz)
+        self._noise_profiler.set_pf_rolloff_depth(config.dsp.perceptual_floor_rolloff_depth)
         self._noise_profiler.set_post_filter_enabled(config.dsp.post_filter_enabled)
         self._noise_profiler.set_post_filter_strength(config.dsp.post_filter_strength)
         self._noise_profiler.set_pitch_enabled(config.dsp.pitch_enhance_enabled)
@@ -230,6 +234,22 @@ class ProcessingPipeline:
     def set_perceptual_floor_enabled(self, v: bool) -> None:
         self._config.dsp.perceptual_floor_enabled = bool(v)
         self._noise_profiler.set_perceptual_floor_enabled(bool(v))
+
+    def set_pf_boost(self, v: float) -> None:
+        self._config.dsp.perceptual_floor_boost = float(v)
+        self._noise_profiler.set_pf_boost(float(v))
+
+    def set_pf_center(self, v: float) -> None:
+        self._config.dsp.perceptual_floor_center = float(v)
+        self._noise_profiler.set_pf_center(float(v))
+
+    def set_pf_rolloff_hz(self, v: float) -> None:
+        self._config.dsp.perceptual_floor_rolloff_hz = float(v)
+        self._noise_profiler.set_pf_rolloff_hz(float(v))
+
+    def set_pf_rolloff_depth(self, v: float) -> None:
+        self._config.dsp.perceptual_floor_rolloff_depth = float(v)
+        self._noise_profiler.set_pf_rolloff_depth(float(v))
 
     def set_post_filter_enabled(self, v: bool) -> None:
         self._config.dsp.post_filter_enabled = bool(v)

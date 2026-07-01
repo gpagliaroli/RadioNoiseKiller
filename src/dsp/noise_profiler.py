@@ -92,7 +92,11 @@ class NoiseProfiler:
         self._mode: str = "static"
 
         # Piso perceptual (curva de enmascaramiento auditivo por bin)
-        self._perceptual_floor_enabled: bool = False
+        self._perceptual_floor_enabled: bool  = False
+        self._pf_boost:         float = 0.75    # amplitud del boost vocal (0–1.5)
+        self._pf_center:        float = 500.0   # Hz, centro del pico de boost
+        self._pf_rolloff_hz:    float = 3000.0  # Hz, inicio del rolloff de alta frecuencia
+        self._pf_rolloff_depth: float = 0.55    # profundidad máxima del rolloff (0–0.7)
         self._floor_curve: np.ndarray = self._build_floor_curve()
 
         # Post-filtro espectral (ruido musical residual)
@@ -223,6 +227,22 @@ class NoiseProfiler:
     def set_perceptual_floor_enabled(self, v: bool) -> None:
         self._perceptual_floor_enabled = bool(v)
 
+    def set_pf_boost(self, v: float) -> None:
+        self._pf_boost = float(np.clip(v, 0.0, 1.5))
+        self._floor_curve = self._build_floor_curve()
+
+    def set_pf_center(self, v: float) -> None:
+        self._pf_center = float(np.clip(v, 200.0, 1200.0))
+        self._floor_curve = self._build_floor_curve()
+
+    def set_pf_rolloff_hz(self, v: float) -> None:
+        self._pf_rolloff_hz = float(np.clip(v, 1000.0, 6000.0))
+        self._floor_curve = self._build_floor_curve()
+
+    def set_pf_rolloff_depth(self, v: float) -> None:
+        self._pf_rolloff_depth = float(np.clip(v, 0.0, 0.7))
+        self._floor_curve = self._build_floor_curve()
+
     def set_post_filter_enabled(self, v: bool) -> None:
         self._post_filter_enabled = bool(v)
 
@@ -255,12 +275,18 @@ class NoiseProfiler:
         freq_per_bin = 48000.0 / self._fft_n
         freqs = np.arange(self._nb, dtype=np.float64) * freq_per_bin
 
-        # Boost vocal: Gaussiana en escala logarítmica centrada en 500 Hz
+        # Boost vocal: Gaussiana en escala logarítmica
         safe_f = np.maximum(freqs, 50.0)
-        vocal_boost = 0.75 * np.exp(-0.5 * ((np.log2(safe_f / 500.0) / 0.6) ** 2))
+        vocal_boost = self._pf_boost * np.exp(
+            -0.5 * ((np.log2(safe_f / self._pf_center) / 0.6) ** 2)
+        )
 
-        # Rolloff suave por encima de 3 kHz
-        high_rolloff = np.clip(1.0 - 0.55 * (freqs - 3000.0) / 6000.0, 0.45, 1.0)
+        # Rolloff suave por encima de pf_rolloff_hz
+        min_rf = 1.0 - self._pf_rolloff_depth
+        high_rolloff = np.clip(
+            1.0 - self._pf_rolloff_depth * (freqs - self._pf_rolloff_hz) / 6000.0,
+            min_rf, 1.0
+        )
 
         multiplier = (1.0 + vocal_boost) * high_rolloff
         return np.clip(multiplier * self._floor, 0.02, 0.45).astype(np.float32)
