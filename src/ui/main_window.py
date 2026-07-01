@@ -687,10 +687,17 @@ class MainWindow(QMainWindow):
         self._btn_clear_noise.setVisible(is_static)
         self._btn_learn.setEnabled(is_static and self._pipeline.is_running())
         if is_static:
-            self._label_noise.setText("Sin perfil — activar procesamiento y presionar Aprender")
+            if self._pipeline.noise_has_profile:
+                dur = self._pipeline.noise_duration_ms / 1000.0
+                self._label_noise.setText(f"Perfil activo: {dur:.1f}s aprendidos — sustracción ON")
+                self._label_noise.setStyleSheet("color: #69f0ae; font-size: 8pt;")
+                self._btn_clear_noise.setEnabled(True)
+            else:
+                self._label_noise.setText("Sin perfil — activar procesamiento y presionar Aprender")
+                self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
         else:
             self._label_noise.setText("Adaptativo (MCRA) — activar procesamiento para calibrar")
-        self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
+            self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
         self._spectrum_widget.clear_floor()
         self._schedule_save()
 
