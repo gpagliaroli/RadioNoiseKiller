@@ -142,17 +142,17 @@ Cada casilla de verificación activa o desactiva un módulo del pipeline de form
 | **Filtro de paso de banda (post)** | Casi siempre activo junto con el pre. Limpia artefactos del procesamiento espectral. |
 | **ANF — Cancela heterodinos y tonos** | Activar cuando se escuchen tonos constantes (pito, zumbido). Desactivar con señales de datos/digitales (PSK, FT8) ya que los tomaría por interferencia. |
 | **Cancelador de ruido estacionario** | El módulo principal. Activar una vez aprendido el perfil de ruido. |
-| &nbsp;&nbsp;&nbsp;↳ **Post-filtro espectral** | Sub-módulo del cancelador. Elimina el "ruido musical" (pitidos intermitentes) que el Wiener deja como residuo. Activar cuando se note ese artefacto. Agresividad configurable en Avanzada Ruido. |
-| &nbsp;&nbsp;&nbsp;↳ **Refuerzo de pitch SSB** | Sub-módulo del cancelador. Para señales SSB muy débiles: detecta el tono fundamental de la voz y protege sus armónicos de ser suprimidos. Activar solo si la voz suena "fantasmal" con el cancelador al máximo. Sensibilidad configurable en Avanzada Ruido. |
+| &nbsp;&nbsp;&nbsp;↳ **Post-filtro espectral** | Sub-módulo del cancelador. Elimina el "ruido musical" (pitidos intermitentes) que el Wiener deja como residuo. Activar cuando se note ese artefacto. Agresividad configurable en Avanzada Cancelador. |
+| &nbsp;&nbsp;&nbsp;↳ **Refuerzo de pitch SSB** | Sub-módulo del cancelador. Para señales SSB muy débiles: detecta el tono fundamental de la voz y protege sus armónicos de ser suprimidos. Activar solo si la voz suena "fantasmal" con el cancelador al máximo. Sensibilidad configurable en Avanzada Cancelador. |
+| &nbsp;&nbsp;&nbsp;↳ **Squelch de voz** | Sub-módulo del cancelador. Silencia el ruido entre transmisiones. **No usar con música** — produce subidas y bajadas de nivel indeseadas. Umbral y retención configurables en Avanzada Cancelador. |
 | **EQ Presencia** | Activar para mejorar la claridad de la voz con señales debilitadas o muy filtradas. |
-| **Squelch de voz (con música no utilizar!)** | Solo para transmisiones de voz SSB/AM. Silencia el ruido entre transmisiones. **No usar con música** — produce subidas y bajadas de nivel indeseadas. |
 | **Excitador armónico** | Para señales de voz opacas, sin brillo. Añade presencia. Comparar con y sin para decidir. |
 
 ---
 
 ## Capítulo 4 — Supresor de Impulsos
 
-**Ubicación:** Pestaña Avanzada Ruido → grupo "Supresor de Impulsos"
+**Ubicación:** Pestaña Avanzada Impulsos → grupo "Supresor de Impulsos"
 
 ### Descripción
 
@@ -213,7 +213,7 @@ Ambos se activan/desactivan de forma independiente desde **Módulos Activos**.
 
 ## Capítulo 6 — ANF: Filtro de Muesca Espectral
 
-**Ubicación:** Pestaña Avanzada Ruido → grupo "ANF"
+**Ubicación:** Pestaña Avanzada Impulsos → grupo "ANF"
 
 ### Descripción
 
@@ -236,7 +236,7 @@ El indicador **Actividad** muestra cuántos tonos están siendo muescados en est
 
 ## Capítulo 7 — Cancelador de Ruido Estacionario
 
-**Ubicación:** Pestaña Principal → grupo "Cancelación de Ruido Estacionario" y Pestaña Avanzada Ruido → grupo "Cancelación de Ruido"
+**Ubicación:** Pestaña Principal → grupo "Cancelación de Ruido Estacionario" y Pestaña Avanzada Cancelador → grupo "Cancelador de Ruido"
 
 ### Descripción
 
@@ -265,7 +265,13 @@ El algoritmo estima el piso de ruido continuamente en tiempo real, sin necesidad
 - El indicador de estado cambia de "calibrando..." a "estimando en tiempo real" una vez listo.
 - **Recomendado** para sesiones largas de escucha donde las condiciones de banda varían.
 
-### Indicadores en tiempo real (Avanzada Ruido)
+**Memoria de piso ante squelch de portadora**
+
+Cuando el squelch de la radio corta la portadora (silencio total entre transmisiones), el MCRA detecta automáticamente que la energía del frame cayó muy por debajo del piso de ruido estimado y **congela** todo el estado del estimador: no actualiza ni el suavizado espectral, ni el seguimiento de mínimos, ni el estimado de ruido `λ_d`. Al volver la señal, el algoritmo retoma exactamente desde el perfil memorizado — sin período de re-calibración ni ruido audible al inicio de la transmisión.
+
+Este comportamiento es automático y no requiere ningún ajuste. Se activa cuando la señal cae más de 13 dB por debajo del piso estimado, lo que distingue un squelch real (portadora cortada) de una pausa normal entre palabras donde el ruido de banda sigue presente.
+
+### Indicadores en tiempo real (Avanzada Cancelador)
 
 | Indicador | Descripción |
 |-----------|-------------|
@@ -273,7 +279,7 @@ El algoritmo estima el piso de ruido continuamente en tiempo real, sin necesidad
 | **Voz (%)** | Probabilidad de que el frame actual contenga voz. Útil para calibrar el Squelch. |
 | **Preview: escuchar ruido eliminado** | Invierte la salida para escuchar solo lo que se está eliminando. Útil para verificar que no se esté eliminando voz. |
 
-### Controles avanzados (Pestaña Avanzada Ruido)
+### Controles avanzados (Pestaña Avanzada Cancelador)
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
@@ -297,7 +303,7 @@ Con **piso bajo + anti-gorgojeo bajo** el resultado es gorgojeo inevitable. Subi
 ### Post-filtro espectral
 
 **Activar:** Módulos Activos → casilla "Post-filtro espectral (ruido musical residual)"  
-**Ajustar:** Pestaña Avanzada Ruido → slider "Post-filtro (ruido musical)"
+**Ajustar:** Pestaña Avanzada Cancelador → slider "Post-filtro (ruido musical)"
 
 El filtro de Wiener, incluso bien configurado, puede dejar un tipo de artefacto muy particular llamado **ruido musical**: en lugar del ruido de fondo uniforme original, aparecen pitidos cortos intermitentes que varían aleatoriamente de bin en bin. Es el residuo de los bins que el VAD marcó como ruido pero que no fueron suprimidos del todo por el piso espectral.
 
@@ -312,7 +318,7 @@ El post-filtro aplica una segunda pasada sobre esos bins usando la misma informa
 ### Refuerzo de pitch SSB
 
 **Activar:** Módulos Activos → casilla "Refuerzo de pitch SSB (detección por autocorrelación)"  
-**Ajustar:** Pestaña Avanzada Ruido → slider "Protección de armónicos"
+**Ajustar:** Pestaña Avanzada Cancelador → slider "Protección de armónicos"
 
 En señales SSB muy débiles enterradas en ruido, el cancelador de Wiener puede suprimir los armónicos de la voz junto con el ruido porque el VAD no logra distinguirlos. El resultado es una voz que suena "fantasmal", de tono cambiante o con pérdida de naturalidad.
 
@@ -332,7 +338,8 @@ Este módulo detecta en tiempo real el **tono fundamental** (f0) de la voz media
 
 ## Capítulo 8 — Squelch de Voz
 
-**Ubicación:** Pestaña Avanzada Ruido → dentro del grupo "Cancelación de Ruido"
+**Ubicación:** Pestaña Principal → Módulos Activos → sub-módulo "↳ Squelch de voz" (bajo el Cancelador)  
+**Configuración avanzada:** Pestaña Avanzada Cancelador → grupo "Squelch de Voz"
 
 > ⚠️ **No usar con música.** El detector de voz está calibrado para voz humana. Con música produce subidas y bajadas repentinas del nivel de audio al ritmo de la dinámica musical.
 
@@ -526,7 +533,7 @@ El piso amarillo se captura desde el botón **⏺ Aprender ruido** de la pestañ
 
 **El cancelador está suprimiendo voz (demasiado agresivo):**
 - El área naranja es grande incluso en los picos de voz.
-- Reducir **Intensidad** o subir **Piso espectral** en la pestaña Avanzada Ruido.
+- Reducir **Intensidad** o subir **Piso espectral** en la pestaña Avanzada Cancelador.
 
 **El cancelador no está haciendo nada:**
 - Las curvas azul y verde se solapan completamente — sin área naranja.
@@ -543,6 +550,8 @@ El piso amarillo se captura desde el botón **⏺ Aprender ruido** de la pestañ
 Todos los ajustes se guardan automáticamente al cerrar la aplicación y se restauran al volver a abrirla. El archivo `settings.json` se crea junto al ejecutable. Para volver a los valores de fábrica, simplemente borrar ese archivo.
 
 Cada pestaña avanzada tiene un botón **"↺ Restaurar valores por defecto"** que reinicia solo los controles de esa pestaña sin afectar el resto de la configuración.
+
+**Restaurar un slider individual:** hacer **clic derecho** sobre cualquier slider muestra un menú contextual con la opción *"↺ Restaurar por defecto (valor)"*. Permite volver al valor de fábrica de ese parámetro puntual sin tocar los demás.
 
 Los valores de los sliders **Máx Y** y **Máx X** del visualizador de espectro también se guardan en `settings.json` junto con el resto de la configuración.
 
