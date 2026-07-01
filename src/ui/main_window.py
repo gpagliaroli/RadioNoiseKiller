@@ -185,6 +185,15 @@ class MainWindow(QMainWindow):
             "Cancelador de ruido estacionario",
             "Filtro de Wiener espectral. Requiere perfil aprendido.",
         )
+        self._chk_perceptual_floor = _chk_sub(
+            "Piso espectral perceptual  (curva de enmascaramiento auditivo)",
+            "Reemplaza el floor fijo por una curva que varía por frecuencia:\n"
+            "  · +75% en ~500 Hz (fundamentales vocales, preserva la calidez)\n"
+            "  · Neutro en 1000–3000 Hz (formantes, sin cambio)\n"
+            "  · –55% sobre 3 kHz (ruido de alta frecuencia, suprime más)\n"
+            "El slider 'Piso espectral' de Avanzada Ruido controla el nivel global.\n"
+            "Requiere cancelador activo.",
+        )
         self._chk_post_filter = _chk_sub(
             "Post-filtro espectral  (ruido musical residual)",
             "Segunda pasada sobre bins de ruido para eliminar el 'ruido musical'\n"
@@ -215,6 +224,7 @@ class MainWindow(QMainWindow):
         self._chk_bandpass_post.toggled.connect(lambda v: self._on_module_toggled("bandpass_post_enabled", self._pipeline.set_bandpass_post_enabled, v))
         self._chk_anf.toggled.connect(lambda v: self._on_module_toggled("anf_enabled", self._pipeline.set_anf_enabled, v))
         self._chk_noise.toggled.connect(lambda v: self._on_module_toggled("noise_enabled", self._pipeline.set_noise_enabled, v))
+        self._chk_perceptual_floor.toggled.connect(lambda v: self._on_module_toggled("perceptual_floor_enabled", self._pipeline.set_perceptual_floor_enabled, v))
         self._chk_post_filter.toggled.connect(lambda v: self._on_module_toggled("post_filter_enabled", self._pipeline.set_post_filter_enabled, v))
         self._chk_pitch_enhance.toggled.connect(lambda v: self._on_module_toggled("pitch_enhance_enabled", self._pipeline.set_pitch_enhance_enabled, v))
         self._chk_presence.toggled.connect(lambda v: self._on_module_toggled("presence_enabled", self._pipeline.set_presence_enabled, v))
@@ -481,7 +491,8 @@ class MainWindow(QMainWindow):
             (self._chk_bandpass_post, "bandpass_post_enabled", self._pipeline.set_bandpass_post_enabled),
             (self._chk_anf,      "anf_enabled",      self._pipeline.set_anf_enabled),
             (self._chk_noise,        "noise_enabled",        self._pipeline.set_noise_enabled),
-            (self._chk_post_filter,   "post_filter_enabled",   self._pipeline.set_post_filter_enabled),
+            (self._chk_perceptual_floor, "perceptual_floor_enabled", self._pipeline.set_perceptual_floor_enabled),
+            (self._chk_post_filter,      "post_filter_enabled",      self._pipeline.set_post_filter_enabled),
             (self._chk_pitch_enhance, "pitch_enhance_enabled", self._pipeline.set_pitch_enhance_enabled),
             (self._chk_presence,      "presence_enabled",      self._pipeline.set_presence_enabled),
             (self._chk_squelch,  "squelch_enabled",   self._pipeline.set_squelch_enabled),

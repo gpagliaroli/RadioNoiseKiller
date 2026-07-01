@@ -91,6 +91,10 @@ class NoiseProfiler:
         # Modo de operación
         self._mode: str = "static"
 
+        # Piso perceptual (curva de enmascaramiento auditivo por bin)
+        self._perceptual_floor_enabled: bool = False
+        self._floor_curve: np.ndarray = self._build_floor_curve()
+
         # Post-filtro espectral (ruido musical residual)
         self._post_filter_enabled:  bool  = False
         self._post_filter_strength: float = 1.0
@@ -202,6 +206,7 @@ class NoiseProfiler:
 
     def set_floor(self, floor: float) -> None:
         self._floor = float(np.clip(floor, 0.0, 0.5))
+        self._floor_curve = self._build_floor_curve()
 
     def set_smooth(self, smooth: float) -> None:
         self._beta = float(np.clip(smooth, 0.0, 0.99))
@@ -214,6 +219,9 @@ class NoiseProfiler:
 
     def set_enabled(self, enabled: bool) -> None:
         self._enabled = bool(enabled)
+
+    def set_perceptual_floor_enabled(self, v: bool) -> None:
+        self._perceptual_floor_enabled = bool(v)
 
     def set_post_filter_enabled(self, v: bool) -> None:
         self._post_filter_enabled = bool(v)
@@ -229,6 +237,33 @@ class NoiseProfiler:
 
     def set_pitch_strength(self, v: float) -> None:
         self._pitch_strength = float(np.clip(v, 0.0, 1.0))
+
+    # ------------------------------------------------------------------
+    # Piso perceptual — curva de enmascaramiento auditivo por bin
+    # ------------------------------------------------------------------
+
+    def _build_floor_curve(self) -> np.ndarray:
+        """Curva de piso por bin siguiendo la energía vocal y el enmascaramiento auditivo.
+
+        Multiplica self._floor por un factor que depende de la frecuencia:
+          · Pico en ~500 Hz (+75%): zona de fundamentales y primer formante vocal.
+            Piso más alto = menos supresión = protege la calidez de la voz.
+          · Neutro en 1000–3000 Hz: rango de formantes, floor sin modificar.
+          · Rolloff sobre 3 kHz (hasta –55%): energía vocal escasa en AM;
+            piso más bajo = más supresión = elimina ruido de alta frecuencia.
+        """
+        freq_per_bin = 48000.0 / self._fft_n
+        freqs = np.arange(self._nb, dtype=np.float64) * freq_per_bin
+
+        # Boost vocal: Gaussiana en escala logarítmica centrada en 500 Hz
+        safe_f = np.maximum(freqs, 50.0)
+        vocal_boost = 0.75 * np.exp(-0.5 * ((np.log2(safe_f / 500.0) / 0.6) ** 2))
+
+        # Rolloff suave por encima de 3 kHz
+        high_rolloff = np.clip(1.0 - 0.55 * (freqs - 3000.0) / 6000.0, 0.45, 1.0)
+
+        multiplier = (1.0 + vocal_boost) * high_rolloff
+        return np.clip(multiplier * self._floor, 0.02, 0.45).astype(np.float32)
 
     # ------------------------------------------------------------------
     # Pitch enhancement — autocorrelación + máscara armónica
@@ -413,12 +448,16 @@ class NoiseProfiler:
                 snr_prior = ((1.0 - beta_eff) * inst
                              + beta_eff * self._gain_prev ** 2 * self._snr_post_prev)
 
+            # Piso efectivo: escalar o curva perceptual por bin
+            _eff_floor = (self._floor_curve if self._perceptual_floor_enabled
+                          else np.float32(self._floor))
+
             # --- Gain Log-MMSE (Ephraim-Malah 1985) ---
             g_wiener = snr_prior / (snr_prior + 1.0)
             v        = np.maximum(g_wiener * snr_post, 1e-10)
             gain_dd  = np.clip(
                 g_wiener * np.exp(0.5 * _exp1(v)),
-                self._floor, 1.0
+                _eff_floor, 1.0
             ).astype(np.float32)
             self._gain_prev     = gain_dd
             self._snr_post_prev = snr_post
@@ -431,12 +470,12 @@ class NoiseProfiler:
                 hmask    = self._harmonic_mask(self._pitch_f0)
                 p_speech = np.maximum(p_speech, hmask * np.float32(self._pitch_strength))
 
-            gain_out = (gain_dd ** p_speech) * (self._floor ** (1.0 - p_speech))
+            gain_out = (gain_dd ** p_speech) * (_eff_floor ** (1.0 - p_speech))
 
             # --- Suavizado de gain en frecuencia ---
             kernel   = np.array([0.25, 0.50, 0.25], dtype=np.float32)
             gain_out = np.convolve(gain_out, kernel, mode='same')
-            gain_out = np.maximum(gain_out, self._floor).astype(np.float32)
+            gain_out = np.maximum(gain_out, _eff_floor).astype(np.float32)
 
             # Intensidad: gain^alpha → alpha=0 passthrough, alpha=1 reducción plena
             if self._alpha < 1.0:
@@ -451,7 +490,7 @@ class NoiseProfiler:
                     gain_out,
                     np.float32(1.0) + np.float32(self._post_filter_strength) * p_noise,
                 ).astype(np.float32)
-                gain_out = np.maximum(gain_out, np.float32(self._floor))
+                gain_out = np.maximum(gain_out, _eff_floor)
 
             self._last_reduction_db = 20.0 * np.log10(max(float(np.mean(gain_out)), 1e-6))
 

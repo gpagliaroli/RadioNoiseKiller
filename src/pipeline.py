@@ -57,6 +57,7 @@ class ProcessingPipeline:
         self._noise_profiler = NoiseProfiler(config.audio.block_size)
         self._noise_profiler.set_smooth(config.dsp.noise_smooth)
         self._noise_profiler.set_attack(config.dsp.noise_attack)
+        self._noise_profiler.set_perceptual_floor_enabled(config.dsp.perceptual_floor_enabled)
         self._noise_profiler.set_post_filter_enabled(config.dsp.post_filter_enabled)
         self._noise_profiler.set_post_filter_strength(config.dsp.post_filter_strength)
         self._noise_profiler.set_pitch_enabled(config.dsp.pitch_enhance_enabled)
@@ -225,6 +226,10 @@ class ProcessingPipeline:
     def set_noise_mode(self, mode: str) -> None:
         self._config.dsp.noise_mode = mode
         self._noise_profiler.set_mode(mode)
+
+    def set_perceptual_floor_enabled(self, v: bool) -> None:
+        self._config.dsp.perceptual_floor_enabled = bool(v)
+        self._noise_profiler.set_perceptual_floor_enabled(bool(v))
 
     def set_post_filter_enabled(self, v: bool) -> None:
         self._config.dsp.post_filter_enabled = bool(v)
