@@ -99,9 +99,13 @@ class SliderRow(QWidget):
         self._val_lbl.setText(self._fmt.format(val) + (" " + self._unit if self._unit else ""))
 
     def _show_context_menu(self, pos) -> None:
-        default_str = self._fmt.format(self._default)
-        if self._unit:
-            default_str += f" {self._unit}"
+        # Reutiliza _update_label (incluyendo overrides de porcentaje, etc.)
+        # para obtener el texto exacto que se mostraría con el valor default.
+        current_val = self.value()
+        self._update_label(self._default)
+        default_str = self._val_lbl.text()
+        self._update_label(current_val)
+
         menu = QMenu(self)
         action = menu.addAction(f"↺  Restaurar por defecto  ({default_str})")
         if menu.exec(self._slider.mapToGlobal(pos)) == action:
