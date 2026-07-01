@@ -532,10 +532,8 @@ class MainWindow(QMainWindow):
                 self._combo_noise_mode.blockSignals(False)
                 break
         self._pipeline.set_noise_mode(self._config.dsp.noise_mode)
-        is_static = self._config.dsp.noise_mode == "static"
-        self._btn_learn.setVisible(is_static)
-        self._btn_clear_noise.setVisible(is_static)
-        if not is_static:
+        self._refresh_noise_profile_ui()
+        if self._config.dsp.noise_mode != "static":
             self._label_noise.setText("Adaptativo (MCRA) — activar procesamiento para calibrar")
 
         if self._saved_input_device is not None:
@@ -600,10 +598,8 @@ class MainWindow(QMainWindow):
                 self._combo_noise_mode.setCurrentIndex(i)
                 self._combo_noise_mode.blockSignals(False)
                 break
-        is_static = cfg.noise_mode == "static"
-        self._btn_learn.setVisible(is_static)
-        self._btn_clear_noise.setVisible(is_static)
-        if not is_static:
+        self._refresh_noise_profile_ui()
+        if cfg.noise_mode != "static":
             self._label_noise.setText("Adaptativo (MCRA) — estimando en tiempo real")
 
         # --- Slider de intensidad de ruido ---
@@ -679,26 +675,58 @@ class MainWindow(QMainWindow):
         self._pipeline.set_noise_alpha(alpha)
         self._schedule_save()
 
+    # ------------------------------------------------------------------
+    # UI del perfil de ruido — fuente única de verdad
+    # ------------------------------------------------------------------
+
+    def _refresh_noise_profile_ui(self) -> None:
+        """Sincroniza label + botones de perfil con el estado real del pipeline.
+        Idempotente; se puede llamar desde cualquier lugar."""
+        is_static  = self._config.dsp.noise_mode == "static"
+        is_running = self._pipeline.is_running()
+        learning   = self._pipeline.noise_is_learning
+        has_prof   = self._pipeline.noise_has_profile
+
+        self._btn_learn.setVisible(is_static)
+        self._btn_clear_noise.setVisible(is_static)
+
+        if not is_static:
+            return
+
+        # Aprender habilitado mientras corre (checked/unchecked controla start/stop)
+        self._btn_learn.setEnabled(is_running)
+        # Borrar habilitado solo si hay perfil y no estamos aprendiendo
+        self._btn_clear_noise.setEnabled(has_prof and not learning)
+
+        if learning:
+            return  # _on_learn_toggled gestiona el texto durante el conteo
+
+        if has_prof:
+            dur = self._pipeline.noise_duration_ms / 1000.0
+            self._label_noise.setText(f"Perfil activo: {dur:.1f}s aprendidos — sustracción ON")
+            self._label_noise.setStyleSheet("color: #69f0ae; font-size: 8pt;")
+        elif is_running:
+            self._label_noise.setText("Sin perfil — presionar Aprender para calibrar")
+            self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
+        else:
+            self._label_noise.setText("Sin perfil — activar procesamiento y presionar Aprender")
+            self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
+
+    # ------------------------------------------------------------------
+    # Handlers de ruido
+    # ------------------------------------------------------------------
+
     def _on_noise_mode_changed(self, idx: int) -> None:
         mode = self._combo_noise_mode.itemData(idx)
         self._pipeline.set_noise_mode(mode)
-        is_static = mode == "static"
-        self._btn_learn.setVisible(is_static)
-        self._btn_clear_noise.setVisible(is_static)
-        self._btn_learn.setEnabled(is_static and self._pipeline.is_running())
-        if is_static:
-            if self._pipeline.noise_has_profile:
-                dur = self._pipeline.noise_duration_ms / 1000.0
-                self._label_noise.setText(f"Perfil activo: {dur:.1f}s aprendidos — sustracción ON")
-                self._label_noise.setStyleSheet("color: #69f0ae; font-size: 8pt;")
-                self._btn_clear_noise.setEnabled(True)
-            else:
-                self._label_noise.setText("Sin perfil — activar procesamiento y presionar Aprender")
-                self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
-        else:
+        self._spectrum_widget.clear_floor()
+        if mode != "static":
+            self._btn_learn.setVisible(False)
+            self._btn_clear_noise.setVisible(False)
             self._label_noise.setText("Adaptativo (MCRA) — activar procesamiento para calibrar")
             self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
-        self._spectrum_widget.clear_floor()
+        else:
+            self._refresh_noise_profile_ui()
         self._schedule_save()
 
     def _on_learn_toggled(self, checked: bool) -> None:
@@ -709,20 +737,14 @@ class MainWindow(QMainWindow):
             self._btn_learn.setText(f"⏹  Aprendiendo... {self._learn_countdown}s")
             self._label_noise.setText("Aprendiendo ruido — mantener silencio en la banda")
             self._label_noise.setStyleSheet("color: #ffd600; font-size: 8pt;")
+            self._btn_clear_noise.setEnabled(False)
             self._learn_timer.start()
         else:
             self._learn_timer.stop()
             self._pipeline.stop_noise_learning()
             self._spectrum_widget.stop_floor_learning()
             self._btn_learn.setText("⏺  Aprender ruido")
-            if self._pipeline.noise_has_profile:
-                dur = self._pipeline.noise_duration_ms / 1000.0
-                self._label_noise.setText(f"Perfil activo: {dur:.1f}s aprendidos — sustracción ON")
-                self._label_noise.setStyleSheet("color: #69f0ae; font-size: 8pt;")
-                self._btn_clear_noise.setEnabled(True)
-            else:
-                self._label_noise.setText("Sin perfil (muy pocos frames, intentar de nuevo)")
-                self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
+            self._refresh_noise_profile_ui()
 
     def _on_learn_tick(self) -> None:
         self._learn_countdown -= 1
@@ -767,7 +789,8 @@ class MainWindow(QMainWindow):
                 self._label_noise.setStyleSheet("color: #ffd600; font-size: 8pt;")
             return
 
-        # Modo estático
+        # Modo estático — auto-corrige label/botones cada 500ms
+        self._refresh_noise_profile_ui()
         if not self._pipeline.noise_has_profile:
             self._lbl_noise_db.setText("—")
             self._lbl_noise_db.setStyleSheet("color: #888; font-weight: bold;")
@@ -799,9 +822,7 @@ class MainWindow(QMainWindow):
     def _on_clear_noise_profile(self) -> None:
         self._pipeline.clear_noise_profile()
         self._spectrum_widget.clear_floor()
-        self._btn_clear_noise.setEnabled(False)
-        self._label_noise.setText("Perfil borrado — sin cancelación activa")
-        self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
+        self._refresh_noise_profile_ui()
 
     def _on_toggle_processing(self, checked: bool) -> None:
         if checked:
@@ -813,16 +834,15 @@ class MainWindow(QMainWindow):
                 self._status_bar.showMessage("Procesando...")
                 self._adv_audio_tab.set_processing_active(True)
                 self._adv_canceller_tab._update_stats()
-                is_static = self._config.dsp.noise_mode == "static"
-                self._btn_learn.setEnabled(is_static)
+                self._refresh_noise_profile_ui()
             except Exception as e:
                 self._btn_start.setChecked(False)
                 self._status_bar.showMessage(f"Error: {e}")
         else:
             if self._pipeline.noise_is_learning:
                 self._btn_learn.setChecked(False)
-            self._btn_learn.setEnabled(False)
             self._pipeline.stop()
+            self._refresh_noise_profile_ui()
             self._level_timer.stop()
             self._spectrum_widget.stop()
             self._btn_start.setText("▶  ACTIVAR")
