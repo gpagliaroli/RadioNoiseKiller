@@ -7,8 +7,8 @@ from config import AppConfig, RadioMode, AudioConfig, DSPConfig
 from pipeline import ProcessingPipeline
 from ui.slider_row import SliderRow
 
-_BLOCK_SIZES = [240, 480, 960, 1920]
-_FILTER_ORDERS = [2, 4, 6, 8]
+_BLOCK_SIZES    = [240, 480, 960, 1920]
+_FILTER_ORDERS  = [2, 4, 6, 8]
 
 
 def _freq_slider(label: str, default: int, lo: int = 50, hi: int = 1000) -> SliderRow:
@@ -39,6 +39,12 @@ def _reset_button_widget(callback) -> QWidget:
     layout.addStretch()
     layout.addWidget(btn)
     return row
+
+
+def _note(text: str) -> QLabel:
+    lbl = QLabel(text)
+    lbl.setStyleSheet("color: #888; font-size: 8pt;")
+    return lbl
 
 
 # ---------------------------------------------------------------------------
@@ -85,10 +91,7 @@ class AdvancedAudioTab(QWidget):
         self._s_block._val_lbl.setFixedWidth(130)
         self._s_block.valueChanged.connect(self._on_block_size)
         layout.addWidget(self._s_block)
-
-        note = QLabel("  ↳ Menor = menor latencia. Requiere reiniciar el procesamiento.")
-        note.setStyleSheet("color: #888; font-size: 8pt;")
-        layout.addWidget(note)
+        layout.addWidget(_note("  ↳ Menor = menor latencia. Requiere reiniciar el procesamiento."))
         return group
 
     def _build_dsp_group(self) -> QGroupBox:
@@ -150,10 +153,7 @@ class AdvancedAudioTab(QWidget):
         )
         self._s_presence.valueChanged.connect(self._pipeline.set_presence_db)
         layout.addWidget(self._s_presence)
-
-        note = QLabel("  ↳ Frecuencia + ganancia del pico vocal. 0 dB=neutro, +4–6 dB=voz de radio.")
-        note.setStyleSheet("color: #888; font-size: 8pt;")
-        layout.addWidget(note)
+        layout.addWidget(_note("  ↳ Frecuencia + ganancia del pico vocal. 0 dB=neutro, +4–6 dB=voz de radio."))
 
         self._s_presence_q = SliderRow(
             "Ancho de presencia (Q):",
@@ -167,10 +167,7 @@ class AdvancedAudioTab(QWidget):
         self._s_presence_q._val_lbl.setFixedWidth(90)
         self._s_presence_q.valueChanged.connect(self._pipeline.set_presence_q)
         layout.addWidget(self._s_presence_q)
-
-        note_q = QLabel("  ↳ Q bajo = boost ancho (más cálido), Q alto = pico estrecho (más nasal).")
-        note_q.setStyleSheet("color: #888; font-size: 8pt;")
-        layout.addWidget(note_q)
+        layout.addWidget(_note("  ↳ Q bajo = boost ancho (más cálido), Q alto = pico estrecho (más nasal)."))
 
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
@@ -189,11 +186,7 @@ class AdvancedAudioTab(QWidget):
         self._s_pitch._val_lbl.setFixedWidth(110)
         self._s_pitch.valueChanged.connect(self._pipeline.set_pitch_shift)
         layout.addWidget(self._s_pitch)
-
-        note_pitch = QLabel("  ↳ Corrige offset de BFO en SSB. +100 Hz si la voz suena grave, -100 Hz si suena aguda.")
-        note_pitch.setStyleSheet("color: #888; font-size: 8pt;")
-        layout.addWidget(note_pitch)
-
+        layout.addWidget(_note("  ↳ Corrige offset de BFO en SSB. +100 Hz si la voz suena grave, -100 Hz si suena aguda."))
         return group
 
     def _build_exciter_group(self) -> QGroupBox:
@@ -212,10 +205,7 @@ class AdvancedAudioTab(QWidget):
         self._s_exciter_drive._val_lbl.setFixedWidth(110)
         self._s_exciter_drive.valueChanged.connect(self._on_exciter_drive)
         layout.addWidget(self._s_exciter_drive)
-
-        note1 = QLabel("  ↳ Saturación tanh: cuántos armónicos se generan. Bajo=sutil, alto=efecto notable.")
-        note1.setStyleSheet("color: #888; font-size: 8pt;")
-        layout.addWidget(note1)
+        layout.addWidget(_note("  ↳ Saturación tanh: cuántos armónicos se generan. Bajo=sutil, alto=efecto notable."))
 
         self._s_exciter_mix = SliderRow(
             "Mezcla:",
@@ -228,11 +218,7 @@ class AdvancedAudioTab(QWidget):
         )
         self._s_exciter_mix.valueChanged.connect(self._on_exciter_mix)
         layout.addWidget(self._s_exciter_mix)
-
-        note2 = QLabel("  ↳ Nivel de armónicos mezclados. 20–40% = zona útil sin sonar artificial.")
-        note2.setStyleSheet("color: #888; font-size: 8pt;")
-        layout.addWidget(note2)
-
+        layout.addWidget(_note("  ↳ Nivel de armónicos mezclados. 20–40% = zona útil sin sonar artificial."))
         return group
 
     # ------------------------------------------------------------------
@@ -306,7 +292,6 @@ class AdvancedAudioTab(QWidget):
         self._pipeline.set_exciter_mix(val)
 
     def reload(self) -> None:
-        """Recarga todos los sliders desde el config (llamado al cargar un preset)."""
         self._load_values()
 
     def set_processing_active(self, active: bool) -> None:
@@ -314,10 +299,10 @@ class AdvancedAudioTab(QWidget):
 
 
 # ---------------------------------------------------------------------------
-# Pestaña Avanzada Ruido
+# Pestaña Avanzada Impulsos  (Blanker + ANF)
 # ---------------------------------------------------------------------------
 
-class AdvancedNoiseTab(QWidget):
+class AdvancedImpulseTab(QWidget):
 
     def __init__(self, config: AppConfig, pipeline: ProcessingPipeline, parent=None):
         super().__init__(parent)
@@ -330,13 +315,12 @@ class AdvancedNoiseTab(QWidget):
         layout = _make_scroll_layout(self)
         layout.addWidget(self._build_blanker_group())
         layout.addWidget(self._build_anf_group())
-        layout.addWidget(self._build_noise_group())
         layout.addWidget(_reset_button_widget(self._reset_defaults))
         layout.addStretch()
 
         self._stats_timer = QTimer(self)
         self._stats_timer.setInterval(500)
-        self._stats_timer.timeout.connect(self._update_all_stats)
+        self._stats_timer.timeout.connect(self._update_stats)
         self._stats_timer.start()
 
     # ------------------------------------------------------------------
@@ -350,7 +334,7 @@ class AdvancedNoiseTab(QWidget):
         hits_row = QHBoxLayout()
         hits_row.addWidget(QLabel("Actividad:"))
         self._lbl_blanker_hits = QLabel("—")
-        self._lbl_blanker_hits.setStyleSheet("color: #4caf50; font-weight: bold;")
+        self._lbl_blanker_hits.setStyleSheet("color: #888;")
         hits_row.addWidget(self._lbl_blanker_hits)
         hits_row.addStretch()
         layout.addLayout(hits_row)
@@ -367,10 +351,7 @@ class AdvancedNoiseTab(QWidget):
         self._s_blanker_frame._val_lbl.setFixedWidth(110)
         self._s_blanker_frame.valueChanged.connect(self._pipeline.set_blanker_frame)
         layout.addWidget(self._s_blanker_frame)
-
-        note1 = QLabel("  ↳ Bajo=captura más impulsos (QRN fuerte). Alto=solo blancos muy grandes.")
-        note1.setStyleSheet("color: #888; font-size: 8pt;")
-        layout.addWidget(note1)
+        layout.addWidget(_note("  ↳ Bajo=captura más impulsos (QRN fuerte). Alto=solo blancos muy grandes."))
 
         self._s_blanker_mini = SliderRow(
             "Umbral micro (0.67 ms):",
@@ -384,48 +365,8 @@ class AdvancedNoiseTab(QWidget):
         self._s_blanker_mini._val_lbl.setFixedWidth(110)
         self._s_blanker_mini.valueChanged.connect(self._pipeline.set_blanker_mini)
         layout.addWidget(self._s_blanker_mini)
-
-        note2 = QLabel("  ↳ Detecta frituras y crackles cortos. Bajo=elimina más, puede recortar consonantes.")
-        note2.setStyleSheet("color: #888; font-size: 8pt;")
-        layout.addWidget(note2)
-
+        layout.addWidget(_note("  ↳ Detecta frituras y crackles cortos. Bajo=elimina más, puede recortar consonantes."))
         return group
-
-    def _update_all_stats(self) -> None:
-        # Supresor de impulsos
-        hits = self._pipeline.pop_blanker_hits()
-        if hits == 0:
-            self._lbl_blanker_hits.setText("—")
-            self._lbl_blanker_hits.setStyleSheet("color: #888;")
-        else:
-            self._lbl_blanker_hits.setText(f"⚡ {hits * 2} /s")
-            self._lbl_blanker_hits.setStyleSheet("color: #ff9800; font-weight: bold;")
-
-        # ANF
-        bins = self._pipeline.anf_notched_bins
-        if bins == 0:
-            self._lbl_anf_activity.setText("—")
-            self._lbl_anf_activity.setStyleSheet("color: #888;")
-        else:
-            self._lbl_anf_activity.setText(f"🔇 {bins} {'tono' if bins == 1 else 'tonos'}")
-            self._lbl_anf_activity.setStyleSheet("color: #4fc3f7; font-weight: bold;")
-
-        # Cancelación de ruido
-        if not self._pipeline.noise_has_profile:
-            self._lbl_noise_db.setText("sin perfil")
-            self._lbl_noise_db.setStyleSheet("color: #888;")
-            self._lbl_noise_vp.setText("—")
-            self._lbl_noise_vp.setStyleSheet("color: #888;")
-        else:
-            db = self._pipeline.noise_reduction_db
-            self._lbl_noise_db.setText(f"{db:.1f} dB")
-            color_db = "#69f0ae" if db < -10 else "#fff176" if db < -3 else "#888"
-            self._lbl_noise_db.setStyleSheet(f"color: {color_db}; font-weight: bold;")
-
-            vp = self._pipeline.noise_voice_prob
-            self._lbl_noise_vp.setText(f"{vp*100:.0f}%")
-            color_vp = "#4fc3f7" if vp > 0.5 else "#fff176" if vp > 0.15 else "#888"
-            self._lbl_noise_vp.setStyleSheet(f"color: {color_vp}; font-weight: bold;")
 
     def _build_anf_group(self) -> QGroupBox:
         group = QGroupBox("ANF — Filtro de Muesca Espectral  (parámetros técnicos)")
@@ -451,10 +392,7 @@ class AdvancedNoiseTab(QWidget):
         self._s_anf_threshold._val_lbl.setFixedWidth(90)
         self._s_anf_threshold.valueChanged.connect(self._pipeline.set_anf_threshold)
         layout.addWidget(self._s_anf_threshold)
-
-        note1 = QLabel("  ↳ Ratio bin/baseline para detectar un tono. Bajar si hay tonos débiles.")
-        note1.setStyleSheet("color: #888; font-size: 8pt;")
-        layout.addWidget(note1)
+        layout.addWidget(_note("  ↳ Ratio bin/baseline para detectar un tono. Bajar si hay tonos débiles."))
 
         self._s_anf_depth = SliderRow(
             "Profundidad:",
@@ -467,14 +405,91 @@ class AdvancedNoiseTab(QWidget):
         )
         self._s_anf_depth.valueChanged.connect(self._pipeline.set_anf_depth)
         layout.addWidget(self._s_anf_depth)
-
-        note2 = QLabel("  ↳ Atenuación aplicada al tono detectado. 100%=silencia, 50%=reduce 6dB.")
-        note2.setStyleSheet("color: #888; font-size: 8pt;")
-        layout.addWidget(note2)
+        layout.addWidget(_note("  ↳ Atenuación aplicada al tono detectado. 100%=silencia, 50%=reduce 6dB."))
         return group
 
-    def _build_noise_group(self) -> QGroupBox:
-        group = QGroupBox("Cancelación de Ruido  (requiere perfil aprendido en pestaña Principal)")
+    # ------------------------------------------------------------------
+    # Stats en tiempo real
+    # ------------------------------------------------------------------
+
+    def _update_stats(self) -> None:
+        hits = self._pipeline.pop_blanker_hits()
+        if hits == 0:
+            self._lbl_blanker_hits.setText("—")
+            self._lbl_blanker_hits.setStyleSheet("color: #888;")
+        else:
+            self._lbl_blanker_hits.setText(f"⚡ {hits * 2} /s")
+            self._lbl_blanker_hits.setStyleSheet("color: #ff9800; font-weight: bold;")
+
+        bins = self._pipeline.anf_notched_bins
+        if bins == 0:
+            self._lbl_anf_activity.setText("—")
+            self._lbl_anf_activity.setStyleSheet("color: #888;")
+        else:
+            self._lbl_anf_activity.setText(f"🔇 {bins} {'tono' if bins == 1 else 'tonos'}")
+            self._lbl_anf_activity.setStyleSheet("color: #4fc3f7; font-weight: bold;")
+
+    # ------------------------------------------------------------------
+    # Carga y reset
+    # ------------------------------------------------------------------
+
+    def _load_values(self) -> None:
+        cfg = self._config.dsp
+        self._s_blanker_frame.set_value(cfg.blanker_frame)
+        self._s_blanker_mini.set_value(cfg.blanker_mini)
+        self._s_anf_threshold.set_value(cfg.anf_threshold)
+        self._s_anf_depth.set_value(cfg.anf_depth)
+
+    def _reset_defaults(self) -> None:
+        defaults = DSPConfig()
+        self._config.dsp.blanker_frame = defaults.blanker_frame
+        self._config.dsp.blanker_mini  = defaults.blanker_mini
+        self._config.dsp.anf_threshold = defaults.anf_threshold
+        self._config.dsp.anf_depth     = defaults.anf_depth
+        self._pipeline.set_blanker_frame(defaults.blanker_frame)
+        self._pipeline.set_blanker_mini(defaults.blanker_mini)
+        self._pipeline.set_anf_threshold(defaults.anf_threshold)
+        self._pipeline.set_anf_depth(defaults.anf_depth)
+        self._load_values()
+
+    def reload(self) -> None:
+        self._load_values()
+
+
+# ---------------------------------------------------------------------------
+# Pestaña Avanzada Cancelador  (Wiener + Squelch + sub-módulos)
+# ---------------------------------------------------------------------------
+
+class AdvancedCancellerTab(QWidget):
+
+    def __init__(self, config: AppConfig, pipeline: ProcessingPipeline, parent=None):
+        super().__init__(parent)
+        self._config = config
+        self._pipeline = pipeline
+        self._build_ui()
+        self._load_values()
+
+    def _build_ui(self) -> None:
+        layout = _make_scroll_layout(self)
+        layout.addWidget(self._build_canceller_group())
+        layout.addWidget(self._build_squelch_group())
+        layout.addWidget(self._build_perceptual_floor_group())
+        layout.addWidget(self._build_post_filter_group())
+        layout.addWidget(self._build_pitch_group())
+        layout.addWidget(_reset_button_widget(self._reset_defaults))
+        layout.addStretch()
+
+        self._stats_timer = QTimer(self)
+        self._stats_timer.setInterval(500)
+        self._stats_timer.timeout.connect(self._update_stats)
+        self._stats_timer.start()
+
+    # ------------------------------------------------------------------
+    # Grupos
+    # ------------------------------------------------------------------
+
+    def _build_canceller_group(self) -> QGroupBox:
+        group = QGroupBox("Cancelador de Ruido  (Wiener Log-MMSE)")
         layout = QVBoxLayout(group)
 
         noise_row = QHBoxLayout()
@@ -498,10 +513,7 @@ class AdvancedNoiseTab(QWidget):
         )
         self._s_noise_floor.valueChanged.connect(self._on_noise_floor)
         layout.addWidget(self._s_noise_floor)
-
-        note2 = QLabel("  ↳ Ganancia mínima por bin. 0.10=suprime 20dB (recomendado). Mínimo 0.05 para evitar gorgojeo severo.")
-        note2.setStyleSheet("color: #888; font-size: 8pt;")
-        layout.addWidget(note2)
+        layout.addWidget(_note("  ↳ Ganancia mínima por bin. 0.10=suprime 20dB (recomendado). Mínimo 0.05."))
 
         self._s_noise_smooth = SliderRow(
             "Anti-gorgojeo (β):",
@@ -515,10 +527,7 @@ class AdvancedNoiseTab(QWidget):
         self._s_noise_smooth._val_lbl.setFixedWidth(110)
         self._s_noise_smooth.valueChanged.connect(self._pipeline.set_noise_smooth)
         layout.addWidget(self._s_noise_smooth)
-
-        note3 = QLabel("  ↳ Release (retorno al ruido): alto (97-98%)=sin gorgojeo. Bajo (<90%)=más reactivo pero con gorgojeo.")
-        note3.setStyleSheet("color: #888; font-size: 8pt;")
-        layout.addWidget(note3)
+        layout.addWidget(_note("  ↳ Release (retorno al ruido): alto (97-98%)=sin gorgojeo. Bajo=más reactivo."))
 
         self._s_noise_attack = SliderRow(
             "Velocidad ataque:",
@@ -532,13 +541,15 @@ class AdvancedNoiseTab(QWidget):
         self._s_noise_attack._val_lbl.setFixedWidth(110)
         self._s_noise_attack.valueChanged.connect(self._on_noise_attack)
         layout.addWidget(self._s_noise_attack)
+        layout.addWidget(_note("  ↳ Attack (onset de voz): bajo=consonantes nítidas. Alto=transiciones suaves."))
+        return group
 
-        note4 = QLabel("  ↳ Attack (onset de voz): bajo=consonantes nítidas. Alto=transiciones suaves. Default 80%.")
-        note4.setStyleSheet("color: #888; font-size: 8pt;")
-        layout.addWidget(note4)
+    def _build_squelch_group(self) -> QGroupBox:
+        group = QGroupBox("Squelch de voz  (activar en Módulos Activos)")
+        layout = QVBoxLayout(group)
 
         self._s_squelch_threshold = SliderRow(
-            "Umbral squelch:",
+            "Umbral:",
             min_val=0.05, max_val=0.60,
             default=self._config.dsp.squelch_threshold,
             step=0.05, unit="", fmt="{:.2f}",
@@ -549,10 +560,7 @@ class AdvancedNoiseTab(QWidget):
         self._s_squelch_threshold._val_lbl.setFixedWidth(110)
         self._s_squelch_threshold.valueChanged.connect(self._on_squelch_threshold)
         layout.addWidget(self._s_squelch_threshold)
-
-        note5 = QLabel("  ↳ Umbral del Squelch de voz. Bajo=abre con señal débil. Alto=solo con voz fuerte. Default 0.20.")
-        note5.setStyleSheet("color: #888; font-size: 8pt;")
-        layout.addWidget(note5)
+        layout.addWidget(_note("  ↳ Bajo=abre con señal débil. Alto=solo con voz fuerte. Default 0.20."))
 
         self._s_squelch_hold = SliderRow(
             "Retención:",
@@ -562,19 +570,12 @@ class AdvancedNoiseTab(QWidget):
         )
         self._s_squelch_hold.valueChanged.connect(self._on_squelch_hold)
         layout.addWidget(self._s_squelch_hold)
+        layout.addWidget(_note("  ↳ Tiempo que el gate permanece abierto tras perder la voz. Default 300 ms."))
+        return group
 
-        note6 = QLabel("  ↳ Tiempo que el gate permanece abierto tras perder la voz. Evita cortes entre palabras. Default 300 ms.")
-        note6.setStyleSheet("color: #888; font-size: 8pt;")
-        layout.addWidget(note6)
-
-        sep_pf_curve = QFrame()
-        sep_pf_curve.setFrameShape(QFrame.Shape.HLine)
-        sep_pf_curve.setStyleSheet("color: #444;")
-        layout.addWidget(sep_pf_curve)
-
-        pf_curve_lbl = QLabel("Piso espectral perceptual  —  forma de la curva  (activo solo con el checkbox del mismo nombre):")
-        pf_curve_lbl.setStyleSheet("color: #888; font-size: 8pt; font-style: italic;")
-        layout.addWidget(pf_curve_lbl)
+    def _build_perceptual_floor_group(self) -> QGroupBox:
+        group = QGroupBox("Piso espectral perceptual  (activar en Módulos Activos)")
+        layout = QVBoxLayout(group)
 
         self._s_pf_boost = SliderRow(
             "Amplitud boost vocal:",
@@ -588,10 +589,7 @@ class AdvancedNoiseTab(QWidget):
         self._s_pf_boost._val_lbl.setFixedWidth(110)
         self._s_pf_boost.valueChanged.connect(self._on_pf_boost)
         layout.addWidget(self._s_pf_boost)
-
-        note_pf_boost = QLabel("  ↳ Cuanto se eleva el piso en la zona vocal. 75%=default. 0=sin boost.")
-        note_pf_boost.setStyleSheet("color: #888; font-size: 8pt;")
-        layout.addWidget(note_pf_boost)
+        layout.addWidget(_note("  ↳ Cuánto se eleva el piso en la zona vocal. 75%=default."))
 
         self._s_pf_center = SliderRow(
             "Centro del boost:",
@@ -605,10 +603,7 @@ class AdvancedNoiseTab(QWidget):
         self._s_pf_center._val_lbl.setFixedWidth(110)
         self._s_pf_center.valueChanged.connect(self._on_pf_center)
         layout.addWidget(self._s_pf_center)
-
-        note_pf_center = QLabel("  ↳ Frecuencia de maximo boost. 500 Hz=AM/SSB tipico. 350 Hz=SSB muy grave.")
-        note_pf_center.setStyleSheet("color: #888; font-size: 8pt;")
-        layout.addWidget(note_pf_center)
+        layout.addWidget(_note("  ↳ Frecuencia de máximo boost. 500 Hz=AM/SSB típico. 350 Hz=SSB muy grave."))
 
         self._s_pf_rolloff_hz = SliderRow(
             "Inicio del rolloff:",
@@ -622,10 +617,7 @@ class AdvancedNoiseTab(QWidget):
         self._s_pf_rolloff_hz._val_lbl.setFixedWidth(110)
         self._s_pf_rolloff_hz.valueChanged.connect(self._on_pf_rolloff_hz)
         layout.addWidget(self._s_pf_rolloff_hz)
-
-        note_pf_rolloff = QLabel("  ↳ A partir de que frecuencia baja el piso. 3000 Hz=default (sobre la voz AM).")
-        note_pf_rolloff.setStyleSheet("color: #888; font-size: 8pt;")
-        layout.addWidget(note_pf_rolloff)
+        layout.addWidget(_note("  ↳ A partir de qué frecuencia baja el piso. 3000 Hz=default."))
 
         self._s_pf_rolloff_depth = SliderRow(
             "Profundidad del rolloff:",
@@ -639,18 +631,15 @@ class AdvancedNoiseTab(QWidget):
         self._s_pf_rolloff_depth._val_lbl.setFixedWidth(110)
         self._s_pf_rolloff_depth.valueChanged.connect(self._on_pf_rolloff_depth)
         layout.addWidget(self._s_pf_rolloff_depth)
+        layout.addWidget(_note("  ↳ Cuánto cae el piso en altas frecuencias. 55%=default."))
+        return group
 
-        note_pf_depth = QLabel("  ↳ Cuanto cae el piso en altas frecuencias. 55%=default. 0=sin rolloff.")
-        note_pf_depth.setStyleSheet("color: #888; font-size: 8pt;")
-        layout.addWidget(note_pf_depth)
-
-        sep_pf = QFrame()
-        sep_pf.setFrameShape(QFrame.Shape.HLine)
-        sep_pf.setStyleSheet("color: #444;")
-        layout.addWidget(sep_pf)
+    def _build_post_filter_group(self) -> QGroupBox:
+        group = QGroupBox("Post-filtro espectral  (activar en Módulos Activos)")
+        layout = QVBoxLayout(group)
 
         self._s_post_filter = SliderRow(
-            "Post-filtro (ruido musical):",
+            "Agresividad:",
             min_val=0.0, max_val=3.0,
             default=self._config.dsp.post_filter_strength,
             step=0.1, unit="", fmt="{:.1f}",
@@ -661,19 +650,12 @@ class AdvancedNoiseTab(QWidget):
         self._s_post_filter._val_lbl.setFixedWidth(110)
         self._s_post_filter.valueChanged.connect(self._on_post_filter_strength)
         layout.addWidget(self._s_post_filter)
+        layout.addWidget(_note("  ↳ Supresión extra en bins de ruido para eliminar 'pitidos fantasma'. 0=off, 1=moderado, 2=agresivo."))
+        return group
 
-        note_pf = QLabel("  ↳ Supresión extra en bins de ruido para eliminar 'pitidos fantasma'. 0=off, 1=moderado, 2=agresivo.")
-        note_pf.setStyleSheet("color: #888; font-size: 8pt;")
-        layout.addWidget(note_pf)
-
-        sep = QFrame()
-        sep.setFrameShape(QFrame.Shape.HLine)
-        sep.setStyleSheet("color: #444;")
-        layout.addWidget(sep)
-
-        pitch_lbl = QLabel("Refuerzo de pitch SSB  —  activar en pestaña Principal → Módulos activos")
-        pitch_lbl.setStyleSheet("color: #888; font-size: 8pt; font-style: italic;")
-        layout.addWidget(pitch_lbl)
+    def _build_pitch_group(self) -> QGroupBox:
+        group = QGroupBox("Refuerzo de pitch SSB  (activar en Módulos Activos)")
+        layout = QVBoxLayout(group)
 
         self._s_pitch_strength = SliderRow(
             "Protección de armónicos:",
@@ -687,11 +669,29 @@ class AdvancedNoiseTab(QWidget):
         self._s_pitch_strength._val_lbl.setFixedWidth(110)
         self._s_pitch_strength.valueChanged.connect(self._on_pitch_strength)
         layout.addWidget(self._s_pitch_strength)
-
-        note_ps = QLabel("  ↳ Cuánto eleva la probabilidad de voz en bins de armónicos. 70%=recomendado.")
-        note_ps.setStyleSheet("color: #888; font-size: 8pt;")
-        layout.addWidget(note_ps)
+        layout.addWidget(_note("  ↳ Cuánto eleva la probabilidad de voz en bins de armónicos. 70%=recomendado."))
         return group
+
+    # ------------------------------------------------------------------
+    # Stats en tiempo real
+    # ------------------------------------------------------------------
+
+    def _update_stats(self) -> None:
+        if not self._pipeline.noise_has_profile:
+            self._lbl_noise_db.setText("sin perfil")
+            self._lbl_noise_db.setStyleSheet("color: #888;")
+            self._lbl_noise_vp.setText("—")
+            self._lbl_noise_vp.setStyleSheet("color: #888;")
+            return
+        db = self._pipeline.noise_reduction_db
+        self._lbl_noise_db.setText(f"{db:.1f} dB")
+        color_db = "#69f0ae" if db < -10 else "#fff176" if db < -3 else "#888"
+        self._lbl_noise_db.setStyleSheet(f"color: {color_db}; font-weight: bold;")
+
+        vp = self._pipeline.noise_voice_prob
+        self._lbl_noise_vp.setText(f"{vp*100:.0f}%")
+        color_vp = "#4fc3f7" if vp > 0.5 else "#fff176" if vp > 0.15 else "#888"
+        self._lbl_noise_vp.setStyleSheet(f"color: {color_vp}; font-weight: bold;")
 
     # ------------------------------------------------------------------
     # Carga y reset
@@ -699,10 +699,6 @@ class AdvancedNoiseTab(QWidget):
 
     def _load_values(self) -> None:
         cfg = self._config.dsp
-        self._s_blanker_frame.set_value(cfg.blanker_frame)
-        self._s_blanker_mini.set_value(cfg.blanker_mini)
-        self._s_anf_threshold.set_value(cfg.anf_threshold)
-        self._s_anf_depth.set_value(cfg.anf_depth)
         self._s_noise_floor.set_value(cfg.noise_floor)
         self._s_noise_smooth.set_value(cfg.noise_smooth)
         self._s_noise_attack.set_value(cfg.noise_attack)
@@ -717,36 +713,31 @@ class AdvancedNoiseTab(QWidget):
 
     def _reset_defaults(self) -> None:
         defaults = DSPConfig()
-        self._config.dsp.blanker_frame  = defaults.blanker_frame
-        self._config.dsp.blanker_mini   = defaults.blanker_mini
-        self._config.dsp.anf_threshold  = defaults.anf_threshold
-        self._config.dsp.anf_depth      = defaults.anf_depth
         self._config.dsp.noise_floor    = defaults.noise_floor
         self._config.dsp.noise_smooth   = defaults.noise_smooth
-        self._config.dsp.noise_attack      = defaults.noise_attack
+        self._config.dsp.noise_attack   = defaults.noise_attack
         self._config.dsp.squelch_threshold = defaults.squelch_threshold
-        self._pipeline.set_blanker_frame(defaults.blanker_frame)
-        self._pipeline.set_blanker_mini(defaults.blanker_mini)
-        self._pipeline.set_anf_threshold(defaults.anf_threshold)
-        self._pipeline.set_anf_depth(defaults.anf_depth)
-        self._pipeline.set_noise_floor(defaults.noise_floor)
-        self._pipeline.set_noise_smooth(defaults.noise_smooth)
-        self._pipeline.set_noise_attack(defaults.noise_attack)
-        self._pipeline.set_squelch_threshold(defaults.squelch_threshold)
-        self._config.dsp.squelch_hold_ms = defaults.squelch_hold_ms
-        self._pipeline.set_squelch_hold_ms(defaults.squelch_hold_ms)
+        self._config.dsp.squelch_hold_ms   = defaults.squelch_hold_ms
         self._config.dsp.perceptual_floor_boost        = defaults.perceptual_floor_boost
         self._config.dsp.perceptual_floor_center       = defaults.perceptual_floor_center
         self._config.dsp.perceptual_floor_rolloff_hz   = defaults.perceptual_floor_rolloff_hz
         self._config.dsp.perceptual_floor_rolloff_depth = defaults.perceptual_floor_rolloff_depth
+        self._config.dsp.post_filter_strength   = defaults.post_filter_strength
+        self._config.dsp.pitch_enhance_strength = defaults.pitch_enhance_strength
+        self._pipeline.set_noise_floor(defaults.noise_floor)
+        self._pipeline.set_noise_smooth(defaults.noise_smooth)
+        self._pipeline.set_noise_attack(defaults.noise_attack)
+        self._pipeline.set_squelch_threshold(defaults.squelch_threshold)
+        self._pipeline.set_squelch_hold_ms(defaults.squelch_hold_ms)
         self._pipeline.set_pf_boost(defaults.perceptual_floor_boost)
         self._pipeline.set_pf_center(defaults.perceptual_floor_center)
         self._pipeline.set_pf_rolloff_hz(defaults.perceptual_floor_rolloff_hz)
         self._pipeline.set_pf_rolloff_depth(defaults.perceptual_floor_rolloff_depth)
-        self._config.dsp.post_filter_strength   = defaults.post_filter_strength
         self._pipeline.set_post_filter_strength(defaults.post_filter_strength)
-        self._config.dsp.pitch_enhance_strength = defaults.pitch_enhance_strength
         self._pipeline.set_pitch_enhance_strength(defaults.pitch_enhance_strength)
+        self._load_values()
+
+    def reload(self) -> None:
         self._load_values()
 
     # ------------------------------------------------------------------
@@ -769,14 +760,6 @@ class AdvancedNoiseTab(QWidget):
         self._config.dsp.squelch_hold_ms = val
         self._pipeline.set_squelch_hold_ms(val)
 
-    def _on_post_filter_strength(self, val: float) -> None:
-        self._config.dsp.post_filter_strength = val
-        self._pipeline.set_post_filter_strength(val)
-
-    def reload(self) -> None:
-        """Recarga todos los sliders desde el config (llamado al cargar un preset)."""
-        self._load_values()
-
     def _on_pf_boost(self, val: float) -> None:
         self._config.dsp.perceptual_floor_boost = val
         self._pipeline.set_pf_boost(val)
@@ -792,6 +775,10 @@ class AdvancedNoiseTab(QWidget):
     def _on_pf_rolloff_depth(self, val: float) -> None:
         self._config.dsp.perceptual_floor_rolloff_depth = val
         self._pipeline.set_pf_rolloff_depth(val)
+
+    def _on_post_filter_strength(self, val: float) -> None:
+        self._config.dsp.post_filter_strength = val
+        self._pipeline.set_post_filter_strength(val)
 
     def _on_pitch_strength(self, val: float) -> None:
         self._config.dsp.pitch_enhance_strength = val

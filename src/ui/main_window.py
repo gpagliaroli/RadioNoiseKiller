@@ -10,7 +10,7 @@ from audio.devices import list_devices, AudioDevice
 from config import AppConfig, RadioMode
 from pipeline import ProcessingPipeline
 from ui.vu_meter import VuMeter
-from ui.advanced_tab import AdvancedAudioTab, AdvancedNoiseTab
+from ui.advanced_tab import AdvancedAudioTab, AdvancedImpulseTab, AdvancedCancellerTab
 from ui.presets_tab import PresetsTab
 from ui.slider_row import SliderRow
 from ui.spectrum_widget import SpectrumWidget
@@ -70,10 +70,12 @@ class MainWindow(QMainWindow):
         self._tabs = QTabWidget()
         self._tabs.addTab(self._build_main_tab(), "Principal")
 
-        self._adv_audio_tab = AdvancedAudioTab(self._config, self._pipeline)
-        self._adv_noise_tab = AdvancedNoiseTab(self._config, self._pipeline)
-        self._tabs.addTab(self._adv_audio_tab, "Avanzada Audio")
-        self._tabs.addTab(self._adv_noise_tab, "Avanzada Ruido")
+        self._adv_audio_tab     = AdvancedAudioTab(self._config, self._pipeline)
+        self._adv_impulse_tab   = AdvancedImpulseTab(self._config, self._pipeline)
+        self._adv_canceller_tab = AdvancedCancellerTab(self._config, self._pipeline)
+        self._tabs.addTab(self._adv_audio_tab,     "Avanzada Audio")
+        self._tabs.addTab(self._adv_impulse_tab,   "Avanzada Impulsos")
+        self._tabs.addTab(self._adv_canceller_tab, "Avanzada Cancelador")
         self._tabs.addTab(self._build_spectrum_tab(), "Espectro")
         self._presets_tab = PresetsTab(
             self._config, self._pipeline, self._preset_manager
@@ -618,7 +620,8 @@ class MainWindow(QMainWindow):
 
         # --- Pestanas avanzadas ---
         self._adv_audio_tab.reload()
-        self._adv_noise_tab.reload()
+        self._adv_impulse_tab.reload()
+        self._adv_canceller_tab.reload()
 
         self._schedule_save()
 
@@ -801,6 +804,7 @@ class MainWindow(QMainWindow):
                 self._spectrum_widget.start()
                 self._status_bar.showMessage("Procesando...")
                 self._adv_audio_tab.set_processing_active(True)
+                self._adv_canceller_tab._update_stats()
                 is_static = self._config.dsp.noise_mode == "static"
                 self._btn_learn.setEnabled(is_static)
             except Exception as e:
