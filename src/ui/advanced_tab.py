@@ -548,6 +548,22 @@ class AdvancedCancellerTab(QWidget):
         group = QGroupBox("Squelch de voz  (activar en Módulos Activos)")
         layout = QVBoxLayout(group)
 
+        sq_row = QHBoxLayout()
+        sq_row.addWidget(QLabel("Nivel de voz:"))
+        self._lbl_sq_vp = QLabel("—")
+        self._lbl_sq_vp.setStyleSheet("color: #888;")
+        sq_row.addWidget(self._lbl_sq_vp)
+        sq_row.addSpacing(20)
+        sq_row.addWidget(QLabel("Gate:"))
+        self._lbl_sq_gate = QLabel("—")
+        self._lbl_sq_gate.setStyleSheet("color: #888;")
+        sq_row.addWidget(self._lbl_sq_gate)
+        sq_row.addStretch()
+        layout.addLayout(sq_row)
+        layout.addWidget(_note(
+            "  ↳ Ajustar Umbral para que quede entre el nivel de voz en silencio (ruido) y con señal."
+        ))
+
         self._s_squelch_threshold = SliderRow(
             "Umbral:",
             min_val=0.05, max_val=0.60,
@@ -677,6 +693,26 @@ class AdvancedCancellerTab(QWidget):
     # ------------------------------------------------------------------
 
     def _update_stats(self) -> None:
+        vp = self._pipeline.noise_voice_prob
+        thr = self._config.dsp.squelch_threshold
+
+        # Indicador squelch (siempre visible aunque no haya perfil)
+        self._lbl_sq_vp.setText(f"{vp*100:.0f}%")
+        if vp > thr:
+            color_sq = "#4fc3f7"   # azul — por encima del umbral → gate abre
+        elif vp > thr * 0.5:
+            color_sq = "#fff176"   # amarillo — zona marginal
+        else:
+            color_sq = "#888"      # gris — ruido claro
+        self._lbl_sq_vp.setStyleSheet(f"color: {color_sq}; font-weight: bold;")
+
+        gate_open = self._pipeline.squelch_gate_open
+        self._lbl_sq_gate.setText("ABIERTO" if gate_open else "CERRADO")
+        self._lbl_sq_gate.setStyleSheet(
+            "color: #69f0ae; font-weight: bold;" if gate_open
+            else "color: #888; font-weight: bold;"
+        )
+
         if not self._pipeline.noise_has_profile:
             self._lbl_noise_db.setText("sin perfil")
             self._lbl_noise_db.setStyleSheet("color: #888;")
@@ -688,7 +724,6 @@ class AdvancedCancellerTab(QWidget):
         color_db = "#69f0ae" if db < -10 else "#fff176" if db < -3 else "#888"
         self._lbl_noise_db.setStyleSheet(f"color: {color_db}; font-weight: bold;")
 
-        vp = self._pipeline.noise_voice_prob
         self._lbl_noise_vp.setText(f"{vp*100:.0f}%")
         color_vp = "#4fc3f7" if vp > 0.5 else "#fff176" if vp > 0.15 else "#888"
         self._lbl_noise_vp.setStyleSheet(f"color: {color_vp}; font-weight: bold;")

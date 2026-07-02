@@ -351,6 +351,14 @@ class ProcessingPipeline:
         return self._noise_profiler.voice_prob
 
     @property
+    def squelch_gate_open(self) -> bool:
+        """True si el gate de squelch está abierto (audio pasa)."""
+        if not self._squelch_enabled:
+            return True
+        vp = self._noise_profiler.voice_prob
+        return vp >= self._squelch_threshold or self._squelch_hold_count > 0
+
+    @property
     def noise_reduction_db(self) -> float:
         return self._noise_profiler.last_reduction_db
 
