@@ -144,7 +144,7 @@ Cada casilla de verificación activa o desactiva un módulo del pipeline de form
 | **Cancelador de ruido estacionario** | El módulo principal. Activar una vez aprendido el perfil de ruido. |
 | &nbsp;&nbsp;&nbsp;↳ **Post-filtro espectral** | Sub-módulo del cancelador. Elimina el "ruido musical" (pitidos intermitentes) que el Wiener deja como residuo. Activar cuando se note ese artefacto. Agresividad configurable en Avanzada Cancelador. |
 | &nbsp;&nbsp;&nbsp;↳ **Refuerzo de pitch SSB** | Sub-módulo del cancelador. Para señales SSB muy débiles: detecta el tono fundamental de la voz y protege sus armónicos de ser suprimidos. Activar solo si la voz suena "fantasmal" con el cancelador al máximo. Sensibilidad configurable en Avanzada Cancelador. |
-| &nbsp;&nbsp;&nbsp;↳ **Squelch de voz** | Sub-módulo del cancelador. Silencia el ruido entre transmisiones. **No usar con música** — produce subidas y bajadas de nivel indeseadas. Umbral y retención configurables en Avanzada Cancelador. |
+| &nbsp;&nbsp;&nbsp;↳ **Squelch de voz** | Sub-módulo del cancelador. Silencia completamente el audio entre transmisiones (gate binario, sin mute parcial). **No usar con música.** Indicador de nivel de voz y estado del gate en Avanzada Cancelador. |
 | **EQ Presencia** | Activar para mejorar la claridad de la voz con señales debilitadas o muy filtradas. |
 | **Excitador armónico** | Para señales de voz opacas, sin brillo. Añade presencia. Comparar con y sin para decidir. |
 
@@ -276,7 +276,7 @@ Este comportamiento es automático y no requiere ningún ajuste. Se activa cuand
 | Indicador | Descripción |
 |-----------|-------------|
 | **Reducción (dB)** | Cuánto está reduciendo el ruido en este momento. Verde = reducción fuerte (>10 dB). Amarillo = reducción moderada. |
-| **Voz (%)** | Probabilidad de que el frame actual contenga voz. Útil para calibrar el Squelch. |
+| **Voz (%)** | Probabilidad de que el frame actual contenga voz (señal suavizada usada internamente por el Wiener). Para calibrar el Squelch, usar el indicador **Nivel de voz** del grupo Squelch (más reactivo). |
 | **Preview: escuchar ruido eliminado** | Invierte la salida para escuchar solo lo que se está eliminando. Útil para verificar que no se esté eliminando voz. |
 
 ### Controles avanzados (Pestaña Avanzada Cancelador)
@@ -347,26 +347,35 @@ Este módulo detecta en tiempo real el **tono fundamental** (f0) de la voz media
 
 Silencia completamente la salida cuando el cancelador de ruido no detecta voz humana. En SSB, entre transmisiones no hay portadora — solo ruido de banda — y el squelch elimina ese ruido residual que queda después de la reducción.
 
-Funciona multiplicando la salida por la probabilidad de voz calculada internamente. Cuando hay voz, la señal pasa sin atenuación. Cuando no hay voz, la salida se reduce suavemente hasta el silencio.
+Funciona como un **gate binario**: cuando se detecta voz, el audio pasa sin modificación; cuando no hay voz (y expira el tiempo de retención), la salida se silencia con un breve rampado de ~10 ms para evitar clicks. El cierre es completo — no hay audio residual ni gorgojeo.
 
 El parámetro **Retención** evita que el squelch corte el final de las palabras o las frases breves, manteniendo el gate abierto algunos milisegundos después de que la voz desaparece.
 
-**Requiere perfil de ruido aprendido** para funcionar.
+**Requiere perfil de ruido aprendido** (modo estático) o un período de calentamiento del MCRA (~200 ms) para funcionar.
+
+### Indicadores en tiempo real (grupo Squelch, Avanzada Cancelador)
+
+| Indicador | Descripción |
+|-----------|-------------|
+| **Nivel de voz** | Porcentaje de actividad vocal detectada en el frame actual, con respuesta rápida (~20 ms). Gris = ruido puro. Amarillo = señal marginal. Azul = voz detectada, gate va a abrir. |
+| **Gate** | Estado actual del gate: **ABIERTO** (verde, audio pasa) o **CERRADO** (gris, silencio). Permanece ABIERTO durante el período de Retención tras fin de la voz. |
 
 ### Controles
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
-| **Umbral squelch** | 0,05 – 0,60 | 0,15 | Nivel mínimo de actividad de voz para abrir el gate. **Bajo (0,05–0,15):** abre con señales débiles, más sensible. **Alto (0,35–0,60):** solo abre con voz clara y fuerte. Ajustar observando el indicador **Voz (%)** en la misma pestaña. |
+| **Umbral squelch** | 0,05 – 0,60 | 0,15 | Nivel mínimo de actividad de voz para abrir el gate. **Bajo (0,05–0,15):** abre con señales débiles, más sensible. **Alto (0,35–0,60):** solo abre con voz clara y fuerte. Ajustar observando el indicador **Nivel de voz** en la misma pestaña. |
 | **Retención** | 0 – 1000 ms | 500 ms | Tiempo que el gate permanece abierto después de que la voz desaparece. 500 ms es adecuado para SSB normal. Subir a 700–1000 ms para operadores con pausas largas entre palabras. |
 
-### Calibración con el indicador Voz (%)
+### Calibración
 
-El indicador **Voz (%)** en el grupo muestra en tiempo real la actividad detectada. Para calibrar el umbral:
+El indicador **Nivel de voz** y el estado del **Gate** en la pestaña Avanzada Cancelador son la herramienta principal de calibración:
 
-1. Escuchar una transmisión activa → el indicador sube a 50–100%.
-2. En silencio entre transmisiones → el indicador cae a 0–15%.
-3. Ajustar el **Umbral** para que esté entre esos dos valores (ej. 0,20 si en voz marca 70% y en silencio marca 5%).
+1. **Con transmisión activa** → "Nivel de voz" sube a 50–100% y "Gate: ABIERTO".
+2. **En silencio entre transmisiones** → "Nivel de voz" cae a 0–15% en ~100 ms y "Gate: CERRADO" tras la retención.
+3. Ajustar el **Umbral** para que quede entre el nivel en silencio y el nivel con voz (ej. 0,20 si en voz marca 70% y en silencio marca 5%).
+
+> **Nota de temporización:** tras el fin de la voz, el indicador baja en ~100 ms; luego el gate permanece ABIERTO durante la Retención configurada y finalmente cierra. Si el gate cierra demasiado pronto cortando finales de palabras, aumentar la Retención.
 
 ---
 
