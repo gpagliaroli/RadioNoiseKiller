@@ -696,11 +696,12 @@ class AdvancedCancellerTab(QWidget):
         vp = self._pipeline.noise_voice_prob
         thr = self._config.dsp.squelch_threshold
 
-        # Indicador squelch (siempre visible aunque no haya perfil)
-        self._lbl_sq_vp.setText(f"{vp*100:.0f}%")
-        if vp > thr:
+        # Indicador squelch: usa voice_prob_sq (rápido), igual que el gate real
+        vp_sq = self._pipeline.noise_voice_prob_sq
+        self._lbl_sq_vp.setText(f"{vp_sq*100:.0f}%")
+        if vp_sq > thr:
             color_sq = "#4fc3f7"   # azul — por encima del umbral → gate abre
-        elif vp > thr * 0.5:
+        elif vp_sq > thr * 0.5:
             color_sq = "#fff176"   # amarillo — zona marginal
         else:
             color_sq = "#888"      # gris — ruido claro

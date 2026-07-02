@@ -71,6 +71,7 @@ class ProcessingPipeline:
         self._squelch_hold_ms:   float = config.dsp.squelch_hold_ms
         self._squelch_hold_frames: int = 0   # se calcula en start()
         self._squelch_hold_count:  int = 0
+        self._sq_gate_was_open:    bool = False  # estado anterior del gate (ramp-out)
         self._exciter = AuralExciter(config.audio.sample_rate)
         self._exciter.set_drive(config.dsp.exciter_drive)
         self._exciter.set_mix(config.dsp.exciter_mix)
@@ -351,11 +352,16 @@ class ProcessingPipeline:
         return self._noise_profiler.voice_prob
 
     @property
+    def noise_voice_prob_sq(self) -> float:
+        """voice_prob rápido (release ~40ms), el que usa el gate de squelch."""
+        return self._noise_profiler.voice_prob_sq
+
+    @property
     def squelch_gate_open(self) -> bool:
         """True si el gate de squelch está abierto (audio pasa)."""
         if not self._squelch_enabled:
             return True
-        vp = self._noise_profiler.voice_prob
+        vp = self._noise_profiler.voice_prob_sq
         return vp >= self._squelch_threshold or self._squelch_hold_count > 0
 
     @property
@@ -490,6 +496,7 @@ class ProcessingPipeline:
             hop_ms = self._config.audio.block_size / self._config.audio.sample_rate * 1000.0
             self._squelch_hold_frames = max(0, round(self._squelch_hold_ms / hop_ms))
             self._squelch_hold_count  = 0
+            self._sq_gate_was_open    = False
             self._in_acc  = np.zeros(0, dtype=np.float32)
             self._out_acc = np.zeros(0, dtype=np.float32)
             self._drain_queues()
@@ -622,16 +629,25 @@ class ProcessingPipeline:
                 filtered = self._noise_profiler.process(filtered)
 
                 if self._squelch_enabled and self._noise_profiler.has_profile:
-                    vp = self._noise_profiler.voice_prob
+                    vp = self._noise_profiler.voice_prob_sq
                     if vp >= self._squelch_threshold:
                         self._squelch_hold_count = self._squelch_hold_frames
-                        sq_gain = 1.0
-                    elif self._squelch_hold_count > 0:
-                        self._squelch_hold_count -= 1
-                        sq_gain = 1.0
+                        gate_open = True
                     else:
-                        sq_gain = float(np.clip(vp / max(self._squelch_threshold, 1e-6), 0.0, 1.0))
-                    filtered = filtered * np.float32(sq_gain)
+                        gate_open = self._squelch_hold_count > 0
+                        if gate_open:
+                            self._squelch_hold_count -= 1
+                    just_closing = self._sq_gate_was_open and not gate_open
+                    self._sq_gate_was_open = gate_open
+                    if not gate_open:
+                        if just_closing:
+                            # primer frame cerrado: ramp lineal 1→0 para evitar click
+                            ramp = np.linspace(1.0, 0.0, len(filtered), dtype=np.float32)
+                            filtered = filtered * ramp
+                        else:
+                            filtered = np.zeros_like(filtered)
+                else:
+                    self._sq_gate_was_open = True
 
                 with self._lock:
                     mixed = self._bandpass_out.process(filtered) if self._bandpass_post_enabled else filtered

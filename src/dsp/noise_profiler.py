@@ -57,11 +57,13 @@ class NoiseProfiler:
     _MCRA_SQUELCH_RATIO: float = 0.05  # congelar si potencia_frame < 5% del piso estimado (-13 dB)
 
     # VAD frame-level (energy minimum tracker)
-    # El ratio lambda_d/sig_power subestima el ruido ~40% por el minimum tracking de MCRA,
-    # haciendo que snr_ratio ≈ 1.4 incluso sin voz → siempre > umbral squelch 0.15.
-    # Solución: tracker de mínimo de energía independiente del estimador de ruido.
-    _VAD_ALPHA_FAST: float = 0.90  # suavizado energía de frame (TC ≈ 10 frames = 100ms)
-    _VAD_MIN_DECAY:  float = 1.002  # piso mínimo sube 0.2%/frame → se duplica en ~350 frames = 3.5s
+    # Dos trackers paralelos: uno lento (OMLSA) y uno rápido (squelch).
+    # El ratio lambda_d/sig_power subestima el ruido ~40% (min-tracking bias),
+    # por eso usamos un tracker de energía independiente del estimador.
+    _VAD_ALPHA_FAST: float = 0.90   # lento: TC=10 frames (100ms) → voz suave en OMLSA
+    _VAD_ALPHA_SQ:   float = 0.50   # rápido: TC=2 frames (20ms) → squelch reactivo
+    _VAD_MIN_DECAY:  float = 1.002  # piso mínimo sube 0.2%/frame
+    _VAD_SQ_RELEASE: float = 0.60   # release voice_prob_sq: 1.0→0.15 en ~4 frames (≈40ms)
 
     def __init__(self, hop_size: int = 480):
         self._hop   = hop_size
@@ -90,7 +92,8 @@ class NoiseProfiler:
         self._snr_post_prev: np.ndarray | None = None
 
         # VAD frame-level
-        self._voice_prob: float = 0.0
+        self._voice_prob:    float = 0.0   # suavizado lento (OMLSA)
+        self._voice_prob_sq: float = 0.0   # suavizado rápido (squelch)
 
         self._last_reduction_db: float = 0.0
         self._preview_mode: bool = False
@@ -127,9 +130,12 @@ class NoiseProfiler:
         self._mcra_sub_idx:   int = 0
         self._mcra_frames:    int = 0
 
-        # VAD frame-level
-        self._vad_energy_fast: float | None = None
-        self._vad_energy_min:  float | None = None
+        # VAD frame-level — tracker lento (OMLSA)
+        self._vad_energy_fast:    float | None = None
+        self._vad_energy_min:     float | None = None
+        # VAD frame-level — tracker rápido (squelch)
+        self._vad_energy_fast_sq: float | None = None
+        self._vad_energy_min_sq:  float | None = None
 
     # ------------------------------------------------------------------
     # Control de modo
@@ -139,9 +145,10 @@ class NoiseProfiler:
         if mode not in ("static", "mcra"):
             return
         self._mode = mode
-        self._gain_prev     = None
-        self._snr_post_prev = None
-        self._voice_prob    = 0.0
+        self._gain_prev      = None
+        self._snr_post_prev  = None
+        self._voice_prob     = 0.0
+        self._voice_prob_sq  = 0.0
         if mode == "mcra":
             self._reset_mcra()
 
@@ -152,9 +159,11 @@ class NoiseProfiler:
         self._mcra_cur_min   = None
         self._mcra_sub_count = 0
         self._mcra_sub_idx   = 0
-        self._mcra_frames    = 0
-        self._vad_energy_fast = None
-        self._vad_energy_min  = None
+        self._mcra_frames         = 0
+        self._vad_energy_fast     = None
+        self._vad_energy_min      = None
+        self._vad_energy_fast_sq  = None
+        self._vad_energy_min_sq   = None
 
     # ------------------------------------------------------------------
     # Control de aprendizaje (modo estático)
@@ -173,9 +182,12 @@ class NoiseProfiler:
         self._ola_acc         = np.zeros(self._fft_n, dtype=np.float32)
         self._gain_prev       = None
         self._snr_post_prev   = None
-        self._voice_prob      = 0.0
-        self._vad_energy_fast = None
-        self._vad_energy_min  = None
+        self._voice_prob         = 0.0
+        self._voice_prob_sq      = 0.0
+        self._vad_energy_fast    = None
+        self._vad_energy_min     = None
+        self._vad_energy_fast_sq = None
+        self._vad_energy_min_sq  = None
         if self._mode == "mcra":
             self._reset_mcra()
 
@@ -191,6 +203,7 @@ class NoiseProfiler:
             self._gain_prev     = None
             self._snr_post_prev = None
             self._voice_prob    = 0.0
+            self._voice_prob_sq = 0.0
         return self._n_frames
 
     def clear_profile(self) -> None:
@@ -202,6 +215,7 @@ class NoiseProfiler:
             self._gain_prev     = None
             self._snr_post_prev = None
             self._voice_prob    = 0.0
+            self._voice_prob_sq = 0.0
             self._last_reduction_db = 0.0
             self._ola_prev = np.zeros(self._hop,   dtype=np.float32)
             self._ola_acc  = np.zeros(self._fft_n, dtype=np.float32)
@@ -213,6 +227,7 @@ class NoiseProfiler:
         self._gain_prev         = None
         self._snr_post_prev     = None
         self._voice_prob        = 0.0
+        self._voice_prob_sq     = 0.0
         self._last_reduction_db = 0.0
         self._ola_prev          = np.zeros(self._hop,   dtype=np.float32)
         self._ola_acc           = np.zeros(self._fft_n, dtype=np.float32)
@@ -474,17 +489,20 @@ class NoiseProfiler:
                                    0.0).astype(np.float32)
             voice_bin = g_detect > self._VAD_THRESHOLD
 
-            # --- VAD frame-level (energy minimum tracker) ---
-            # lambda_d subestima el ruido ~40% (min-tracking bias), lo que hace
-            # snr_ratio ≈ 1.4 incluso sin voz → squelch nunca muteaba el ruido.
-            # Solución: tracker de mínimo sobre la energía suavizada del frame,
-            # independiente del estimador de ruido. Funciona igual en ambos modos.
+            # --- VAD frame-level (dual energy minimum tracker) ---
+            # Dos trackers paralelos, independientes del estimador de ruido (sin bias MCRA):
+            #  - lento (alpha=0.90, TC=100ms): voz suave para OMLSA/beta
+            #  - rapido (alpha=0.50, TC=20ms): squelch reactivo
+            # Con alpha=0.90, la energia tarda ~60 frames en bajar desde +20dB de voz;
+            # con alpha=0.50 baja en ~14 frames (<200ms incluso a +30dB SNR).
             mean_sig        = float(np.mean(sig_power))
             mean_noise_prof = float(np.mean(noise_prof2))
-            # Silencio de portadora: congelar el tracker para no degradar el piso
+            # Portadora cortada: congelar ambos trackers
             if mean_sig < mean_noise_prof * self._MCRA_SQUELCH_RATIO:
-                vp_raw = 0.0
+                vp_raw    = 0.0
+                vp_raw_sq = 0.0
             else:
+                # Tracker lento (OMLSA)
                 if self._vad_energy_fast is None:
                     self._vad_energy_fast = mean_sig
                     self._vad_energy_min  = mean_sig
@@ -498,12 +516,34 @@ class NoiseProfiler:
                 vp_raw = float(np.clip(
                     self._vad_energy_fast / (self._vad_energy_min + 1e-30) - 1.0, 0.0, 1.0
                 ))
+                # Tracker rapido (squelch)
+                if self._vad_energy_fast_sq is None:
+                    self._vad_energy_fast_sq = mean_sig
+                    self._vad_energy_min_sq  = mean_sig
+                else:
+                    self._vad_energy_fast_sq = (self._VAD_ALPHA_SQ * self._vad_energy_fast_sq
+                                                + (1.0 - self._VAD_ALPHA_SQ) * mean_sig)
+                    if self._vad_energy_fast_sq < self._vad_energy_min_sq:
+                        self._vad_energy_min_sq = self._vad_energy_fast_sq
+                    else:
+                        self._vad_energy_min_sq *= self._VAD_MIN_DECAY
+                vp_raw_sq = float(np.clip(
+                    self._vad_energy_fast_sq / (self._vad_energy_min_sq + 1e-30) - 1.0, 0.0, 1.0
+                ))
 
+            # Suavizado lento (release=0.97) para OMLSA
             if vp_raw > self._voice_prob:
                 self._voice_prob = 0.4 * self._voice_prob + 0.6 * vp_raw
             else:
                 self._voice_prob *= 0.97
             self._voice_prob = float(np.clip(self._voice_prob, 0.0, 1.0))
+
+            # Suavizado rapido (release=0.60, ~4 frames) para squelch
+            if vp_raw_sq > self._voice_prob_sq:
+                self._voice_prob_sq = vp_raw_sq
+            else:
+                self._voice_prob_sq *= self._VAD_SQ_RELEASE
+            self._voice_prob_sq = float(np.clip(self._voice_prob_sq, 0.0, 1.0))
 
             # --- β efectivo por bin ---
             beta_r        = np.float32(self._beta)
@@ -588,6 +628,11 @@ class NoiseProfiler:
     @property
     def voice_prob(self) -> float:
         return self._voice_prob
+
+    @property
+    def voice_prob_sq(self) -> float:
+        """voice_prob con release rápido (~40ms), específico para el gate de squelch."""
+        return self._voice_prob_sq
 
     @property
     def has_profile(self) -> bool:
