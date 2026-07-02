@@ -364,7 +364,7 @@ El parámetro **Retención** evita que el squelch corte el final de las palabras
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
-| **Umbral squelch** | 0,05 – 0,60 | 0,15 | Nivel mínimo de actividad de voz para abrir el gate. **Bajo (0,05–0,15):** abre con señales débiles, más sensible. **Alto (0,35–0,60):** solo abre con voz clara y fuerte. Ajustar observando el indicador **Nivel de voz** en la misma pestaña. |
+| **Umbral squelch** | 5% – 60% | 15% | Nivel mínimo de actividad de voz para abrir el gate. La misma escala que el indicador **Nivel de voz**: si en silencio marca 5% y con voz marca 70%, poner umbral en 20–30%. **Bajo (5–15%):** más sensible, abre con señales débiles. **Alto (35–60%):** solo con voz clara y fuerte. |
 | **Retención** | 0 – 1000 ms | 500 ms | Tiempo que el gate permanece abierto después de que la voz desaparece. 500 ms es adecuado para SSB normal. Subir a 700–1000 ms para operadores con pausas largas entre palabras. |
 
 ### Calibración
@@ -373,7 +373,7 @@ El indicador **Nivel de voz** y el estado del **Gate** en la pestaña Avanzada C
 
 1. **Con transmisión activa** → "Nivel de voz" sube a 50–100% y "Gate: ABIERTO".
 2. **En silencio entre transmisiones** → "Nivel de voz" cae a 0–15% en ~100 ms y "Gate: CERRADO" tras la retención.
-3. Ajustar el **Umbral** para que quede entre el nivel en silencio y el nivel con voz (ej. 0,20 si en voz marca 70% y en silencio marca 5%).
+3. Ajustar el **Umbral** para que quede entre esos dos valores (ej. Umbral 20% si en voz marca 70% y en silencio marca 5%).
 
 > **Nota de temporización:** tras el fin de la voz, el indicador baja en ~100 ms; luego el gate permanece ABIERTO durante la Retención configurada y finalmente cierra. Si el gate cierra demasiado pronto cortando finales de palabras, aumentar la Retención.
 

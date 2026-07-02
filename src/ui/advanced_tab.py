@@ -561,22 +561,22 @@ class AdvancedCancellerTab(QWidget):
         sq_row.addStretch()
         layout.addLayout(sq_row)
         layout.addWidget(_note(
-            "  ↳ Ajustar Umbral para que quede entre el nivel de voz en silencio (ruido) y con señal."
+            "  ↳ Ajustar Umbral (%) para que quede entre el nivel en silencio y con voz."
         ))
 
         self._s_squelch_threshold = SliderRow(
             "Umbral:",
             min_val=0.05, max_val=0.60,
             default=self._config.dsp.squelch_threshold,
-            step=0.05, unit="", fmt="{:.2f}",
+            step=0.05, unit="", fmt="{:.0f}",
         )
         self._s_squelch_threshold._update_label = lambda v: self._s_squelch_threshold._val_lbl.setText(
-            f"{v:.2f}  ({'sensible' if v < 0.15 else 'normal' if v < 0.35 else 'selectivo'})"
+            f"{v*100:.0f}%  ({'sensible' if v < 0.15 else 'normal' if v < 0.35 else 'selectivo'})"
         )
         self._s_squelch_threshold._val_lbl.setFixedWidth(110)
         self._s_squelch_threshold.valueChanged.connect(self._on_squelch_threshold)
         layout.addWidget(self._s_squelch_threshold)
-        layout.addWidget(_note("  ↳ Bajo=abre con señal débil. Alto=solo con voz fuerte. Default 0.20."))
+        layout.addWidget(_note("  ↳ Si en silencio marca 5% y con voz marca 70%, poner umbral en 20–30%."))
 
         self._s_squelch_hold = SliderRow(
             "Retención:",
