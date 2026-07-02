@@ -56,6 +56,13 @@ class NoiseProfiler:
     _MCRA_M:             int   = 20     # frames por subtrama → ventana total = B×M = 80 frames ≈ 800ms
     _MCRA_SQUELCH_RATIO: float = 0.05  # congelar si potencia_frame < 5% del piso estimado (-13 dB)
 
+    # VAD frame-level (energy minimum tracker)
+    # El ratio lambda_d/sig_power subestima el ruido ~40% por el minimum tracking de MCRA,
+    # haciendo que snr_ratio ≈ 1.4 incluso sin voz → siempre > umbral squelch 0.15.
+    # Solución: tracker de mínimo de energía independiente del estimador de ruido.
+    _VAD_ALPHA_FAST: float = 0.90  # suavizado energía de frame (TC ≈ 10 frames = 100ms)
+    _VAD_MIN_DECAY:  float = 1.002  # piso mínimo sube 0.2%/frame → se duplica en ~350 frames = 3.5s
+
     def __init__(self, hop_size: int = 480):
         self._hop   = hop_size
         self._fft_n = 2 * hop_size
@@ -120,6 +127,10 @@ class NoiseProfiler:
         self._mcra_sub_idx:   int = 0
         self._mcra_frames:    int = 0
 
+        # VAD frame-level
+        self._vad_energy_fast: float | None = None
+        self._vad_energy_min:  float | None = None
+
     # ------------------------------------------------------------------
     # Control de modo
     # ------------------------------------------------------------------
@@ -142,6 +153,8 @@ class NoiseProfiler:
         self._mcra_sub_count = 0
         self._mcra_sub_idx   = 0
         self._mcra_frames    = 0
+        self._vad_energy_fast = None
+        self._vad_energy_min  = None
 
     # ------------------------------------------------------------------
     # Control de aprendizaje (modo estático)
@@ -156,11 +169,13 @@ class NoiseProfiler:
             self._accum   = np.zeros(self._nb, dtype=np.float64)
             self._noise_mag = None
             self._n_frames  = 0
-        self._ola_prev      = np.zeros(self._hop, dtype=np.float32)
-        self._ola_acc       = np.zeros(self._fft_n, dtype=np.float32)
-        self._gain_prev     = None
-        self._snr_post_prev = None
-        self._voice_prob    = 0.0
+        self._ola_prev        = np.zeros(self._hop, dtype=np.float32)
+        self._ola_acc         = np.zeros(self._fft_n, dtype=np.float32)
+        self._gain_prev       = None
+        self._snr_post_prev   = None
+        self._voice_prob      = 0.0
+        self._vad_energy_fast = None
+        self._vad_energy_min  = None
         if self._mode == "mcra":
             self._reset_mcra()
 
@@ -459,11 +474,30 @@ class NoiseProfiler:
                                    0.0).astype(np.float32)
             voice_bin = g_detect > self._VAD_THRESHOLD
 
-            # --- VAD frame-level ---
+            # --- VAD frame-level (energy minimum tracker) ---
+            # lambda_d subestima el ruido ~40% (min-tracking bias), lo que hace
+            # snr_ratio ≈ 1.4 incluso sin voz → squelch nunca muteaba el ruido.
+            # Solución: tracker de mínimo sobre la energía suavizada del frame,
+            # independiente del estimador de ruido. Funciona igual en ambos modos.
             mean_sig        = float(np.mean(sig_power))
             mean_noise_prof = float(np.mean(noise_prof2))
-            snr_ratio       = mean_sig / mean_noise_prof
-            vp_raw          = float(np.clip(snr_ratio - 1.0, 0.0, 1.0))
+            # Silencio de portadora: congelar el tracker para no degradar el piso
+            if mean_sig < mean_noise_prof * self._MCRA_SQUELCH_RATIO:
+                vp_raw = 0.0
+            else:
+                if self._vad_energy_fast is None:
+                    self._vad_energy_fast = mean_sig
+                    self._vad_energy_min  = mean_sig
+                else:
+                    self._vad_energy_fast = (self._VAD_ALPHA_FAST * self._vad_energy_fast
+                                             + (1.0 - self._VAD_ALPHA_FAST) * mean_sig)
+                    if self._vad_energy_fast < self._vad_energy_min:
+                        self._vad_energy_min = self._vad_energy_fast
+                    else:
+                        self._vad_energy_min *= self._VAD_MIN_DECAY
+                vp_raw = float(np.clip(
+                    self._vad_energy_fast / (self._vad_energy_min + 1e-30) - 1.0, 0.0, 1.0
+                ))
 
             if vp_raw > self._voice_prob:
                 self._voice_prob = 0.4 * self._voice_prob + 0.6 * vp_raw
