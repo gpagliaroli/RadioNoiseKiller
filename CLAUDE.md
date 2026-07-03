@@ -256,9 +256,10 @@ En bundle: junto al `.exe` / `.bin`
 ## Estado del proyecto
 
 **Fase 1 + Espectro + mejoras DSP completos** — todas las funcionalidades MVP operativas.
-**v1.2 cerrada (julio 2026)** — versión de app actualizada a 1.2.0 (`main.py`, título de ventana),
-manual regenerado (`MANUAL_ReductorRuidoRadio_v1.2.pdf`, gitignoreado — se regenera desde `MANUAL.md`
-con markdown2 + weasyprint del venv). Falta publicar el distribuible en GitHub Releases.
+**v1.2 publicada (julio 2026)** — release en GitHub con distribuibles Windows y Linux.
+Versión de app 1.2.0 (`main.py`, título de ventana), manual regenerado
+(`MANUAL_ReductorRuidoRadio_v1.2.pdf`, gitignoreado — se regenera desde `MANUAL.md`
+con markdown2 + **xhtml2pdf** del venv; weasyprint no funciona en Windows, requiere GTK).
 
 Cambios v1.2:
 - MCRA: estimación adaptativa de ruido, seleccionable vs. perfil estático en la UI
