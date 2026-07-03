@@ -46,6 +46,10 @@ class ProcessingPipeline:
         self._presence_enabled:      bool = True
 
         self._agc = AGC(config.audio.sample_rate, config.audio.block_size)
+        self._agc.set_custom_target(config.dsp.agc_target_dbfs)
+        self._agc.set_custom_max_gain(config.dsp.agc_max_gain_db)
+        self._agc.set_custom_attack(config.dsp.agc_attack_ms)
+        self._agc.set_custom_release(config.dsp.agc_release_ms)
         self._bandpass     = BandpassFilter(config.dsp, config.audio.sample_rate)
         self._bandpass_out = BandpassFilter(config.dsp, config.audio.sample_rate)
         self._anf = AdaptiveNotchFilter(
@@ -66,6 +70,7 @@ class ProcessingPipeline:
         self._noise_profiler.set_post_filter_strength(config.dsp.post_filter_strength)
         self._noise_profiler.set_pitch_enabled(config.dsp.pitch_enhance_enabled)
         self._noise_profiler.set_pitch_strength(config.dsp.pitch_enhance_strength)
+        self._noise_profiler.set_fading_comp(config.dsp.noise_fading_comp)
         self._squelch_enabled:   bool  = config.dsp.squelch_enabled
         self._squelch_threshold: float = config.dsp.squelch_threshold
         self._squelch_hold_ms:   float = config.dsp.squelch_hold_ms
@@ -80,6 +85,10 @@ class ProcessingPipeline:
         self._presence.set_freq(config.dsp.presence_freq)
         self._presence.set_gain_db(config.dsp.presence_db)
         self._presence.set_q(config.dsp.presence_q)
+        # Segunda banda paramétrica: cuerpo de la voz (150-800 Hz), Q fijo ancho
+        self._body = PresenceFilter(config.audio.sample_rate, freq_hz=350.0, q=0.9)
+        self._body.set_freq(config.dsp.body_freq)
+        self._body.set_gain_db(config.dsp.body_db)
         self._freq_shifter = FrequencyShifter(config.audio.sample_rate)
         self._freq_shifter.set_shift_hz(config.dsp.pitch_shift_hz)
         self._limiter = GainLimiter(
@@ -128,6 +137,22 @@ class ProcessingPipeline:
         self._config.dsp.agc_preset = preset
         self._agc.set_preset(preset)
 
+    def set_agc_target(self, dbfs: float) -> None:
+        self._config.dsp.agc_target_dbfs = float(dbfs)
+        self._agc.set_custom_target(dbfs)
+
+    def set_agc_max_gain(self, db: float) -> None:
+        self._config.dsp.agc_max_gain_db = float(db)
+        self._agc.set_custom_max_gain(db)
+
+    def set_agc_attack(self, ms: float) -> None:
+        self._config.dsp.agc_attack_ms = float(ms)
+        self._agc.set_custom_attack(ms)
+
+    def set_agc_release(self, ms: float) -> None:
+        self._config.dsp.agc_release_ms = float(ms)
+        self._agc.set_custom_release(ms)
+
     def set_presence_db(self, db: float) -> None:
         self._config.dsp.presence_db = float(db)
         self._presence.set_gain_db(db)
@@ -139,6 +164,16 @@ class ProcessingPipeline:
     def set_presence_freq(self, hz: float) -> None:
         self._config.dsp.presence_freq = float(hz)
         self._presence.set_freq(hz)
+
+    def set_body_freq(self, hz: float) -> None:
+        self._config.dsp.body_freq = float(hz)
+        with self._lock:
+            self._body.set_freq(hz)
+
+    def set_body_db(self, db: float) -> None:
+        self._config.dsp.body_db = float(db)
+        with self._lock:
+            self._body.set_gain_db(db)
 
     def set_pitch_shift(self, hz: float) -> None:
         self._config.dsp.pitch_shift_hz = float(hz)
@@ -199,6 +234,10 @@ class ProcessingPipeline:
         gain = config.gain
 
         self.set_mode(dsp.mode)
+        self.set_agc_target(dsp.agc_target_dbfs)
+        self.set_agc_max_gain(dsp.agc_max_gain_db)
+        self.set_agc_attack(dsp.agc_attack_ms)
+        self.set_agc_release(dsp.agc_release_ms)
         self.set_agc_preset(dsp.agc_preset)
 
         self.set_blanker_enabled(dsp.blanker_enabled)
@@ -234,6 +273,8 @@ class ProcessingPipeline:
         self.set_presence_freq(dsp.presence_freq)
         self.set_presence_db(dsp.presence_db)
         self.set_presence_q(dsp.presence_q)
+        self.set_body_freq(dsp.body_freq)
+        self.set_body_db(dsp.body_db)
 
         self.set_pitch_shift(dsp.pitch_shift_hz)
 
@@ -248,6 +289,7 @@ class ProcessingPipeline:
 
         self.set_pitch_enhance_enabled(dsp.pitch_enhance_enabled)
         self.set_pitch_enhance_strength(dsp.pitch_enhance_strength)
+        self.set_fading_comp(dsp.noise_fading_comp)
 
         self.set_input_gain_db(gain.input_gain_db)
         self.set_output_gain_db(gain.output_gain_db)
@@ -271,8 +313,9 @@ class ProcessingPipeline:
         self._noise_profiler.set_alpha(alpha)
 
     def set_noise_floor(self, floor: float) -> None:
-        self._config.dsp.noise_floor = max(0.05, float(floor))
-        self._noise_profiler.set_floor(floor)
+        clamped = max(0.05, float(floor))
+        self._config.dsp.noise_floor = clamped
+        self._noise_profiler.set_floor(clamped)
 
     def set_noise_smooth(self, smooth: float) -> None:
         self._config.dsp.noise_smooth = smooth
@@ -328,6 +371,22 @@ class ProcessingPipeline:
         self._config.dsp.post_filter_strength = float(v)
         self._noise_profiler.set_post_filter_strength(float(v))
 
+    def set_fading_comp(self, v: bool) -> None:
+        self._config.dsp.noise_fading_comp = bool(v)
+        self._noise_profiler.set_fading_comp(bool(v))
+
+    @property
+    def fading_comp_enabled(self) -> bool:
+        return self._config.dsp.noise_fading_comp
+
+    @property
+    def fading_active(self) -> bool:
+        return self._noise_profiler.fading_active
+
+    @property
+    def pitch_f0(self) -> "float | None":
+        return self._noise_profiler.pitch_f0
+
     def set_pitch_enhance_enabled(self, v: bool) -> None:
         self._config.dsp.pitch_enhance_enabled = bool(v)
         self._noise_profiler.set_pitch_enabled(bool(v))
@@ -352,14 +411,28 @@ class ProcessingPipeline:
         return self._noise_profiler.voice_prob
 
     @property
+    def pf_peak_pct(self) -> float:
+        return self._noise_profiler.pf_peak_pct
+
+    @property
+    def pf_active_frac(self) -> float:
+        return self._noise_profiler.pf_active_frac
+
+    @property
+    def post_filter_extra_db(self) -> float:
+        return self._noise_profiler.pf_extra_db
+
+    @property
     def noise_voice_prob_sq(self) -> float:
         """voice_prob rápido (release ~40ms), el que usa el gate de squelch."""
         return self._noise_profiler.voice_prob_sq
 
     @property
     def squelch_gate_open(self) -> bool:
-        """True si el gate de squelch está abierto (audio pasa)."""
-        if not self._squelch_enabled:
+        """True si el gate de squelch está abierto (audio pasa).
+        Refleja las mismas condiciones que el bloque de squelch en _run_processor."""
+        if (not self._squelch_enabled or not self._noise_enabled
+                or not self._noise_profiler.has_profile):
             return True
         vp = self._noise_profiler.voice_prob_sq
         return vp >= self._squelch_threshold or self._squelch_hold_count > 0
@@ -445,6 +518,10 @@ class ProcessingPipeline:
         return self._limiter.last_reduction_db
 
     def pop_blanker_hits(self) -> int:
+        # Lectura+reset no atómico: puede perder un conteo si el hilo DSP
+        # incrementa entre ambas líneas. Aceptado a propósito — un lock aquí
+        # agregaría contención al hilo de audio para proteger un contador
+        # de diagnóstico que se lee 2 veces por segundo.
         h = self._blanker_hits
         self._blanker_hits = 0
         return h
@@ -489,9 +566,11 @@ class ProcessingPipeline:
             self._bandpass.reset()
             self._bandpass_out.reset()
             self._presence.reset()
+            self._body.reset()
             self._freq_shifter.reset()
             self._anf.reset()
             self._noise_profiler.reset(self._config.audio.block_size)
+            self._agc.set_hop(self._config.audio.block_size)
             self._exciter.reset()
             hop_ms = self._config.audio.block_size / self._config.audio.sample_rate * 1000.0
             self._squelch_hold_frames = max(0, round(self._squelch_hold_ms / hop_ms))
@@ -628,7 +707,11 @@ class ProcessingPipeline:
                 self._spec_pre_frames.append(filtered.copy())   # post-bandpass/ANF, pre noise profiler
                 filtered = self._noise_profiler.process(filtered)
 
-                if self._squelch_enabled and self._noise_profiler.has_profile:
+                # El squelch depende de voice_prob_sq, que solo se actualiza con el
+                # cancelador activo — sin _noise_enabled el vp queda congelado y el
+                # gate podría cerrar para siempre.
+                if (self._squelch_enabled and self._noise_enabled
+                        and self._noise_profiler.has_profile):
                     vp = self._noise_profiler.voice_prob_sq
                     if vp >= self._squelch_threshold:
                         self._squelch_hold_count = self._squelch_hold_frames
@@ -653,6 +736,7 @@ class ProcessingPipeline:
                     mixed = self._bandpass_out.process(filtered) if self._bandpass_post_enabled else filtered
                     if self._presence_enabled:
                         mixed = self._presence.process(mixed)
+                        mixed = self._body.process(mixed)
                     mixed = self._exciter.process(mixed)
                     out_frame = self._limiter.process(mixed, self._config.audio.sample_rate)
 
@@ -673,6 +757,7 @@ class ProcessingPipeline:
                     self._bandpass.reset()
                     self._bandpass_out.reset()
                     self._presence.reset()
+                    self._body.reset()
                     self._exciter.reset()
                 energy_hist = 1e-8
 

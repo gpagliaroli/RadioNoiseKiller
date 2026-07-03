@@ -86,7 +86,7 @@ class PresenceFilter:
         self._update_coeffs()
 
     def set_freq(self, freq_hz: float) -> None:
-        freq_hz = float(np.clip(freq_hz, 200.0, 8000.0))
+        freq_hz = float(np.clip(freq_hz, 100.0, 8000.0))
         if abs(freq_hz - self._freq_hz) < 1.0:
             return
         self._freq_hz = freq_hz

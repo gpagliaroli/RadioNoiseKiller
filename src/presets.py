@@ -68,6 +68,17 @@ class PresetManager:
     def exists(self, name: str) -> bool:
         return os.path.exists(self._path_for(name))
 
+    def matches(self, name: str, config: AppConfig) -> bool:
+        """True si los valores DSP+Gain actuales del config coinciden exactamente
+        con los guardados en el preset (para mostrar '(modificado)' en la UI)."""
+        try:
+            saved = self._read_file(self._path_for(name))
+        except Exception:
+            return False
+        current = self._capture(name, config)
+        return (saved.get("dsp") == current["dsp"]
+                and saved.get("gain") == current["gain"])
+
     # ------------------------------------------------------------------ #
     # Internos                                                             #
     # ------------------------------------------------------------------ #
@@ -97,6 +108,10 @@ class PresetManager:
             "dsp": {
                 "mode":                      dsp.mode.value,
                 "agc_preset":                dsp.agc_preset,
+                "agc_target_dbfs":           dsp.agc_target_dbfs,
+                "agc_max_gain_db":           dsp.agc_max_gain_db,
+                "agc_attack_ms":             dsp.agc_attack_ms,
+                "agc_release_ms":            dsp.agc_release_ms,
                 "blanker_enabled":           dsp.blanker_enabled,
                 "blanker_frame":             dsp.blanker_frame,
                 "blanker_mini":              dsp.blanker_mini,
@@ -123,6 +138,8 @@ class PresetManager:
                 "presence_freq":             dsp.presence_freq,
                 "presence_db":               dsp.presence_db,
                 "presence_q":                dsp.presence_q,
+                "body_freq":                 dsp.body_freq,
+                "body_db":                   dsp.body_db,
                 "pitch_shift_hz":            dsp.pitch_shift_hz,
                 "perceptual_floor_enabled":       dsp.perceptual_floor_enabled,
                 "perceptual_floor_boost":         dsp.perceptual_floor_boost,
@@ -133,6 +150,7 @@ class PresetManager:
                 "post_filter_strength":      dsp.post_filter_strength,
                 "pitch_enhance_enabled":     dsp.pitch_enhance_enabled,
                 "pitch_enhance_strength":    dsp.pitch_enhance_strength,
+                "noise_fading_comp":         dsp.noise_fading_comp,
             },
             "gain": {
                 "input_gain_db":  config.gain.input_gain_db,
@@ -154,6 +172,10 @@ class PresetManager:
         except ValueError:
             pass
         dsp.agc_preset           = d.get("agc_preset",           dsp.agc_preset)
+        dsp.agc_target_dbfs      = float(d.get("agc_target_dbfs", dsp.agc_target_dbfs))
+        dsp.agc_max_gain_db      = float(d.get("agc_max_gain_db", dsp.agc_max_gain_db))
+        dsp.agc_attack_ms        = float(d.get("agc_attack_ms",   dsp.agc_attack_ms))
+        dsp.agc_release_ms       = float(d.get("agc_release_ms",  dsp.agc_release_ms))
         dsp.blanker_enabled      = bool(d.get("blanker_enabled",  dsp.blanker_enabled))
         dsp.blanker_frame        = float(d.get("blanker_frame",   dsp.blanker_frame))
         dsp.blanker_mini         = float(d.get("blanker_mini",    dsp.blanker_mini))
@@ -185,6 +207,8 @@ class PresetManager:
         dsp.presence_freq      = float(d.get("presence_freq",     dsp.presence_freq))
         dsp.presence_db        = float(d.get("presence_db",       dsp.presence_db))
         dsp.presence_q         = float(d.get("presence_q",        dsp.presence_q))
+        dsp.body_freq          = float(d.get("body_freq",         dsp.body_freq))
+        dsp.body_db            = float(d.get("body_db",           dsp.body_db))
         dsp.pitch_shift_hz     = float(d.get("pitch_shift_hz",    dsp.pitch_shift_hz))
         dsp.perceptual_floor_enabled       = bool(d.get("perceptual_floor_enabled",       dsp.perceptual_floor_enabled))
         dsp.perceptual_floor_boost         = float(d.get("perceptual_floor_boost",        dsp.perceptual_floor_boost))
@@ -195,6 +219,7 @@ class PresetManager:
         dsp.post_filter_strength   = float(d.get("post_filter_strength",  dsp.post_filter_strength))
         dsp.pitch_enhance_enabled  = bool(d.get("pitch_enhance_enabled",  dsp.pitch_enhance_enabled))
         dsp.pitch_enhance_strength = float(d.get("pitch_enhance_strength",dsp.pitch_enhance_strength))
+        dsp.noise_fading_comp      = bool(d.get("noise_fading_comp",     dsp.noise_fading_comp))
 
         gain.input_gain_db  = float(g.get("input_gain_db",  gain.input_gain_db))
         gain.output_gain_db = float(g.get("output_gain_db", gain.output_gain_db))

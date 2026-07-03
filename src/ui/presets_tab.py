@@ -15,6 +15,7 @@ class PresetsTab(QWidget):
     para que MainWindow actualice la UI con los nuevos valores.
     """
     preset_loaded = Signal()
+    state_changed = Signal()   # cambió last_preset → MainWindow agenda el guardado
 
     def __init__(self, config: AppConfig, pipeline: ProcessingPipeline,
                  manager: PresetManager, parent=None):
@@ -25,6 +26,21 @@ class PresetsTab(QWidget):
         self._active: str | None = None
         self._build_ui()
         self._refresh_list()
+        # Restaurar el preset activo de la sesión anterior (solo informativo)
+        lp = config.last_preset
+        if lp and self._manager.exists(lp):
+            self._set_active(lp, modified=not self._manager.matches(lp, config))
+            self._select_by_name(lp)
+
+    def showEvent(self, event) -> None:
+        # Re-evaluar "(modificado)" cada vez que se muestra la pestaña:
+        # el usuario pudo haber retocado sliders desde la última vez.
+        super().showEvent(event)
+        if self._active and self._manager.exists(self._active):
+            self._set_active(
+                self._active,
+                modified=not self._manager.matches(self._active, self._config),
+            )
 
     # ------------------------------------------------------------------ #
     # Construccion de la UI                                               #
@@ -157,6 +173,8 @@ class PresetsTab(QWidget):
         if self._active == name:
             self._active = None
             self._lbl_active.setText("(ninguno)")
+            self._config.last_preset = ""
+            self.state_changed.emit()
         self._refresh_list()
 
     def _on_rename(self) -> None:
@@ -187,9 +205,12 @@ class PresetsTab(QWidget):
     # Helpers                                                              #
     # ------------------------------------------------------------------ #
 
-    def _set_active(self, name: str) -> None:
+    def _set_active(self, name: str, modified: bool = False) -> None:
         self._active = name
-        self._lbl_active.setText(name)
+        self._lbl_active.setText(f"{name}  (modificado)" if modified else name)
+        if self._config.last_preset != name:
+            self._config.last_preset = name
+            self.state_changed.emit()
 
     def _refresh_list(self) -> None:
         current = self._list.currentItem()

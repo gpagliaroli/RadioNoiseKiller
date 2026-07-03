@@ -179,6 +179,63 @@ del todo. Fórmula: `gain_post[k] = gain[k]^(1 + strength·(1 − p_speech[k]))`
 - Bins intermedios: supresión gradual proporcional a `1 - p_speech[k]`.
 - Aplicado después del suavizado en frecuencia y del paso alpha, antes de `spec_out = gain·spec`.
 - `post_filter_enabled / post_filter_strength` en DSPConfig; checkbox en `MainWindow._build_modules_group()` (sub-módulo indentado bajo el cancelador), slider en `AdvancedNoiseTab`.
+- **IMPORTANTE — no clampear con `_eff_floor` después del post-filtro.** El `np.maximum` final debe usar
+  un suelo bajo (`0.005`, −46 dB) para proteger de underflow, NO `_eff_floor`. Clampear con el piso
+  espectral (0.10 = −20 dB) devuelve todos los bins suprimidos al nivel del piso y anula silenciosamente
+  toda la supresión extra — el slider de agresividad no tiene efecto audible. El `_eff_floor` ya fue
+  aplicado antes por OMLSA y no debe re-aplicarse después de una etapa de supresión adicional.
+
+### Compensación de fading HF (noise_fading_comp)
+Para onda corta con QSB. Dos mecanismos, ambos activos solo con el checkbox habilitado:
+- **Freeze MCRA:** si la energía del frame cambia ≥5 dB respecto al EMA (`_FADING_CHANGE_DB`, EMA con
+  alpha=0.80), se congela `λ_d` por 20 frames (`_FADING_FREEZE_FRAMES`, 200ms). Evita que MCRA siga al
+  nivel de señal durante el fade y quede desfasado al volver. Ambas transiciones (fade y recovery)
+  disparan el freeze — es lo deseado.
+- **Release DD acelerado:** en bins con SNR subiendo, `beta_eff` usa `_FADING_BETA_RELEASE=0.45` en vez
+  de `beta_fast` (0.80) → la ganancia Wiener responde en ~2-3 frames en vez de 10-15. Elimina el
+  "llega tarde" al salir del fade. Nota: este release aplica siempre que el checkbox esté activo, no
+  solo durante el evento de fading.
+- Detección en `process()` ANTES de `_mcra_update()` (el freeze debe estar activo al entrar).
+- Solo tiene efecto en modo MCRA; en estático el freeze no aplica (no hay estimador que congelar).
+- `noise_fading_comp` en DSPConfig, persistido en settings.json y presets. Indicador "FADE"/"ok" en
+  Avanzada Cancelador (`fading_active` property → pipeline → `_update_stats()`).
+
+### Invariantes a mantener (lecciones de la revisión pre-v1.2)
+
+Bugs reales encontrados en revisión — cada uno es un patrón que puede reaparecer:
+
+1. **Clamp del setter == rango del slider.** Al ampliar el rango de un SliderRow, actualizar también
+   el `np.clip` del setter correspondiente en `NoiseProfiler`/pipeline. Ocurrió dos veces:
+   `set_pf_boost` clampeaba a 1.5 con slider a 2.5 (la mitad superior del slider no hacía nada), y
+   antes `set_post_filter_strength` a 3.0 con slider a 4.0. El bug es silencioso: la UI muestra el
+   valor nuevo pero el DSP usa el recortado.
+2. **El squelch requiere `_noise_enabled`.** `voice_prob_sq` solo se actualiza dentro de
+   `NoiseProfiler.process()` con el cancelador activo. Sin ese chequeo, desactivar el cancelador con
+   squelch activo congela el vp y el gate puede cerrar para siempre (silencio total sin indicación).
+   La condición vive en `_run_processor` Y en la property `squelch_gate_open` — mantener ambas en sync.
+3. **Las properties de estado deben reflejar las condiciones reales del procesamiento.**
+   `squelch_gate_open` reportaba CERRADO cuando el bloque real de squelch ni corría (sin perfil).
+   Si un indicador se calcula fuera del hilo DSP, replicar TODAS las condiciones del bloque real.
+4. **`is_running` es método, no property** — `if pipeline.is_running:` siempre es True (bound method
+   truthy). Escribir `is_running()`.
+5. **Los indicadores de `_update_stats()` deben actualizarse siempre**, no detrás de un early-return
+   condicional (quedan con valores viejos, p. ej. tras "Borrar perfil"). Usar if/else, no return.
+6. **Features condicionadas a un modo deben chequear el modo en TODOS sus efectos.** El
+   `beta_release` de fading comp aplicaba en modo static aunque la detección solo corre en MCRA.
+   Además, al salir del modo (set_mode) resetear el estado del feature (`_fading_active` quedaba
+   pegado en True).
+7. **Race aceptada:** `pop_blanker_hits` (lectura+reset no atómico) se deja sin lock a propósito —
+   proteger un contador de diagnóstico no justifica contención en el hilo de audio. No "arreglarlo".
+8. **`default=` de SliderRow es el valor de fábrica, no el de la config.** El parámetro `default`
+   alimenta el menú "Restaurar por defecto" (click derecho). Pasar `self._config.x` hace que el
+   default sea lo que quedó de la sesión anterior. Usar `_DSP_DEF`/`_AUDIO_DEF`/`GainConfig()` y
+   cargar la posición inicial aparte vía `_load_values()` / `set_value()`.
+9. **Todo array por-bin debe redimensionarse en `reset(hop_size)`.** Al agregar estado con tamaño
+   `self._nb` (como `_floor_curve`), incluirlo en el bloque de resize de `NoiseProfiler.reset()`.
+   Un array con tamaño viejo produce shape mismatch tras cambiar el tamaño de bloque, y el error
+   handler de `_run_processor` resetea el profiler en loop — MCRA nunca completa el warmup y el
+   síntoma es "nunca termina de calibrar" (sin mensaje de error visible). Módulos con estado
+   dependiente del hop (AGC) también deben actualizarse en `pipeline.start()`.
 
 ## Configuración persistente
 
@@ -199,16 +256,45 @@ En bundle: junto al `.exe` / `.bin`
 ## Estado del proyecto
 
 **Fase 1 + Espectro + mejoras DSP completos** — todas las funcionalidades MVP operativas.
-Distribuible v1.1 en GitHub Releases. Manual fuente en `MANUAL.md` — regenerar PDF para v1.2.
+**v1.2 cerrada (julio 2026)** — versión de app actualizada a 1.2.0 (`main.py`, título de ventana),
+manual regenerado (`MANUAL_ReductorRuidoRadio_v1.2.pdf`, gitignoreado — se regenera desde `MANUAL.md`
+con markdown2 + weasyprint del venv). Falta publicar el distribuible en GitHub Releases.
 
-Cambios v1.2 (pendiente de release):
+Cambios v1.2:
 - MCRA: estimación adaptativa de ruido, seleccionable vs. perfil estático en la UI
 - Log-MMSE: reemplaza MMSE-STSA en el estimador de ganancia DD (voz más natural)
 - Piso MCRA en espectro: línea amarilla se actualiza cada 500ms con el estimado adaptativo
+- Piso estático en espectro: la línea amarilla también aparece con perfil estático (aprendido o cargado de settings.json)
 - Indicador del limitador de picos: label en tiempo real junto al slider (naranja/rojo cuando activo)
 - Pitch enhancement SSB: detección de f0 por autocorrelación + máscara gaussiana de armónicos
-- Post-filtro espectral: segunda pasada sobre bins de ruido contra ruido musical residual
-- Reorganización UI: ambos sub-módulos del cancelador indentados en Módulos Activos (pestaña Principal)
+- Post-filtro espectral: segunda pasada sobre bins de ruido contra ruido musical residual; rango 0–4, indicador "Reducción extra" en dB
+- Squelch de voz: gate binario (mute completo, sin gorgojeo), dual VAD tracker, indicadores Nivel de voz/Gate, umbral en %
+- Piso perceptual: indicadores "Piso vocal" y "Activo" (% bins retenidos), rango de boost 0–250%
+- Pitch SSB: indicador "Pitch detectado" (f0 en Hz en tiempo real, verde cuando la máscara actúa)
+- Squelch: umbral ampliado a 5–100% (el ruido fluctuante de banda puede marcar 50–60% en el VAD)
+- EQ de Cuerpo: segunda banda paramétrica (150–800 Hz, Q fijo 0.9) bajo el mismo checkbox de
+  presencia — refuerza fundamentales de la voz; `body_freq/body_db` en DSPConfig; PresenceFilter
+  reutilizado (clamp de freq bajado a 100 Hz)
+- Fix "Restaurar por defecto" (click derecho en sliders): ahora restaura los valores de fábrica
+  (`_DSP_DEF`/`_AUDIO_DEF`/`GainConfig()`), no el valor persistido de la sesión anterior
+- Controles de Avanzadas se deshabilitan cuando su módulo está desactivado:
+  `refresh_enabled_states()` en cada tab, llamado desde `_on_module_toggled` y `reload()`;
+  los sub-módulos del cancelador requieren además `noise_enabled`
+- Preset activo persistente: `last_preset` en AppConfig/settings.json; la etiqueta muestra
+  "(modificado)" si los valores actuales difieren del preset (`PresetManager.matches()`,
+  re-evaluado en `showEvent` de PresetsTab); señal `state_changed` → `_schedule_save`
+- Fix cambio de tamaño de bloque: `NoiseProfiler.reset(hop)` no redimensionaba `_floor_curve` →
+  con piso perceptual activo, shape mismatch al terminar el warmup MCRA → el error handler
+  reseteaba el profiler en loop → "nunca termina de calibrar". También `AGC.set_hop()` recalcula
+  las constantes de tiempo (quedaban escaladas al bloque viejo)
+- Compensación fading HF: freeze MCRA ante cambios ≥5dB + release DD acelerado (checkbox en Avanzada Cancelador)
+- AGC Custom: quinto preset con Target/Ganancia máx/Ataque/Release ajustables en "Avanzada Audio"
+  (`agc_target_dbfs/agc_max_gain_db/agc_attack_ms/agc_release_ms` en DSPConfig, persistidos en
+  settings.json y presets); sliders habilitados solo con el combo AGC en "Custom", todos live
+- Reorganización UI: sub-módulos del cancelador indentados en Módulos Activos (pestaña Principal)
+- Revisión de bugs pre-release: clamp de pf_boost desalineado con el slider, squelch podía mutear
+  permanente con cancelador off, indicadores con estado viejo tras borrar perfil, beta_release de
+  fading aplicando en modo static (ver "Invariantes a mantener")
 
 ### Visualizador de espectro — decisiones de implementación
 
@@ -218,6 +304,10 @@ ancho de banda que la curva "Salida" — evita que la entrada aparezca más alta
 
 **Piso de ruido (línea amarilla):** se toma un snapshot de `_ema_pre` al llamar `stop_floor_learning()`,
 no un acumulado. Con ALPHA=0.35 y 5 segundos el EMA está completamente convergido.
+Además, en modo estático `_update_noise_db()` (timer 500ms) dibuja la curva desde
+`get_noise_floor_data()` cuando `_db_floor is None` — cubre el caso de perfil cargado desde
+settings.json o reinicio del stream (que limpia el widget en `start()`). La condición `is None`
+evita re-interpolar en cada tick y no pisa el snapshot del aprendizaje.
 
 **GIL y CPU:** el timer corre a 15 fps (67ms). `_tick()` devuelve inmediatamente si `isVisible()` es
 False (tab no activo). Las curvas se dibujan con `QPolygonF` + `drawPolyline`/`drawPolygon` en lugar de

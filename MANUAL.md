@@ -1,5 +1,7 @@
 # Reductor de Ruido Radio — Manual de Usuario
 
+**Versión 1.2**
+
 ---
 
 ## Introducción
@@ -28,7 +30,7 @@ La aplicación aplica una serie de procesos en cadena — el **pipeline** — do
 ### Lo que la aplicación NO hace
 
 - No demodula la señal de RF — recibe audio ya demodulado.
-- No corrige desvanecimientos (fading) de propagación.
+- No corrige el nivel de los desvanecimientos (fading) de propagación — aunque la **Compensación fading HF** (Cap. 7) evita que el cancelador de ruido se desajuste durante los fades.
 - No mejora señales con nivel de señal (S-meter) muy bajo — necesita algo de señal para trabajar.
 
 ---
@@ -67,8 +69,8 @@ El audio recorre los siguientes procesos en orden. Cada etapa puede activarse o 
             [ Filtro de Paso de Banda  ── POST ]
          Limpia fugas espectrales post-procesado
                            │
-                   [ EQ de Presencia ]
-            Realce de consonantes y legibilidad
+              [ EQ de Voz: presencia + cuerpo ]
+         Realce de consonantes y cuerpo de la voz
                            │
               [ Excitador Armónico  (opcional) ]
            Genera armónicos para recuperar brillo
@@ -119,9 +121,24 @@ Controles principales de operación: modo de recepción, AGC y activación del p
 | Control | Descripción |
 |---------|-------------|
 | **Modo** | Selecciona el tipo de señal recibida: **AM** (amplitud modulada, ancho de banda más amplio) o **SSB** (banda lateral única, voz comprimida en frecuencia). Afecta los límites por defecto del Filtro de Paso de Banda. |
-| **AGC** | Control Automático de Ganancia. **off** = sin AGC. **slow / medium / fast** = velocidad de respuesta. Para SSB se recomienda *slow* o *medium*; para AM con señales estables, *off* o *slow*. |
+| **AGC** | Control Automático de Ganancia. **off** = sin AGC. **slow / medium / fast** = velocidad de respuesta. **Custom** = parámetros ajustables a mano (ver más abajo). Para SSB se recomienda *slow* o *medium*; para AM con señales estables, *off* o *slow*. |
 | **▶ ACTIVAR / ■ DETENER** | Inicia o detiene el procesamiento en tiempo real. Al activar, el audio fluye por todo el pipeline. |
 | **Bypass** | Pasa el audio directo de entrada a salida sin ningún procesamiento. Útil para comparar el sonido con y sin la aplicación activa. |
+
+### AGC Personalizado (Custom)
+
+**Ubicación:** Pestaña Avanzada Audio → grupo "AGC Personalizado"
+
+Al seleccionar **Custom** en el combo AGC se habilitan cuatro sliders que permiten ajustar el comportamiento del AGC a mano. Con cualquier otro preset los sliders quedan deshabilitados (los presets usan sus valores fijos). Todos los cambios se aplican en tiempo real.
+
+| Control | Rango | Default | Descripción |
+|---------|-------|---------|-------------|
+| **Nivel objetivo** | −30 a −6 dBFS | −20 | Nivel RMS al que el AGC lleva la señal. Más alto = salida más fuerte, pero menos margen antes del limitador de picos. |
+| **Ganancia máxima** | 0 a +60 dB | +36 | Tope de amplificación para señales débiles. Bajarlo evita que el AGC levante el ruido de fondo en pausas largas sin señal. |
+| **Ataque** | 1 a 200 ms | 25 | Cuán rápido baja la ganancia ante una señal fuerte. Rápido protege de picos pero puede "bombear" con voz SSB; lento es más natural. |
+| **Release** | 100 a 8000 ms | 2000 | Cuán rápido recupera la ganancia al caer la señal. Lento = estable con QSB profundo; rápido = sigue el fading pero respira más. |
+
+**Guía rápida:** los presets equivalen aproximadamente a — *fast*: ataque 5 ms / release 500 ms; *medium*: 25 ms / 2000 ms; *slow*: 100 ms / 5000 ms (todos con objetivo −20 dBFS y ganancia máxima +36 dB). Partir del preset más parecido a lo que se busca y ajustar desde ahí.
 
 ---
 
@@ -142,10 +159,11 @@ Cada casilla de verificación activa o desactiva un módulo del pipeline de form
 | **Filtro de paso de banda (post)** | Casi siempre activo junto con el pre. Limpia artefactos del procesamiento espectral. |
 | **ANF — Cancela heterodinos y tonos** | Activar cuando se escuchen tonos constantes (pito, zumbido). Desactivar con señales de datos/digitales (PSK, FT8) ya que los tomaría por interferencia. |
 | **Cancelador de ruido estacionario** | El módulo principal. Activar una vez aprendido el perfil de ruido. |
+| &nbsp;&nbsp;&nbsp;↳ **Piso espectral perceptual** | Sub-módulo del cancelador. Reemplaza el piso fijo por una curva que varía con la frecuencia: eleva el piso en la zona vocal (~500 Hz, preserva la calidez de la voz) y lo baja en alta frecuencia (suprime más el soplido). Curva configurable en Avanzada Cancelador. |
 | &nbsp;&nbsp;&nbsp;↳ **Post-filtro espectral** | Sub-módulo del cancelador. Elimina el "ruido musical" (pitidos intermitentes) que el Wiener deja como residuo. Activar cuando se note ese artefacto. Agresividad configurable en Avanzada Cancelador. |
 | &nbsp;&nbsp;&nbsp;↳ **Refuerzo de pitch SSB** | Sub-módulo del cancelador. Para señales SSB muy débiles: detecta el tono fundamental de la voz y protege sus armónicos de ser suprimidos. Activar solo si la voz suena "fantasmal" con el cancelador al máximo. Sensibilidad configurable en Avanzada Cancelador. |
 | &nbsp;&nbsp;&nbsp;↳ **Squelch de voz** | Sub-módulo del cancelador. Silencia completamente el audio entre transmisiones (gate binario, sin mute parcial). **No usar con música.** Indicador de nivel de voz y estado del gate en Avanzada Cancelador. |
-| **EQ Presencia** | Activar para mejorar la claridad de la voz con señales debilitadas o muy filtradas. |
+| **EQ Voz (presencia + cuerpo)** | Dos bandas paramétricas: presencia (claridad, 1–2 kHz) y cuerpo (calidez, 150–800 Hz). Activar para modelar la voz con señales debilitadas o muy filtradas. |
 | **Excitador armónico** | Para señales de voz opacas, sin brillo. Añade presencia. Comparar con y sin para decidir. |
 
 ---
@@ -271,6 +289,24 @@ Cuando el squelch de la radio corta la portadora (silencio total entre transmisi
 
 Este comportamiento es automático y no requiere ningún ajuste. Se activa cuando la señal cae más de 13 dB por debajo del piso estimado, lo que distingue un squelch real (portadora cortada) de una pausa normal entre palabras donde el ruido de banda sigue presente.
 
+**Compensación de fading HF** (solo modo Adaptativo)
+
+**Activar:** Pestaña Avanzada Cancelador → casilla "Compensación fading HF"
+
+En onda corta con desvanecimiento ionosférico (QSB), la señal sube y baja de nivel varias veces por minuto. Sin compensación, esto produce dos problemas audibles:
+
+1. Durante el fade, el estimador adaptativo interpreta la caída de señal como una bajada del piso de ruido y se re-calibra hacia abajo. Al volver la señal, el piso queda desfasado y se escucha ruido sin atenuar hasta que el estimador se reajusta (~800 ms).
+2. El estimador de ganancia del Wiener sigue al nivel de señal con retraso: cuando la señal vuelve del fade, "llega tarde" y recorta el inicio de la voz arrastrando ruido.
+
+La compensación ataca ambos problemas:
+
+- **Congelamiento del estimador:** cuando detecta un cambio brusco de energía (≥5 dB en un frame, típico de una transición de fade), congela el estimado de piso de ruido por 200 ms. El piso pre-fade se preserva y al volver la señal se aplica de inmediato.
+- **Release acelerado:** mientras la casilla está activa, la ganancia del Wiener responde a subidas de señal en ~20–30 ms en lugar de 100–150 ms. La voz que emerge del fade se abre sin retraso perceptible.
+
+El indicador junto a la casilla muestra **FADE** (naranja) cuando hay un evento de fading activo y **ok** (gris) cuando la señal está estable. Si FADE aparece constantemente sin que haya desvanecimiento real, la señal tiene variaciones rápidas de nivel (p. ej. AM con modulación profunda) y conviene desactivar la casilla.
+
+> **Cuándo activarla:** escucha de onda corta (SSB o AM DX) con fading perceptible, siempre en modo Adaptativo. En señales locales estables o en modo Perfil estático no tiene efecto útil.
+
 ### Indicadores en tiempo real (Avanzada Cancelador)
 
 | Indicador | Descripción |
@@ -285,7 +321,7 @@ Este comportamiento es automático y no requiere ningún ajuste. Se activa cuand
 |---------|-------|---------|-------------|
 | **Intensidad** | 0% – 100% | 70% | Cuánta reducción se aplica sobre los gains calculados. **0%** = sin reducción (audio pasa sin cambios). **100%** = reducción plena. La escala es no lineal: valores medios (50–70%) ya producen una reducción perceptible, mientras que los bins de voz se ven mínimamente afectados en cualquier posición. Comenzar en 70% y subir según el nivel de ruido. |
 | **Piso espectral** | 0,05 – 0,30 | 0,10 | Ganancia mínima que se aplica a cualquier bin, incluso el más ruidoso. 0,10 significa que nunca se silencia más del 90% de la energía de un bin. **Nunca bajar de 0,05** — valores muy bajos con Anti-gorgojeo alto producen gorgojeo severo. |
-| **Anti-gorgojeo (β)** | 0% – 98% | 97% | Velocidad con que los gains retornan al piso después de detectar voz. Alto (97–98%) = transiciones suaves, sin gorgojeo. Bajo (<90%) = más reactivo pero con riesgo de gorgojeo audible. **No bajar de 90% salvo en casos excepcionales.** |
+| **Anti-gorgojeo (β)** | 90% – 99% (pasos de 0,1%) | 97% | Velocidad con que los gains retornan al piso después de detectar voz. Alto (97–99%) = transiciones suaves, sin gorgojeo. Bajo (90–95%) = más reactivo pero con riesgo de gorgojeo audible. La resolución fina de 0,1% permite calibrar con precisión en el extremo alto, donde cada décima cambia el release de forma audible (98,0% ≈ 0,5 s; 98,5% ≈ 0,7 s; 99,0% ≈ 1 s). El máximo elimina el gorgojeo más persistente pero puede dejar una "cola" de ruido tras cada transmisión — usarlo solo si 97–98% no alcanza. |
 | **Velocidad de ataque** | 50% – 92% | 80% | Velocidad con que el cancelador "abre" los bins de voz cuando detecta una señal. Bajo (50–70%) = ataque rápido, consonantes más nítidas. Alto (>85%) = ataque suave, menos artefactos en transiciones. |
 
 ### Relación entre Piso y Anti-gorgojeo
@@ -300,20 +336,57 @@ Estos dos parámetros interactúan. La regla práctica:
 
 Con **piso bajo + anti-gorgojeo bajo** el resultado es gorgojeo inevitable. Subir primero el piso y luego ajustar el anti-gorgojeo.
 
+### Piso espectral perceptual
+
+**Activar:** Módulos Activos → casilla "Piso espectral perceptual (curva de enmascaramiento auditivo)"  
+**Ajustar:** Pestaña Avanzada Cancelador → grupo "Piso espectral perceptual"
+
+El control **Piso espectral** estándar aplica la misma ganancia mínima a todas las frecuencias. Pero el oído no percibe el ruido residual por igual en todas las bandas: en la zona de las fundamentales vocales (~300–800 Hz) un piso algo más alto suena más natural y cálido, mientras que por encima de 3 kHz el ruido residual (soplido) es lo más molesto y conviene suprimirlo más.
+
+Este módulo reemplaza el piso fijo por una curva con tres zonas:
+
+- **Boost vocal:** el piso se eleva alrededor de la frecuencia central configurada (default 500 Hz). Preserva la calidez de la voz.
+- **Zona neutra** (1–3 kHz): sin cambio — los formantes pasan con el piso base.
+- **Rolloff de agudos:** por encima de la frecuencia de inicio configurada, el piso baja progresivamente. Suprime más el soplido de alta frecuencia.
+
+**Indicadores en tiempo real:**
+
+| Indicador | Descripción |
+|-----------|-------------|
+| **Piso vocal** | Valor del piso en la frecuencia de máximo boost, en % y en dB relativos al piso base. Ej.: "25% (+8.0 dB)" significa que en el centro vocal el piso es 0,25 mientras el base es 0,10. |
+| **Activo** | Porcentaje de bins del espectro que el piso está reteniendo en este momento. **Si marca 0%, el módulo no está teniendo ningún efecto** — el Wiener ya está dando ganancias por encima del piso y mover los sliders no cambiará nada audible. Con ruido de banda presente, valores de 20–50% son normales. |
+
+**Controles:**
+
+| Control | Rango | Default | Descripción |
+|---------|-------|---------|-------------|
+| **Amplitud boost vocal** | 0% – 250% | 75% | Cuánto se eleva el piso en la zona vocal respecto al piso base. 75% = suave, 150% = normal, 250% = máximo. Subir si la voz suena "fría" o hueca con el cancelador activo. |
+| **Centro del boost** | 200 – 1200 Hz | 500 Hz | Frecuencia donde el boost es máximo. 400–600 Hz para voz masculina, 600–900 Hz para voz femenina. |
+| **Inicio del rolloff** | 1000 – 6000 Hz | 3000 Hz | Frecuencia a partir de la cual el piso empieza a bajar. |
+| **Profundidad del rolloff** | 0% – 70% | 55% | Cuánto baja el piso en el extremo agudo. Más profundidad = menos soplido residual, a costa de opacar levemente los agudos de la voz. |
+
+> **Consejo:** usar el indicador **Activo** como guía. Si marca 0% de forma sostenida, el piso base (control "Piso espectral") ya está por debajo de las ganancias que calcula el Wiener y la curva perceptual no interviene — en ese caso el ajuste relevante es la Intensidad del cancelador, no esta curva.
+
 ### Post-filtro espectral
 
 **Activar:** Módulos Activos → casilla "Post-filtro espectral (ruido musical residual)"  
-**Ajustar:** Pestaña Avanzada Cancelador → slider "Post-filtro (ruido musical)"
+**Ajustar:** Pestaña Avanzada Cancelador → grupo "Post-filtro espectral"
 
 El filtro de Wiener, incluso bien configurado, puede dejar un tipo de artefacto muy particular llamado **ruido musical**: en lugar del ruido de fondo uniforme original, aparecen pitidos cortos intermitentes que varían aleatoriamente de bin en bin. Es el residuo de los bins que el VAD marcó como ruido pero que no fueron suprimidos del todo por el piso espectral.
 
 El post-filtro aplica una segunda pasada sobre esos bins usando la misma información de probabilidad de voz: en los bins donde hay ruido residual (`p_speech ≈ 0`) la ganancia se reduce adicionalmente; en los bins de voz (`p_speech ≈ 1`) no se aplica ningún cambio.
 
+**Indicador en tiempo real:**
+
+| Indicador | Descripción |
+|-----------|-------------|
+| **Reducción extra** | Cuántos dB adicionales está eliminando el post-filtro en los bins de ruido, por encima de lo que ya hace el cancelador base. Verde cuando supera −5 dB, amarillo en la zona −0,5 a −5 dB, gris cuando no hay ruido activo o el módulo está desactivado. Permite verificar de un vistazo que el slider de agresividad está teniendo efecto real. |
+
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
-| **Post-filtro (ruido musical)** | 0,0 – 3,0 | 1,0 | Agresividad de la segunda pasada. **0** = desactivado (aunque el checkbox esté activo). **1** = moderado: los bins de ruido puro reciben `gain²` (duplica la reducción en dB). **2** = agresivo: `gain³`. Empezar en 1,0 y subir solo si el ruido musical persiste. |
+| **Agresividad** | 0,0 – 4,0 | 1,0 | Fuerza de la segunda pasada. **0** = desactivado (aunque el checkbox esté activo). **1** = moderado: los bins de ruido puro reciben `gain²` (duplica la reducción en dB). **2** = normal: `gain³`. **4** = máximo: `gain⁵` — silencio casi total en los bins de ruido. Empezar en 1,0 y subir según el indicador Reducción extra hasta que el ruido musical desaparezca. |
 
-> **Nota:** Valores altos (>2,0) con señales de SNR muy bajo pueden producir supresión excesiva en los bordes de las transiciones de voz. Si la voz empieza a sonar recortada, reducir a 0,5–1,0.
+> **Nota:** Valores altos (>2,5) con señales de SNR muy bajo pueden producir supresión excesiva en los bordes de las transiciones de voz. Si la voz empieza a sonar recortada, reducir a 0,5–1,5.
 
 ### Refuerzo de pitch SSB
 
@@ -327,6 +400,12 @@ Este módulo detecta en tiempo real el **tono fundamental** (f0) de la voz media
 - La detección funciona con un **umbral de confianza**: si la señal no es suficientemente periódica (no hay voz clara), no modifica nada.
 - **Hold de 3 frames:** ante breves gaps de detección, el último f0 válido se mantiene para evitar fluctuaciones.
 - **Solo para SSB.** En AM con ruido, el ensanchamiento de banda hace que la detección de f0 sea poco fiable.
+
+**Indicador en tiempo real:**
+
+| Indicador | Descripción |
+|-----------|-------------|
+| **Pitch detectado** | f0 de la voz en Hz, en tiempo real. Verde = detección activa (la máscara de armónicos está protegiendo la voz). "sin detección" (gris) = no hay señal periódica — el módulo está en passthrough. Con voz SSB clara debería marcar un valor estable en 80–400 Hz; si fluctúa erráticamente o nunca detecta, la señal es demasiado ruidosa o el clarificador de la radio está desajustado. |
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
@@ -351,7 +430,7 @@ Funciona como un **gate binario**: cuando se detecta voz, el audio pasa sin modi
 
 El parámetro **Retención** evita que el squelch corte el final de las palabras o las frases breves, manteniendo el gate abierto algunos milisegundos después de que la voz desaparece.
 
-**Requiere perfil de ruido aprendido** (modo estático) o un período de calentamiento del MCRA (~200 ms) para funcionar.
+**Requiere el Cancelador de ruido estacionario activo** — el detector de voz vive dentro del cancelador. Si el cancelador está desactivado, el squelch queda en bypass (el audio pasa siempre). Además necesita perfil de ruido aprendido (modo estático) o el período de calentamiento del MCRA (~200 ms).
 
 ### Indicadores en tiempo real (grupo Squelch, Avanzada Cancelador)
 
@@ -364,38 +443,48 @@ El parámetro **Retención** evita que el squelch corte el final de las palabras
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
-| **Umbral squelch** | 5% – 60% | 15% | Nivel mínimo de actividad de voz para abrir el gate. La misma escala que el indicador **Nivel de voz**: si en silencio marca 5% y con voz marca 70%, poner umbral en 20–30%. **Bajo (5–15%):** más sensible, abre con señales débiles. **Alto (35–60%):** solo con voz clara y fuerte. |
+| **Umbral squelch** | 5% – 100% | 15% | Nivel mínimo de actividad de voz para abrir el gate. La misma escala que el indicador **Nivel de voz**: observar cuánto marca con solo ruido y poner el umbral por encima. **Bajo (5–15%):** más sensible, abre con señales débiles — para bandas tranquilas. **Alto (65–90%):** necesario en bandas ruidosas, donde el ruido fluctuante puede marcar 50–60% por sí solo. |
 | **Retención** | 0 – 1000 ms | 500 ms | Tiempo que el gate permanece abierto después de que la voz desaparece. 500 ms es adecuado para SSB normal. Subir a 700–1000 ms para operadores con pausas largas entre palabras. |
 
 ### Calibración
 
 El indicador **Nivel de voz** y el estado del **Gate** en la pestaña Avanzada Cancelador son la herramienta principal de calibración:
 
-1. **Con transmisión activa** → "Nivel de voz" sube a 50–100% y "Gate: ABIERTO".
-2. **En silencio entre transmisiones** → "Nivel de voz" cae a 0–15% en ~100 ms y "Gate: CERRADO" tras la retención.
-3. Ajustar el **Umbral** para que quede entre esos dos valores (ej. Umbral 20% si en voz marca 70% y en silencio marca 5%).
+1. **Con solo ruido de banda** (sin transmisión) → anotar cuánto marca "Nivel de voz". En bandas tranquilas será 5–15%; en bandas con ruido fuerte y fluctuante puede llegar a 50–60% — es normal: el detector mide variaciones de energía y el ruido atmosférico varía.
+2. **Con transmisión activa** → "Nivel de voz" sube hacia 80–100% y "Gate: ABIERTO".
+3. Ajustar el **Umbral** entre esos dos valores, más cerca del nivel de ruido (ej.: ruido 60% y voz 100% → umbral 70–75%; ruido 10% y voz 80% → umbral 20–30%).
+
+> **Si el gate nunca cierra:** el nivel con solo ruido está por encima del umbral. Subir el umbral hasta superarlo — para eso el control llega hasta 100%.
 
 > **Nota de temporización:** tras el fin de la voz, el indicador baja en ~100 ms; luego el gate permanece ABIERTO durante la Retención configurada y finalmente cierra. Si el gate cierra demasiado pronto cortando finales de palabras, aumentar la Retención.
 
 ---
 
-## Capítulo 9 — EQ de Presencia
+## Capítulo 9 — EQ de Voz (Presencia + Cuerpo)
 
-**Ubicación:** Pestaña Avanzada Audio → grupo "Voz"
+**Ubicación:** Pestaña Avanzada Audio → grupo "Voz"  
+**Activar:** Módulos Activos → casilla "EQ Voz (presencia + cuerpo)"
 
 ### Descripción
 
-Filtro ecualizador de pico (peaking EQ) centrado en la zona de frecuencias críticas para la inteligibilidad de la voz. El rango 1000–3000 Hz es donde el oído humano discrimina mejor las consonantes — las que hacen que la voz sea inteligible.
+Dos filtros ecualizadores de pico (peaking EQ) independientes que trabajan sobre las dos zonas que definen el carácter de la voz:
 
-Útil cuando la voz suena "apagada" o "nasal" después del procesamiento, o cuando la condición de propagación atenúa las frecuencias altas.
+- **Cuerpo (150–800 Hz):** la zona de las fundamentales de la voz. Reforzarla da calidez, peso y "cuerpo" — útil cuando la voz suena delgada o telefónica, algo habitual después del filtrado de paso de banda y la reducción de ruido.
+- **Presencia (1000–2000 Hz):** la zona donde el oído discrimina mejor las consonantes. Reforzarla da claridad e inteligibilidad — útil cuando la voz suena "apagada" o la propagación atenúa los agudos.
+
+Ambas bandas pueden usarse a la vez: cuerpo +4 dB y presencia +4 dB producen una voz más llena y clara que cualquiera de las dos por separado. Cada banda con ganancia 0 dB queda en passthrough exacto (sin costo de procesamiento).
 
 ### Controles
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
-| **Frecuencia** | 1000 – 2000 Hz | 2000 Hz | Centro del pico de realce. 2000 Hz enfatiza consonantes (s, t, f). 1000–1500 Hz da más "cuerpo" a la voz masculina. |
-| **Ganancia** | -3 dB a +10 dB | 0 dB | Cuánto se amplifica la frecuencia central. Con 0 dB el módulo no tiene efecto aunque esté activo. Comenzar con +3 a +6 dB y ajustar por preferencia. |
-| **Q (selectividad)** | 0,2 – 2,0 | 0,7 | Anchura del pico. Q bajo (0,2–0,4) = pico ancho, afecta una banda amplia. Q alto (1,5–2,0) = pico estrecho, muy selectivo. Para voz de radio, Q entre 0,5 y 1,0 es lo habitual. |
+| **Frecuencia de cuerpo** | 150 – 800 Hz | 350 Hz | Centro del pico de cuerpo. 250–400 Hz para voz masculina, 400–600 Hz para voz femenina. El ancho es fijo (Q 0,9 — aproximadamente una octava). |
+| **Cuerpo (ganancia)** | -3 dB a +10 dB | 0 dB | Cuánto se refuerza el cuerpo de la voz. +3 a +5 dB es la zona útil; más de +6 dB puede sonar "tubular". También admite valores negativos para atenuar un exceso de graves. |
+| **Frecuencia de presencia** | 1000 – 2000 Hz | 2000 Hz | Centro del pico de realce. 2000 Hz enfatiza consonantes (s, t, f). 1000–1500 Hz refuerza la zona media. |
+| **Presencia (ganancia)** | -3 dB a +10 dB | 0 dB | Cuánto se amplifica la frecuencia central. Comenzar con +3 a +6 dB y ajustar por preferencia. |
+| **Q (selectividad)** | 0,2 – 2,0 | 0,7 | Anchura del pico de presencia. Q bajo (0,2–0,4) = pico ancho, afecta una banda amplia. Q alto (1,5–2,0) = pico estrecho, muy selectivo. Para voz de radio, Q entre 0,5 y 1,0 es lo habitual. |
+
+> **Consejo:** si la voz pierde cuerpo al activar el cancelador de ruido, probar primero el **Piso espectral perceptual** (Cap. 7), que evita la pérdida en origen. El EQ de cuerpo compensa después del hecho — ambos enfoques se complementan.
 
 ---
 
@@ -472,11 +561,13 @@ Debajo del slider **Límite de picos** aparece un indicador en tiempo real:
 | Filtro paso de banda pre | ✅ Activo | SSB: 200–3000 Hz |
 | Filtro paso de banda post | ✅ Activo | Igual que pre |
 | ANF | ✅ Activo | Sensibilidad 3,0×, profundidad 90% |
-| Cancelador de ruido | ✅ Activo | Aprender perfil primero |
+| Cancelador de ruido | ✅ Activo | Aprender perfil primero (o modo Adaptativo) |
+| ↳ Piso espectral perceptual | ⬜ Opcional | Activar si la voz suena fría o hueca |
 | ↳ Post-filtro espectral | ⬜ Opcional | Activar si se escuchan pitidos intermitentes residuales |
 | ↳ Refuerzo de pitch SSB | ⬜ Opcional | Solo para señales SSB DX muy débiles |
-| Squelch | ✅ Activo | Umbral 0,20, retención 300 ms |
-| EQ Presencia | ✅ Activo | +4 dB a 2000 Hz |
+| Compensación fading HF | ⬜ Opcional | Activar con QSB perceptible (solo modo Adaptativo) |
+| Squelch | ✅ Activo | Umbral 15%, retención 300 ms |
+| EQ Voz | ✅ Activo | Presencia +4 dB a 2000 Hz; cuerpo +3 dB a 350 Hz si la voz suena delgada |
 | Excitador armónico | ⬜ Opcional | Drive 2,0×, mezcla 25% |
 
 ### AM (ondas medias o cortas)
@@ -487,11 +578,13 @@ Debajo del slider **Límite de picos** aparece un indicador en tiempo real:
 | Filtro paso de banda pre | ✅ Activo | AM: 300–5000 Hz (música: hasta 10000 Hz) |
 | Filtro paso de banda post | ✅ Activo | Igual que pre |
 | ANF | ⬜ Opcional | Solo si hay heterodinos audibles |
-| Cancelador de ruido | ✅ Activo | Aprender perfil primero |
+| Cancelador de ruido | ✅ Activo | Aprender perfil primero (o modo Adaptativo) |
+| ↳ Piso espectral perceptual | ⬜ Opcional | Activar si la voz suena fría o hueca |
 | ↳ Post-filtro espectral | ⬜ Opcional | Activar si quedan pitidos residuales |
 | ↳ Refuerzo de pitch SSB | ❌ No usar | No fiable con la banda ancha de AM |
+| Compensación fading HF | ⬜ Opcional | Solo onda corta con QSB (modo Adaptativo); en AM local con música puede disparar en falso |
 | Squelch | ❌ No usar | Produce bombeo con música |
-| EQ Presencia | ⬜ Opcional | Solo si la voz suena apagada |
+| EQ Voz | ⬜ Opcional | Presencia si la voz suena apagada; cuerpo si suena delgada |
 | Excitador armónico | ⬜ Opcional | Con moderación |
 
 ---
@@ -513,7 +606,7 @@ El visualizador opera a ~15 cuadros por segundo. Para reducir el costo de CPU, s
 | **Entrada** | Azul | Señal antes del cancelador de ruido (después del filtro de paso de banda y el ANF). |
 | **Salida** | Verde | Señal final procesada, tal como sale al dispositivo de audio. |
 | **Lo cancelado** | Naranja (relleno) | Área entre la curva de entrada y la de salida — energía que el cancelador está restando. Cuanto mayor el área naranja, más ruido está siendo eliminado. |
-| **Piso de ruido** | Amarillo punteado | Perfil espectral aprendido por el cancelador. Aparece al aprender el perfil desde la pestaña Principal. Representa "cómo suena el ruido de fondo" bin a bin. |
+| **Piso de ruido** | Amarillo punteado | Perfil espectral usado por el cancelador. Representa "cómo suena el ruido de fondo" bin a bin. En modo **Perfil estático** aparece automáticamente cuando hay perfil (aprendido en la sesión o cargado desde una sesión anterior). En modo **Adaptativo (MCRA)** se actualiza cada 500 ms con el estimado en tiempo real. |
 
 Cada curva puede mostrarse u ocultarse de forma independiente con las casillas de la barra superior.
 
@@ -525,7 +618,7 @@ Activan o desactivan cada curva sin afectar el procesamiento de audio.
 
 **Aprender / borrar el piso de ruido**
 
-El piso amarillo se captura desde el botón **⏺ Aprender ruido** de la pestaña Principal. Al detener el aprendizaje, la línea queda fija mostrando el perfil activo. El botón **Borrar perfil** también borra la línea del espectro.
+En modo Perfil estático, el piso amarillo se captura desde el botón **⏺ Aprender ruido** de la pestaña Principal y queda fijo mostrando el perfil activo — incluso tras reiniciar el procesamiento o la aplicación, mientras el perfil exista. El botón **Borrar perfil** también borra la línea del espectro. En modo Adaptativo la línea se actualiza sola, sin intervención.
 
 **Sliders de zoom**
 
@@ -551,6 +644,39 @@ El piso amarillo se captura desde el botón **⏺ Aprender ruido** de la pestañ
 **Verificar el preview "escuchar ruido eliminado":**
 - Activar el checkbox **Preview: escuchar ruido eliminado** (pestaña Principal) y observar el espectro.
 - Lo que se escucha debe coincidir con el área naranja. Si se ven picos de voz en el área naranja, el cancelador está tocando la voz — subir el **Piso espectral**.
+
+---
+
+## Capítulo 13 — Presets
+
+**Ubicación:** Pestaña Presets
+
+### Descripción
+
+Un preset guarda una "foto" completa de la configuración DSP y de ganancia — todos los módulos, sliders y modos de las pestañas Principal y Avanzadas. Los dispositivos de audio y la posición de la ventana **no** forman parte del preset (son específicos de cada equipo).
+
+Uso típico: un preset "SSB DX débil" con cancelador agresivo y pitch enhancement, otro "AM local" con squelch apagado y filtros anchos, y cambiar entre ellos con doble clic según lo que estés escuchando.
+
+### Operaciones
+
+| Botón | Acción |
+|-------|--------|
+| **Guardar como nuevo** | Crea un preset con el nombre escrito, capturando la configuración actual. |
+| **Sobrescribir seleccionado** | Actualiza el preset seleccionado con la configuración actual. |
+| **Cargar** (o doble clic) | Aplica el preset **en caliente** — sin reiniciar el audio. Todos los sliders y checkboxes de la UI se actualizan al instante. |
+| **Eliminar / Renombrar** | Gestión de la lista. |
+
+Los presets se guardan como archivos `.json` individuales en la carpeta `Presets/` junto al ejecutable — se pueden respaldar o copiar entre equipos.
+
+### Preset activo y persistencia
+
+La etiqueta **"Preset activo"** muestra el último preset cargado o guardado. Si después de cargarlo se modifica cualquier control, la etiqueta agrega el sufijo **"(modificado)"** — indica que lo que suena es el preset más tus retoques, no el preset puro.
+
+Al cerrar y volver a abrir la aplicación:
+
+- **Los valores se restauran exactamente como quedaron** (vía `settings.json`), incluyendo cualquier retoque posterior al preset.
+- La etiqueta "Preset activo" recuerda el nombre, con "(modificado)" si los valores actuales difieren de los guardados en el preset.
+- Para volver al preset puro descartando los retoques, simplemente cargarlo de nuevo.
 
 ---
 

@@ -22,6 +22,10 @@ class AudioConfig:
 class DSPConfig:
     mode: RadioMode = RadioMode.SSB
     agc_preset: str = "off"
+    agc_target_dbfs: float = -20.0   # AGC Custom: nivel RMS objetivo (dBFS)
+    agc_max_gain_db: float = 36.0    # AGC Custom: ganancia máxima (dB)
+    agc_attack_ms:   float = 25.0    # AGC Custom: ataque (ms)
+    agc_release_ms:  float = 2000.0  # AGC Custom: release (ms)
     blanker_enabled:  bool  = True
     bandpass_pre_enabled:  bool = True
     bandpass_post_enabled: bool = True
@@ -46,6 +50,8 @@ class DSPConfig:
     presence_freq:   float = 2000.0 # Hz, centro del pico de presencia (1000-2000)
     presence_db:     float = 0.0    # dB, ganancia del pico de presencia
     presence_q:      float = 0.7    # Q del pico de presencia
+    body_freq:       float = 350.0  # Hz, centro del pico de cuerpo de voz (150-800)
+    body_db:         float = 0.0    # dB, ganancia del pico de cuerpo (0 = passthrough)
     pitch_shift_hz:  float = 0.0    # Hz, corrección de tono SSB (-500 a +500)
     perceptual_floor_enabled:       bool  = False  # piso espectral variable por curva de enmascaramiento auditivo
     perceptual_floor_boost:         float = 0.75   # amplitud del boost vocal (0–1.5)
@@ -56,6 +62,7 @@ class DSPConfig:
     post_filter_strength:   float = 1.0   # agresividad del post-filtro (0=off, 1=moderado, 2=agresivo)
     pitch_enhance_enabled:  bool  = False  # refuerzo de armónicos SSB via autocorrelación
     pitch_enhance_strength: float = 0.7    # qué tanto elevar p_speech en bins de armónicos (0-1)
+    noise_fading_comp:      bool  = False  # compensación de fading HF: freeze MCRA + release rápido
     bandpass_limits: dict = field(default_factory=lambda: {
         RadioMode.AM:  (300, 5000),
         RadioMode.SSB: (200, 3000),
@@ -85,9 +92,11 @@ class AppConfig:
     dsp:    DSPConfig    = field(default_factory=DSPConfig)
     gain:   GainConfig   = field(default_factory=GainConfig)
     window: WindowConfig = field(default_factory=WindowConfig)
+    last_preset: str = ""   # nombre del último preset cargado/guardado (solo informativo)
 
     def save(self, path: str) -> None:
         data = {
+            "last_preset": self.last_preset,
             "audio": {
                 "block_size": self.audio.block_size,
                 "input_device": self.audio.input_device,
@@ -96,6 +105,10 @@ class AppConfig:
             "dsp": {
                 "mode": self.dsp.mode.value,
                 "agc_preset": self.dsp.agc_preset,
+                "agc_target_dbfs": self.dsp.agc_target_dbfs,
+                "agc_max_gain_db": self.dsp.agc_max_gain_db,
+                "agc_attack_ms":   self.dsp.agc_attack_ms,
+                "agc_release_ms":  self.dsp.agc_release_ms,
                 "blanker_enabled":  self.dsp.blanker_enabled,
                 "bandpass_pre_enabled":  self.dsp.bandpass_pre_enabled,
                 "bandpass_post_enabled": self.dsp.bandpass_post_enabled,
@@ -118,6 +131,8 @@ class AppConfig:
                 "exciter_drive":     self.dsp.exciter_drive,
                 "exciter_mix":       self.dsp.exciter_mix,
                 "presence_freq":  self.dsp.presence_freq,
+                "body_freq":      self.dsp.body_freq,
+                "body_db":        self.dsp.body_db,
                 "presence_db":    self.dsp.presence_db,
                 "presence_q":     self.dsp.presence_q,
                 "pitch_shift_hz": self.dsp.pitch_shift_hz,
@@ -130,6 +145,7 @@ class AppConfig:
                 "post_filter_strength":   self.dsp.post_filter_strength,
                 "pitch_enhance_enabled":  self.dsp.pitch_enhance_enabled,
                 "pitch_enhance_strength": self.dsp.pitch_enhance_strength,
+                "noise_fading_comp":      self.dsp.noise_fading_comp,
                 "filter_order": self.dsp.filter_order,
                 "bandpass_limits": {
                     m.value: list(v)
@@ -158,6 +174,8 @@ class AppConfig:
         except (FileNotFoundError, json.JSONDecodeError):
             return
 
+        self.last_preset = str(data.get("last_preset", ""))
+
         a = data.get("audio", {})
         self.audio.block_size = a.get("block_size", self.audio.block_size)
         self.audio.input_device = a.get("input_device", self.audio.input_device)
@@ -172,6 +190,10 @@ class AppConfig:
         except ValueError:
             pass
         self.dsp.agc_preset       = d.get("agc_preset",       self.dsp.agc_preset)
+        self.dsp.agc_target_dbfs  = float(d.get("agc_target_dbfs", self.dsp.agc_target_dbfs))
+        self.dsp.agc_max_gain_db  = float(d.get("agc_max_gain_db", self.dsp.agc_max_gain_db))
+        self.dsp.agc_attack_ms    = float(d.get("agc_attack_ms",   self.dsp.agc_attack_ms))
+        self.dsp.agc_release_ms   = float(d.get("agc_release_ms",  self.dsp.agc_release_ms))
         self.dsp.blanker_enabled  = bool(d.get("blanker_enabled",  self.dsp.blanker_enabled))
         # migración: settings viejos con "bandpass_enabled" aplican a ambos
         _bp_legacy = d.get("bandpass_enabled", None)
@@ -199,6 +221,8 @@ class AppConfig:
         self.dsp.presence_freq  = d.get("presence_freq",  self.dsp.presence_freq)
         self.dsp.presence_db    = d.get("presence_db",    self.dsp.presence_db)
         self.dsp.presence_q     = d.get("presence_q",     self.dsp.presence_q)
+        self.dsp.body_freq      = float(d.get("body_freq", self.dsp.body_freq))
+        self.dsp.body_db        = float(d.get("body_db",   self.dsp.body_db))
         self.dsp.pitch_shift_hz = d.get("pitch_shift_hz", self.dsp.pitch_shift_hz)
         self.dsp.perceptual_floor_enabled       = bool(d.get("perceptual_floor_enabled",       self.dsp.perceptual_floor_enabled))
         self.dsp.perceptual_floor_boost         = float(d.get("perceptual_floor_boost",         self.dsp.perceptual_floor_boost))
@@ -209,6 +233,7 @@ class AppConfig:
         self.dsp.post_filter_strength   = float(d.get("post_filter_strength",   self.dsp.post_filter_strength))
         self.dsp.pitch_enhance_enabled  = bool(d.get("pitch_enhance_enabled",  self.dsp.pitch_enhance_enabled))
         self.dsp.pitch_enhance_strength = float(d.get("pitch_enhance_strength", self.dsp.pitch_enhance_strength))
+        self.dsp.noise_fading_comp      = bool(d.get("noise_fading_comp",      self.dsp.noise_fading_comp))
         self.dsp.filter_order = d.get("filter_order", self.dsp.filter_order)
         for mode_str, limits in d.get("bandpass_limits", {}).items():
             if mode_str in ("SSB-USB", "SSB-LSB"):

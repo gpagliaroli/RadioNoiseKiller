@@ -56,6 +56,14 @@ class NoiseProfiler:
     _MCRA_M:             int   = 20     # frames por subtrama → ventana total = B×M = 80 frames ≈ 800ms
     _MCRA_SQUELCH_RATIO: float = 0.05  # congelar si potencia_frame < 5% del piso estimado (-13 dB)
 
+    # Compensación de fading HF
+    # Detecta cambios bruscos de energía (fading ionosférico) y congela MCRA para que el
+    # piso de ruido no siga al nivel de señal. También acelera el release del estimador DD.
+    _FADING_CHANGE_DB:    float = 5.0   # umbral: cambio ≥5 dB en un frame → fade detectado
+    _FADING_FREEZE_FRAMES: int  = 20    # frames a congelar MCRA tras el evento (200ms)
+    _FADING_EMA_ALPHA:    float = 0.80  # suavizado de energía para detección (TC≈4 frames)
+    _FADING_BETA_RELEASE: float = 0.45  # beta DD en modo fading (release más rápido que 0.80)
+
     # VAD frame-level (energy minimum tracker)
     # Dos trackers paralelos: uno lento (OMLSA) y uno rápido (squelch).
     # El ratio lambda_d/sig_power subestima el ruido ~40% (min-tracking bias),
@@ -104,11 +112,21 @@ class NoiseProfiler:
 
         # Piso perceptual (curva de enmascaramiento auditivo por bin)
         self._perceptual_floor_enabled: bool  = False
-        self._pf_boost:         float = 0.75    # amplitud del boost vocal (0–1.5)
+        self._pf_boost:         float = 0.75    # amplitud del boost vocal (0–2.5)
         self._pf_center:        float = 500.0   # Hz, centro del pico de boost
         self._pf_rolloff_hz:    float = 3000.0  # Hz, inicio del rolloff de alta frecuencia
         self._pf_rolloff_depth: float = 0.55    # profundidad máxima del rolloff (0–0.7)
         self._floor_curve: np.ndarray = self._build_floor_curve()
+
+        # Compensación de fading HF
+        self._fading_comp:         bool  = False
+        self._fading_energy_ema:   float | None = None  # EMA de energía de frame
+        self._mcra_freeze_count:   int   = 0    # frames restantes de congelado MCRA
+        self._fading_active:       bool  = False # True mientras hay evento de fading
+
+        # Métricas para indicadores UI
+        self._pf_active_frac: float = 0.0   # fracción de bins retenidos por el piso perceptual
+        self._pf_extra_db:    float = 0.0   # reducción extra del post-filtro en bins de ruido (dB)
 
         # Post-filtro espectral (ruido musical residual)
         self._post_filter_enabled:  bool  = False
@@ -149,6 +167,9 @@ class NoiseProfiler:
         self._snr_post_prev  = None
         self._voice_prob     = 0.0
         self._voice_prob_sq  = 0.0
+        self._fading_energy_ema = None
+        self._mcra_freeze_count = 0
+        self._fading_active     = False
         if mode == "mcra":
             self._reset_mcra()
 
@@ -178,6 +199,9 @@ class NoiseProfiler:
             self._accum   = np.zeros(self._nb, dtype=np.float64)
             self._noise_mag = None
             self._n_frames  = 0
+            # La curva de piso perceptual depende de nb — sin esto, shape mismatch
+            # en el Wiener tras cambiar el tamaño de bloque
+            self._floor_curve = self._build_floor_curve()
         self._ola_prev        = np.zeros(self._hop, dtype=np.float32)
         self._ola_acc         = np.zeros(self._fft_n, dtype=np.float32)
         self._gain_prev       = None
@@ -188,6 +212,11 @@ class NoiseProfiler:
         self._vad_energy_min     = None
         self._vad_energy_fast_sq = None
         self._vad_energy_min_sq  = None
+        self._pf_active_frac     = 0.0
+        self._pf_extra_db        = 0.0
+        self._fading_energy_ema  = None
+        self._mcra_freeze_count  = 0
+        self._fading_active      = False
         if self._mode == "mcra":
             self._reset_mcra()
 
@@ -259,7 +288,7 @@ class NoiseProfiler:
         self._perceptual_floor_enabled = bool(v)
 
     def set_pf_boost(self, v: float) -> None:
-        self._pf_boost = float(np.clip(v, 0.0, 1.5))
+        self._pf_boost = float(np.clip(v, 0.0, 2.5))
         self._floor_curve = self._build_floor_curve()
 
     def set_pf_center(self, v: float) -> None:
@@ -274,11 +303,18 @@ class NoiseProfiler:
         self._pf_rolloff_depth = float(np.clip(v, 0.0, 0.7))
         self._floor_curve = self._build_floor_curve()
 
+    def set_fading_comp(self, v: bool) -> None:
+        self._fading_comp = bool(v)
+        if not v:
+            self._fading_energy_ema = None
+            self._mcra_freeze_count = 0
+            self._fading_active     = False
+
     def set_post_filter_enabled(self, v: bool) -> None:
         self._post_filter_enabled = bool(v)
 
     def set_post_filter_strength(self, v: float) -> None:
-        self._post_filter_strength = float(np.clip(v, 0.0, 3.0))
+        self._post_filter_strength = float(np.clip(v, 0.0, 4.0))
 
     def set_pitch_enabled(self, v: bool) -> None:
         self._pitch_enabled = bool(v)
@@ -320,7 +356,7 @@ class NoiseProfiler:
         )
 
         multiplier = (1.0 + vocal_boost) * high_rolloff
-        return np.clip(multiplier * self._floor, 0.02, 0.45).astype(np.float32)
+        return np.clip(multiplier * self._floor, 0.02, 0.60).astype(np.float32)
 
     # ------------------------------------------------------------------
     # Pitch enhancement — autocorrelación + máscara armónica
@@ -397,6 +433,10 @@ class NoiseProfiler:
                 return np.sqrt(self._mcra_ld).astype(np.float32)
             return None
 
+        # Freeze de fading: no actualizar λ_d durante un evento de fading detectado
+        if self._fading_comp and self._mcra_freeze_count > 0 and self._mcra_frames >= self._MCRA_M:
+            return np.sqrt(self._mcra_ld).astype(np.float32)
+
         # 1. Suavizado de potencia espectral
         self._mcra_Sf = (self._MCRA_ALPHA_S * self._mcra_Sf
                          + (1.0 - self._MCRA_ALPHA_S) * power)
@@ -468,6 +508,26 @@ class NoiseProfiler:
             self._n_frames += 1
 
         # Obtener noise_mag según el modo
+        # --- Detección de fading HF (antes de MCRA para que el freeze ya esté activo) ---
+        if self._fading_comp and self._mode == "mcra":
+            frame_e = float(np.mean(np.abs(spec) ** 2))
+            if self._fading_energy_ema is None:
+                self._fading_energy_ema = frame_e
+                self._fading_active = False
+            else:
+                ema = self._fading_energy_ema
+                if ema > 1e-15:
+                    change_db = abs(10.0 * np.log10(max(frame_e, 1e-15) / ema))
+                    if change_db >= self._FADING_CHANGE_DB:
+                        self._mcra_freeze_count = self._FADING_FREEZE_FRAMES
+                if self._mcra_freeze_count > 0:
+                    self._mcra_freeze_count -= 1
+                    self._fading_active = True
+                else:
+                    self._fading_active = False
+                self._fading_energy_ema = (self._FADING_EMA_ALPHA * ema
+                                           + (1.0 - self._FADING_EMA_ALPHA) * frame_e)
+
         if self._mode == "mcra":
             noise_mag = self._mcra_update(spec)
         else:
@@ -549,6 +609,11 @@ class NoiseProfiler:
             beta_r        = np.float32(self._beta)
             vp            = np.float32(self._voice_prob)
             beta_fast_eff = np.float32(beta_r * (1.0 - vp) + self._beta_fast * vp)
+            # En modo fading comp (solo MCRA), el release es más rápido para seguir
+            # la señal al volver del fade
+            beta_release  = (np.float32(self._FADING_BETA_RELEASE)
+                             if self._fading_comp and self._mode == "mcra"
+                             else beta_fast_eff)
 
             # --- DD SNR a priori ---
             if self._gain_prev is None:
@@ -556,7 +621,7 @@ class NoiseProfiler:
             else:
                 rising   = snr_post > self._snr_post_prev
                 use_fast = rising & voice_bin
-                beta_eff = np.where(use_fast, beta_fast_eff, beta_r)
+                beta_eff = np.where(use_fast, beta_release, beta_r)
                 snr_prior = ((1.0 - beta_eff) * inst
                              + beta_eff * self._gain_prev ** 2 * self._snr_post_prev)
 
@@ -567,10 +632,11 @@ class NoiseProfiler:
             # --- Gain Log-MMSE (Ephraim-Malah 1985) ---
             g_wiener = snr_prior / (snr_prior + 1.0)
             v        = np.maximum(g_wiener * snr_post, 1e-10)
-            gain_dd  = np.clip(
-                g_wiener * np.exp(0.5 * _exp1(v)),
-                _eff_floor, 1.0
-            ).astype(np.float32)
+            gain_raw = (g_wiener * np.exp(0.5 * _exp1(v))).astype(np.float32)
+            # Medir fraccion de bins retenidos por el piso perceptual
+            if self._perceptual_floor_enabled:
+                self._pf_active_frac = float(np.mean(gain_raw < _eff_floor))
+            gain_dd  = np.clip(gain_raw, _eff_floor, 1.0).astype(np.float32)
             self._gain_prev     = gain_dd
             self._snr_post_prev = snr_post
 
@@ -598,11 +664,18 @@ class NoiseProfiler:
             # Bins de voz (p_speech=1): sin cambio. Bins de ruido (p_speech=0): gain^(1+strength)
             if self._post_filter_enabled and self._post_filter_strength > 0.0:
                 p_noise  = np.float32(1.0) - p_speech
+                # Métrica de reducción extra: extra_exp * log(gain) dB, en bins de ruido
+                noise_mask = p_speech < 0.3
+                if np.any(noise_mask):
+                    log_gain_db = 20.0 * np.log10(np.maximum(gain_out[noise_mask], 1e-6))
+                    extra_exp   = np.float32(self._post_filter_strength) * p_noise[noise_mask]
+                    self._pf_extra_db = float(np.mean(extra_exp * log_gain_db))
                 gain_out = np.power(
                     gain_out,
                     np.float32(1.0) + np.float32(self._post_filter_strength) * p_noise,
                 ).astype(np.float32)
-                gain_out = np.maximum(gain_out, _eff_floor)
+                # Usar un suelo mínimo bajo (no el _eff_floor) para no anular la supresión extra
+                gain_out = np.maximum(gain_out, np.float32(0.005))
 
             self._last_reduction_db = 20.0 * np.log10(max(float(np.mean(gain_out)), 1e-6))
 
@@ -633,6 +706,35 @@ class NoiseProfiler:
     def voice_prob_sq(self) -> float:
         """voice_prob con release rápido (~40ms), específico para el gate de squelch."""
         return self._voice_prob_sq
+
+    @property
+    def pf_peak_pct(self) -> float:
+        """Floor en el bin del centro vocal (fracción 0-1). Indica el piso a la frecuencia de máximo boost."""
+        if not self._perceptual_floor_enabled:
+            return self._floor
+        freq_per_bin = 48000.0 / self._fft_n
+        center_bin = min(round(self._pf_center / freq_per_bin), len(self._floor_curve) - 1)
+        return float(self._floor_curve[center_bin])
+
+    @property
+    def pf_active_frac(self) -> float:
+        """Fracción de bins retenidos por el piso perceptual en el último frame procesado."""
+        return self._pf_active_frac
+
+    @property
+    def pf_extra_db(self) -> float:
+        """Reducción extra (dB, ≤0) aplicada por el post-filtro en bins de ruido."""
+        return self._pf_extra_db
+
+    @property
+    def fading_active(self) -> bool:
+        """True si hay un evento de fading activo (MCRA congelado por cambio brusco de energía)."""
+        return self._fading_active
+
+    @property
+    def pitch_f0(self) -> "float | None":
+        """f0 detectado (Hz) por el refuerzo de pitch SSB, o None si no hay detección activa."""
+        return self._pitch_f0
 
     @property
     def has_profile(self) -> bool:

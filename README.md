@@ -12,7 +12,7 @@ Procesa el audio ya demodulado entre el receptor y los parlantes/auriculares.
 - **Cancelador de ruido estacionario** — estimador DD Wiener con suavizado OMLSA: ancla bins de ruido al floor evitando el gorgojeo (musical noise)
 - **Supresor de impulsos** — dos niveles en cascada (10ms y 0,67ms) para QRN atmosférico
 - **ANF** — filtro de muesca espectral adaptativo para heterodinos y portadoras AM
-- **AGC** — control automático de ganancia (slow / medium / fast)
+- **AGC** — control automático de ganancia (slow / medium / fast / custom con target, ganancia máx, ataque y release ajustables)
 - **Squelch de voz** — silencia la salida entre transmisiones SSB, con hold time configurable
 - **EQ de presencia** — realce de consonantes en la zona de legibilidad
 - **Excitador armónico** — genera armónicos en 1–4 kHz para recuperar brillo post-filtrado

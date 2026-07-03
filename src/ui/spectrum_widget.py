@@ -118,6 +118,11 @@ class SpectrumWidget(QWidget):
         self._floor_learning = False
         self.update()
 
+    @property
+    def has_floor(self) -> bool:
+        """True si hay una curva de piso de ruido cargada en el widget."""
+        return self._db_floor is not None
+
     def set_noise_floor_from_hz(self, freqs_hz: np.ndarray, db: np.ndarray) -> None:
         """Actualiza el piso de ruido desde datos (freqs_hz, db) — usado por el modo MCRA."""
         widget_freqs = np.arange(self._n_bins, dtype=np.float32) * self._freq_per_bin

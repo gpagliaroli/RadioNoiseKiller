@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont
 
 from audio.devices import list_devices, AudioDevice
-from config import AppConfig, RadioMode
+from config import AppConfig, RadioMode, GainConfig
 from pipeline import ProcessingPipeline
 from ui.vu_meter import VuMeter
 from ui.advanced_tab import AdvancedAudioTab, AdvancedImpulseTab, AdvancedCancellerTab
@@ -53,7 +53,7 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _build_ui(self) -> None:
-        self.setWindowTitle("Reductor de Ruido Radio  v0.2")
+        self.setWindowTitle("Reductor de Ruido Radio  v1.2")
         self.setMinimumWidth(800)
         self.setMaximumWidth(1100)
 
@@ -81,6 +81,7 @@ class MainWindow(QMainWindow):
             self._config, self._pipeline, self._preset_manager
         )
         self._presets_tab.preset_loaded.connect(self.refresh_from_config)
+        self._presets_tab.state_changed.connect(self._schedule_save)
         self._tabs.addTab(self._presets_tab, "Presets")
         self._tabs.currentChanged.connect(self._on_tab_changed)
 
@@ -137,6 +138,7 @@ class MainWindow(QMainWindow):
             ("Rápido",      "fast"),
             ("Medio",       "medium"),
             ("Lento",       "slow"),
+            ("Custom",      "custom"),
         ]:
             self._combo_agc.addItem(label, preset)
         self._combo_agc.setCurrentIndex(0)
@@ -221,8 +223,11 @@ class MainWindow(QMainWindow):
             "Silencia la salida cuando no hay voz detectada. Requiere perfil de ruido aprendido.",
         )
         self._chk_presence = _chk(
-            "EQ Presencia",
-            "Pico de realce vocal configurable en pestaña Avanzada.",
+            "EQ Voz  (presencia + cuerpo)",
+            "Dos picos de realce vocal configurables en pestaña Avanzada Audio:\n"
+            "  · Presencia (1000–2000 Hz): claridad e inteligibilidad\n"
+            "  · Cuerpo (150–800 Hz): calidez y graves de la voz\n"
+            "Cada banda con ganancia 0 dB queda en passthrough.",
         )
         self._chk_exciter = _chk(
             "Excitador armónico",
@@ -335,24 +340,30 @@ class MainWindow(QMainWindow):
         self._label_latency.setAlignment(Qt.AlignRight)
         layout.addWidget(self._label_latency)
 
+        # default = valor de fábrica (menú click derecho); la posición inicial
+        # se carga aparte con set_value() desde la config persistida.
+        _gain_def = GainConfig()
         self._s_gain_in = SliderRow(
             "Entrada:",
             min_val=-20.0, max_val=20.0,
-            default=self._config.gain.input_gain_db,
+            default=_gain_def.input_gain_db,
             step=0.5, unit="dB", fmt="{:+.1f}",
         )
         self._s_gain_out = SliderRow(
             "Salida:",
             min_val=-20.0, max_val=20.0,
-            default=self._config.gain.output_gain_db,
+            default=_gain_def.output_gain_db,
             step=0.5, unit="dB", fmt="{:+.1f}",
         )
         self._s_peak = SliderRow(
             "Límite de picos:",
             min_val=-20.0, max_val=0.0,
-            default=self._config.gain.peak_limit_db,
+            default=_gain_def.peak_limit_db,
             step=0.5, unit="dBFS", fmt="{:+.1f}",
         )
+        self._s_gain_in.set_value(self._config.gain.input_gain_db)
+        self._s_gain_out.set_value(self._config.gain.output_gain_db)
+        self._s_peak.set_value(self._config.gain.peak_limit_db)
         self._s_gain_in.valueChanged.connect(self._on_gain_in_changed)
         self._s_gain_out.valueChanged.connect(self._on_gain_out_changed)
         self._s_peak.valueChanged.connect(self._on_peak_changed)
@@ -646,11 +657,20 @@ class MainWindow(QMainWindow):
         self._pipeline.set_agc_preset(preset)
         if preset == "off":
             self._label_agc_gain.setText("")
+        # Los sliders de AGC Custom solo se habilitan con el preset "custom"
+        if hasattr(self, "_adv_audio_tab"):
+            self._adv_audio_tab.refresh_enabled_states()
         self._schedule_save()
 
     def _on_module_toggled(self, key: str, setter, checked: bool) -> None:
         setattr(self._config.dsp, key, checked)
         setter(checked)
+        # Reflejar el estado en los controles de las pestañas Avanzadas
+        # (guard: los checkboxes pueden inicializarse antes de crear las tabs)
+        if hasattr(self, "_adv_canceller_tab"):
+            self._adv_audio_tab.refresh_enabled_states()
+            self._adv_impulse_tab.refresh_enabled_states()
+            self._adv_canceller_tab.refresh_enabled_states()
         self._schedule_save()
 
     def _on_gain_in_changed(self, val: float) -> None:
@@ -795,6 +815,11 @@ class MainWindow(QMainWindow):
             self._lbl_noise_db.setText("—")
             self._lbl_noise_db.setStyleSheet("color: #888; font-weight: bold;")
             return
+        # Mostrar curva de piso en el espectro (se actualiza solo cuando cambia o al reiniciar)
+        if not self._spectrum_widget.has_floor:
+            floor_data = self._pipeline.get_noise_floor_data()
+            if floor_data is not None:
+                self._spectrum_widget.set_noise_floor_from_hz(*floor_data)
         db = self._pipeline.noise_reduction_db
         if db >= -0.5:
             self._lbl_noise_db.setText("~0 dB  (sin ruido detectable)")
