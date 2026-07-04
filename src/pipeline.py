@@ -39,17 +39,18 @@ class ProcessingPipeline:
         self._blanker_mini:  float = config.dsp.blanker_mini
         self._blanker_hits:  int   = 0
 
-        self._blanker_enabled:       bool = True
+        self._blanker_enabled:       bool = config.dsp.blanker_enabled
         self._bandpass_pre_enabled:  bool = config.dsp.bandpass_pre_enabled
         self._bandpass_post_enabled: bool = config.dsp.bandpass_post_enabled
-        self._noise_enabled:         bool = True
-        self._presence_enabled:      bool = True
+        self._noise_enabled:         bool = config.dsp.noise_enabled
+        self._presence_enabled:      bool = config.dsp.presence_enabled
 
         self._agc = AGC(config.audio.sample_rate, config.audio.block_size)
         self._agc.set_custom_target(config.dsp.agc_target_dbfs)
         self._agc.set_custom_max_gain(config.dsp.agc_max_gain_db)
         self._agc.set_custom_attack(config.dsp.agc_attack_ms)
         self._agc.set_custom_release(config.dsp.agc_release_ms)
+        self._agc.set_preset(config.dsp.agc_preset)
         self._bandpass     = BandpassFilter(config.dsp, config.audio.sample_rate)
         self._bandpass_out = BandpassFilter(config.dsp, config.audio.sample_rate)
         self._anf = AdaptiveNotchFilter(
@@ -73,6 +74,9 @@ class ProcessingPipeline:
         self._noise_profiler.set_fading_comp(config.dsp.noise_fading_comp)
         self._noise_profiler.set_fading_change_db(config.dsp.noise_fading_change_db)
         self._noise_profiler.set_fading_freeze_ms(config.dsp.noise_fading_freeze_ms)
+        self._noise_profiler.set_mode(config.dsp.noise_mode)
+        self._noise_profiler.set_alpha(config.dsp.noise_alpha)
+        self._noise_profiler.set_floor(config.dsp.noise_floor)
         self._squelch_enabled:   bool  = config.dsp.squelch_enabled
         self._squelch_threshold: float = config.dsp.squelch_threshold
         self._squelch_hold_ms:   float = config.dsp.squelch_hold_ms
@@ -571,7 +575,9 @@ class ProcessingPipeline:
     # Ciclo de vida del stream
     # ------------------------------------------------------------------
 
-    def start(self) -> None:
+    def start(self, headless: bool = False) -> None:
+        """Inicia el procesamiento. headless=True omite el AudioStream (tests sin
+        hardware): el hilo procesador corre igual y se alimenta via _process()."""
         with self._lock:
             if self._running:
                 return
@@ -596,9 +602,10 @@ class ProcessingPipeline:
         self._proc_thread = threading.Thread(target=self._run_processor, daemon=True)
         self._proc_thread.start()
 
-        with self._lock:
-            self._stream = AudioStream(self._config.audio, self._process)
-            self._stream.start()
+        if not headless:
+            with self._lock:
+                self._stream = AudioStream(self._config.audio, self._process)
+                self._stream.start()
 
     def stop(self) -> None:
         with self._lock:

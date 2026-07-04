@@ -255,8 +255,11 @@ En bundle: junto al `.exe` / `.bin`
 |---------|-------------|
 | `tests/test_devices.py` | Enumeración y deduplicación de dispositivos |
 | `tests/test_hostapis.py` | Listado completo por API (diagnóstico) |
-| `tests/test_dsp.py` | BandpassFilter, GainLimiter, LevelMeter |
-| `tests/test_pipeline.py` | Pipeline completo simulado sin hardware |
+| `tests/test_dsp.py` | BandpassFilter, GainLimiter (curva soft-knee, carry entre chunks), LevelMeter |
+| `tests/test_pipeline.py` | Latencia y bypass con config default (no ejercita los módulos opcionales) |
+| `tests/test_presets.py` | `_capture()` cubre DSPConfig/GainConfig, roundtrips, rename/delete |
+| `tests/test_noise_vad.py` | VAD del squelch (ruido fluctuante, voz armónica, release AGC), cuarentena MCRA, clamps de fading. **Validar detectores con ruido fluctuante y voz con envolvente — el gaussiano estacionario da falsos OK** |
+| `tests/test_integration.py` | Pipeline headless (`start(headless=True)`) con TODOS los módulos activos: warmup MCRA, ciclo squelch, cambios de modo en caliente, cambio de block size con reinicio |
 
 ## Estado del proyecto
 
@@ -343,6 +346,13 @@ Cambios v1.3 (pendiente de release):
   inaudible). `_reset_mcra()` limpia la cola (cubre set_mode/reset/clear_profile y cambios de hop).
   Verificado: drift de λ_d tras fade de −14dB: 0.015 dB con comp ON vs 6.5 dB sin protección;
   impulso aislado +20dB: 0.000 dB; adaptación a subidas lentas intacta (+6.1 dB seguidos de +6 reales).
+- Tests permanentes nuevos: `test_noise_vad.py` (VAD + cuarentena + fading) y `test_integration.py`
+  (pipeline headless todo-activado; usa `pipeline.start(headless=True)`, que omite el AudioStream).
+  El test de integración destapó que el constructor del pipeline no honraba toda la config
+  (`noise_mode`, `agc_preset`, `noise_alpha/floor` y los enables de blanker/cancelador/presencia
+  quedaban hardcodeados o sin aplicar — la UI lo tapaba vía `_apply_loaded_config`). Corregido:
+  el constructor ahora inicializa todo desde config; un `ProcessingPipeline(cfg)` recién construido
+  se comporta según su config sin pasos extra.
 - Limitador de picos con rodilla suave: antes era brickwall ∞:1 con rodilla dura y release 100ms —
   aplastaba los picos de voz de golpe y el envelope "agachaba" los ~150ms siguientes (ducking
   audible). Ahora: curva cuadrática en dominio dB con rodilla de 6 dB centrada en el límite
