@@ -1,7 +1,7 @@
 import math
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QGroupBox, QLabel,
-    QScrollArea, QPushButton, QHBoxLayout, QFrame, QCheckBox,
+    QScrollArea, QPushButton, QHBoxLayout, QFrame,
 )
 from PySide6.QtCore import Qt, QTimer
 from config import AppConfig, RadioMode, AudioConfig, DSPConfig
@@ -613,7 +613,8 @@ class AdvancedCancellerTab(QWidget):
         noise = dsp.noise_enabled
         for s in (self._s_noise_floor, self._s_noise_smooth, self._s_noise_attack):
             s.set_enabled(noise)
-        self._chk_fading.setEnabled(noise)
+        for s in (self._s_fading_change, self._s_fading_freeze):
+            s.set_enabled(noise and dsp.noise_fading_comp)
         for s in (self._s_squelch_threshold, self._s_squelch_hold):
             s.set_enabled(noise and dsp.squelch_enabled)
         for s in (self._s_pf_boost, self._s_pf_center,
@@ -697,17 +698,41 @@ class AdvancedCancellerTab(QWidget):
         layout.addWidget(_note("  ↳ Attack (onset de voz): bajo=consonantes nítidas. Alto=transiciones suaves."))
 
         fading_row = QHBoxLayout()
-        self._chk_fading = QCheckBox("Compensación fading HF")
-        self._chk_fading.setChecked(self._config.dsp.noise_fading_comp)
-        self._chk_fading.toggled.connect(self._on_fading_comp)
-        fading_row.addWidget(self._chk_fading)
-        fading_row.addSpacing(16)
+        fading_row.addWidget(QLabel("Compensación fading HF:"))
         self._lbl_fading = QLabel("—")
         self._lbl_fading.setStyleSheet("color: #888;")
         fading_row.addWidget(self._lbl_fading)
         fading_row.addStretch()
         layout.addLayout(fading_row)
-        layout.addWidget(_note("  ↳ Congela el estimador de ruido durante fading ionosférico y acelera el release. Solo modo Adaptativo."))
+        layout.addWidget(_note("  ↳ Activar en Módulos Activos (sub-módulo del cancelador). Solo modo Adaptativo."))
+
+        self._s_fading_change = SliderRow(
+            "Sensibilidad fading:",
+            min_val=2.0, max_val=10.0,
+            default=_DSP_DEF.noise_fading_change_db,
+            step=0.5, unit="dB", fmt="{:.1f}",
+        )
+        self._s_fading_change._update_label = lambda v: self._s_fading_change._val_lbl.setText(
+            f"{v:.1f} dB  ({'sensible' if v < 4 else 'normal' if v < 7 else 'selectivo'})"
+        )
+        self._s_fading_change._val_lbl.setFixedWidth(110)
+        self._s_fading_change.valueChanged.connect(self._pipeline.set_fading_change_db)
+        layout.addWidget(self._s_fading_change)
+        layout.addWidget(_note("  ↳ Cambio de energía que dispara el freeze. Bajo=detecta QSB suave, puede disparar con la voz. Alto=solo fades profundos."))
+
+        self._s_fading_freeze = SliderRow(
+            "Duración del freeze:",
+            min_val=100.0, max_val=500.0,
+            default=_DSP_DEF.noise_fading_freeze_ms,
+            step=25.0, unit="ms", fmt="{:.0f}",
+        )
+        self._s_fading_freeze._update_label = lambda v: self._s_fading_freeze._val_lbl.setText(
+            f"{v:.0f} ms  ({'corto' if v < 175 else 'normal' if v < 325 else 'largo'})"
+        )
+        self._s_fading_freeze._val_lbl.setFixedWidth(110)
+        self._s_fading_freeze.valueChanged.connect(self._pipeline.set_fading_freeze_ms)
+        layout.addWidget(self._s_fading_freeze)
+        layout.addWidget(_note("  ↳ Tiempo que MCRA queda congelado tras cada evento. Fades lentos necesitan más; muy largo desactualiza el piso."))
         return group
 
     def _build_squelch_group(self) -> QGroupBox:
@@ -1005,7 +1030,8 @@ class AdvancedCancellerTab(QWidget):
         self._s_noise_floor.set_value(cfg.noise_floor)
         self._s_noise_smooth.set_value(cfg.noise_smooth)
         self._s_noise_attack.set_value(cfg.noise_attack)
-        self._chk_fading.setChecked(cfg.noise_fading_comp)
+        self._s_fading_change.set_value(cfg.noise_fading_change_db)
+        self._s_fading_freeze.set_value(cfg.noise_fading_freeze_ms)
         self._s_squelch_threshold.set_value(cfg.squelch_threshold)
         self._s_squelch_hold.set_value(cfg.squelch_hold_ms)
         self._s_pf_boost.set_value(cfg.perceptual_floor_boost)
@@ -1020,7 +1046,6 @@ class AdvancedCancellerTab(QWidget):
         self._config.dsp.noise_floor       = defaults.noise_floor
         self._config.dsp.noise_smooth      = defaults.noise_smooth
         self._config.dsp.noise_attack      = defaults.noise_attack
-        self._config.dsp.noise_fading_comp = defaults.noise_fading_comp
         self._config.dsp.squelch_threshold = defaults.squelch_threshold
         self._config.dsp.squelch_hold_ms   = defaults.squelch_hold_ms
         self._config.dsp.perceptual_floor_boost        = defaults.perceptual_floor_boost
@@ -1032,7 +1057,8 @@ class AdvancedCancellerTab(QWidget):
         self._pipeline.set_noise_floor(defaults.noise_floor)
         self._pipeline.set_noise_smooth(defaults.noise_smooth)
         self._pipeline.set_noise_attack(defaults.noise_attack)
-        self._pipeline.set_fading_comp(defaults.noise_fading_comp)
+        self._pipeline.set_fading_change_db(defaults.noise_fading_change_db)
+        self._pipeline.set_fading_freeze_ms(defaults.noise_fading_freeze_ms)
         self._pipeline.set_squelch_threshold(defaults.squelch_threshold)
         self._pipeline.set_squelch_hold_ms(defaults.squelch_hold_ms)
         self._pipeline.set_pf_boost(defaults.perceptual_floor_boost)
@@ -1058,10 +1084,6 @@ class AdvancedCancellerTab(QWidget):
     def _on_noise_attack(self, val: float) -> None:
         self._config.dsp.noise_attack = val
         self._pipeline.set_noise_attack(val)
-
-    def _on_fading_comp(self, val: bool) -> None:
-        self._config.dsp.noise_fading_comp = val
-        self._pipeline.set_fading_comp(val)
 
     def _on_squelch_threshold(self, val: float) -> None:
         self._config.dsp.squelch_threshold = val

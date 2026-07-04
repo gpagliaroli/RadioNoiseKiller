@@ -186,19 +186,24 @@ del todo. Fórmula: `gain_post[k] = gain[k]^(1 + strength·(1 − p_speech[k]))`
   aplicado antes por OMLSA y no debe re-aplicarse después de una etapa de supresión adicional.
 
 ### Compensación de fading HF (noise_fading_comp)
-Para onda corta con QSB. Dos mecanismos, ambos activos solo con el checkbox habilitado:
-- **Freeze MCRA:** si la energía del frame cambia ≥5 dB respecto al EMA (`_FADING_CHANGE_DB`, EMA con
-  alpha=0.80), se congela `λ_d` por 20 frames (`_FADING_FREEZE_FRAMES`, 200ms). Evita que MCRA siga al
-  nivel de señal durante el fade y quede desfasado al volver. Ambas transiciones (fade y recovery)
-  disparan el freeze — es lo deseado.
+Para onda corta con QSB. Dos mecanismos, ambos activos solo con el checkbox habilitado
+(sub-módulo del cancelador en Módulos Activos, pestaña Principal — v1.3):
+- **Freeze MCRA:** si la energía del frame cambia ≥ umbral respecto al EMA (slider "Sensibilidad
+  fading" 2–10 dB, default 5; EMA con alpha=0.80 fijo), se congela `λ_d` por N frames (slider
+  "Duración del freeze" 100–500 ms, default 200; `_fading_freeze_frames = round(ms / hop_ms)` —
+  se recalcula en `reset(hop)`, invariante 9). Evita que MCRA siga al nivel de señal durante el
+  fade y quede desfasado al volver. Ambas transiciones (fade y recovery) disparan el freeze.
 - **Release DD acelerado:** en bins con SNR subiendo, `beta_eff` usa `_FADING_BETA_RELEASE=0.45` en vez
   de `beta_fast` (0.80) → la ganancia Wiener responde en ~2-3 frames en vez de 10-15. Elimina el
   "llega tarde" al salir del fade. Nota: este release aplica siempre que el checkbox esté activo, no
-  solo durante el evento de fading.
+  solo durante el evento de fading. Fijo, no expuesto (interactúa con el slider "Velocidad ataque").
 - Detección en `process()` ANTES de `_mcra_update()` (el freeze debe estar activo al entrar).
+  Ojo: por el OLA al 50%, un fade tarda 2 frames en verse completo en la energía del frame.
 - Solo tiene efecto en modo MCRA; en estático el freeze no aplica (no hay estimador que congelar).
-- `noise_fading_comp` en DSPConfig, persistido en settings.json y presets. Indicador "FADE"/"ok" en
-  Avanzada Cancelador (`fading_active` property → pipeline → `_update_stats()`).
+- `noise_fading_comp / noise_fading_change_db / noise_fading_freeze_ms` en DSPConfig, persistidos en
+  settings.json y presets. Indicador "FADE"/"ok" y ambos sliders en Avanzada Cancelador
+  (`fading_active` property → pipeline → `_update_stats()`); sliders habilitados solo con
+  cancelador + checkbox activos.
 
 ### Invariantes a mantener (lecciones de la revisión pre-v1.2)
 
@@ -296,6 +301,12 @@ Cambios v1.2:
 - Revisión de bugs pre-release: clamp de pf_boost desalineado con el slider, squelch podía mutear
   permanente con cancelador off, indicadores con estado viejo tras borrar perfil, beta_release de
   fading aplicando en modo static (ver "Invariantes a mantener")
+
+Cambios v1.3 (pendiente de release):
+- Fading HF calibrable: sliders "Sensibilidad fading" (2–10 dB) y "Duración del freeze" (100–500 ms)
+  en Avanzada Cancelador (`noise_fading_change_db/noise_fading_freeze_ms` en DSPConfig, persistidos
+  en settings.json y presets); checkbox movido de Avanzada Cancelador a Módulos Activos como
+  sub-módulo del cancelador; el indicador FADE/ok queda en Avanzada Cancelador
 
 ### Visualizador de espectro — decisiones de implementación
 

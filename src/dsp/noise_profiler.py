@@ -59,8 +59,8 @@ class NoiseProfiler:
     # Compensación de fading HF
     # Detecta cambios bruscos de energía (fading ionosférico) y congela MCRA para que el
     # piso de ruido no siga al nivel de señal. También acelera el release del estimador DD.
-    _FADING_CHANGE_DB:    float = 5.0   # umbral: cambio ≥5 dB en un frame → fade detectado
-    _FADING_FREEZE_FRAMES: int  = 20    # frames a congelar MCRA tras el evento (200ms)
+    # Umbral de detección y duración del freeze son ajustables por slider (ver setters);
+    # estos dos quedan fijos:
     _FADING_EMA_ALPHA:    float = 0.80  # suavizado de energía para detección (TC≈4 frames)
     _FADING_BETA_RELEASE: float = 0.45  # beta DD en modo fading (release más rápido que 0.80)
 
@@ -120,6 +120,9 @@ class NoiseProfiler:
 
         # Compensación de fading HF
         self._fading_comp:         bool  = False
+        self._fading_change_db:    float = 5.0   # umbral de detección (slider, 2-10 dB)
+        self._fading_freeze_ms:    float = 200.0 # duración del freeze (slider, 100-500 ms)
+        self._fading_freeze_frames: int  = self._calc_fading_freeze_frames()
         self._fading_energy_ema:   float | None = None  # EMA de energía de frame
         self._mcra_freeze_count:   int   = 0    # frames restantes de congelado MCRA
         self._fading_active:       bool  = False # True mientras hay evento de fading
@@ -202,6 +205,8 @@ class NoiseProfiler:
             # La curva de piso perceptual depende de nb — sin esto, shape mismatch
             # en el Wiener tras cambiar el tamaño de bloque
             self._floor_curve = self._build_floor_curve()
+            # El freeze de fading se expresa en frames — depende del hop
+            self._fading_freeze_frames = self._calc_fading_freeze_frames()
         self._ola_prev        = np.zeros(self._hop, dtype=np.float32)
         self._ola_acc         = np.zeros(self._fft_n, dtype=np.float32)
         self._gain_prev       = None
@@ -309,6 +314,18 @@ class NoiseProfiler:
             self._fading_energy_ema = None
             self._mcra_freeze_count = 0
             self._fading_active     = False
+
+    def _calc_fading_freeze_frames(self) -> int:
+        """Frames de freeze según la duración en ms y el hop actual (48 kHz)."""
+        hop_ms = self._hop / 48.0
+        return max(1, round(self._fading_freeze_ms / hop_ms))
+
+    def set_fading_change_db(self, v: float) -> None:
+        self._fading_change_db = float(np.clip(v, 2.0, 10.0))
+
+    def set_fading_freeze_ms(self, v: float) -> None:
+        self._fading_freeze_ms = float(np.clip(v, 100.0, 500.0))
+        self._fading_freeze_frames = self._calc_fading_freeze_frames()
 
     def set_post_filter_enabled(self, v: bool) -> None:
         self._post_filter_enabled = bool(v)
@@ -518,8 +535,8 @@ class NoiseProfiler:
                 ema = self._fading_energy_ema
                 if ema > 1e-15:
                     change_db = abs(10.0 * np.log10(max(frame_e, 1e-15) / ema))
-                    if change_db >= self._FADING_CHANGE_DB:
-                        self._mcra_freeze_count = self._FADING_FREEZE_FRAMES
+                    if change_db >= self._fading_change_db:
+                        self._mcra_freeze_count = self._fading_freeze_frames
                 if self._mcra_freeze_count > 0:
                     self._mcra_freeze_count -= 1
                     self._fading_active = True

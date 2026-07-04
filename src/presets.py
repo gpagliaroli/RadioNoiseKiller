@@ -151,6 +151,8 @@ class PresetManager:
                 "pitch_enhance_enabled":     dsp.pitch_enhance_enabled,
                 "pitch_enhance_strength":    dsp.pitch_enhance_strength,
                 "noise_fading_comp":         dsp.noise_fading_comp,
+                "noise_fading_change_db":    dsp.noise_fading_change_db,
+                "noise_fading_freeze_ms":    dsp.noise_fading_freeze_ms,
             },
             "gain": {
                 "input_gain_db":  config.gain.input_gain_db,
@@ -220,6 +222,8 @@ class PresetManager:
         dsp.pitch_enhance_enabled  = bool(d.get("pitch_enhance_enabled",  dsp.pitch_enhance_enabled))
         dsp.pitch_enhance_strength = float(d.get("pitch_enhance_strength",dsp.pitch_enhance_strength))
         dsp.noise_fading_comp      = bool(d.get("noise_fading_comp",     dsp.noise_fading_comp))
+        dsp.noise_fading_change_db = float(d.get("noise_fading_change_db", dsp.noise_fading_change_db))
+        dsp.noise_fading_freeze_ms = float(d.get("noise_fading_freeze_ms", dsp.noise_fading_freeze_ms))
 
         gain.input_gain_db  = float(g.get("input_gain_db",  gain.input_gain_db))
         gain.output_gain_db = float(g.get("output_gain_db", gain.output_gain_db))

@@ -71,6 +71,8 @@ class ProcessingPipeline:
         self._noise_profiler.set_pitch_enabled(config.dsp.pitch_enhance_enabled)
         self._noise_profiler.set_pitch_strength(config.dsp.pitch_enhance_strength)
         self._noise_profiler.set_fading_comp(config.dsp.noise_fading_comp)
+        self._noise_profiler.set_fading_change_db(config.dsp.noise_fading_change_db)
+        self._noise_profiler.set_fading_freeze_ms(config.dsp.noise_fading_freeze_ms)
         self._squelch_enabled:   bool  = config.dsp.squelch_enabled
         self._squelch_threshold: float = config.dsp.squelch_threshold
         self._squelch_hold_ms:   float = config.dsp.squelch_hold_ms
@@ -290,6 +292,8 @@ class ProcessingPipeline:
         self.set_pitch_enhance_enabled(dsp.pitch_enhance_enabled)
         self.set_pitch_enhance_strength(dsp.pitch_enhance_strength)
         self.set_fading_comp(dsp.noise_fading_comp)
+        self.set_fading_change_db(dsp.noise_fading_change_db)
+        self.set_fading_freeze_ms(dsp.noise_fading_freeze_ms)
 
         self.set_input_gain_db(gain.input_gain_db)
         self.set_output_gain_db(gain.output_gain_db)
@@ -374,6 +378,14 @@ class ProcessingPipeline:
     def set_fading_comp(self, v: bool) -> None:
         self._config.dsp.noise_fading_comp = bool(v)
         self._noise_profiler.set_fading_comp(bool(v))
+
+    def set_fading_change_db(self, v: float) -> None:
+        self._config.dsp.noise_fading_change_db = float(v)
+        self._noise_profiler.set_fading_change_db(float(v))
+
+    def set_fading_freeze_ms(self, v: float) -> None:
+        self._config.dsp.noise_fading_freeze_ms = float(v)
+        self._noise_profiler.set_fading_freeze_ms(float(v))
 
     @property
     def fading_comp_enabled(self) -> bool:

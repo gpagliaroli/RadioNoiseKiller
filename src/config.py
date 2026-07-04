@@ -63,6 +63,8 @@ class DSPConfig:
     pitch_enhance_enabled:  bool  = False  # refuerzo de armónicos SSB via autocorrelación
     pitch_enhance_strength: float = 0.7    # qué tanto elevar p_speech en bins de armónicos (0-1)
     noise_fading_comp:      bool  = False  # compensación de fading HF: freeze MCRA + release rápido
+    noise_fading_change_db: float = 5.0    # umbral de detección de fade (2-10 dB)
+    noise_fading_freeze_ms: float = 200.0  # duración del freeze MCRA tras el evento (100-500 ms)
     bandpass_limits: dict = field(default_factory=lambda: {
         RadioMode.AM:  (300, 5000),
         RadioMode.SSB: (200, 3000),
@@ -146,6 +148,8 @@ class AppConfig:
                 "pitch_enhance_enabled":  self.dsp.pitch_enhance_enabled,
                 "pitch_enhance_strength": self.dsp.pitch_enhance_strength,
                 "noise_fading_comp":      self.dsp.noise_fading_comp,
+                "noise_fading_change_db": self.dsp.noise_fading_change_db,
+                "noise_fading_freeze_ms": self.dsp.noise_fading_freeze_ms,
                 "filter_order": self.dsp.filter_order,
                 "bandpass_limits": {
                     m.value: list(v)
@@ -234,6 +238,8 @@ class AppConfig:
         self.dsp.pitch_enhance_enabled  = bool(d.get("pitch_enhance_enabled",  self.dsp.pitch_enhance_enabled))
         self.dsp.pitch_enhance_strength = float(d.get("pitch_enhance_strength", self.dsp.pitch_enhance_strength))
         self.dsp.noise_fading_comp      = bool(d.get("noise_fading_comp",      self.dsp.noise_fading_comp))
+        self.dsp.noise_fading_change_db = float(d.get("noise_fading_change_db", self.dsp.noise_fading_change_db))
+        self.dsp.noise_fading_freeze_ms = float(d.get("noise_fading_freeze_ms", self.dsp.noise_fading_freeze_ms))
         self.dsp.filter_order = d.get("filter_order", self.dsp.filter_order)
         for mode_str, limits in d.get("bandpass_limits", {}).items():
             if mode_str in ("SSB-USB", "SSB-LSB"):
