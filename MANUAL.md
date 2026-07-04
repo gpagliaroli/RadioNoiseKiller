@@ -35,6 +35,47 @@ La aplicación aplica una serie de procesos en cadena — el **pipeline** — do
 
 ---
 
+## Glosario de términos
+
+Los términos que aparecen a lo largo del manual, en orden alfabético. Los operadores con experiencia pueden saltear este capítulo y volver cuando encuentren un término desconocido.
+
+| Término | Significado |
+|---------|-------------|
+| **AGC** | Control Automático de Ganancia (*Automatic Gain Control*). Ajusta el volumen de forma continua para mantener un nivel de salida estable: amplifica las señales débiles y atenúa las fuertes. |
+| **AM / SSB** | Los dos modos de recepción soportados. **AM** (amplitud modulada): radiodifusión y onda corta comercial, ancho de banda amplio. **SSB** (banda lateral única): el modo de voz habitual en radioafición de HF, más eficiente pero con la voz comprimida en frecuencia. |
+| **ANF** | Filtro de muesca automático (*Automatic Notch Filter*). Detecta y elimina tonos continuos (heterodinos, portadoras, zumbidos de red) sin afectar la voz. |
+| **Armónicos** | Múltiplos de la frecuencia fundamental de un sonido. La voz humana concentra su energía en la fundamental (80–400 Hz) y sus armónicos — esa estructura es lo que distingue la voz del ruido. |
+| **Ataque / Release** | Tiempos de reacción de un procesador de dinámica. **Ataque:** cuán rápido reacciona cuando la señal sube. **Release:** cuán rápido se recupera cuando la señal baja. |
+| **Bin (espectral)** | Cada una de las "celdas" de frecuencia en que la FFT divide el espectro. El cancelador de ruido decide bin por bin cuánto atenuar. |
+| **Bypass** | Pasar el audio sin procesar. Sirve para comparar el sonido con y sin la aplicación. |
+| **dB / dBFS** | **Decibel:** unidad logarítmica de nivel; +6 dB ≈ el doble de amplitud, −20 dB = una décima parte. **dBFS** (*full scale*): decibeles referidos al máximo digital; 0 dBFS es el tope absoluto antes de la distorsión, los niveles de trabajo son negativos (ej. −20 dBFS). |
+| **DSP** | Procesamiento Digital de Señales (*Digital Signal Processing*). Todo el trabajo que la aplicación hace sobre el audio: filtros, cancelación de ruido, ecualización. |
+| **Fading / QSB** | Desvanecimiento: subidas y bajadas lentas del nivel de señal por cambios en la propagación ionosférica, típico de onda corta. QSB es su código Q en radioafición. |
+| **FFT / Espectro** | La FFT (*Fast Fourier Transform*) descompone el audio en sus frecuencias componentes. El **espectro** es esa representación: cuánta energía hay en cada frecuencia. |
+| **Filtro de paso de banda** | Filtro que deja pasar solo las frecuencias entre un límite inferior y uno superior (ej. 200–3000 Hz para SSB), eliminando todo lo demás. |
+| **Gate** | Compuerta de audio: abierta deja pasar el sonido, cerrada lo silencia por completo. Es el mecanismo del squelch. |
+| **Heterodino** | Tono continuo (silbido) producido por una portadora cercana a la frecuencia sintonizada. El ANF los elimina automáticamente. |
+| **Hz / kHz** | Hertz: unidad de frecuencia (ciclos por segundo). 1 kHz = 1000 Hz. La voz en SSB ocupa aproximadamente 200–3000 Hz. |
+| **MCRA** | Modo de estimación **Adaptativa** del ruido (*Minima Controlled Recursive Averaging*). Estima el piso de ruido de forma continua y automática, sin necesidad de "aprender" un perfil manualmente. Alternativa al Perfil estático. |
+| **Perfil de ruido** | "Fotografía" del ruido de la banda que el cancelador usa como referencia. En modo estático se aprende manualmente (3–5 s sin señal); en modo Adaptativo (MCRA) se estima solo. |
+| **Pipeline** | La cadena de procesamiento: la secuencia ordenada de etapas que el audio atraviesa desde la entrada hasta la salida. |
+| **Piso de ruido** | El nivel de ruido de fondo constante de la banda. Todo lo que está por debajo es inaudible; la señal útil debe superarlo. |
+| **Pitch (f0)** | La frecuencia fundamental de la voz — el "tono" con que habla una persona (80–400 Hz). La aplicación lo detecta para proteger los armónicos de la voz y para el squelch. |
+| **Portadora** | Señal de radio sin modulación (un tono puro en RF). En el audio demodulado aparece como silbido continuo o como silencio con ruido de fondo, según el modo. |
+| **Preset** | Conjunto guardado de todos los ajustes DSP y de ganancia, para cargar de una vez configuraciones completas (pestaña Presets). |
+| **Q (selectividad)** | Factor de calidad de un filtro: qué tan angosto es. Q bajo = afecta una banda ancha de frecuencias; Q alto = pico estrecho y selectivo. |
+| **QRN** | Código Q para el ruido atmosférico: descargas eléctricas, tormentas, crujidos impulsivos. Lo ataca el Supresor de Impulsos. |
+| **Retención (hold)** | Tiempo que el squelch mantiene el gate abierto después de que la voz desaparece, para no cortar finales de palabra ni pausas breves. |
+| **RMS** | Valor eficaz (*Root Mean Square*): medida del nivel promedio de una señal, más representativa del volumen percibido que el valor pico. |
+| **SDR** | Radio Definida por Software (*Software Defined Radio*). Receptores cuya demodulación se hace en la PC (SDR#, HDSDR, etc.); su audio se puede procesar con esta aplicación usando un cable de audio virtual. |
+| **SNR** | Relación señal/ruido (*Signal-to-Noise Ratio*): cuántas veces la señal supera al ruido. SNR alto = señal limpia; SNR bajo = señal enterrada en ruido. |
+| **Squelch** | Silenciador: suprime la salida de audio cuando no hay una transmisión presente, eliminando el ruido de banda entre comunicados. |
+| **Umbral** | Valor de disparo de un detector: por encima de él actúa, por debajo no. Varios módulos tienen umbral configurable (squelch, ANF, supresor de impulsos). |
+| **VAD** | Detector de Actividad de Voz (*Voice Activity Detector*). Decide en tiempo real si lo que se escucha es voz humana o solo ruido; alimenta al squelch y al cancelador. |
+| **Wiener (filtro)** | Técnica matemática de reducción de ruido que atenúa cada bin del espectro en proporción a cuánto ruido contiene. Es el corazón del Cancelador de Ruido Estacionario. |
+
+---
+
 ## Diagrama del Pipeline
 
 El audio recorre los siguientes procesos en orden. Cada etapa puede activarse o desactivarse de forma independiente:
