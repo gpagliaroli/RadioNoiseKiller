@@ -332,6 +332,14 @@ Cambios v1.3 (pendiente de release):
   frame (`_sq_gain_prev`) para reaperturas y cierres sin clicks; reemplaza el ramp-out de un frame
   (`_sq_gate_was_open` eliminado). La property `squelch_gate_open` no cambia: gain>0 ⇔ vp≥umbral o
   hold>0, mismas condiciones.
+- Limitador de picos con rodilla suave: antes era brickwall ∞:1 con rodilla dura y release 100ms —
+  aplastaba los picos de voz de golpe y el envelope "agachaba" los ~150ms siguientes (ducking
+  audible). Ahora: curva cuadrática en dominio dB con rodilla de 6 dB centrada en el límite
+  (`_KNEE_DB`; passthrough hasta límite−3dB, techo plano en límite+3dB, la salida nunca supera el
+  límite) y release 50ms (`_RELEASE_S`). Ambos son constantes de clase en `gain.py` pensadas para
+  ajuste de escucha en código, sin controles UI. Fix incluido: el carry del envelope entre chunks
+  multiplicaba por 1/coef en vez de coef (inflaba el envelope ~0.04% por borde → limitaba de más);
+  ahora procesado por chunks == entero, bit a bit.
 
 ### Visualizador de espectro — decisiones de implementación
 
