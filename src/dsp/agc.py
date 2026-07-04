@@ -99,6 +99,11 @@ class AGC:
         return 20.0 * np.log10(max(self._gain, 1e-10))
 
     @property
+    def gain_lin(self) -> float:
+        """Ganancia lineal actual (1.0 con AGC desactivado)."""
+        return self._gain if self._enabled else 1.0
+
+    @property
     def enabled(self) -> bool:
         return self._enabled
 

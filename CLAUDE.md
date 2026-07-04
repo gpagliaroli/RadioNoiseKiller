@@ -307,6 +307,31 @@ Cambios v1.3 (pendiente de release):
   en Avanzada Cancelador (`noise_fading_change_db/noise_fading_freeze_ms` en DSPConfig, persistidos
   en settings.json y presets); checkbox movido de Avanzada Cancelador a Módulos Activos como
   sub-módulo del cancelador; el indicador FADE/ok queda en Avanzada Cancelador
+- Fix squelch + AGC (dos partes, automático, sin controles nuevos):
+  1. **Compensación AGC**: el release del AGC tras la voz amplificaba el ruido hasta el target y el
+     VAD de energía lo tomaba por voz — el gate no cerraba. El pipeline pasa `AGC.gain_lin` al
+     profiler cada frame (`set_agc_gain`) y los trackers de energía descuentan `ganancia²`.
+  2. **Confirmación espectral del VAD**: el tracker de energía satura con ratio 2:1 (3 dB) — el
+     ruido de banda fluctuante marcaba 100% de voz aunque no subiera de nivel. `vp_raw` se multiplica
+     por `max(conf_peakiness, conf_periodicidad)`:
+     - *Peakiness*: `mean(top 5% snr_post) / mean(snr_post)` — invariante al nivel (una ráfaga plana
+       eleva todos los bins por igual). Ruido exponencial ≈ 4-5; voz (armónicos) 8-18. Mapeo 5.5→9.5.
+     - *Periodicidad*: confianza de la autocorrelación (`_pitch_autocorr()`, refactor de
+       `_detect_pitch` que ahora corre SIEMPRE, una vez por frame, compartida con pitch enhance).
+       Independiente del estimador — cubre voz sostenida cuando la ventana de mínimos de MCRA (800ms)
+       absorbió los armónicos y la peakiness se aplana. Mapeo 0.25→0.45.
+     La confianza tiene ataque instantáneo y release ~100ms (`_VAD_CONF_RELEASE=0.90`) para cubrir
+     valles entre sílabas. Verificado en simulación: ruido fluctuante ±6dB vp=0.00 (antes 1.00),
+     voz clara gate abierto 100% (umbral 30% + hold 500ms), release AGC vp=0.00.
+- Fix VAD saturado: `vp_raw > vp` estricto hacía oscilar voice_prob_sq 1.0/0.6 por frame con voz
+  plena (ambos saturados en 1.0 → el else aplicaba release). Con umbral de squelch >60% el gate
+  parpadearía. Fix: `>=` en ambos trackers (lento y rápido).
+- Cierre progresivo del squelch (anti "cola de squelch"): durante la retención, ganancia plena en la
+  primera mitad del hold (las pausas entre palabras no se atenúan) y fade lineal en la segunda mitad
+  hasta el mute — antes el ruido pasaba a pleno volumen todo el hold y cortaba de golpe. Rampa por
+  frame (`_sq_gain_prev`) para reaperturas y cierres sin clicks; reemplaza el ramp-out de un frame
+  (`_sq_gate_was_open` eliminado). La property `squelch_gate_open` no cambia: gain>0 ⇔ vp≥umbral o
+  hold>0, mismas condiciones.
 
 ### Visualizador de espectro — decisiones de implementación
 

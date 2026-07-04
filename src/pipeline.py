@@ -78,7 +78,7 @@ class ProcessingPipeline:
         self._squelch_hold_ms:   float = config.dsp.squelch_hold_ms
         self._squelch_hold_frames: int = 0   # se calcula en start()
         self._squelch_hold_count:  int = 0
-        self._sq_gate_was_open:    bool = False  # estado anterior del gate (ramp-out)
+        self._sq_gain_prev:        float = 1.0   # ganancia del gate en el frame anterior (rampa)
         self._exciter = AuralExciter(config.audio.sample_rate)
         self._exciter.set_drive(config.dsp.exciter_drive)
         self._exciter.set_mix(config.dsp.exciter_mix)
@@ -587,7 +587,7 @@ class ProcessingPipeline:
             hop_ms = self._config.audio.block_size / self._config.audio.sample_rate * 1000.0
             self._squelch_hold_frames = max(0, round(self._squelch_hold_ms / hop_ms))
             self._squelch_hold_count  = 0
-            self._sq_gate_was_open    = False
+            self._sq_gain_prev        = 1.0
             self._in_acc  = np.zeros(0, dtype=np.float32)
             self._out_acc = np.zeros(0, dtype=np.float32)
             self._drain_queues()
@@ -717,6 +717,8 @@ class ProcessingPipeline:
 
                 filtered = self._anf.process(filtered)
                 self._spec_pre_frames.append(filtered.copy())   # post-bandpass/ANF, pre noise profiler
+                # El VAD del profiler descuenta la ganancia del AGC (nivel de antena)
+                self._noise_profiler.set_agc_gain(self._agc.gain_lin)
                 filtered = self._noise_profiler.process(filtered)
 
                 # El squelch depende de voice_prob_sq, que solo se actualiza con el
@@ -727,22 +729,25 @@ class ProcessingPipeline:
                     vp = self._noise_profiler.voice_prob_sq
                     if vp >= self._squelch_threshold:
                         self._squelch_hold_count = self._squelch_hold_frames
-                        gate_open = True
+                    elif self._squelch_hold_count > 0:
+                        self._squelch_hold_count -= 1
+                    # Ganancia del gate: plena con voz y durante la primera mitad
+                    # de la retención (no toca pausas entre palabras); fade suave
+                    # en la segunda mitad — evita la "cola de squelch" (ruido a
+                    # pleno volumen hasta el mute abrupto). Si vuelve la voz, la
+                    # rampa por frame reabre sin click.
+                    if vp >= self._squelch_threshold:
+                        sq_gain = 1.0
                     else:
-                        gate_open = self._squelch_hold_count > 0
-                        if gate_open:
-                            self._squelch_hold_count -= 1
-                    just_closing = self._sq_gate_was_open and not gate_open
-                    self._sq_gate_was_open = gate_open
-                    if not gate_open:
-                        if just_closing:
-                            # primer frame cerrado: ramp lineal 1→0 para evitar click
-                            ramp = np.linspace(1.0, 0.0, len(filtered), dtype=np.float32)
-                            filtered = filtered * ramp
-                        else:
-                            filtered = np.zeros_like(filtered)
+                        half    = max(1, self._squelch_hold_frames // 2)
+                        sq_gain = min(1.0, self._squelch_hold_count / half)
+                    if sq_gain < 1.0 or self._sq_gain_prev < 1.0:
+                        ramp = np.linspace(self._sq_gain_prev, sq_gain,
+                                           len(filtered), dtype=np.float32)
+                        filtered = filtered * ramp
+                    self._sq_gain_prev = sq_gain
                 else:
-                    self._sq_gate_was_open = True
+                    self._sq_gain_prev = 1.0
 
                 with self._lock:
                     mixed = self._bandpass_out.process(filtered) if self._bandpass_post_enabled else filtered

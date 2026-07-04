@@ -767,7 +767,7 @@ class AdvancedCancellerTab(QWidget):
         self._s_squelch_threshold._val_lbl.setFixedWidth(110)
         self._s_squelch_threshold.valueChanged.connect(self._on_squelch_threshold)
         layout.addWidget(self._s_squelch_threshold)
-        layout.addWidget(_note("  ↳ Ponerlo por ENCIMA de lo que marca 'Nivel de voz' con solo ruido (ej: ruido 60% → umbral 70–80%)."))
+        layout.addWidget(_note("  ↳ El ruido marca ~0% (el detector exige estructura de voz): 10–25% suele bastar. Subirlo solo si una interferencia tonal abre el gate."))
 
         self._s_squelch_hold = SliderRow(
             "Retención:",

@@ -1,6 +1,6 @@
 # Reductor de Ruido Radio — Manual de Usuario
 
-**Versión 1.2**
+**Versión 1.3**
 
 ---
 
@@ -162,7 +162,8 @@ Cada casilla de verificación activa o desactiva un módulo del pipeline de form
 | &nbsp;&nbsp;&nbsp;↳ **Piso espectral perceptual** | Sub-módulo del cancelador. Reemplaza el piso fijo por una curva que varía con la frecuencia: eleva el piso en la zona vocal (~500 Hz, preserva la calidez de la voz) y lo baja en alta frecuencia (suprime más el soplido). Curva configurable en Avanzada Cancelador. |
 | &nbsp;&nbsp;&nbsp;↳ **Post-filtro espectral** | Sub-módulo del cancelador. Elimina el "ruido musical" (pitidos intermitentes) que el Wiener deja como residuo. Activar cuando se note ese artefacto. Agresividad configurable en Avanzada Cancelador. |
 | &nbsp;&nbsp;&nbsp;↳ **Refuerzo de pitch SSB** | Sub-módulo del cancelador. Para señales SSB muy débiles: detecta el tono fundamental de la voz y protege sus armónicos de ser suprimidos. Activar solo si la voz suena "fantasmal" con el cancelador al máximo. Sensibilidad configurable en Avanzada Cancelador. |
-| &nbsp;&nbsp;&nbsp;↳ **Squelch de voz** | Sub-módulo del cancelador. Silencia completamente el audio entre transmisiones (gate binario, sin mute parcial). **No usar con música.** Indicador de nivel de voz y estado del gate en Avanzada Cancelador. |
+| &nbsp;&nbsp;&nbsp;↳ **Squelch de voz** | Sub-módulo del cancelador. Silencia el audio entre transmisiones con cierre progresivo (sin gorgojeo ni cola de ruido). **No usar con música.** Indicador de nivel de voz y estado del gate en Avanzada Cancelador. |
+| &nbsp;&nbsp;&nbsp;↳ **Compensación fading HF** | Sub-módulo del cancelador, solo modo Adaptativo. Congela el estimador de ruido durante fades ionosféricos (QSB) y acelera la recuperación al volver la señal. Sensibilidad y duración en Avanzada Cancelador. |
 | **EQ Voz (presencia + cuerpo)** | Dos bandas paramétricas: presencia (claridad, 1–2 kHz) y cuerpo (calidez, 150–800 Hz). Activar para modelar la voz con señales debilitadas o muy filtradas. |
 | **Excitador armónico** | Para señales de voz opacas, sin brillo. Añade presencia. Comparar con y sin para decidir. |
 
@@ -291,7 +292,8 @@ Este comportamiento es automático y no requiere ningún ajuste. Se activa cuand
 
 **Compensación de fading HF** (solo modo Adaptativo)
 
-**Activar:** Pestaña Avanzada Cancelador → casilla "Compensación fading HF"
+**Activar:** Pestaña Principal → Módulos activos → casilla "Compensación fading HF" (sub-módulo del cancelador)
+**Calibrar:** Pestaña Avanzada Cancelador → sliders "Sensibilidad fading" y "Duración del freeze"
 
 En onda corta con desvanecimiento ionosférico (QSB), la señal sube y baja de nivel varias veces por minuto. Sin compensación, esto produce dos problemas audibles:
 
@@ -300,10 +302,17 @@ En onda corta con desvanecimiento ionosférico (QSB), la señal sube y baja de n
 
 La compensación ataca ambos problemas:
 
-- **Congelamiento del estimador:** cuando detecta un cambio brusco de energía (≥5 dB en un frame, típico de una transición de fade), congela el estimado de piso de ruido por 200 ms. El piso pre-fade se preserva y al volver la señal se aplica de inmediato.
+- **Congelamiento del estimador:** cuando detecta un cambio brusco de energía (típico de una transición de fade), congela el estimado de piso de ruido. El piso pre-fade se preserva y al volver la señal se aplica de inmediato.
 - **Release acelerado:** mientras la casilla está activa, la ganancia del Wiener responde a subidas de señal en ~20–30 ms en lugar de 100–150 ms. La voz que emerge del fade se abre sin retraso perceptible.
 
-El indicador junto a la casilla muestra **FADE** (naranja) cuando hay un evento de fading activo y **ok** (gris) cuando la señal está estable. Si FADE aparece constantemente sin que haya desvanecimiento real, la señal tiene variaciones rápidas de nivel (p. ej. AM con modulación profunda) y conviene desactivar la casilla.
+Dos sliders en Avanzada Cancelador permiten calibrar la detección:
+
+| Control | Rango | Default | Descripción |
+|---------|-------|---------|-------------|
+| **Sensibilidad fading** | 2 – 10 dB | 5 dB | Cambio de energía que dispara el congelamiento. Bajo (2–4 dB): detecta QSB suave, pero puede disparar con la propia voz. Alto (7–10 dB): solo fades profundos. |
+| **Duración del freeze** | 100 – 500 ms | 200 ms | Cuánto tiempo queda congelado el estimador tras cada evento. Fades lentos necesitan más; un valor muy largo desactualiza el piso si el ruido de banda cambió de verdad. |
+
+El indicador en Avanzada Cancelador muestra **FADE** (naranja) cuando hay un evento de fading activo y **ok** (gris) cuando la señal está estable. Si FADE aparece constantemente sin que haya desvanecimiento real, la señal tiene variaciones rápidas de nivel (p. ej. AM con modulación profunda) — subir la Sensibilidad o desactivar la casilla.
 
 > **Cuándo activarla:** escucha de onda corta (SSB o AM DX) con fading perceptible, siempre en modo Adaptativo. En señales locales estables o en modo Perfil estático no tiene efecto útil.
 
@@ -426,9 +435,9 @@ Este módulo detecta en tiempo real el **tono fundamental** (f0) de la voz media
 
 Silencia completamente la salida cuando el cancelador de ruido no detecta voz humana. En SSB, entre transmisiones no hay portadora — solo ruido de banda — y el squelch elimina ese ruido residual que queda después de la reducción.
 
-Funciona como un **gate binario**: cuando se detecta voz, el audio pasa sin modificación; cuando no hay voz (y expira el tiempo de retención), la salida se silencia con un breve rampado de ~10 ms para evitar clicks. El cierre es completo — no hay audio residual ni gorgojeo.
+El detector de voz no mide solo energía: exige **estructura de voz** — concentración de energía en armónicos y periodicidad (autocorrelación) — y descuenta la ganancia del AGC. Por eso el ruido de banda marca valores cercanos a 0% en el indicador aunque fluctúe fuerte o el AGC lo amplifique al terminar una transmisión, y la voz marca 80–100%.
 
-El parámetro **Retención** evita que el squelch corte el final de las palabras o las frases breves, manteniendo el gate abierto algunos milisegundos después de que la voz desaparece.
+Funciona como un **gate con cierre progresivo**: con voz detectada el audio pasa sin modificación; al desaparecer la voz, el gate se mantiene a volumen pleno durante la primera mitad de la Retención (las pausas entre palabras no se alteran), se desvanece suavemente durante la segunda mitad, y queda en silencio completo. Si la voz reaparece en cualquier punto, el gate reabre al instante sin clicks. No hay audio residual ni gorgojeo en el estado cerrado.
 
 **Requiere el Cancelador de ruido estacionario activo** — el detector de voz vive dentro del cancelador. Si el cancelador está desactivado, el squelch queda en bypass (el audio pasa siempre). Además necesita perfil de ruido aprendido (modo estático) o el período de calentamiento del MCRA (~200 ms).
 
@@ -443,20 +452,20 @@ El parámetro **Retención** evita que el squelch corte el final de las palabras
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
-| **Umbral squelch** | 5% – 100% | 15% | Nivel mínimo de actividad de voz para abrir el gate. La misma escala que el indicador **Nivel de voz**: observar cuánto marca con solo ruido y poner el umbral por encima. **Bajo (5–15%):** más sensible, abre con señales débiles — para bandas tranquilas. **Alto (65–90%):** necesario en bandas ruidosas, donde el ruido fluctuante puede marcar 50–60% por sí solo. |
-| **Retención** | 0 – 1000 ms | 500 ms | Tiempo que el gate permanece abierto después de que la voz desaparece. 500 ms es adecuado para SSB normal. Subir a 700–1000 ms para operadores con pausas largas entre palabras. |
+| **Umbral squelch** | 5% – 100% | 15% | Nivel mínimo de actividad de voz para abrir el gate, en la misma escala que el indicador **Nivel de voz**. Como el detector exige estructura de voz, el ruido marca ~0% y no hace falta un umbral alto: **10–25% cubre la mayoría de los casos**. Bajarlo a 5–10% para señales muy débiles; subirlo solo si alguna interferencia con estructura tonal (p. ej. un heterodino que el ANF no atrapa) abriera el gate. |
+| **Retención** | 0 – 1000 ms | 500 ms | Tiempo desde el fin de la voz hasta el silencio total: volumen pleno la primera mitad, desvanecimiento progresivo la segunda. 500 ms es adecuado para SSB normal; con el detector actual se puede bajar a 300 ms para un mute más rápido. Subir a 700–1000 ms para operadores con pausas largas entre palabras. |
 
 ### Calibración
 
 El indicador **Nivel de voz** y el estado del **Gate** en la pestaña Avanzada Cancelador son la herramienta principal de calibración:
 
-1. **Con solo ruido de banda** (sin transmisión) → anotar cuánto marca "Nivel de voz". En bandas tranquilas será 5–15%; en bandas con ruido fuerte y fluctuante puede llegar a 50–60% — es normal: el detector mide variaciones de energía y el ruido atmosférico varía.
+1. **Con solo ruido de banda** (sin transmisión) → "Nivel de voz" debería marcar 0–10%, incluso con ruido fuerte, fluctuante o con el AGC amplificándolo. Si marca más de forma sostenida, probablemente haya una interferencia tonal — activar el ANF.
 2. **Con transmisión activa** → "Nivel de voz" sube hacia 80–100% y "Gate: ABIERTO".
-3. Ajustar el **Umbral** entre esos dos valores, más cerca del nivel de ruido (ej.: ruido 60% y voz 100% → umbral 70–75%; ruido 10% y voz 80% → umbral 20–30%).
+3. Ajustar el **Umbral** en 15–25%. Para señales muy débiles que no llegan a abrir, bajarlo a 5–10%.
 
-> **Si el gate nunca cierra:** el nivel con solo ruido está por encima del umbral. Subir el umbral hasta superarlo — para eso el control llega hasta 100%.
+> **Si el gate nunca cierra:** hay algo con estructura tonal o periódica en la banda (heterodino, portadora). Activar el ANF para eliminarlo, o subir el umbral por encima de lo que marca el indicador.
 
-> **Nota de temporización:** tras el fin de la voz, el indicador baja en ~100 ms; luego el gate permanece ABIERTO durante la Retención configurada y finalmente cierra. Si el gate cierra demasiado pronto cortando finales de palabras, aumentar la Retención.
+> **Nota de temporización:** tras el fin de la voz, el indicador baja en ~100–150 ms; el gate sigue a volumen pleno la primera mitad de la Retención y se desvanece durante la segunda. Si corta finales de palabras, aumentar la Retención; si el ruido tarda en apagarse, reducirla.
 
 ---
 

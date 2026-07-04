@@ -72,6 +72,19 @@ class NoiseProfiler:
     _VAD_ALPHA_SQ:   float = 0.50   # rápido: TC=2 frames (20ms) → squelch reactivo
     _VAD_MIN_DECAY:  float = 1.002  # piso mínimo sube 0.2%/frame
     _VAD_SQ_RELEASE: float = 0.60   # release voice_prob_sq: 1.0→0.15 en ~4 frames (≈40ms)
+    # Confirmación espectral (peakiness): ratio entre el SNR medio del top 5% de
+    # bins y el SNR medio global. Invariante al nivel: el ruido plano (exponencial)
+    # da ~4-5 sin importar cuánto suba (ráfagas, release del AGC); la voz concentra
+    # energía en armónicos → 8-18. Medido en simulación: ruido p90=5.3, voz débil
+    # p90=8.4, voz clara p90=17.6.
+    _VAD_PEAK_BASE:  float = 5.5    # ratio donde la confianza empieza a subir
+    _VAD_PEAK_SPAN:  float = 4.0    # ratio BASE+SPAN (9.5) → confianza plena
+    # Confirmación por periodicidad (autocorrelación, independiente del estimador
+    # de ruido — cubre voz sostenida cuando MCRA absorbió los armónicos):
+    _VAD_PITCH_BASE: float = 0.25   # confianza de autocorr donde empieza a subir
+    _VAD_PITCH_SPAN: float = 0.20   # BASE+SPAN (0.45) → confianza plena
+    _VAD_CONF_RELEASE: float = 0.90 # release de la confianza (~100ms): cubre los
+                                    # valles entre sílabas sin dejar pasar ruido
 
     def __init__(self, hop_size: int = 480):
         self._hop   = hop_size
@@ -102,6 +115,8 @@ class NoiseProfiler:
         # VAD frame-level
         self._voice_prob:    float = 0.0   # suavizado lento (OMLSA)
         self._voice_prob_sq: float = 0.0   # suavizado rápido (squelch)
+        self._agc_gain:      float = 1.0   # ganancia lineal del AGC (compensación del VAD)
+        self._spec_conf:     float = 0.0   # confianza espectral suavizada (peakiness)
 
         self._last_reduction_db: float = 0.0
         self._preview_mode: bool = False
@@ -170,6 +185,7 @@ class NoiseProfiler:
         self._snr_post_prev  = None
         self._voice_prob     = 0.0
         self._voice_prob_sq  = 0.0
+        self._spec_conf      = 0.0
         self._fading_energy_ema = None
         self._mcra_freeze_count = 0
         self._fading_active     = False
@@ -213,6 +229,7 @@ class NoiseProfiler:
         self._snr_post_prev   = None
         self._voice_prob         = 0.0
         self._voice_prob_sq      = 0.0
+        self._spec_conf          = 0.0
         self._vad_energy_fast    = None
         self._vad_energy_min     = None
         self._vad_energy_fast_sq = None
@@ -238,6 +255,7 @@ class NoiseProfiler:
             self._snr_post_prev = None
             self._voice_prob    = 0.0
             self._voice_prob_sq = 0.0
+            self._spec_conf     = 0.0
         return self._n_frames
 
     def clear_profile(self) -> None:
@@ -250,6 +268,7 @@ class NoiseProfiler:
             self._snr_post_prev = None
             self._voice_prob    = 0.0
             self._voice_prob_sq = 0.0
+            self._spec_conf     = 0.0
             self._last_reduction_db = 0.0
             self._ola_prev = np.zeros(self._hop,   dtype=np.float32)
             self._ola_acc  = np.zeros(self._fft_n, dtype=np.float32)
@@ -262,6 +281,7 @@ class NoiseProfiler:
         self._snr_post_prev     = None
         self._voice_prob        = 0.0
         self._voice_prob_sq     = 0.0
+        self._spec_conf         = 0.0
         self._last_reduction_db = 0.0
         self._ola_prev          = np.zeros(self._hop,   dtype=np.float32)
         self._ola_acc           = np.zeros(self._fft_n, dtype=np.float32)
@@ -319,6 +339,13 @@ class NoiseProfiler:
         """Frames de freeze según la duración en ms y el hop actual (48 kHz)."""
         hop_ms = self._hop / 48.0
         return max(1, round(self._fading_freeze_ms / hop_ms))
+
+    def set_agc_gain(self, g: float) -> None:
+        """Ganancia lineal actual del AGC (aguas arriba del profiler).
+        Los trackers de energía del VAD la descuentan para trabajar a nivel
+        de antena: sin esto, el release del AGC tras la voz amplifica el ruido
+        de banda y el VAD lo confunde con voz (el gate de squelch no cierra)."""
+        self._agc_gain = max(float(g), 1e-6)
 
     def set_fading_change_db(self, v: float) -> None:
         self._fading_change_db = float(np.clip(v, 2.0, 10.0))
@@ -379,14 +406,15 @@ class NoiseProfiler:
     # Pitch enhancement — autocorrelación + máscara armónica
     # ------------------------------------------------------------------
 
-    def _detect_pitch(self) -> "float | None":
-        """Detecta f0 por autocorrelación normalizada sobre _pitch_buf.
-        Retorna Hz si la señal es periódica con confianza ≥ _PITCH_CONF_THR, None si no."""
+    def _pitch_autocorr(self) -> "tuple[float | None, float]":
+        """Autocorrelación normalizada sobre _pitch_buf.
+        Retorna (f0_Hz, confianza 0-1). f0 es el pico en 80-400 Hz; la confianza
+        es el valor del pico (voz periódica ≈ 0.4-0.9, ruido de banda < 0.2)."""
         x = self._pitch_buf.astype(np.float64)
         x -= x.mean()
         e0 = float(np.dot(x, x))
         if e0 < 1e-8:
-            return None
+            return None, 0.0
 
         # Autocorrelación vía FFT (rápida y exacta)
         n    = len(x)
@@ -397,15 +425,18 @@ class NoiseProfiler:
 
         search   = acf[self._PITCH_LAG_MIN : self._PITCH_LAG_MAX + 1]
         if len(search) == 0:
-            return None
+            return None, 0.0
 
         peak_idx = int(np.argmax(search))
         peak_val = float(search[peak_idx])
+        return 48000.0 / (peak_idx + self._PITCH_LAG_MIN), peak_val
 
-        if peak_val < self._PITCH_CONF_THR:
+    def _detect_pitch(self) -> "float | None":
+        """f0 en Hz si la señal es periódica con confianza ≥ _PITCH_CONF_THR, None si no."""
+        f0, conf = self._pitch_autocorr()
+        if f0 is None or conf < self._PITCH_CONF_THR:
             return None
-
-        return 48000.0 / (peak_idx + self._PITCH_LAG_MIN)
+        return f0
 
     def _harmonic_mask(self, f0: float) -> np.ndarray:
         """Máscara gaussiana centrada en cada armónico de f0 (en bins FFT)."""
@@ -501,8 +532,11 @@ class NoiseProfiler:
         self._pitch_buf[:-hop] = self._pitch_buf[hop:]
         self._pitch_buf[-hop:] = chunk
 
+        # Autocorrelación una vez por frame: la comparten el pitch enhance y la
+        # confirmación de periodicidad del VAD (voz = periódica, ruido no)
+        f0_frame, pitch_conf = self._pitch_autocorr()
         if self._pitch_enabled:
-            f0 = self._detect_pitch()
+            f0 = f0_frame if pitch_conf >= self._PITCH_CONF_THR else None
             if f0 is not None:
                 self._pitch_f0      = f0
                 self._pitch_f0_hold = 3          # mantener 3 frames ante gaps de detección
@@ -574,6 +608,9 @@ class NoiseProfiler:
             # con alpha=0.50 baja en ~14 frames (<200ms incluso a +30dB SNR).
             mean_sig        = float(np.mean(sig_power))
             mean_noise_prof = float(np.mean(noise_prof2))
+            # Energía compensada por el AGC (nivel de antena): sin esto, el release
+            # del AGC tras la voz amplifica el ruido y los trackers lo toman por voz.
+            mean_sig_comp = mean_sig / (self._agc_gain * self._agc_gain)
             # Portadora cortada: congelar ambos trackers
             if mean_sig < mean_noise_prof * self._MCRA_SQUELCH_RATIO:
                 vp_raw    = 0.0
@@ -581,11 +618,11 @@ class NoiseProfiler:
             else:
                 # Tracker lento (OMLSA)
                 if self._vad_energy_fast is None:
-                    self._vad_energy_fast = mean_sig
-                    self._vad_energy_min  = mean_sig
+                    self._vad_energy_fast = mean_sig_comp
+                    self._vad_energy_min  = mean_sig_comp
                 else:
                     self._vad_energy_fast = (self._VAD_ALPHA_FAST * self._vad_energy_fast
-                                             + (1.0 - self._VAD_ALPHA_FAST) * mean_sig)
+                                             + (1.0 - self._VAD_ALPHA_FAST) * mean_sig_comp)
                     if self._vad_energy_fast < self._vad_energy_min:
                         self._vad_energy_min = self._vad_energy_fast
                     else:
@@ -595,11 +632,11 @@ class NoiseProfiler:
                 ))
                 # Tracker rapido (squelch)
                 if self._vad_energy_fast_sq is None:
-                    self._vad_energy_fast_sq = mean_sig
-                    self._vad_energy_min_sq  = mean_sig
+                    self._vad_energy_fast_sq = mean_sig_comp
+                    self._vad_energy_min_sq  = mean_sig_comp
                 else:
                     self._vad_energy_fast_sq = (self._VAD_ALPHA_SQ * self._vad_energy_fast_sq
-                                                + (1.0 - self._VAD_ALPHA_SQ) * mean_sig)
+                                                + (1.0 - self._VAD_ALPHA_SQ) * mean_sig_comp)
                     if self._vad_energy_fast_sq < self._vad_energy_min_sq:
                         self._vad_energy_min_sq = self._vad_energy_fast_sq
                     else:
@@ -608,15 +645,45 @@ class NoiseProfiler:
                     self._vad_energy_fast_sq / (self._vad_energy_min_sq + 1e-30) - 1.0, 0.0, 1.0
                 ))
 
+                # --- Confirmación espectral (peakiness) ---
+                # El tracker de energía satura con ratio 2:1 (3 dB): el ruido de
+                # banda fluctuante lo lleva a 100% sin estructura de voz. Una
+                # ráfaga plana eleva TODOS los bins por igual (el SNR relativo
+                # top/media no cambia); la voz concentra energía en armónicos y
+                # dispara ese ratio. snr_post ya está normalizado por bin con el
+                # estimado de ruido, así que la métrica es invariante al nivel.
+                k_top    = max(1, snr_post.size // 20)   # top 5% de bins
+                top_mean = float(np.mean(np.partition(snr_post, -k_top)[-k_top:]))
+                peak_ratio = top_mean / (float(np.mean(snr_post)) + 1e-12)
+                conf_peak  = float(np.clip(
+                    (peak_ratio - self._VAD_PEAK_BASE) / self._VAD_PEAK_SPAN, 0.0, 1.0
+                ))
+                # Periodicidad: inmune a que MCRA absorba los armónicos en voz
+                # sostenida (la peakiness se aplana si λ_d aprendió la voz)
+                conf_pitch = float(np.clip(
+                    (pitch_conf - self._VAD_PITCH_BASE) / self._VAD_PITCH_SPAN, 0.0, 1.0
+                ))
+                conf_raw = max(conf_peak, conf_pitch)
+                # Ataque instantáneo, release ~100ms: cubre los valles entre
+                # sílabas (con ruido la confianza cruda es 0 y decae rápido)
+                if conf_raw >= self._spec_conf:
+                    self._spec_conf = conf_raw
+                else:
+                    self._spec_conf *= self._VAD_CONF_RELEASE
+                vp_raw    *= self._spec_conf
+                vp_raw_sq *= self._spec_conf
+
             # Suavizado lento (release=0.97) para OMLSA
-            if vp_raw > self._voice_prob:
+            # >= y no >: con vp_raw == vp (ambos saturados en 1.0 con voz plena),
+            # el > estricto aplicaba el release y el vp oscilaba 1.0/0.6 por frame
+            if vp_raw >= self._voice_prob:
                 self._voice_prob = 0.4 * self._voice_prob + 0.6 * vp_raw
             else:
                 self._voice_prob *= 0.97
             self._voice_prob = float(np.clip(self._voice_prob, 0.0, 1.0))
 
             # Suavizado rapido (release=0.60, ~4 frames) para squelch
-            if vp_raw_sq > self._voice_prob_sq:
+            if vp_raw_sq >= self._voice_prob_sq:
                 self._voice_prob_sq = vp_raw_sq
             else:
                 self._voice_prob_sq *= self._VAD_SQ_RELEASE
