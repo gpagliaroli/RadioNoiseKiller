@@ -1,3 +1,5 @@
+from collections import deque
+
 import numpy as np
 from scipy.special import exp1 as _exp1
 
@@ -55,6 +57,12 @@ class NoiseProfiler:
     _MCRA_B:             int   = 4      # número de subtramas
     _MCRA_M:             int   = 20     # frames por subtrama → ventana total = B×M = 80 frames ≈ 800ms
     _MCRA_SQUELCH_RATIO: float = 0.05  # congelar si potencia_frame < 5% del piso estimado (-13 dB)
+    # Cuarentena look-behind: λ_d se actualiza con el frame de hace K frames, y solo
+    # si ningún frame posterior detectó fade/impulso mientras estaba en cola. Así el
+    # onset de un fade (que la detección ve 1-2 frames tarde por el OLA al 50%) se
+    # descarta retroactivamente y nunca contamina el estimado. No agrega latencia de
+    # audio: solo el estimador consume frames viejos (ya promedia sobre ~800ms).
+    _MCRA_QUAR_FRAMES:   int   = 3      # profundidad de la cuarentena (30ms @ hop 480)
 
     # Compensación de fading HF
     # Detecta cambios bruscos de energía (fading ionosférico) y congela MCRA para que el
@@ -165,6 +173,7 @@ class NoiseProfiler:
         self._mcra_sub_count: int = 0
         self._mcra_sub_idx:   int = 0
         self._mcra_frames:    int = 0
+        self._mcra_quar:      deque = deque()  # cuarentena: [power, contaminado]
 
         # VAD frame-level — tracker lento (OMLSA)
         self._vad_energy_fast:    float | None = None
@@ -200,6 +209,7 @@ class NoiseProfiler:
         self._mcra_sub_count = 0
         self._mcra_sub_idx   = 0
         self._mcra_frames         = 0
+        self._mcra_quar.clear()
         self._vad_energy_fast     = None
         self._vad_energy_min      = None
         self._vad_energy_fast_sq  = None
@@ -456,9 +466,30 @@ class NoiseProfiler:
     # MCRA — estimación adaptativa de ruido
     # ------------------------------------------------------------------
 
-    def _mcra_update(self, spec: np.ndarray) -> "np.ndarray | None":
-        """Actualiza el estimador MCRA y retorna noise_mag. None durante warmup inicial."""
+    def _mcra_current(self) -> "np.ndarray | None":
+        """Estimado actual sin actualizar. None si el warmup no terminó."""
+        if self._mcra_ld is not None and self._mcra_frames >= self._MCRA_M:
+            return np.sqrt(self._mcra_ld).astype(np.float32)
+        return None
+
+    def _mcra_feed(self, spec: np.ndarray) -> "np.ndarray | None":
+        """Encola el frame actual y alimenta MCRA con el frame diferido de la
+        cuarentena (K frames atrás), salvo que haya sido marcado como
+        contaminado por un fade/impulso detectado después de encolarlo.
+        Retorna noise_mag (None durante warmup inicial)."""
         power = (np.abs(spec) ** 2 + 1e-12).astype(np.float64)
+        self._mcra_quar.append([power, self._fading_active])
+        if len(self._mcra_quar) <= self._MCRA_QUAR_FRAMES:
+            return self._mcra_current()
+        old_power, contaminated = self._mcra_quar.popleft()
+        # Durante el warmup se consume igual (el freeze nunca aplicó en warmup)
+        if contaminated and self._mcra_frames >= self._MCRA_M:
+            return self._mcra_current()
+        return self._mcra_update(old_power)
+
+    def _mcra_update(self, power: np.ndarray) -> "np.ndarray | None":
+        """Actualiza el estimador MCRA con la potencia espectral de un frame
+        (ya diferido por la cuarentena) y retorna noise_mag. None durante warmup."""
         self._mcra_frames += 1
 
         # Inicialización en el primer frame
@@ -481,9 +512,8 @@ class NoiseProfiler:
                 return np.sqrt(self._mcra_ld).astype(np.float32)
             return None
 
-        # Freeze de fading: no actualizar λ_d durante un evento de fading detectado
-        if self._fading_comp and self._mcra_freeze_count > 0 and self._mcra_frames >= self._MCRA_M:
-            return np.sqrt(self._mcra_ld).astype(np.float32)
+        # (El freeze de fading vive en _mcra_feed: los frames encolados durante un
+        #  evento — o retroactivamente marcados al detectarlo — no llegan acá.)
 
         # 1. Suavizado de potencia espectral
         self._mcra_Sf = (self._MCRA_ALPHA_S * self._mcra_Sf
@@ -571,6 +601,11 @@ class NoiseProfiler:
                     change_db = abs(10.0 * np.log10(max(frame_e, 1e-15) / ema))
                     if change_db >= self._fading_change_db:
                         self._mcra_freeze_count = self._fading_freeze_frames
+                        # Marcado retroactivo: el onset del fade ya está en la
+                        # cuarentena (la detección lo ve 1-2 frames tarde por el
+                        # OLA) — que esos frames no actualicen λ_d
+                        for item in self._mcra_quar:
+                            item[1] = True
                 if self._mcra_freeze_count > 0:
                     self._mcra_freeze_count -= 1
                     self._fading_active = True
@@ -580,7 +615,7 @@ class NoiseProfiler:
                                            + (1.0 - self._FADING_EMA_ALPHA) * frame_e)
 
         if self._mode == "mcra":
-            noise_mag = self._mcra_update(spec)
+            noise_mag = self._mcra_feed(spec)
         else:
             noise_mag = self._noise_mag
 

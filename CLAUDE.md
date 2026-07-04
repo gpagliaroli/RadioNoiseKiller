@@ -332,6 +332,17 @@ Cambios v1.3 (pendiente de release):
   frame (`_sq_gain_prev`) para reaperturas y cierres sin clicks; reemplaza el ramp-out de un frame
   (`_sq_gate_was_open` eliminado). La property `squelch_gate_open` no cambia: gain>0 ⇔ vp≥umbral o
   hold>0, mismas condiciones.
+- Cuarentena MCRA (look-behind, sin latencia de audio): `λ_d` se actualiza con el frame de hace
+  `_MCRA_QUAR_FRAMES=3` frames (30ms), y solo si ningún frame posterior detectó fade/impulso mientras
+  estaba en cola (`_mcra_feed` → deque `[power, contaminado]`). Al detectar un fade, los frames aún
+  encolados se marcan retroactivamente — el onset (que la detección ve 1-2 frames tarde por el OLA)
+  nunca contamina el estimado. El freeze viejo dentro de `_mcra_update` se eliminó: su semántica vive
+  ahora en los flags de la cuarentena (frames encolados con `_fading_active=True` se descartan al
+  salir). Durante el warmup se consume igual (el freeze nunca aplicó en warmup). La cuarentena corre
+  siempre en modo MCRA (con fading comp OFF no hay flags — es solo un lag de 30ms del estimador,
+  inaudible). `_reset_mcra()` limpia la cola (cubre set_mode/reset/clear_profile y cambios de hop).
+  Verificado: drift de λ_d tras fade de −14dB: 0.015 dB con comp ON vs 6.5 dB sin protección;
+  impulso aislado +20dB: 0.000 dB; adaptación a subidas lentas intacta (+6.1 dB seguidos de +6 reales).
 - Limitador de picos con rodilla suave: antes era brickwall ∞:1 con rodilla dura y release 100ms —
   aplastaba los picos de voz de golpe y el envelope "agachaba" los ~150ms siguientes (ducking
   audible). Ahora: curva cuadrática en dominio dB con rodilla de 6 dB centrada en el límite
