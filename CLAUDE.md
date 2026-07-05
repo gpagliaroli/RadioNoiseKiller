@@ -195,8 +195,11 @@ Para onda corta con QSB. Dos mecanismos, ambos activos solo con el checkbox habi
   fade y quede desfasado al volver. Ambas transiciones (fade y recovery) disparan el freeze.
 - **Release DD acelerado:** en bins con SNR subiendo, `beta_eff` usa `_FADING_BETA_RELEASE=0.45` en vez
   de `beta_fast` (0.80) → la ganancia Wiener responde en ~2-3 frames en vez de 10-15. Elimina el
-  "llega tarde" al salir del fade. Nota: este release aplica siempre que el checkbox esté activo, no
-  solo durante el evento de fading. Fijo, no expuesto (interactúa con el slider "Velocidad ataque").
+  "llega tarde" al salir del fade. **Solo durante un evento activo (`_fading_active`)** — la
+  recuperación dispara su propia ventana de freeze, así que la voz que vuelve del fade queda cubierta.
+  (Antes aplicaba siempre con el checkbox activo: con mucho ruido y sin fading real, los falsos
+  positivos del detector de bins subían con β=0.45 → gorgojeo extra audible — reportado en 40m local.
+  Test de regresión: sin eventos, comp ON == comp OFF salida idéntica.) Fijo, no expuesto.
 - Detección en `process()` ANTES de `_mcra_update()` (el freeze debe estar activo al entrar).
   Ojo: por el OLA al 50%, un fade tarda 2 frames en verse completo en la energía del frame.
 - Solo tiene efecto en modo MCRA; en estático el freeze no aplica (no hay estimador que congelar).
@@ -346,6 +349,10 @@ Cambios v1.3 (pendiente de release):
   inaudible). `_reset_mcra()` limpia la cola (cubre set_mode/reset/clear_profile y cambios de hop).
   Verificado: drift de λ_d tras fade de −14dB: 0.015 dB con comp ON vs 6.5 dB sin protección;
   impulso aislado +20dB: 0.000 dB; adaptación a subidas lentas intacta (+6.1 dB seguidos de +6 reales).
+- Fix gorgojeo con fading comp sin fading: el release acelerado (β=0.45) aplicaba siempre que el
+  checkbox estuviera activo; en bandas ruidosas sin QSB (40m local) los falsos positivos del
+  detector de bins subían casi instantáneo → gorgojeo extra. Ahora condicionado a `_fading_active`
+  (invariante 6: las features condicionadas a un modo deben chequear el modo en TODOS sus efectos).
 - Tests permanentes nuevos: `test_noise_vad.py` (VAD + cuarentena + fading) y `test_integration.py`
   (pipeline headless todo-activado; usa `pipeline.start(headless=True)`, que omite el AudioStream).
   El test de integración destapó que el constructor del pipeline no honraba toda la config

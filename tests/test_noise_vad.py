@@ -190,6 +190,23 @@ check("reset limpia cuarentena", len(p7._mcra_quar) == 0)
 p7.reset(240)
 check("reset(240) recalcula frames (40)", p7._fading_freeze_frames == 40)
 
+# 8. Sin eventos de fading, el checkbox NO debe alterar el procesamiento.
+#    (Bug real: el release acelerado beta=0.45 aplicaba siempre con el checkbox
+#    activo -> gorgojeo extra con mucho ruido y sin fading. Reportado en 40m.)
+mild = rng.standard_normal(500 * HOP) * 0.01
+env_mild = np.repeat(10 ** (rng.uniform(-1.5, 1.5, size=51) / 20.0), 10 * HOP)[: 500 * HOP]
+mild = (mild * env_mild).astype(np.float32).reshape(500, HOP)   # +-3dB < umbral de 5dB
+pa, pb = make_profiler(True), make_profiler(False)
+out_a, out_b = [], []
+fade_seen = False
+for i in range(500):
+    out_a.append(pa.process(mild[i]))
+    out_b.append(pb.process(mild[i]))
+    fade_seen = fade_seen or pa.fading_active
+diff = float(np.max(np.abs(np.concatenate(out_a) - np.concatenate(out_b))))
+check("ruido suave: ningun evento de fading disparado", not fade_seen)
+check("sin eventos: comp ON == comp OFF, salida identica (dif %.1e)" % diff, diff == 0.0)
+
 # ---------------------------------------------------------------------------
 print()
 if _fails:

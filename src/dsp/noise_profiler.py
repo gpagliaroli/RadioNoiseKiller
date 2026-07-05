@@ -728,10 +728,14 @@ class NoiseProfiler:
             beta_r        = np.float32(self._beta)
             vp            = np.float32(self._voice_prob)
             beta_fast_eff = np.float32(beta_r * (1.0 - vp) + self._beta_fast * vp)
-            # En modo fading comp (solo MCRA), el release es más rápido para seguir
-            # la señal al volver del fade
+            # Release acelerado SOLO durante un evento de fading activo (la
+            # recuperación dispara su propia ventana, así que "la voz que vuelve
+            # del fade" queda cubierta). Antes aplicaba siempre con el checkbox
+            # activo: con mucho ruido y sin fading, los falsos positivos del
+            # detector de bins subían con β=0.45 → gorgojeo extra audible.
             beta_release  = (np.float32(self._FADING_BETA_RELEASE)
-                             if self._fading_comp and self._mode == "mcra"
+                             if (self._fading_comp and self._mode == "mcra"
+                                 and self._fading_active)
                              else beta_fast_eff)
 
             # --- DD SNR a priori ---
