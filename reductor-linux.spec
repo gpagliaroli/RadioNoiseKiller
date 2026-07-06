@@ -80,6 +80,15 @@ a = Analysis(
     noarchive=False,
 )
 
+# Excluir libasound del bundle: la libasound empaquetada (la del runner de
+# build) no puede cargar los plugins ALSA del host (pulse/pipewire/default —
+# rutas y versiones distintas), y la enumeración de PortAudio queda solo con
+# dispositivos hw:. Al excluirla, el linker usa la libasound del sistema
+# (ABI estable, presente en cualquier Linux con audio) y los dispositivos
+# virtuales vuelven a aparecer.
+a.binaries = [b for b in a.binaries
+              if not os.path.basename(b[0]).startswith("libasound.")]
+
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(
