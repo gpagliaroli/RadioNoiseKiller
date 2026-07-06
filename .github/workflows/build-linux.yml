@@ -2,8 +2,8 @@ name: Build Linux
 
 on:
   push:
-    branches: [main, master]
-  workflow_dispatch:
+    tags: ['v*']        # solo al cerrar una version (git push origin vX.Y)
+  workflow_dispatch:     # o manualmente desde la pestana Actions
 
 jobs:
   build:
