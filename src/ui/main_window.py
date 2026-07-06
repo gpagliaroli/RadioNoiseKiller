@@ -478,6 +478,12 @@ class MainWindow(QMainWindow):
             self._on_freq_range_changed,
         ))
 
+        # Aplicar el zoom persistido al widget: setValue() en _slider_row corre
+        # ANTES del connect(), así que el valor restaurado no dispara el handler
+        # y el gráfico quedaba con los defaults hasta tocar los sliders.
+        self._spectrum_widget.set_db_max(self._config.window.spectrum_db_max)
+        self._spectrum_widget.set_max_freq_hz(self._config.window.spectrum_max_freq_hz)
+
         layout.addWidget(zoom_widget)
         return tab
 

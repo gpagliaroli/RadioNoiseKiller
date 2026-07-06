@@ -378,6 +378,12 @@ Cambios v1.3:
   ahora procesado por chunks == entero, bit a bit.
 
 Cambios v1.4 (pendiente de release):
+- Fix zoom del espectro al arrancar: los sliders Máx X/Y restauraban su posición desde
+  `WindowConfig`, pero `setValue()` corre antes del `connect()` en `_slider_row` → el handler no se
+  dispara y el `SpectrumWidget` quedaba con defaults hasta tocar los sliders. Fix: push explícito de
+  `set_db_max`/`set_max_freq_hz` tras construir los sliders. Patrón a vigilar: **todo widget cuyo
+  valor inicial se setea antes de conectar la señal necesita aplicar ese valor a mano al destino**
+  (mismo perfil que el bug de `_update_label` diferido en SliderRow).
 - "Aprender ruido" sin saturación: al iniciar el aprendizaje estático, (1) el AGC se congela
   (`AGC.set_hold(True)` — sin hold, el AGC amplifica el ruido de banda hasta el target y el perfil
   captura un barrido de niveles en vez de un nivel estable) y (2) el monitoreo se atenúa −12 dB
