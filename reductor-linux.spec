@@ -74,7 +74,7 @@ a = Analysis(
     ],
     hookspath=[],
     hooksconfig={},
-    runtime_hooks=[],
+    runtime_hooks=[str(ROOT / "pyi_rth_gio.py")],
     excludes=["torch", "tensorflow", "matplotlib", "tkinter", "onnxruntime"],
     cipher=block_cipher,
     noarchive=False,

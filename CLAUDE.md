@@ -378,6 +378,11 @@ Cambios v1.3:
   ahora procesado por chunks == entero, bit a bit.
 
 Cambios v1.4 (pendiente de release):
+- Fix pantallas bajas (reportado en notebook Ubuntu 1366x768): la pestaña Principal ahora vive en un
+  QScrollArea (no fuerza la altura mínima de la ventana) y `_restore_or_center` dimensiona la ventana
+  a `min(contenido, pantalla-60)` — si no entra, aparece scroll pero la app siempre cabe. La posición
+  guardada se clampea dentro de la pantalla actual (cambios de monitor/resolución). Nota Wayland:
+  `move()` puede ser ignorado por el compositor — la posición persistida puede no restaurarse ahí.
 - Nivelador de voz (`voice_leveler_enabled`, sub-módulo del cancelador en Módulos Activos): segundo
   AGC (`_agc_voice`) post-cancelador/post-squelch, gateado por el VAD — `set_hold(voice_prob <
   _LEVELER_VP_THR=0.30)` por frame: solo adapta con voz presente, con ruido/silencio la ganancia

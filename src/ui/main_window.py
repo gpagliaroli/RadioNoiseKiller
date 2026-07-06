@@ -2,6 +2,7 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QComboBox, QSlider, QPushButton, QStatusBar,
     QGroupBox, QCheckBox, QTabWidget, QApplication,
+    QScrollArea, QFrame,
 )
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont
@@ -103,7 +104,15 @@ class MainWindow(QMainWindow):
         layout.addWidget(self._build_modules_group())
         layout.addWidget(self._build_noise_group())
         layout.addWidget(self._build_level_group())
-        return tab
+        # Scroll para pantallas bajas (notebooks 1366x768): sin esto la pestaña
+        # fija la altura mínima de la ventana y no entra completa en el monitor
+        self._main_tab_inner = tab   # para calcular la altura deseada en _restore_or_center
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setWidget(tab)
+        return scroll
 
     def _build_device_group(self) -> QGroupBox:
         group = QGroupBox("Dispositivos de Audio")
@@ -974,13 +983,25 @@ class MainWindow(QMainWindow):
             self._lbl_snr.setStyleSheet("color: #888; font-weight: bold;")
 
     def _restore_or_center(self) -> None:
+        screen = QApplication.primaryScreen().availableGeometry()
+        # Altura deseada: el contenido completo de la pestaña Principal (que
+        # ahora vive en un scroll y ya no fuerza la altura de la ventana) más
+        # tabs/botón/status. Si el monitor es más bajo, se recorta y aparece
+        # el scroll — la app siempre entra en pantalla.
+        desired_h = self._main_tab_inner.sizeHint().height() + 130
+        self.resize(self.minimumWidth(), min(desired_h, screen.height() - 60))
         if self._config.window.x is not None:
-            self.move(self._config.window.x, self._config.window.y)
+            # Clamp: una posición guardada en otro monitor/resolución no debe
+            # dejar la ventana fuera de la pantalla
+            x = max(screen.x(), min(self._config.window.x,
+                                    screen.x() + screen.width() - 200))
+            y = max(screen.y(), min(self._config.window.y,
+                                    screen.y() + screen.height() - 200))
+            self.move(x, y)
         else:
-            screen = QApplication.primaryScreen().availableGeometry()
             self.move(
-                screen.x() + (screen.width()  - self.sizeHint().width())  // 2,
-                screen.y() + (screen.height() - self.sizeHint().height()) // 2,
+                screen.x() + (screen.width()  - self.width())  // 2,
+                screen.y() + (screen.height() - self.height()) // 2,
             )
 
     def _schedule_save(self) -> None:
