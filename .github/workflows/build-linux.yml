@@ -36,11 +36,11 @@ jobs:
       - name: Create ZIP
         run: |
           cd dist
-          zip -r ReductorRuidoRadio-linux-x86_64.zip ReductorRuidoRadio/
+          zip -r RadioNoiseKiller-linux-x86_64.zip RadioNoiseKiller/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ReductorRuidoRadio-linux-x86_64
-          path: dist/ReductorRuidoRadio-linux-x86_64.zip
+          name: RadioNoiseKiller-linux-x86_64
+          path: dist/RadioNoiseKiller-linux-x86_64.zip
           retention-days: 30

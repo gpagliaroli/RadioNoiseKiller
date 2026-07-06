@@ -10,7 +10,7 @@ from ui.main_window import MainWindow
 
 def main():
     app = QApplication(sys.argv)
-    app.setApplicationName("Reductor de Ruido Radio")
+    app.setApplicationName("RadioNoiseKiller")
     app.setApplicationVersion("1.2.0")
     window = MainWindow()
     window.show()

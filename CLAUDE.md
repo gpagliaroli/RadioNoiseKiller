@@ -1,4 +1,4 @@
-# Reductor de Ruido Radio — contexto para Claude Code
+# RadioNoiseKiller (ex "Reductor de Ruido Radio") — contexto para Claude Code
 
 ## Descripción del proyecto
 
@@ -19,7 +19,7 @@ Todo el DSP es numpy/scipy puro — sin dependencias de IA, ONNX ni modelos exte
 .venv\Scripts\python.exe tests\test_devices.py   # Windows
 .venv/bin/python        tests/test_devices.py    # Linux/Pi
 
-# Empaquetar (Windows — genera dist/ReductorRuidoRadio/)
+# Empaquetar (Windows — genera dist/RadioNoiseKiller/)
 .venv\Scripts\python.exe -m PyInstaller reductor.spec --clean --noconfirm
 
 # Empaquetar (Linux x86_64 o Raspberry Pi ARM64 — mismo spec)
@@ -309,6 +309,11 @@ Cambios v1.2:
   fading aplicando en modo static (ver "Invariantes a mantener")
 
 Cambios v1.3 (pendiente de release):
+- Renombre de la app a **RadioNoiseKiller** (nombre final, igual al repo): título de ventana,
+  `setApplicationName`, `name=` en ambos specs (exe/bundle pasan de `ReductorRuidoRadio` a
+  `RadioNoiseKiller`), artifact del workflow Linux, manual y README. El PDF pasa a llamarse
+  `MANUAL_RadioNoiseKiller_vX.Y.pdf`. La carpeta del proyecto local sigue siendo
+  `Reductor_Ruido_Radio` (no se renombra el working dir).
 - Fading HF calibrable: sliders "Sensibilidad fading" (2–10 dB) y "Duración del freeze" (100–500 ms)
   en Avanzada Cancelador (`noise_fading_change_db/noise_fading_freeze_ms` en DSPConfig, persistidos
   en settings.json y presets); checkbox movido de Avanzada Cancelador a Módulos Activos como

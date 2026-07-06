@@ -49,11 +49,11 @@ Audio salida
 4. Presionar **ACTIVAR**
 5. Aprender el perfil de ruido: pulsar **⏺ Aprender ruido** durante 3–5 segundos sin señal, luego **⏹ Detener**
 
-Para Windows: ejecutar `ReductorRuidoRadio.exe`  
+Para Windows: ejecutar `RadioNoiseKiller.exe`  
 Para Linux: dar permisos y ejecutar:
 ```bash
-chmod +x ReductorRuidoRadio
-./ReductorRuidoRadio
+chmod +x RadioNoiseKiller
+./RadioNoiseKiller
 ```
 
 ---

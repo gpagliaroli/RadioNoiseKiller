@@ -1,4 +1,4 @@
-# Reductor de Ruido Radio — Manual de Usuario
+# RadioNoiseKiller — Manual de Usuario
 
 **Versión 1.3**
 
@@ -6,7 +6,7 @@
 
 ## Introducción
 
-**Reductor de Ruido Radio** es una aplicación para Windows que procesa en tiempo real el audio de una radio AM/SSB antes de que llegue a los parlantes o auriculares. Se ubica entre la salida de audio de la radio (o receptor SDR) y la reproducción final, actuando como una cadena de filtros digitales diseñados específicamente para el tipo de ruido que aparece en las bandas de onda corta y AM.
+**RadioNoiseKiller** es una aplicación para Windows que procesa en tiempo real el audio de una radio AM/SSB antes de que llegue a los parlantes o auriculares. Se ubica entre la salida de audio de la radio (o receptor SDR) y la reproducción final, actuando como una cadena de filtros digitales diseñados específicamente para el tipo de ruido que aparece en las bandas de onda corta y AM.
 
 ### ¿Para qué sirve?
 
@@ -742,4 +742,4 @@ Los valores de los sliders **Máx Y** y **Máx X** del visualizador de espectro 
 
 ---
 
-*Reductor de Ruido Radio — versión 1.2*
+*RadioNoiseKiller — versión 1.3*
