@@ -308,7 +308,10 @@ Cambios v1.2:
   permanente con cancelador off, indicadores con estado viejo tras borrar perfil, beta_release de
   fading aplicando en modo static (ver "Invariantes a mantener")
 
-Cambios v1.3 (pendiente de release):
+**v1.3 cerrada (julio 2026)** — versión de app 1.3.0 (`main.py`, título de ventana), manual
+regenerado como `MANUAL_RadioNoiseKiller_v1.3.pdf`. Falta publicar el distribuible en GitHub Releases.
+
+Cambios v1.3:
 - Renombre de la app a **RadioNoiseKiller** (nombre final, igual al repo): título de ventana,
   `setApplicationName`, `name=` en ambos specs (exe/bundle pasan de `ReductorRuidoRadio` a
   `RadioNoiseKiller`), artifact del workflow Linux, manual y README. El PDF pasa a llamarse
