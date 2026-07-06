@@ -205,6 +205,7 @@ Cada casilla de verificación activa o desactiva un módulo del pipeline de form
 | &nbsp;&nbsp;&nbsp;↳ **Refuerzo de pitch SSB** | Sub-módulo del cancelador. Para señales SSB muy débiles: detecta el tono fundamental de la voz y protege sus armónicos de ser suprimidos. Activar solo si la voz suena "fantasmal" con el cancelador al máximo. Sensibilidad configurable en Avanzada Cancelador. |
 | &nbsp;&nbsp;&nbsp;↳ **Squelch de voz** | Sub-módulo del cancelador. Silencia el audio entre transmisiones con cierre progresivo (sin gorgojeo ni cola de ruido). **No usar con música.** Indicador de nivel de voz y estado del gate en Avanzada Cancelador. |
 | &nbsp;&nbsp;&nbsp;↳ **Compensación fading HF** | Sub-módulo del cancelador, solo modo Adaptativo. Congela el estimador de ruido durante fades ionosféricos (QSB) y acelera la recuperación al volver la señal. Sensibilidad y duración en Avanzada Cancelador. |
+| &nbsp;&nbsp;&nbsp;↳ **Nivelador de voz** | Sub-módulo del cancelador. AGC de voz aplicado *después* de la reducción de ruido: mantiene la voz limpia a nivel constante aunque las condiciones de la banda (y la cantidad de cancelación) varíen. Solo adapta cuando detecta voz — el ruido entre transmisiones no se re-amplifica. |
 | **EQ Voz (presencia + cuerpo)** | Dos bandas paramétricas: presencia (claridad, 1–2 kHz) y cuerpo (calidez, 150–800 Hz). Activar para modelar la voz con señales debilitadas o muy filtradas. |
 | **Excitador armónico** | Para señales de voz opacas, sin brillo. Añade presencia. Comparar con y sin para decidir. |
 
@@ -659,6 +660,10 @@ El visualizador opera a ~15 cuadros por segundo. Para reducir el costo de CPU, s
 | **Piso de ruido** | Amarillo punteado | Perfil espectral usado por el cancelador. Representa "cómo suena el ruido de fondo" bin a bin. En modo **Perfil estático** aparece automáticamente cuando hay perfil (aprendido en la sesión o cargado desde una sesión anterior). En modo **Adaptativo (MCRA)** se actualiza cada 500 ms con el estimado en tiempo real. |
 
 Cada curva puede mostrarse u ocultarse de forma independiente con las casillas de la barra superior.
+
+### Indicador S/N
+
+A la derecha de las casillas, el indicador **S/N** muestra la relación señal/ruido de banda completa: cuántos dB por encima del piso de ruido estimado están los picos de la señal actual (suavizado ~1 s). Verde = señal cómoda (>15 dB); amarillo = trabajable (6–15 dB); gris = marginal o solo ruido (con solo ruido de banda marca valores cercanos a 0). Requiere el cancelador activo con perfil (aprendido o MCRA calibrado). Útil para comparar antenas, bandas o condiciones de propagación con un número objetivo.
 
 ### Controles
 

@@ -29,6 +29,7 @@ class ProcessingPipeline:
     """
 
     _LEARN_DUCK_GAIN: float = 0.25   # monitoreo a -12 dB durante "Aprender ruido"
+    _LEVELER_VP_THR:  float = 0.30   # voice_prob mínimo para que el nivelador adapte
 
     def __init__(self, config: AppConfig):
         self._config = config
@@ -53,6 +54,16 @@ class ProcessingPipeline:
         self._agc.set_custom_attack(config.dsp.agc_attack_ms)
         self._agc.set_custom_release(config.dsp.agc_release_ms)
         self._agc.set_preset(config.dsp.agc_preset)
+        # Nivelador de voz: AGC post-cancelador gateado por el VAD. Compensa la
+        # atenuación de voz del Wiener a SNR bajo sin re-amplificar el ruido
+        # residual (con ruido/silencio la ganancia queda congelada via set_hold).
+        self._agc_voice = AGC(config.audio.sample_rate, config.audio.block_size)
+        self._agc_voice.set_custom_target(-20.0)
+        self._agc_voice.set_custom_max_gain(config.dsp.voice_leveler_max_db)
+        self._agc_voice.set_custom_attack(80.0)     # lento — nivelar, no comprimir
+        self._agc_voice.set_custom_release(1500.0)
+        self._agc_voice.set_preset("custom")
+        self._voice_leveler_enabled: bool = config.dsp.voice_leveler_enabled
         self._bandpass     = BandpassFilter(config.dsp, config.audio.sample_rate)
         self._bandpass_out = BandpassFilter(config.dsp, config.audio.sample_rate)
         self._anf = AdaptiveNotchFilter(
@@ -161,6 +172,25 @@ class ProcessingPipeline:
     def set_agc_release(self, ms: float) -> None:
         self._config.dsp.agc_release_ms = float(ms)
         self._agc.set_custom_release(ms)
+
+    def set_voice_leveler_enabled(self, enabled: bool) -> None:
+        self._config.dsp.voice_leveler_enabled = bool(enabled)
+        self._voice_leveler_enabled = bool(enabled)
+
+    def set_voice_leveler_max_db(self, db: float) -> None:
+        # clamp == rango del slider (el clamp interno del AGC es 0-60, más ancho)
+        db = float(np.clip(db, 0.0, 20.0))
+        self._config.dsp.voice_leveler_max_db = db
+        self._agc_voice.set_custom_max_gain(db)
+
+    @property
+    def voice_leveler_gain_db(self) -> float:
+        return self._agc_voice.gain_db
+
+    @property
+    def snr_db(self) -> float:
+        """S/N banda completa (dB, suavizado ~1s) estimado por el cancelador."""
+        return self._noise_profiler.snr_db
 
     def set_presence_db(self, db: float) -> None:
         self._config.dsp.presence_db = float(db)
@@ -301,6 +331,8 @@ class ProcessingPipeline:
         self.set_fading_comp(dsp.noise_fading_comp)
         self.set_fading_change_db(dsp.noise_fading_change_db)
         self.set_fading_freeze_ms(dsp.noise_fading_freeze_ms)
+        self.set_voice_leveler_enabled(dsp.voice_leveler_enabled)
+        self.set_voice_leveler_max_db(dsp.voice_leveler_max_db)
 
         self.set_input_gain_db(gain.input_gain_db)
         self.set_output_gain_db(gain.output_gain_db)
@@ -592,6 +624,7 @@ class ProcessingPipeline:
             self._anf.reset()
             self._noise_profiler.reset(self._config.audio.block_size)
             self._agc.set_hop(self._config.audio.block_size)
+            self._agc_voice.set_hop(self._config.audio.block_size)
             self._exciter.reset()
             hop_ms = self._config.audio.block_size / self._config.audio.sample_rate * 1000.0
             self._squelch_hold_frames = max(0, round(self._squelch_hold_ms / hop_ms))
@@ -775,6 +808,15 @@ class ProcessingPipeline:
                     self._sq_gain_prev = sq_gain
                 else:
                     self._sq_gain_prev = 1.0
+
+                # Nivelador de voz: solo adapta con voz presente (el vp requiere
+                # cancelador activo — invariante 2); con ruido o gate cerrado la
+                # ganancia queda congelada y no persigue al ruido residual.
+                if (self._voice_leveler_enabled and self._noise_enabled
+                        and self._noise_profiler.has_profile):
+                    self._agc_voice.set_hold(
+                        self._noise_profiler.voice_prob < self._LEVELER_VP_THR)
+                    filtered = self._agc_voice.process(filtered)
 
                 with self._lock:
                     mixed = self._bandpass_out.process(filtered) if self._bandpass_post_enabled else filtered

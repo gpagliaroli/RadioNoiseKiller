@@ -622,6 +622,7 @@ class AdvancedCancellerTab(QWidget):
             s.set_enabled(noise and dsp.perceptual_floor_enabled)
         self._s_post_filter.set_enabled(noise and dsp.post_filter_enabled)
         self._s_pitch_strength.set_enabled(noise and dsp.pitch_enhance_enabled)
+        self._s_leveler_max.set_enabled(noise and dsp.voice_leveler_enabled)
 
     def _build_ui(self) -> None:
         layout = _make_scroll_layout(self)
@@ -630,6 +631,7 @@ class AdvancedCancellerTab(QWidget):
         layout.addWidget(self._build_perceptual_floor_group())
         layout.addWidget(self._build_post_filter_group())
         layout.addWidget(self._build_pitch_group())
+        layout.addWidget(self._build_leveler_group())
         layout.addWidget(_reset_button_widget(self._reset_defaults))
         layout.addStretch()
 
@@ -913,6 +915,25 @@ class AdvancedCancellerTab(QWidget):
         layout.addWidget(_note("  ↳ Cuánto eleva la probabilidad de voz en bins de armónicos. 70%=recomendado."))
         return group
 
+    def _build_leveler_group(self) -> QGroupBox:
+        group = QGroupBox("Nivelador de voz  (activar en Módulos Activos)")
+        layout = QVBoxLayout(group)
+
+        self._s_leveler_max = SliderRow(
+            "Ganancia máxima:",
+            min_val=0.0, max_val=20.0,
+            default=_DSP_DEF.voice_leveler_max_db,
+            step=1.0, unit="dB", fmt="{:.0f}",
+        )
+        self._s_leveler_max._update_label = lambda v: self._s_leveler_max._val_lbl.setText(
+            f"+{v:.0f} dB  ({'suave' if v < 7 else 'normal' if v < 14 else 'fuerte'})"
+        )
+        self._s_leveler_max._val_lbl.setFixedWidth(110)
+        self._s_leveler_max.valueChanged.connect(self._pipeline.set_voice_leveler_max_db)
+        layout.addWidget(self._s_leveler_max)
+        layout.addWidget(_note("  ↳ Tope de compensación para voz débil. Alto=iguala más las señales, pero levanta también el ruido que acompaña a la voz débil."))
+        return group
+
     # ------------------------------------------------------------------
     # Stats en tiempo real
     # ------------------------------------------------------------------
@@ -1040,6 +1061,7 @@ class AdvancedCancellerTab(QWidget):
         self._s_pf_rolloff_depth.set_value(cfg.perceptual_floor_rolloff_depth)
         self._s_post_filter.set_value(cfg.post_filter_strength)
         self._s_pitch_strength.set_value(cfg.pitch_enhance_strength)
+        self._s_leveler_max.set_value(cfg.voice_leveler_max_db)
 
     def _reset_defaults(self) -> None:
         defaults = DSPConfig()
@@ -1067,6 +1089,7 @@ class AdvancedCancellerTab(QWidget):
         self._pipeline.set_pf_rolloff_depth(defaults.perceptual_floor_rolloff_depth)
         self._pipeline.set_post_filter_strength(defaults.post_filter_strength)
         self._pipeline.set_pitch_enhance_strength(defaults.pitch_enhance_strength)
+        self._pipeline.set_voice_leveler_max_db(defaults.voice_leveler_max_db)
         self._load_values()
 
     def reload(self) -> None:

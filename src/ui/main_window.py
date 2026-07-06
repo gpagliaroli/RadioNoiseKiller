@@ -228,6 +228,13 @@ class MainWindow(QMainWindow):
             "la recuperación al volver la señal. Solo tiene efecto en modo Adaptativo (MCRA).\n"
             "Sensibilidad y duración del freeze configurables en Avanzada Cancelador.",
         )
+        self._chk_voice_leveler = _chk_sub(
+            "Nivelador de voz  (compensa condiciones de banda)",
+            "AGC de voz después del cancelador: mantiene la voz limpia a nivel\n"
+            "constante aunque el ruido (y por ende la cancelación) varíe.\n"
+            "Solo adapta cuando detecta voz — el ruido residual entre\n"
+            "transmisiones no se re-amplifica. Requiere cancelador activo.",
+        )
         self._chk_presence = _chk(
             "EQ Voz  (presencia + cuerpo)",
             "Dos picos de realce vocal configurables en pestaña Avanzada Audio:\n"
@@ -251,6 +258,7 @@ class MainWindow(QMainWindow):
         self._chk_presence.toggled.connect(lambda v: self._on_module_toggled("presence_enabled", self._pipeline.set_presence_enabled, v))
         self._chk_squelch.toggled.connect(lambda v: self._on_module_toggled("squelch_enabled", self._pipeline.set_squelch_enabled, v))
         self._chk_fading_comp.toggled.connect(lambda v: self._on_module_toggled("noise_fading_comp", self._pipeline.set_fading_comp, v))
+        self._chk_voice_leveler.toggled.connect(lambda v: self._on_module_toggled("voice_leveler_enabled", self._pipeline.set_voice_leveler_enabled, v))
         self._chk_exciter.toggled.connect(lambda v: self._on_module_toggled("exciter_enabled", self._pipeline.set_exciter_enabled, v))
 
         return group
@@ -387,6 +395,13 @@ class MainWindow(QMainWindow):
         self._lbl_peak_active.setStyleSheet("color: #555; font-size: 8pt; font-weight: bold;")
         peak_row.addWidget(lbl_peak_title)
         peak_row.addWidget(self._lbl_peak_active)
+        peak_row.addSpacing(24)
+        lbl_lev_title = QLabel("Nivelador de voz:")
+        lbl_lev_title.setStyleSheet("color: #607d8b; font-size: 8pt;")
+        self._lbl_leveler = QLabel("—")
+        self._lbl_leveler.setStyleSheet("color: #555; font-size: 8pt; font-weight: bold;")
+        peak_row.addWidget(lbl_lev_title)
+        peak_row.addWidget(self._lbl_leveler)
         peak_row.addStretch()
         layout.addLayout(peak_row)
 
@@ -428,6 +443,16 @@ class MainWindow(QMainWindow):
         ctrl.addSpacing(12)
         ctrl.addWidget(self._chk_spec_floor)
         ctrl.addStretch()
+
+        self._lbl_snr = QLabel("S/N: —")
+        self._lbl_snr.setStyleSheet("color: #888; font-weight: bold;")
+        self._lbl_snr.setToolTip(
+            "Relación señal/ruido de banda completa (suavizada ~1s):\n"
+            "señal actual vs piso de ruido estimado por el cancelador.\n"
+            "Con solo ruido marca ~0 dB."
+        )
+        ctrl.addWidget(self._lbl_snr)
+        ctrl.addSpacing(16)
 
         lbl_hint = QLabel("dBFS")
         lbl_hint.setStyleSheet("color: #607d8b; font-size: 7pt;")
@@ -531,6 +556,7 @@ class MainWindow(QMainWindow):
             (self._chk_presence,      "presence_enabled",      self._pipeline.set_presence_enabled),
             (self._chk_squelch,  "squelch_enabled",   self._pipeline.set_squelch_enabled),
             (self._chk_fading_comp, "noise_fading_comp", self._pipeline.set_fading_comp),
+            (self._chk_voice_leveler, "voice_leveler_enabled", self._pipeline.set_voice_leveler_enabled),
             (self._chk_exciter,  "exciter_enabled",   self._pipeline.set_exciter_enabled),
         ]:
             val = getattr(self._config.dsp, key)
@@ -592,6 +618,7 @@ class MainWindow(QMainWindow):
             (self._chk_presence,          "presence_enabled",          self._pipeline.set_presence_enabled),
             (self._chk_squelch,           "squelch_enabled",           self._pipeline.set_squelch_enabled),
             (self._chk_fading_comp,       "noise_fading_comp",         self._pipeline.set_fading_comp),
+            (self._chk_voice_leveler,     "voice_leveler_enabled",     self._pipeline.set_voice_leveler_enabled),
             (self._chk_exciter,           "exciter_enabled",           self._pipeline.set_exciter_enabled),
         ]:
             val = getattr(cfg, key)
@@ -921,6 +948,30 @@ class MainWindow(QMainWindow):
         else:
             self._lbl_peak_active.setText("—")
             self._lbl_peak_active.setStyleSheet("color: #555; font-size: 8pt; font-weight: bold;")
+
+        # Indicador del nivelador de voz (junto al del limitador)
+        if (self._config.dsp.voice_leveler_enabled and self._config.dsp.noise_enabled
+                and self._pipeline.is_running()):
+            lev = self._pipeline.voice_leveler_gain_db
+            if lev > 0.5:
+                self._lbl_leveler.setText(f"+{lev:.1f} dB")
+                self._lbl_leveler.setStyleSheet("color: #69f0ae; font-size: 8pt; font-weight: bold;")
+            else:
+                self._lbl_leveler.setText("0 dB")
+                self._lbl_leveler.setStyleSheet("color: #888; font-size: 8pt; font-weight: bold;")
+        else:
+            self._lbl_leveler.setText("—")
+            self._lbl_leveler.setStyleSheet("color: #555; font-size: 8pt; font-weight: bold;")
+
+        # Indicador S/N (pestaña Espectro)
+        if self._pipeline.is_running() and self._pipeline.noise_has_profile:
+            snr = self._pipeline.snr_db
+            color_snr = "#69f0ae" if snr > 15 else "#fff176" if snr > 6 else "#90a4ae"
+            self._lbl_snr.setText(f"S/N: {snr:+.0f} dB")
+            self._lbl_snr.setStyleSheet(f"color: {color_snr}; font-weight: bold;")
+        else:
+            self._lbl_snr.setText("S/N: —")
+            self._lbl_snr.setStyleSheet("color: #888; font-weight: bold;")
 
     def _restore_or_center(self) -> None:
         if self._config.window.x is not None:

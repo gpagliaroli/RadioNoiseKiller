@@ -65,6 +65,8 @@ class DSPConfig:
     noise_fading_comp:      bool  = False  # compensación de fading HF: freeze MCRA + release rápido
     noise_fading_change_db: float = 5.0    # umbral de detección de fade (2-10 dB)
     noise_fading_freeze_ms: float = 200.0  # duración del freeze MCRA tras el evento (100-500 ms)
+    voice_leveler_enabled:  bool  = False  # AGC de voz post-cancelador gateado por VAD
+    voice_leveler_max_db:   float = 12.0   # ganancia máxima del nivelador (0-20 dB)
     bandpass_limits: dict = field(default_factory=lambda: {
         RadioMode.AM:  (300, 5000),
         RadioMode.SSB: (200, 3000),
@@ -150,6 +152,8 @@ class AppConfig:
                 "noise_fading_comp":      self.dsp.noise_fading_comp,
                 "noise_fading_change_db": self.dsp.noise_fading_change_db,
                 "noise_fading_freeze_ms": self.dsp.noise_fading_freeze_ms,
+                "voice_leveler_enabled":  self.dsp.voice_leveler_enabled,
+                "voice_leveler_max_db":   self.dsp.voice_leveler_max_db,
                 "filter_order": self.dsp.filter_order,
                 "bandpass_limits": {
                     m.value: list(v)
@@ -240,6 +244,8 @@ class AppConfig:
         self.dsp.noise_fading_comp      = bool(d.get("noise_fading_comp",      self.dsp.noise_fading_comp))
         self.dsp.noise_fading_change_db = float(d.get("noise_fading_change_db", self.dsp.noise_fading_change_db))
         self.dsp.noise_fading_freeze_ms = float(d.get("noise_fading_freeze_ms", self.dsp.noise_fading_freeze_ms))
+        self.dsp.voice_leveler_enabled  = bool(d.get("voice_leveler_enabled",  self.dsp.voice_leveler_enabled))
+        self.dsp.voice_leveler_max_db   = float(d.get("voice_leveler_max_db",  self.dsp.voice_leveler_max_db))
         self.dsp.filter_order = d.get("filter_order", self.dsp.filter_order)
         for mode_str, limits in d.get("bandpass_limits", {}).items():
             if mode_str in ("SSB-USB", "SSB-LSB"):

@@ -125,6 +125,7 @@ class NoiseProfiler:
         self._voice_prob_sq: float = 0.0   # suavizado rápido (squelch)
         self._agc_gain:      float = 1.0   # ganancia lineal del AGC (compensación del VAD)
         self._spec_conf:     float = 0.0   # confianza espectral suavizada (peakiness)
+        self._snr_db:        float = 0.0   # S/N banda completa suavizado (indicador, EMA ~1s)
 
         self._last_reduction_db: float = 0.0
         self._preview_mode: bool = False
@@ -643,6 +644,17 @@ class NoiseProfiler:
             # con alpha=0.50 baja en ~14 frames (<200ms incluso a +30dB SNR).
             mean_sig        = float(np.mean(sig_power))
             mean_noise_prof = float(np.mean(noise_prof2))
+            # S/N para el indicador del espectro. Suavizado asimétrico: ataque
+            # rápido (~100ms) y decaimiento lento (~1s) — lee los picos silábicos
+            # de la señal sobre el piso, que es el S/N que espera un operador
+            # (un EMA simétrico promedia los valles entre sílabas y marca bajo).
+            # Nota: el estimado de ruido (min-tracking) subestima ~40% → el S/N
+            # sobreestima ~1.5 dB; aceptable para un indicador comparativo.
+            snr_inst = 10.0 * np.log10(max(mean_sig / (mean_noise_prof + 1e-30), 1e-6))
+            if snr_inst > self._snr_db:
+                self._snr_db = 0.90 * self._snr_db + 0.10 * snr_inst
+            else:
+                self._snr_db = 0.99 * self._snr_db + 0.01 * snr_inst
             # Energía compensada por el AGC (nivel de antena): sin esto, el release
             # del AGC tras la voz amplifica el ruido y los trackers lo toman por voz.
             mean_sig_comp = mean_sig / (self._agc_gain * self._agc_gain)
@@ -829,6 +841,11 @@ class NoiseProfiler:
     def voice_prob_sq(self) -> float:
         """voice_prob con release rápido (~40ms), específico para el gate de squelch."""
         return self._voice_prob_sq
+
+    @property
+    def snr_db(self) -> float:
+        """S/N banda completa (dB, EMA ~1s) — señal actual vs piso de ruido estimado."""
+        return self._snr_db
 
     @property
     def pf_peak_pct(self) -> float:

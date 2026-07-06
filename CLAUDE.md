@@ -378,6 +378,24 @@ Cambios v1.3:
   ahora procesado por chunks == entero, bit a bit.
 
 Cambios v1.4 (pendiente de release):
+- Nivelador de voz (`voice_leveler_enabled`, sub-módulo del cancelador en Módulos Activos): segundo
+  AGC (`_agc_voice`) post-cancelador/post-squelch, gateado por el VAD — `set_hold(voice_prob <
+  _LEVELER_VP_THR=0.30)` por frame: solo adapta con voz presente, con ruido/silencio la ganancia
+  queda congelada (no persigue al ruido residual — ese era el riesgo de compensar por
+  reduction_db/SNR). Params fijos: target −20 dBFS, max +12 dB, ataque 80ms, release 1500ms.
+  Requiere cancelador activo + perfil (invariante 2: el vp no se actualiza sin cancelador).
+  `set_hop` en `start()` (invariante 9). Persistido en settings.json y presets.
+  Único control expuesto (decisión del usuario, para no sumar controles): slider "Ganancia máxima"
+  0–20 dB (default 12) en Avanzada Cancelador → `voice_leveler_max_db` (el clamp del setter del
+  pipeline es 0–20 == slider; el clamp interno del AGC es 0–60, más ancho — por eso clampeamos en
+  `set_voice_leveler_max_db`). Indicador "Nivelador de voz: +X dB" junto al del limitador en la
+  pestaña Principal (verde cuando compensa, actualizado en `_tick_levels`).
+- Indicador S/N en la pestaña Espectro: `NoiseProfiler.snr_db` — mean_sig/mean(λ_d) en dB con
+  suavizado asimétrico (ataque ~100ms, decay ~1s): lee los picos silábicos sobre el piso, que es el
+  S/N que espera un operador (un EMA simétrico promedia los valles entre sílabas y marca ~4 dB con
+  voz clara). Sobreestima ~1.5 dB por el bias de min-tracking del estimador — aceptable como
+  indicador comparativo. Label en la barra del espectro, actualizado en `_tick_levels`; "—" sin
+  perfil o sin stream.
 - Fix zoom del espectro al arrancar: los sliders Máx X/Y restauraban su posición desde
   `WindowConfig`, pero `setValue()` corre antes del `connect()` en `_slider_row` → el handler no se
   dispara y el `SpectrumWidget` quedaba con defaults hasta tocar los sliders. Fix: push explícito de

@@ -105,10 +105,26 @@ for i in range(0, 300, 50):
     vps.append(pipeline.noise_voice_prob_sq)
 check("vp sube con voz (max %.2f)" % max(vps), max(vps) > 0.5)
 check("gate abierto con voz", pipeline.squelch_gate_open)
+check("indicador S/N alto con voz (%.1f dB)" % pipeline.snr_db, pipeline.snr_db > 6.0)
 
 print("\n=== Fase 3: vuelve el ruido (gate cierra tras la retencion) ===")
 feed(pipeline, noise_frames(150, hop))
 check("gate cerrado de nuevo tras el hold", not pipeline.squelch_gate_open)
+check("indicador S/N cae con solo ruido (%.1f dB)" % pipeline.snr_db, pipeline.snr_db < 6.0)
+
+print("\n=== Fase 3b: nivelador de voz (adapta con voz, congela con ruido) ===")
+pipeline.set_agc_preset("off")             # sin AGC de entrada: la voz debil llega debil
+pipeline.set_voice_leveler_enabled(True)
+vx_w = voice_frames(250, hop, level=0.3)
+feed(pipeline, vx_w)
+g_voice = pipeline.voice_leveler_gain_db
+check("nivelador sube ganancia con voz debil (%.1f dB)" % g_voice, g_voice > 2.0)
+feed(pipeline, noise_frames(150, hop))
+g_noise = pipeline.voice_leveler_gain_db
+check("con solo ruido la ganancia queda congelada (%.1f vs %.1f dB)" % (g_noise, g_voice),
+      abs(g_noise - g_voice) < 0.5)
+pipeline.set_voice_leveler_enabled(False)
+pipeline.set_agc_preset("custom")
 
 print("\n=== Fase 4: cambios en caliente ===")
 pipeline.set_noise_mode("static")
