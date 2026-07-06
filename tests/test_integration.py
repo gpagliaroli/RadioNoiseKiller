@@ -120,6 +120,23 @@ pipeline.apply_config(cfg)              # carga de preset completa en caliente
 feed(pipeline, noise_frames(100, hop))
 check("apply_config en caliente sin errores", len(errors) == 0)
 
+print("\n=== Fase 4b: aprendizaje estatico (AGC congelado + monitoreo atenuado) ===")
+pipeline.set_noise_mode("static")
+pipeline.clear_noise_profile()
+rms_pre = feed(pipeline, noise_frames(60, hop), collect=True)
+g_before = pipeline.agc_gain_db
+pipeline.start_noise_learning()
+rms_learn = feed(pipeline, noise_frames(200, hop), collect=True)
+g_after = pipeline.agc_gain_db
+frames_learned = pipeline.stop_noise_learning()
+check("el aprendizaje capturo frames (%d)" % frames_learned, frames_learned > 100)
+check("AGC congelado durante el aprendizaje (delta %.1f dB)" % abs(g_after - g_before),
+      abs(g_after - g_before) < 1.0)
+check("monitoreo atenuado durante el aprendizaje (rms %.4f vs %.4f)" % (rms_learn, rms_pre),
+      rms_learn < rms_pre * 0.6)
+pipeline.set_noise_mode("mcra")
+feed(pipeline, noise_frames(250, hop))
+
 print("\n=== Fase 5: cambio de tamano de bloque (reinicio) ===")
 pipeline.stop()
 cfg.audio.block_size = 960

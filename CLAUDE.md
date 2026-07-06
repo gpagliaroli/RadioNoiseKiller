@@ -377,6 +377,14 @@ Cambios v1.3:
   multiplicaba por 1/coef en vez de coef (inflaba el envelope ~0.04% por borde → limitaba de más);
   ahora procesado por chunks == entero, bit a bit.
 
+Cambios v1.4 (pendiente de release):
+- "Aprender ruido" sin saturación: al iniciar el aprendizaje estático, (1) el AGC se congela
+  (`AGC.set_hold(True)` — sin hold, el AGC amplifica el ruido de banda hasta el target y el perfil
+  captura un barrido de niveles en vez de un nivel estable) y (2) el monitoreo se atenúa −12 dB
+  (`_LEARN_DUCK_GAIN=0.25` en pipeline, rampa por frame sin clicks — el duck va DESPUÉS del profiler:
+  el aprendizaje ve la señal a nivel pleno). Ambos se liberan al terminar/cancelar el aprendizaje
+  (el flag se evalúa por frame desde `noise_profiler.is_learning`) y en `start()`.
+
 ### Visualizador de espectro — decisiones de implementación
 
 **Captura de spec_pre en pipeline:** `spec_pre_frames` se llena después del bandpass+ANF y antes del

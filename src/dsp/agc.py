@@ -40,6 +40,7 @@ class AGC:
             "attack_ms":   25.0,
             "release_ms":  2000.0,
         }
+        self._hold      = False
 
     # ------------------------------------------------------------------
     # Configuración
@@ -84,6 +85,12 @@ class AGC:
         if getattr(self, "_preset", "off") == "custom":
             self.set_preset("custom")
 
+    def set_hold(self, hold: bool) -> None:
+        """Congela ganancia y envelope. Durante el aprendizaje del perfil de
+        ruido evita que el AGC amplifique el ruido de banda (saturación) y que
+        el nivel cambie a mitad de la captura (perfil inconsistente)."""
+        self._hold = bool(hold)
+
     def set_hop(self, hop_size: int) -> None:
         """Actualiza el tamaño de bloque y recalcula las constantes de tiempo."""
         if hop_size != self._hop:
@@ -114,6 +121,10 @@ class AGC:
     def process(self, samples: np.ndarray) -> np.ndarray:
         if not self._enabled:
             return samples
+
+        if self._hold:
+            # Ganancia congelada: aplicar la actual sin actualizar el estado
+            return (samples * self._gain).astype(np.float32)
 
         gain_prev = self._gain
 

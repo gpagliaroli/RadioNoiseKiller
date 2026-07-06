@@ -28,6 +28,8 @@ class ProcessingPipeline:
     _out_queue: processor thread  →  callback  (chunks procesados)
     """
 
+    _LEARN_DUCK_GAIN: float = 0.25   # monitoreo a -12 dB durante "Aprender ruido"
+
     def __init__(self, config: AppConfig):
         self._config = config
         self._lock   = threading.Lock()
@@ -83,6 +85,7 @@ class ProcessingPipeline:
         self._squelch_hold_frames: int = 0   # se calcula en start()
         self._squelch_hold_count:  int = 0
         self._sq_gain_prev:        float = 1.0   # ganancia del gate en el frame anterior (rampa)
+        self._learn_gain_prev:     float = 1.0   # ganancia del duck de aprendizaje (rampa)
         self._exciter = AuralExciter(config.audio.sample_rate)
         self._exciter.set_drive(config.dsp.exciter_drive)
         self._exciter.set_mix(config.dsp.exciter_mix)
@@ -594,6 +597,8 @@ class ProcessingPipeline:
             self._squelch_hold_frames = max(0, round(self._squelch_hold_ms / hop_ms))
             self._squelch_hold_count  = 0
             self._sq_gain_prev        = 1.0
+            self._learn_gain_prev     = 1.0
+            self._agc.set_hold(False)
             self._in_acc  = np.zeros(0, dtype=np.float32)
             self._out_acc = np.zeros(0, dtype=np.float32)
             self._drain_queues()
@@ -717,6 +722,11 @@ class ProcessingPipeline:
                             chunk[:n_complete] = (mini * scales[:, np.newaxis].astype(np.float32)).ravel()
                             self._blanker_hits += int(np.sum(over))
 
+                # Durante el aprendizaje del perfil: AGC congelado (si no, sube
+                # la ganancia sobre el ruido y el perfil captura un barrido de
+                # niveles en vez de un nivel estable)
+                learning = self._noise_profiler.is_learning
+                self._agc.set_hold(learning)
                 chunk = self._agc.process(chunk)
 
                 with self._lock:
@@ -727,6 +737,16 @@ class ProcessingPipeline:
                 # El VAD del profiler descuenta la ganancia del AGC (nivel de antena)
                 self._noise_profiler.set_agc_gain(self._agc.gain_lin)
                 filtered = self._noise_profiler.process(filtered)
+
+                # Monitoreo atenuado durante el aprendizaje: sin perfil todavía
+                # no hay supresión y el ruido de banda sale a pleno — molesto y
+                # puede saturar. -12 dB con rampa por frame (sin clicks).
+                learn_gain = self._LEARN_DUCK_GAIN if learning else 1.0
+                if learn_gain != self._learn_gain_prev or learn_gain < 1.0:
+                    ramp = np.linspace(self._learn_gain_prev, learn_gain,
+                                       len(filtered), dtype=np.float32)
+                    filtered = filtered * ramp
+                    self._learn_gain_prev = learn_gain
 
                 # El squelch depende de voice_prob_sq, que solo se actualiza con el
                 # cancelador activo — sin _noise_enabled el vp queda congelado y el
