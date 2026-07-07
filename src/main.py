@@ -1,9 +1,12 @@
 import sys
 import os
-# Limitar threads de OpenBLAS/MKL usados por NumPy antes de importar numpy
-os.environ.setdefault("OMP_NUM_THREADS", "2")
-os.environ.setdefault("OPENBLAS_NUM_THREADS", "2")
-os.environ.setdefault("MKL_NUM_THREADS", "2")
+# UN solo thread para OpenBLAS/MKL (antes de importar numpy). Los arrays del
+# DSP son diminutos (481-4096 elementos): el multihilo BLAS nunca ayuda y sus
+# hilos hacen busy-waiting entre operaciones — en CPUs débiles (AMD A6, 2
+# cores) ese spinning aparecía como ~100% de CPU.
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
 from PySide6.QtWidgets import QApplication
 from ui.main_window import MainWindow
 

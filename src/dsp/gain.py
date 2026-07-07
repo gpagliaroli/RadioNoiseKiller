@@ -69,6 +69,14 @@ class GainLimiter:
 
         self._envelope = float(envelope[-1])
 
+        # Fast path: si todo el frame quedó por debajo del inicio de la rodilla
+        # no hay nada que limitar — evita log10/potencias por muestra (relevante
+        # en CPUs débiles; la mayoría de los frames no tocan el limitador)
+        knee_start = self._limit * 10.0 ** (-self._KNEE_DB / 40.0)   # límite − K/2 dB
+        if envelope[-1] <= knee_start and float(np.max(envelope)) <= knee_start:
+            self._last_reduction_db = 0.0
+            return audio.astype(np.float32)
+
         # Curva de limitación con rodilla suave (en dominio dB):
         #   por debajo de (límite − K/2):  sin cambio (gain = 1)
         #   zona de rodilla (ancho K):     compresión cuadrática progresiva

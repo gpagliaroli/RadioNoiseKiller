@@ -48,6 +48,8 @@ class NoiseProfiler:
     _PITCH_LAG_MIN:  int   = 120    # lag mínimo → 400 Hz
     _PITCH_LAG_MAX:  int   = 600    # lag máximo →  80 Hz
     _PITCH_CONF_THR: float = 0.30   # umbral de confianza de la autocorrelación
+    _PITCH_EVERY:    int   = 3      # autocorr cada N frames (2 FFTs de 4096 — caro en CPUs
+                                    # débiles; el pitch no cambia en 30ms, se cachea)
     _PITCH_SIGMA:    float = 1.5    # sigma (bins) de la máscara gaussiana por armónico
 
     # Parámetros MCRA
@@ -165,6 +167,8 @@ class NoiseProfiler:
         self._pitch_buf = np.zeros(self._PITCH_BUF_N, dtype=np.float32)
         self._pitch_f0:       float | None = None
         self._pitch_f0_hold:  int = 0   # frames a mantener el último f0 cuando la autocorr falla
+        self._pitch_cache:    "tuple[float | None, float] | None" = None
+        self._pitch_countdown: int = 0  # frames hasta la próxima autocorr
 
         # Estado MCRA
         self._mcra_Sf:        np.ndarray | None = None
@@ -247,6 +251,8 @@ class NoiseProfiler:
         self._vad_energy_min_sq  = None
         self._pf_active_frac     = 0.0
         self._pf_extra_db        = 0.0
+        self._pitch_cache        = None
+        self._pitch_countdown    = 0
         self._fading_energy_ema  = None
         self._mcra_freeze_count  = 0
         self._fading_active      = False
@@ -563,9 +569,13 @@ class NoiseProfiler:
         self._pitch_buf[:-hop] = self._pitch_buf[hop:]
         self._pitch_buf[-hop:] = chunk
 
-        # Autocorrelación una vez por frame: la comparten el pitch enhance y la
-        # confirmación de periodicidad del VAD (voz = periódica, ruido no)
-        f0_frame, pitch_conf = self._pitch_autocorr()
+        # Autocorrelación cada _PITCH_EVERY frames (cacheada): la comparten el
+        # pitch enhance y la confirmación de periodicidad del VAD
+        if self._pitch_countdown <= 0 or self._pitch_cache is None:
+            self._pitch_cache = self._pitch_autocorr()
+            self._pitch_countdown = self._PITCH_EVERY
+        self._pitch_countdown -= 1
+        f0_frame, pitch_conf = self._pitch_cache
         if self._pitch_enabled:
             f0 = f0_frame if pitch_conf >= self._PITCH_CONF_THR else None
             if f0 is not None:
