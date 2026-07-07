@@ -29,6 +29,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Stamp build id
+        run: |
+          echo "BUILD_ID = \"$(git rev-parse --short HEAD) $(date -u +%Y-%m-%d)\"" > src/buildinfo.py
+          cat src/buildinfo.py
+
       - name: Build with PyInstaller
         run: |
           python -m PyInstaller reductor-linux.spec --clean --noconfirm

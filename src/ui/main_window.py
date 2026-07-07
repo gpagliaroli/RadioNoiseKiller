@@ -54,7 +54,8 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _build_ui(self) -> None:
-        self.setWindowTitle("RadioNoiseKiller  v1.3")
+        from buildinfo import BUILD_ID
+        self.setWindowTitle(f"RadioNoiseKiller  v1.3  ·  build {BUILD_ID}")
         self.setMinimumWidth(800)
         self.setMaximumWidth(1100)
 
