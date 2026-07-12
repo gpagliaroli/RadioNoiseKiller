@@ -53,7 +53,24 @@
       "PowerShell(& \"C:\\\\Disco_D\\\\Proyectos ByCoding\\\\Reductor_Ruido_Radio\\\\.venv\\\\Scripts\\\\python.exe\" \"C:\\\\Users\\\\GPAGLI~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Disco-D-Proyectos-ByCoding-Reductor-Ruido-Radio\\\\04a26405-02a3-4e28-9953-1b7d595c8212\\\\scratchpad\\\\dbg_chunks.py\")",
       "PowerShell(Set-Location *)",
       "PowerShell(Set-Location \"C:\\\\Disco_D\\\\Proyectos ByCoding\\\\Reductor_Ruido_Radio\"; .venv\\\\Scripts\\\\python.exe -c \"import py_compile; [py_compile.compile\\(f, doraise=True\\) for f in ['src/config.py','src/presets.py','src/pipeline.py','src/ui/advanced_tab.py','src/ui/main_window.py']]; print\\('compile OK'\\)\"; foreach \\($t in @\\(\"test_presets\",\"test_integration\"\\)\\) { .venv\\\\Scripts\\\\python.exe \"tests\\\\$t.py\" > $null; if \\($?\\) { Write-Host \"$t OK\" } else { Write-Host \"$t FALLO\" } })",
-      "PowerShell(Set-Location \"C:\\\\Disco_D\\\\Proyectos ByCoding\\\\Reductor_Ruido_Radio\"; .venv\\\\Scripts\\\\python.exe -c \"import py_compile; [py_compile.compile\\(f, doraise=True\\) for f in ['src/main.py','src/dsp/noise_profiler.py','src/dsp/gain.py']]; print\\('compile OK'\\)\"; foreach \\($t in @\\(\"test_dsp\",\"test_pipeline\",\"test_noise_vad\",\"test_integration\"\\)\\) { .venv\\\\Scripts\\\\python.exe \"tests\\\\$t.py\" > $null; if \\($?\\) { Write-Host \"$t OK\" } else { Write-Host \"$t FALLO\" } })"
+      "PowerShell(Set-Location \"C:\\\\Disco_D\\\\Proyectos ByCoding\\\\Reductor_Ruido_Radio\"; .venv\\\\Scripts\\\\python.exe -c \"import py_compile; [py_compile.compile\\(f, doraise=True\\) for f in ['src/main.py','src/dsp/noise_profiler.py','src/dsp/gain.py']]; print\\('compile OK'\\)\"; foreach \\($t in @\\(\"test_dsp\",\"test_pipeline\",\"test_noise_vad\",\"test_integration\"\\)\\) { .venv\\\\Scripts\\\\python.exe \"tests\\\\$t.py\" > $null; if \\($?\\) { Write-Host \"$t OK\" } else { Write-Host \"$t FALLO\" } })",
+      "PowerShell(gh release view v1.3 --json name,tagName,assets --jq '{name, tagName, assets: [.assets[].name]}')",
+      "Bash(gh release *)",
+      "PowerShell(& .venv\\\\Scripts\\\\python.exe -c \"import markdown2, xhtml2pdf; print\\('markdown2', markdown2.__version__\\); import xhtml2pdf.pisa; print\\('xhtml2pdf ok'\\)\")",
+      "PowerShell(& .venv\\\\Scripts\\\\python.exe \"C:\\\\Users\\\\GPAGLI~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Disco-D-Proyectos-ByCoding-Reductor-Ruido-Radio\\\\96f7806c-f7a6-4320-a746-4c407e3e3204\\\\scratchpad\\\\gen_manual_pdf.py\")",
+      "PowerShell(& .venv\\\\Scripts\\\\python.exe -c \"from pypdf import PdfReader; r = PdfReader\\(r'MANUAL_RadioNoiseKiller_v1.4.pdf'\\); full = ''.join\\(p.extract_text\\(\\) for p in r.pages\\); print\\('paginas:', len\\(r.pages\\)\\); print\\('Nivelador:', full.count\\('Nivelador de voz'\\)\\); print\\('v1.4:', '1.4' in full\\); print\\('AGC congela:', 'AGC se congela' in full\\); print\\('S/N:', 'Indicador S/N' in full\\)\")",
+      "PowerShell(foreach \\($t in @\\(\"test_dsp\",\"test_pipeline\",\"test_presets\",\"test_noise_vad\",\"test_integration\",\"test_devices\"\\)\\) { & .venv\\\\Scripts\\\\python.exe \"tests\\\\$t.py\" > $null; if \\($?\\) { Write-Host \"$t OK\" } else { Write-Host \"$t FALLO\" } })",
+      "PowerShell(Set-Content *)",
+      "PowerShell(& .venv\\\\Scripts\\\\python.exe -m PyInstaller reductor.spec --clean --noconfirm)",
+      "PowerShell(winget list *)",
+      "PowerShell($out = \"url=https://github.com`n`n\" | git credential fill 2>$null; $user = \\($out | Select-String '^username='\\).Line -replace '^username=',''; $hasPw = [bool]\\(\\($out | Select-String '^password='\\)\\); Write-Host \"username: $user | password presente: $hasPw\")",
+      "PowerShell($out = @\\(\"protocol=https\",\"host=github.com\",\"\"\\) | git credential fill 2>$null; $user = \\($out | Select-String '^username='\\).Line -replace '^username=',''; $hasPw = [bool]\\(\\($out | Select-String '^password='\\)\\); Write-Host \"username: $user | password presente: $hasPw\")",
+      "Bash(git credential *)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(r['name'], r['head_branch'], r['status'], r['conclusion']\\) for r in d['workflow_runs']]\")",
+      "PowerShell($exe = \"dist\\\\RadioNoiseKiller\\\\RadioNoiseKiller.exe\"; if \\(Test-Path $exe\\) { $sz = \\(Get-ChildItem dist\\\\RadioNoiseKiller -Recurse | Measure-Object -Property Length -Sum\\).Sum / 1MB; Write-Host \"EXE OK — dist total: $\\([math]::Round\\($sz,1\\)\\) MB\" } else { Write-Host \"FALTA EL EXE\"; Get-ChildItem dist })",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(r['id'], r['name'], r['head_branch'], r['status'], r['conclusion']\\) for r in d['workflow_runs']]\")",
+      "Bash(python -c ' *)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d['html_url']\\); [print\\(' -', a['name'], round\\(a['size']/1e6,1\\), 'MB,', a['state']\\) for a in d['assets']]\")"
     ]
   }
 }
