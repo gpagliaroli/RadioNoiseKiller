@@ -15,6 +15,41 @@ SRC  = ROOT / "src"
 
 ARCH = platform.machine()   # "x86_64", "aarch64", "armv7l", …
 
+# La app es QWidgets puro: estos módulos Qt se cuelan como dependencias de
+# los hooks de PySide6 pero nunca se importan. (No excluir QtDBus — la
+# integración de plataforma de Qt en Linux lo necesita.)
+QT_EXCLUDES = [
+    "PySide6.QtNetwork", "PySide6.QtQml", "PySide6.QtQuick",
+    "PySide6.QtQuickWidgets", "PySide6.QtOpenGL", "PySide6.QtOpenGLWidgets",
+    "PySide6.QtPdf", "PySide6.QtSvg", "PySide6.QtSvgWidgets",
+    "PySide6.QtVirtualKeyboard", "PySide6.QtMultimedia",
+]
+
+# Basura Qt que igual entra al bundle vía binarios/datas de los hooks:
+# libs de Quick/Qml/Pdf/Network, plugins de esos módulos, formatos de
+# imagen (Qt6Gui trae PNG integrado) y traducciones de Qt (la app no
+# instala QTranslator).
+_QT_JUNK = (
+    "qt6quick", "qtquick", "qt6qml", "qtqml",
+    "qt6pdf", "qtpdf", "qt6opengl", "qtopengl",
+    "qt6network", "qtnetwork", "qt6svg", "qtsvg",
+    "qt6virtualkeyboard", "qtvirtualkeyboard",
+    "plugins/imageformats", "plugins/tls", "plugins/qml",
+    "plugins/virtualkeyboard", "plugins/networkinformation",
+    "plugins/iconengines", "pyside6/translations",
+)
+
+
+def sin_basura_qt(toc):
+    """Filtra entradas de PySide6 que la app no usa (ver _QT_JUNK)."""
+    out = []
+    for entry in toc:
+        dest = entry[0].replace("\\", "/").lower()
+        if any(pat in dest for pat in _QT_JUNK):
+            continue
+        out.append(entry)
+    return out
+
 
 def find_shared_lib(name: str) -> str | None:
     """Busca una librería compartida con ldconfig y devuelve su ruta."""
@@ -76,7 +111,8 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[str(ROOT / "pyi_rth_gio.py"),
                    str(ROOT / "pyi_rth_portaudio.py")],
-    excludes=["torch", "tensorflow", "matplotlib", "tkinter", "onnxruntime"],
+    excludes=["torch", "tensorflow", "matplotlib", "tkinter", "onnxruntime"]
+             + QT_EXCLUDES,
     cipher=block_cipher,
     noarchive=False,
 )
@@ -89,6 +125,9 @@ a = Analysis(
 # virtuales vuelven a aparecer.
 a.binaries = [b for b in a.binaries
               if not os.path.basename(b[0]).startswith("libasound.")]
+
+a.binaries = sin_basura_qt(a.binaries)
+a.datas    = sin_basura_qt(a.datas)
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
