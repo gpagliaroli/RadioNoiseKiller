@@ -452,3 +452,6 @@ bajo la clave `"window"` junto con la posición de la ventana.
 Pendiente para Fase 2:
 - Validar build en Pi real (ARM64 Raspberry Pi OS Bookworm)
 - Soporte de múltiples canales de audio
+- Internacionalización: soporte multi-idioma en la UI, en principio español e inglés
+  (evaluar Qt Linguist / `QTranslator` — toda la UI hoy tiene strings hardcodeados en español;
+  alcanza también al manual si se decide traducirlo)
