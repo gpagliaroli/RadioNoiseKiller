@@ -455,3 +455,7 @@ Pendiente para Fase 2:
 - Internacionalización: soporte multi-idioma en la UI, en principio español e inglés
   (evaluar Qt Linguist / `QTranslator` — toda la UI hoy tiene strings hardcodeados en español;
   alcanza también al manual si se decide traducirlo)
+- Reducir/optimizar el tamaño total de la app (dist Windows ~218 MB, zip ~88 MB; Linux ~190 MB).
+  Sospechosos principales: módulos Qt de PySide6 que no se usan (excludes en los .spec),
+  submódulos de scipy no usados, traducciones/plugins de Qt. Medir primero qué pesa en
+  `dist/RadioNoiseKiller/_internal` antes de recortar
