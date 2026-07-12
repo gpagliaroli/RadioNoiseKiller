@@ -377,7 +377,22 @@ Cambios v1.3:
   multiplicaba por 1/coef en vez de coef (inflaba el envelope ~0.04% por borde → limitaba de más);
   ahora procesado por chunks == entero, bit a bit.
 
-Cambios v1.4 (pendiente de release):
+**v1.4 publicada (julio 2026)** — release en GitHub con distribuibles Windows y Linux.
+Versión de app 1.4.0, manual `MANUAL_RadioNoiseKiller_v1.4.pdf` (30 págs; el script
+markdown2+xhtml2pdf se reescribe en el scratchpad de la sesión cuando hace falta — no está versionado).
+
+Cambios v1.4:
+- Optimización de CPU para equipos débiles (reportado 100% en AMD A6, 2 cores): BLAS a 1 thread
+  (env vars en `main.py` antes de importar numpy — el busy-waiting de OpenBLAS aparecía como CPU
+  alto constante), autocorrelación del pitch cada 3 frames con cache, fast path del limitador que
+  evita la curva en dB cuando el frame no llega a la rodilla. **Validado en el AMD A6 real: de 100%
+  a <50% promedio.**
+- Fixes de empaquetado Linux: excluir `libasound` del bundle (dispositivos virtuales ALSA) y
+  preferir la `libportaudio` del sistema (backend Pulse, PCMs virtuales); build de Linux en CI solo
+  en tags `v*`.
+- Identificador de compilación en el título de la ventana (`buildinfo.BUILD_ID`).
+- Presets de fábrica versionados en `Presets/` (5 perfiles JSON: AM local, AM SW ruido
+  medio/alto con fading, SSB adaptativo/estático).
 - Fix pantallas bajas (reportado en notebook Ubuntu 1366x768): la pestaña Principal ahora vive en un
   QScrollArea (no fuerza la altura mínima de la ventana) y `_restore_or_center` dimensiona la ventana
   a `min(contenido, pantalla-60)` — si no entra, aparece scroll pero la app siempre cabe. La posición

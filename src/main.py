@@ -14,7 +14,7 @@ from ui.main_window import MainWindow
 def main():
     app = QApplication(sys.argv)
     app.setApplicationName("RadioNoiseKiller")
-    app.setApplicationVersion("1.3.0")
+    app.setApplicationVersion("1.4.0")
     window = MainWindow()
     window.show()
     sys.exit(app.exec())

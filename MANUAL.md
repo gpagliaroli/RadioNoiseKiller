@@ -1,12 +1,12 @@
 # RadioNoiseKiller — Manual de Usuario
 
-**Versión 1.3**
+**Versión 1.4**
 
 ---
 
 ## Introducción
 
-**RadioNoiseKiller** es una aplicación para Windows que procesa en tiempo real el audio de una radio AM/SSB antes de que llegue a los parlantes o auriculares. Se ubica entre la salida de audio de la radio (o receptor SDR) y la reproducción final, actuando como una cadena de filtros digitales diseñados específicamente para el tipo de ruido que aparece en las bandas de onda corta y AM.
+**RadioNoiseKiller** es una aplicación para Windows y Linux que procesa en tiempo real el audio de una radio AM/SSB antes de que llegue a los parlantes o auriculares. Se ubica entre la salida de audio de la radio (o receptor SDR) y la reproducción final, actuando como una cadena de filtros digitales diseñados específicamente para el tipo de ruido que aparece en las bandas de onda corta y AM.
 
 ### ¿Para qué sirve?
 
@@ -318,6 +318,13 @@ El algoritmo aprende una "foto" del ruido de fondo durante unos segundos y la us
 4. Si las condiciones cambian mucho, repetir el proceso.
 5. **Borrar perfil** reinicia la referencia.
 
+Durante el aprendizaje la aplicación toma dos medidas automáticas para capturar un perfil fiel:
+
+- **El AGC se congela.** Sin esto, el AGC amplificaría progresivamente el ruido de banda hasta su nivel objetivo y el perfil capturaría un barrido de niveles en lugar de un nivel estable.
+- **El monitoreo se atenúa −12 dB.** Escuchar el ruido crudo a volumen pleno durante 3–5 segundos es molesto; la atenuación es solo en lo que se escucha — el algoritmo analiza la señal a nivel completo.
+
+Ambas medidas se liberan solas al pulsar ⏹ Detener (o al cancelar el aprendizaje).
+
 **Adaptativo (MCRA)** (modo automático)
 El algoritmo estima el piso de ruido continuamente en tiempo real, sin necesidad de aprendizaje manual. Se calibra en ~200ms al activar el procesamiento y se adapta automáticamente cuando cambian las condiciones de propagación, aparece QRM o varía el ruido de banda.
 
@@ -464,6 +471,25 @@ Este módulo detecta en tiempo real el **tono fundamental** (f0) de la voz media
 
 > **Cuándo activarlo:** cuando la voz suena "fantasmal" o "robótica" con el cancelador en modo MCRA o con intensidad alta, y la señal es SSB DX débil. En condiciones normales, dejarlo desactivado.
 
+### Nivelador de voz
+
+**Activar:** Módulos Activos → casilla "Nivelador de voz (compensa condiciones de banda)"  
+**Ajustar:** Pestaña Avanzada Cancelador → grupo "Nivelador de voz"
+
+En una sesión de escucha real el nivel de la voz limpia varía constantemente: cambia la propagación, cambia la estación, y la propia cantidad de cancelación de ruido resta más o menos energía según las condiciones. El nivelador es un **AGC dedicado a la voz** que trabaja *después* del cancelador y del squelch — es decir, sobre el audio ya limpio — y lo lleva a un nivel constante.
+
+La diferencia con el AGC general (Cap. 2) es el **gate por detección de voz**: el nivelador solo adapta su ganancia cuando el detector de voz del cancelador confirma que hay voz presente. Con ruido o silencio la ganancia queda **congelada** en el último valor — el ruido residual entre transmisiones no se re-amplifica, que es el defecto típico de encadenar dos AGC comunes.
+
+**Requiere el Cancelador de ruido estacionario activo con perfil** (aprendido o MCRA calibrado) — el detector de voz vive dentro del cancelador. Los tiempos internos son fijos (objetivo −20 dBFS, ataque 80 ms, release 1,5 s), pensados para seguir cambios de condiciones sin bombear con la dinámica natural de la voz.
+
+**Indicador en tiempo real:** en la pestaña Principal, junto al indicador del limitador de picos, la etiqueta **"Nivelador de voz"** muestra la ganancia que está aplicando (verde cuando compensa, "0 dB" en gris cuando la voz ya está a nivel, "—" cuando el módulo no corre).
+
+| Control | Rango | Default | Descripción |
+|---------|-------|---------|-------------|
+| **Ganancia máxima** | 0 – 20 dB | +12 dB | Tope de amplificación para voz débil. Subir para señales DX muy por debajo del nivel objetivo; bajar si al aparecer una estación fuerte tras una débil el arranque suena excesivo. Con 0 dB el módulo solo atenúa (nunca amplifica). |
+
+> **Cuándo activarlo:** sesiones largas con estaciones de niveles dispares o QSB pronunciado, especialmente con squelch activo (los saltos de nivel entre transmisiones se notan más al no haber ruido de fondo que los enmascare).
+
 ---
 
 ## Capítulo 8 — Squelch de Voz
@@ -594,6 +620,8 @@ Debajo del slider **Límite de picos** aparece un indicador en tiempo real:
 - **ACTIVO  -X.X dB** (naranja): el limitador está reduciendo picos leves (menos de 3 dB de reducción).
 - **ACTIVO  -X.X dB** (rojo): el limitador está trabajando intensamente (más de 3 dB de reducción) — considerar bajar la ganancia de salida o el límite de picos.
 
+En la misma fila aparece el indicador **"Nivelador de voz"** con la ganancia que ese módulo está aplicando (ver Cap. 7) — verde cuando compensa una voz débil, "—" cuando el módulo está desactivado.
+
 ### Medidores VU
 
 - **Verde** (-20 a -6 dB): nivel óptimo.
@@ -617,6 +645,7 @@ Debajo del slider **Límite de picos** aparece un indicador en tiempo real:
 | ↳ Post-filtro espectral | ⬜ Opcional | Activar si se escuchan pitidos intermitentes residuales |
 | ↳ Refuerzo de pitch SSB | ⬜ Opcional | Solo para señales SSB DX muy débiles |
 | Compensación fading HF | ⬜ Opcional | Activar con QSB perceptible (solo modo Adaptativo) |
+| ↳ Nivelador de voz | ⬜ Opcional | Activar con estaciones de niveles dispares o QSB fuerte |
 | Squelch | ✅ Activo | Umbral 15%, retención 300 ms |
 | EQ Voz | ✅ Activo | Presencia +4 dB a 2000 Hz; cuerpo +3 dB a 350 Hz si la voz suena delgada |
 | Excitador armónico | ⬜ Opcional | Drive 2,0×, mezcla 25% |
@@ -634,6 +663,7 @@ Debajo del slider **Límite de picos** aparece un indicador en tiempo real:
 | ↳ Post-filtro espectral | ⬜ Opcional | Activar si quedan pitidos residuales |
 | ↳ Refuerzo de pitch SSB | ❌ No usar | No fiable con la banda ancha de AM |
 | Compensación fading HF | ⬜ Opcional | Solo onda corta con QSB (modo Adaptativo); en AM local con música puede disparar en falso |
+| ↳ Nivelador de voz | ❌ No usar | Con música el gate de voz congela la ganancia de forma errática |
 | Squelch | ❌ No usar | Produce bombeo con música |
 | EQ Voz | ⬜ Opcional | Presencia si la voz suena apagada; cuerpo si suena delgada |
 | Excitador armónico | ⬜ Opcional | Con moderación |
@@ -747,4 +777,4 @@ Los valores de los sliders **Máx Y** y **Máx X** del visualizador de espectro 
 
 ---
 
-*RadioNoiseKiller — versión 1.3*
+*RadioNoiseKiller — versión 1.4*
