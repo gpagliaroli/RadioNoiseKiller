@@ -29,9 +29,13 @@ QT_EXCLUDES = [
 # libs de Quick/Qml/Pdf/Network, plugins de esos módulos, formatos de
 # imagen (Qt6Gui trae PNG integrado) y traducciones de Qt (la app no
 # instala QTranslator).
+# OJO: NO filtrar libQt6OpenGL en Linux — el plugin de decoraciones de
+# Qt Wayland (bradient) depende de ella; sin la lib el plugin no carga y
+# la ventana queda SIN barra de título bajo Wayland ("Could not create
+# decoration from factory!" en consola — reportado en la notebook Ubuntu).
 _QT_JUNK = (
     "qt6quick", "qtquick", "qt6qml", "qtqml",
-    "qt6pdf", "qtpdf", "qt6opengl", "qtopengl",
+    "qt6pdf", "qtpdf",
     "qt6network", "qtnetwork", "qt6svg", "qtsvg",
     "qt6virtualkeyboard", "qtvirtualkeyboard",
     "plugins/imageformats", "plugins/tls", "plugins/qml",
