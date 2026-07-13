@@ -5,6 +5,7 @@ env/
 
 # Build / distribución
 dist/
+dist_*/
 build/
 *.zip
 *.egg-info/
