@@ -1,4 +1,4 @@
-import math
+﻿import math
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QGroupBox, QLabel,
     QScrollArea, QPushButton, QHBoxLayout, QFrame,
@@ -7,6 +7,7 @@ from PySide6.QtCore import Qt, QTimer
 from config import AppConfig, RadioMode, AudioConfig, DSPConfig
 from pipeline import ProcessingPipeline
 from ui.slider_row import SliderRow
+from i18n import tr
 
 _BLOCK_SIZES    = [240, 480, 960, 1920]
 _FILTER_ORDERS  = [2, 4, 6, 8]
@@ -41,7 +42,7 @@ def _reset_button_widget(callback) -> QWidget:
     row = QWidget()
     layout = QHBoxLayout(row)
     layout.setContentsMargins(0, 4, 0, 0)
-    btn = QPushButton("↺  Restaurar valores por defecto")
+    btn = QPushButton(tr("↺  Restaurar valores por defecto"))
     btn.clicked.connect(callback)
     layout.addStretch()
     layout.addWidget(btn)
@@ -99,94 +100,94 @@ class AdvancedAudioTab(QWidget):
     # ------------------------------------------------------------------
 
     def _build_audio_group(self) -> QGroupBox:
-        group = QGroupBox("Audio")
+        group = QGroupBox(tr("Audio"))
         layout = QVBoxLayout(group)
 
         self._s_block = SliderRow(
-            "Tamaño de bloque:",
+            tr("Tamaño de bloque:"),
             min_val=0, max_val=len(_BLOCK_SIZES) - 1,
             default=_BLOCK_SIZES.index(_AUDIO_DEF.block_size),
             step=1, unit="", fmt="{}",
         )
         self._s_block._fmt = ""
         self._s_block._update_label = lambda v: self._s_block._val_lbl.setText(
-            f"{_BLOCK_SIZES[int(v)]} muestras ({_BLOCK_SIZES[int(v)]/48:.0f} ms)"
+            tr("{n} muestras ({ms:.0f} ms)").format(n=_BLOCK_SIZES[int(v)], ms=_BLOCK_SIZES[int(v)]/48)
         )
         self._s_block._val_lbl.setFixedWidth(130)
         self._s_block.valueChanged.connect(self._on_block_size)
         layout.addWidget(self._s_block)
-        layout.addWidget(_note("  ↳ Menor = menor latencia. Requiere reiniciar el procesamiento."))
+        layout.addWidget(_note(tr("  ↳ Menor = menor latencia. Requiere reiniciar el procesamiento.")))
         return group
 
     def _build_agc_group(self) -> QGroupBox:
-        group = QGroupBox("AGC Personalizado  (activar con AGC: Custom en Principal)")
+        group = QGroupBox(tr("AGC Personalizado  (activar con AGC: Custom en Principal)"))
         layout = QVBoxLayout(group)
 
         self._s_agc_target = SliderRow(
-            "Nivel objetivo:",
+            tr("Nivel objetivo:"),
             min_val=-30.0, max_val=-6.0,
             default=_DSP_DEF.agc_target_dbfs,
             step=1.0, unit="dBFS", fmt="{:.0f}",
         )
         self._s_agc_target._update_label = lambda v: self._s_agc_target._val_lbl.setText(
-            f"{v:.0f} dBFS  ({'bajo' if v < -24 else 'normal' if v < -14 else 'alto'})"
+            f"{v:.0f} dBFS  ({tr('bajo') if v < -24 else tr('normal') if v < -14 else tr('alto')})"
         )
         self._s_agc_target._val_lbl.setFixedWidth(110)
         self._s_agc_target.valueChanged.connect(self._pipeline.set_agc_target)
         layout.addWidget(self._s_agc_target)
-        layout.addWidget(_note("  ↳ Nivel RMS al que el AGC lleva la señal. -20 dBFS=default, más alto=más fuerte."))
+        layout.addWidget(_note(tr("  ↳ Nivel RMS al que el AGC lleva la señal. -20 dBFS=default, más alto=más fuerte.")))
 
         self._s_agc_max_gain = SliderRow(
-            "Ganancia máxima:",
+            tr("Ganancia máxima:"),
             min_val=0.0, max_val=60.0,
             default=_DSP_DEF.agc_max_gain_db,
             step=1.0, unit="dB", fmt="{:.0f}",
         )
         self._s_agc_max_gain._update_label = lambda v: self._s_agc_max_gain._val_lbl.setText(
-            f"+{v:.0f} dB  ({'limitado' if v < 20 else 'normal' if v < 45 else 'máximo'})"
+            f"+{v:.0f} dB  ({tr('limitado') if v < 20 else tr('normal') if v < 45 else tr('máximo')})"
         )
         self._s_agc_max_gain._val_lbl.setFixedWidth(110)
         self._s_agc_max_gain.valueChanged.connect(self._pipeline.set_agc_max_gain)
         layout.addWidget(self._s_agc_max_gain)
-        layout.addWidget(_note("  ↳ Tope de amplificación en señales débiles. Bajo=no levanta el ruido de fondo."))
+        layout.addWidget(_note(tr("  ↳ Tope de amplificación en señales débiles. Bajo=no levanta el ruido de fondo.")))
 
         self._s_agc_attack = SliderRow(
-            "Ataque:",
+            tr("Ataque:"),
             min_val=1.0, max_val=200.0,
             default=_DSP_DEF.agc_attack_ms,
             step=1.0, unit="ms", fmt="{:.0f}",
         )
         self._s_agc_attack._update_label = lambda v: self._s_agc_attack._val_lbl.setText(
-            f"{v:.0f} ms  ({'rápido' if v < 15 else 'normal' if v < 60 else 'lento'})"
+            f"{v:.0f} ms  ({tr('rápido') if v < 15 else tr('normal') if v < 60 else tr('lento')})"
         )
         self._s_agc_attack._val_lbl.setFixedWidth(110)
         self._s_agc_attack.valueChanged.connect(self._pipeline.set_agc_attack)
         layout.addWidget(self._s_agc_attack)
-        layout.addWidget(_note("  ↳ Cuán rápido baja la ganancia ante señal fuerte. Rápido=protege, puede bombear."))
+        layout.addWidget(_note(tr("  ↳ Cuán rápido baja la ganancia ante señal fuerte. Rápido=protege, puede bombear.")))
 
         self._s_agc_release = SliderRow(
-            "Release:",
+            tr("Release:"),
             min_val=100.0, max_val=8000.0,
             default=_DSP_DEF.agc_release_ms,
             step=100.0, unit="ms", fmt="{:.0f}",
         )
         self._s_agc_release._update_label = lambda v: self._s_agc_release._val_lbl.setText(
-            f"{v:.0f} ms  ({'rápido' if v < 1000 else 'normal' if v < 4000 else 'lento'})"
+            f"{v:.0f} ms  ({tr('rápido') if v < 1000 else tr('normal') if v < 4000 else tr('lento')})"
         )
         self._s_agc_release._val_lbl.setFixedWidth(110)
         self._s_agc_release.valueChanged.connect(self._pipeline.set_agc_release)
         layout.addWidget(self._s_agc_release)
-        layout.addWidget(_note("  ↳ Cuán rápido recupera ganancia al caer la señal. Lento=estable en QSB, rápido=sigue el fading."))
+        layout.addWidget(_note(tr("  ↳ Cuán rápido recupera ganancia al caer la señal. Lento=estable en QSB, rápido=sigue el fading.")))
         return group
 
     def _build_dsp_group(self) -> QGroupBox:
-        group = QGroupBox("Filtros DSP  (se aplican en tiempo real)")
+        group = QGroupBox(tr("Filtros DSP  (se aplican en tiempo real)"))
         layout = QVBoxLayout(group)
 
-        self._s_am_lo  = _freq_slider("AM – Hz inferior:",  _DSP_DEF.bandpass_limits[RadioMode.AM][0])
-        self._s_am_hi  = _freq_slider("AM – Hz superior:",  _DSP_DEF.bandpass_limits[RadioMode.AM][1],  hi=10000)
-        self._s_ssb_lo = _freq_slider("SSB – Hz inferior:", _DSP_DEF.bandpass_limits[RadioMode.SSB][0])
-        self._s_ssb_hi = _freq_slider("SSB – Hz superior:", _DSP_DEF.bandpass_limits[RadioMode.SSB][1], hi=6000)
+        self._s_am_lo  = _freq_slider(tr("AM – Hz inferior:"),  _DSP_DEF.bandpass_limits[RadioMode.AM][0])
+        self._s_am_hi  = _freq_slider(tr("AM – Hz superior:"),  _DSP_DEF.bandpass_limits[RadioMode.AM][1],  hi=10000)
+        self._s_ssb_lo = _freq_slider(tr("SSB – Hz inferior:"), _DSP_DEF.bandpass_limits[RadioMode.SSB][0])
+        self._s_ssb_hi = _freq_slider(tr("SSB – Hz superior:"), _DSP_DEF.bandpass_limits[RadioMode.SSB][1], hi=6000)
 
         self._s_am_lo.valueChanged.connect(lambda v: self._on_bp(RadioMode.AM,  lo=int(v)))
         self._s_am_hi.valueChanged.connect(lambda v: self._on_bp(RadioMode.AM,  hi=int(v)))
@@ -197,13 +198,13 @@ class AdvancedAudioTab(QWidget):
             layout.addWidget(s)
 
         self._s_order = SliderRow(
-            "Orden del filtro:",
+            tr("Orden del filtro:"),
             min_val=0, max_val=len(_FILTER_ORDERS) - 1,
             default=_FILTER_ORDERS.index(_DSP_DEF.filter_order),
             step=1,
         )
         self._s_order._update_label = lambda v: self._s_order._val_lbl.setText(
-            f"Orden {_FILTER_ORDERS[int(v)]}"
+            tr("Orden {n}").format(n=_FILTER_ORDERS[int(v)])
         )
         self._s_order.valueChanged.connect(
             lambda v: self._pipeline.set_filter_order(_FILTER_ORDERS[int(v)])
@@ -212,31 +213,31 @@ class AdvancedAudioTab(QWidget):
         return group
 
     def _build_voice_group(self) -> QGroupBox:
-        group = QGroupBox("Voz  (se aplica en tiempo real)")
+        group = QGroupBox(tr("Voz  (se aplica en tiempo real)"))
         layout = QVBoxLayout(group)
 
         self._s_body_freq = SliderRow(
-            "Frecuencia de cuerpo:",
+            tr("Frecuencia de cuerpo:"),
             min_val=150, max_val=800,
             default=int(_DSP_DEF.body_freq),
             step=25, unit="Hz", fmt="{:.0f}",
         )
         self._s_body_freq._update_label = lambda v: self._s_body_freq._val_lbl.setText(
-            f"{v:.0f} Hz  ({'grave' if v < 300 else 'cuerpo' if v < 550 else 'calidez'})"
+            f"{v:.0f} Hz  ({tr('grave') if v < 300 else tr('cuerpo') if v < 550 else tr('calidez')})"
         )
         self._s_body_freq._val_lbl.setFixedWidth(110)
         self._s_body_freq.valueChanged.connect(self._pipeline.set_body_freq)
         layout.addWidget(self._s_body_freq)
 
         self._s_body = SliderRow(
-            "Cuerpo (ganancia):",
+            tr("Cuerpo (ganancia):"),
             min_val=-3.0, max_val=10.0,
             default=0.0,
             step=0.5, unit="dB", fmt="{:+.1f}",
         )
         self._s_body.valueChanged.connect(self._pipeline.set_body_db)
         layout.addWidget(self._s_body)
-        layout.addWidget(_note("  ↳ Refuerza los graves de la voz (fundamentales). 0 dB=apagado, +3–5 dB=voz con más cuerpo."))
+        layout.addWidget(_note(tr("  ↳ Refuerza los graves de la voz (fundamentales). 0 dB=apagado, +3–5 dB=voz con más cuerpo.")))
 
         sep_body = QFrame()
         sep_body.setFrameShape(QFrame.Shape.HLine)
@@ -244,30 +245,30 @@ class AdvancedAudioTab(QWidget):
         layout.addWidget(sep_body)
 
         self._s_presence_freq = SliderRow(
-            "Frecuencia de presencia:",
+            tr("Frecuencia de presencia:"),
             min_val=1000, max_val=2000,
             default=int(_DSP_DEF.presence_freq),
             step=25, unit="Hz", fmt="{:.0f}",
         )
         self._s_presence_freq._update_label = lambda v: self._s_presence_freq._val_lbl.setText(
-            f"{v:.0f} Hz  ({'media-baja' if v < 1300 else 'media' if v < 1700 else 'presencia'})"
+            f"{v:.0f} Hz  ({tr('media-baja') if v < 1300 else tr('media') if v < 1700 else tr('presencia')})"
         )
         self._s_presence_freq._val_lbl.setFixedWidth(140)
         self._s_presence_freq.valueChanged.connect(self._pipeline.set_presence_freq)
         layout.addWidget(self._s_presence_freq)
 
         self._s_presence = SliderRow(
-            "Presencia (ganancia):",
+            tr("Presencia (ganancia):"),
             min_val=-3.0, max_val=10.0,
             default=0.0,
             step=0.5, unit="dB", fmt="{:+.1f}",
         )
         self._s_presence.valueChanged.connect(self._pipeline.set_presence_db)
         layout.addWidget(self._s_presence)
-        layout.addWidget(_note("  ↳ Frecuencia + ganancia del pico vocal. 0 dB=neutro, +4–6 dB=voz de radio."))
+        layout.addWidget(_note(tr("  ↳ Frecuencia + ganancia del pico vocal. 0 dB=neutro, +4–6 dB=voz de radio.")))
 
         self._s_presence_q = SliderRow(
-            "Ancho de presencia (Q):",
+            tr("Ancho de presencia (Q):"),
             min_val=0.2, max_val=2.0,
             default=0.7,
             step=0.1, unit="", fmt="{:.1f}",
@@ -278,7 +279,7 @@ class AdvancedAudioTab(QWidget):
         self._s_presence_q._val_lbl.setFixedWidth(90)
         self._s_presence_q.valueChanged.connect(self._pipeline.set_presence_q)
         layout.addWidget(self._s_presence_q)
-        layout.addWidget(_note("  ↳ Q bajo = boost ancho (más cálido), Q alto = pico estrecho (más nasal)."))
+        layout.addWidget(_note(tr("  ↳ Q bajo = boost ancho (más cálido), Q alto = pico estrecho (más nasal).")))
 
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
@@ -286,40 +287,40 @@ class AdvancedAudioTab(QWidget):
         layout.addWidget(sep)
 
         self._s_pitch = SliderRow(
-            "Corrección de tono SSB:",
+            tr("Corrección de tono SSB:"),
             min_val=-500, max_val=500,
             default=int(_DSP_DEF.pitch_shift_hz),
             step=10, unit="Hz", fmt="{:+.0f}",
         )
         self._s_pitch._update_label = lambda v: self._s_pitch._val_lbl.setText(
-            f"{v:+.0f} Hz  ({'neutro' if abs(v) < 5 else 'agudo' if v > 0 else 'grave'})"
+            f"{v:+.0f} Hz  ({tr('neutro') if abs(v) < 5 else tr('agudo') if v > 0 else tr('grave')})"
         )
         self._s_pitch._val_lbl.setFixedWidth(110)
         self._s_pitch.valueChanged.connect(self._pipeline.set_pitch_shift)
         layout.addWidget(self._s_pitch)
-        layout.addWidget(_note("  ↳ Corrige offset de BFO en SSB. +100 Hz si la voz suena grave, -100 Hz si suena aguda."))
+        layout.addWidget(_note(tr("  ↳ Corrige offset de BFO en SSB. +100 Hz si la voz suena grave, -100 Hz si suena aguda.")))
         return group
 
     def _build_exciter_group(self) -> QGroupBox:
-        group = QGroupBox("Excitador Armónico  (se aplica en tiempo real)")
+        group = QGroupBox(tr("Excitador Armónico  (se aplica en tiempo real)"))
         layout = QVBoxLayout(group)
 
         self._s_exciter_drive = SliderRow(
-            "Drive:",
+            tr("Drive:"),
             min_val=1.0, max_val=10.0,
             default=_DSP_DEF.exciter_drive,
             step=0.5, unit="", fmt="{:.1f}",
         )
         self._s_exciter_drive._update_label = lambda v: self._s_exciter_drive._val_lbl.setText(
-            f"{v:.1f}×  ({'suave' if v < 3.0 else 'normal' if v < 6.0 else 'agresivo'})"
+            f"{v:.1f}×  ({tr('suave') if v < 3.0 else tr('normal') if v < 6.0 else tr('agresivo')})"
         )
         self._s_exciter_drive._val_lbl.setFixedWidth(110)
         self._s_exciter_drive.valueChanged.connect(self._on_exciter_drive)
         layout.addWidget(self._s_exciter_drive)
-        layout.addWidget(_note("  ↳ Saturación tanh: cuántos armónicos se generan. Bajo=sutil, alto=efecto notable."))
+        layout.addWidget(_note(tr("  ↳ Saturación tanh: cuántos armónicos se generan. Bajo=sutil, alto=efecto notable.")))
 
         self._s_exciter_mix = SliderRow(
-            "Mezcla:",
+            tr("Mezcla:"),
             min_val=0.0, max_val=1.0,
             default=_DSP_DEF.exciter_mix,
             step=0.05, unit="", fmt="{:.2f}",
@@ -329,7 +330,7 @@ class AdvancedAudioTab(QWidget):
         )
         self._s_exciter_mix.valueChanged.connect(self._on_exciter_mix)
         layout.addWidget(self._s_exciter_mix)
-        layout.addWidget(_note("  ↳ Nivel de armónicos mezclados. 20–40% = zona útil sin sonar artificial."))
+        layout.addWidget(_note(tr("  ↳ Nivel de armónicos mezclados. 20–40% = zona útil sin sonar artificial.")))
         return group
 
     # ------------------------------------------------------------------
@@ -463,11 +464,11 @@ class AdvancedImpulseTab(QWidget):
     # ------------------------------------------------------------------
 
     def _build_blanker_group(self) -> QGroupBox:
-        group = QGroupBox("Supresor de Impulsos  (se aplica en tiempo real)")
+        group = QGroupBox(tr("Supresor de Impulsos  (se aplica en tiempo real)"))
         layout = QVBoxLayout(group)
 
         hits_row = QHBoxLayout()
-        hits_row.addWidget(QLabel("Actividad:"))
+        hits_row.addWidget(QLabel(tr("Actividad:")))
         self._lbl_blanker_hits = QLabel("—")
         self._lbl_blanker_hits.setStyleSheet("color: #888;")
         hits_row.addWidget(self._lbl_blanker_hits)
@@ -475,40 +476,40 @@ class AdvancedImpulseTab(QWidget):
         layout.addLayout(hits_row)
 
         self._s_blanker_frame = SliderRow(
-            "Umbral de trama (10 ms):",
+            tr("Umbral de trama (10 ms):"),
             min_val=5.0, max_val=100.0,
             default=_DSP_DEF.blanker_frame,
             step=1.0, unit="×", fmt="{:.0f}",
         )
         self._s_blanker_frame._update_label = lambda v: self._s_blanker_frame._val_lbl.setText(
-            f"{int(v)}×  ({'agresivo' if v < 10 else 'normal' if v < 35 else 'suave'})"
+            f"{int(v)}×  ({tr('agresivo') if v < 10 else tr('normal') if v < 35 else tr('suave')})"
         )
         self._s_blanker_frame._val_lbl.setFixedWidth(110)
         self._s_blanker_frame.valueChanged.connect(self._pipeline.set_blanker_frame)
         layout.addWidget(self._s_blanker_frame)
-        layout.addWidget(_note("  ↳ Bajo=captura más impulsos (QRN fuerte). Alto=solo blancos muy grandes."))
+        layout.addWidget(_note(tr("  ↳ Bajo=captura más impulsos (QRN fuerte). Alto=solo blancos muy grandes.")))
 
         self._s_blanker_mini = SliderRow(
-            "Umbral micro (0.67 ms):",
+            tr("Umbral micro (0.67 ms):"),
             min_val=3.0, max_val=30.0,
             default=_DSP_DEF.blanker_mini,
             step=1.0, unit="×", fmt="{:.0f}",
         )
         self._s_blanker_mini._update_label = lambda v: self._s_blanker_mini._val_lbl.setText(
-            f"{int(v)}×  ({'agresivo' if v < 5 else 'normal' if v < 15 else 'suave'})"
+            f"{int(v)}×  ({tr('agresivo') if v < 5 else tr('normal') if v < 15 else tr('suave')})"
         )
         self._s_blanker_mini._val_lbl.setFixedWidth(110)
         self._s_blanker_mini.valueChanged.connect(self._pipeline.set_blanker_mini)
         layout.addWidget(self._s_blanker_mini)
-        layout.addWidget(_note("  ↳ Detecta frituras y crackles cortos. Bajo=elimina más, puede recortar consonantes."))
+        layout.addWidget(_note(tr("  ↳ Detecta frituras y crackles cortos. Bajo=elimina más, puede recortar consonantes.")))
         return group
 
     def _build_anf_group(self) -> QGroupBox:
-        group = QGroupBox("ANF — Filtro de Muesca Espectral  (parámetros técnicos)")
+        group = QGroupBox(tr("ANF — Filtro de Muesca Espectral  (parámetros técnicos)"))
         layout = QVBoxLayout(group)
 
         anf_row = QHBoxLayout()
-        anf_row.addWidget(QLabel("Actividad:"))
+        anf_row.addWidget(QLabel(tr("Actividad:")))
         self._lbl_anf_activity = QLabel("—")
         self._lbl_anf_activity.setStyleSheet("color: #888;")
         anf_row.addWidget(self._lbl_anf_activity)
@@ -516,21 +517,21 @@ class AdvancedImpulseTab(QWidget):
         layout.addLayout(anf_row)
 
         self._s_anf_threshold = SliderRow(
-            "Sensibilidad:",
+            tr("Sensibilidad:"),
             min_val=1.5, max_val=10.0,
             default=_DSP_DEF.anf_threshold,
             step=0.1, unit="x", fmt="{:.1f}",
         )
         self._s_anf_threshold._update_label = lambda v: self._s_anf_threshold._val_lbl.setText(
-            f"{v:.1f}×  ({'alta' if v < 2.5 else 'media' if v < 5.0 else 'baja'})"
+            f"{v:.1f}×  ({tr('alta') if v < 2.5 else tr('media') if v < 5.0 else tr('baja')})"
         )
         self._s_anf_threshold._val_lbl.setFixedWidth(90)
         self._s_anf_threshold.valueChanged.connect(self._pipeline.set_anf_threshold)
         layout.addWidget(self._s_anf_threshold)
-        layout.addWidget(_note("  ↳ Ratio bin/baseline para detectar un tono. Bajar si hay tonos débiles."))
+        layout.addWidget(_note(tr("  ↳ Ratio bin/baseline para detectar un tono. Bajar si hay tonos débiles.")))
 
         self._s_anf_depth = SliderRow(
-            "Profundidad:",
+            tr("Profundidad:"),
             min_val=0.0, max_val=1.0,
             default=_DSP_DEF.anf_depth,
             step=0.05, unit="", fmt="{:.2f}",
@@ -540,7 +541,7 @@ class AdvancedImpulseTab(QWidget):
         )
         self._s_anf_depth.valueChanged.connect(self._pipeline.set_anf_depth)
         layout.addWidget(self._s_anf_depth)
-        layout.addWidget(_note("  ↳ Atenuación aplicada al tono detectado. 100%=silencia, 50%=reduce 6dB."))
+        layout.addWidget(_note(tr("  ↳ Atenuación aplicada al tono detectado. 100%=silencia, 50%=reduce 6dB.")))
         return group
 
     # ------------------------------------------------------------------
@@ -561,7 +562,7 @@ class AdvancedImpulseTab(QWidget):
             self._lbl_anf_activity.setText("—")
             self._lbl_anf_activity.setStyleSheet("color: #888;")
         else:
-            self._lbl_anf_activity.setText(f"🔇 {bins} {'tono' if bins == 1 else 'tonos'}")
+            self._lbl_anf_activity.setText(f"🔇 {bins} {tr('tono') if bins == 1 else tr('tonos')}")
             self._lbl_anf_activity.setStyleSheet("color: #4fc3f7; font-weight: bold;")
 
     # ------------------------------------------------------------------
@@ -645,16 +646,16 @@ class AdvancedCancellerTab(QWidget):
     # ------------------------------------------------------------------
 
     def _build_canceller_group(self) -> QGroupBox:
-        group = QGroupBox("Cancelador de Ruido  (Wiener Log-MMSE)")
+        group = QGroupBox(tr("Cancelador de Ruido  (Wiener Log-MMSE)"))
         layout = QVBoxLayout(group)
 
         noise_row = QHBoxLayout()
-        noise_row.addWidget(QLabel("Reducción:"))
+        noise_row.addWidget(QLabel(tr("Reducción:")))
         self._lbl_noise_db = QLabel("—")
         self._lbl_noise_db.setStyleSheet("color: #888;")
         noise_row.addWidget(self._lbl_noise_db)
         noise_row.addSpacing(16)
-        noise_row.addWidget(QLabel("Voz:"))
+        noise_row.addWidget(QLabel(tr("Voz:")))
         self._lbl_noise_vp = QLabel("—")
         self._lbl_noise_vp.setStyleSheet("color: #888;")
         noise_row.addWidget(self._lbl_noise_vp)
@@ -662,276 +663,276 @@ class AdvancedCancellerTab(QWidget):
         layout.addLayout(noise_row)
 
         self._s_noise_floor = SliderRow(
-            "Piso espectral:",
+            tr("Piso espectral:"),
             min_val=0.05, max_val=0.3,
             default=_DSP_DEF.noise_floor,
             step=0.01, unit="", fmt="{:.2f}",
         )
         self._s_noise_floor.valueChanged.connect(self._on_noise_floor)
         layout.addWidget(self._s_noise_floor)
-        layout.addWidget(_note("  ↳ Ganancia mínima por bin. 0.10=suprime 20dB (recomendado). Mínimo 0.05."))
+        layout.addWidget(_note(tr("  ↳ Ganancia mínima por bin. 0.10=suprime 20dB (recomendado). Mínimo 0.05.")))
 
         self._s_noise_smooth = SliderRow(
-            "Anti-gorgojeo (β):",
+            tr("Anti-gorgojeo (β):"),
             min_val=0.90, max_val=0.99,
             default=_DSP_DEF.noise_smooth,
             step=0.001, unit="", fmt="{:.3f}",
         )
         self._s_noise_smooth._update_label = lambda v: self._s_noise_smooth._val_lbl.setText(
-            f"{v*100:.1f}%  ({'reactivo' if v < 0.95 else 'normal' if v < 0.98 else 'suave' if v < 0.985 else 'máximo'})"
+            f"{v*100:.1f}%  ({tr('reactivo') if v < 0.95 else tr('normal') if v < 0.98 else tr('suave') if v < 0.985 else tr('máximo')})"
         )
         self._s_noise_smooth._val_lbl.setFixedWidth(110)
         self._s_noise_smooth.valueChanged.connect(self._pipeline.set_noise_smooth)
         layout.addWidget(self._s_noise_smooth)
-        layout.addWidget(_note("  ↳ Release (retorno al ruido), pasos de 0.1% para calibrar fino. 99%≈1s de release — puede dejar cola de ruido tras la voz."))
+        layout.addWidget(_note(tr("  ↳ Release (retorno al ruido), pasos de 0.1% para calibrar fino. 99%≈1s de release — puede dejar cola de ruido tras la voz.")))
 
         self._s_noise_attack = SliderRow(
-            "Velocidad ataque:",
+            tr("Velocidad ataque:"),
             min_val=0.50, max_val=0.92,
             default=_DSP_DEF.noise_attack,
             step=0.02, unit="", fmt="{:.2f}",
         )
         self._s_noise_attack._update_label = lambda v: self._s_noise_attack._val_lbl.setText(
-            f"{v*100:.0f}%  ({'rápido' if v < 0.68 else 'normal' if v < 0.84 else 'suave'})"
+            f"{v*100:.0f}%  ({tr('rápido') if v < 0.68 else tr('normal') if v < 0.84 else tr('suave')})"
         )
         self._s_noise_attack._val_lbl.setFixedWidth(110)
         self._s_noise_attack.valueChanged.connect(self._on_noise_attack)
         layout.addWidget(self._s_noise_attack)
-        layout.addWidget(_note("  ↳ Attack (onset de voz): bajo=consonantes nítidas. Alto=transiciones suaves."))
+        layout.addWidget(_note(tr("  ↳ Attack (onset de voz): bajo=consonantes nítidas. Alto=transiciones suaves.")))
 
         fading_row = QHBoxLayout()
-        fading_row.addWidget(QLabel("Compensación fading HF:"))
+        fading_row.addWidget(QLabel(tr("Compensación fading HF:")))
         self._lbl_fading = QLabel("—")
         self._lbl_fading.setStyleSheet("color: #888;")
         fading_row.addWidget(self._lbl_fading)
         fading_row.addStretch()
         layout.addLayout(fading_row)
-        layout.addWidget(_note("  ↳ Activar en Módulos Activos (sub-módulo del cancelador). Solo modo Adaptativo."))
+        layout.addWidget(_note(tr("  ↳ Activar en Módulos Activos (sub-módulo del cancelador). Solo modo Adaptativo.")))
 
         self._s_fading_change = SliderRow(
-            "Sensibilidad fading:",
+            tr("Sensibilidad fading:"),
             min_val=2.0, max_val=10.0,
             default=_DSP_DEF.noise_fading_change_db,
             step=0.5, unit="dB", fmt="{:.1f}",
         )
         self._s_fading_change._update_label = lambda v: self._s_fading_change._val_lbl.setText(
-            f"{v:.1f} dB  ({'sensible' if v < 4 else 'normal' if v < 7 else 'selectivo'})"
+            f"{v:.1f} dB  ({tr('sensible') if v < 4 else tr('normal') if v < 7 else tr('selectivo')})"
         )
         self._s_fading_change._val_lbl.setFixedWidth(110)
         self._s_fading_change.valueChanged.connect(self._pipeline.set_fading_change_db)
         layout.addWidget(self._s_fading_change)
-        layout.addWidget(_note("  ↳ Cambio de energía que dispara el freeze. Bajo=detecta QSB suave, puede disparar con la voz. Alto=solo fades profundos."))
+        layout.addWidget(_note(tr("  ↳ Cambio de energía que dispara el freeze. Bajo=detecta QSB suave, puede disparar con la voz. Alto=solo fades profundos.")))
 
         self._s_fading_freeze = SliderRow(
-            "Duración del freeze:",
+            tr("Duración del freeze:"),
             min_val=100.0, max_val=500.0,
             default=_DSP_DEF.noise_fading_freeze_ms,
             step=25.0, unit="ms", fmt="{:.0f}",
         )
         self._s_fading_freeze._update_label = lambda v: self._s_fading_freeze._val_lbl.setText(
-            f"{v:.0f} ms  ({'corto' if v < 175 else 'normal' if v < 325 else 'largo'})"
+            f"{v:.0f} ms  ({tr('corto') if v < 175 else tr('normal') if v < 325 else tr('largo')})"
         )
         self._s_fading_freeze._val_lbl.setFixedWidth(110)
         self._s_fading_freeze.valueChanged.connect(self._pipeline.set_fading_freeze_ms)
         layout.addWidget(self._s_fading_freeze)
-        layout.addWidget(_note("  ↳ Tiempo que MCRA queda congelado tras cada evento. Fades lentos necesitan más; muy largo desactualiza el piso."))
+        layout.addWidget(_note(tr("  ↳ Tiempo que MCRA queda congelado tras cada evento. Fades lentos necesitan más; muy largo desactualiza el piso.")))
         return group
 
     def _build_squelch_group(self) -> QGroupBox:
-        group = QGroupBox("Squelch de voz  (activar en Módulos Activos)")
+        group = QGroupBox(tr("Squelch de voz  (activar en Módulos Activos)"))
         layout = QVBoxLayout(group)
 
         sq_row = QHBoxLayout()
-        sq_row.addWidget(QLabel("Nivel de voz:"))
+        sq_row.addWidget(QLabel(tr("Nivel de voz:")))
         self._lbl_sq_vp = QLabel("—")
         self._lbl_sq_vp.setStyleSheet("color: #888;")
         sq_row.addWidget(self._lbl_sq_vp)
         sq_row.addSpacing(20)
-        sq_row.addWidget(QLabel("Gate:"))
+        sq_row.addWidget(QLabel(tr("Gate:")))
         self._lbl_sq_gate = QLabel("—")
         self._lbl_sq_gate.setStyleSheet("color: #888;")
         sq_row.addWidget(self._lbl_sq_gate)
         sq_row.addStretch()
         layout.addLayout(sq_row)
         layout.addWidget(_note(
-            "  ↳ Ajustar Umbral (%) para que quede entre el nivel en silencio y con voz."
+            tr("  ↳ Ajustar Umbral (%) para que quede entre el nivel en silencio y con voz.")
         ))
 
         self._s_squelch_threshold = SliderRow(
-            "Umbral:",
+            tr("Umbral:"),
             min_val=0.05, max_val=1.00,
             default=_DSP_DEF.squelch_threshold,
             step=0.05, unit="", fmt="{:.0f}",
         )
         self._s_squelch_threshold._update_label = lambda v: self._s_squelch_threshold._val_lbl.setText(
-            f"{v*100:.0f}%  ({'sensible' if v < 0.15 else 'normal' if v < 0.35 else 'selectivo' if v < 0.75 else 'máximo'})"
+            f"{v*100:.0f}%  ({tr('sensible') if v < 0.15 else tr('normal') if v < 0.35 else tr('selectivo') if v < 0.75 else tr('máximo')})"
         )
         self._s_squelch_threshold._val_lbl.setFixedWidth(110)
         self._s_squelch_threshold.valueChanged.connect(self._on_squelch_threshold)
         layout.addWidget(self._s_squelch_threshold)
-        layout.addWidget(_note("  ↳ El ruido marca ~0% (el detector exige estructura de voz): 10–25% suele bastar. Subirlo solo si una interferencia tonal abre el gate."))
+        layout.addWidget(_note(tr("  ↳ El ruido marca ~0% (el detector exige estructura de voz): 10–25% suele bastar. Subirlo solo si una interferencia tonal abre el gate.")))
 
         self._s_squelch_hold = SliderRow(
-            "Retención:",
+            tr("Retención:"),
             min_val=0.0, max_val=1000.0,
             default=_DSP_DEF.squelch_hold_ms,
             step=50.0, unit="ms", fmt="{:.0f}",
         )
         self._s_squelch_hold.valueChanged.connect(self._on_squelch_hold)
         layout.addWidget(self._s_squelch_hold)
-        layout.addWidget(_note("  ↳ Tiempo que el gate permanece abierto tras perder la voz. Default 300 ms."))
+        layout.addWidget(_note(tr("  ↳ Tiempo que el gate permanece abierto tras perder la voz. Default 300 ms.")))
         return group
 
     def _build_perceptual_floor_group(self) -> QGroupBox:
-        group = QGroupBox("Piso espectral perceptual  (activar en Módulos Activos)")
+        group = QGroupBox(tr("Piso espectral perceptual  (activar en Módulos Activos)"))
         layout = QVBoxLayout(group)
 
         pf_row = QHBoxLayout()
-        pf_row.addWidget(QLabel("Piso vocal:"))
+        pf_row.addWidget(QLabel(tr("Piso vocal:")))
         self._lbl_pf_peak = QLabel("—")
         self._lbl_pf_peak.setStyleSheet("color: #888;")
         pf_row.addWidget(self._lbl_pf_peak)
         pf_row.addSpacing(20)
-        pf_row.addWidget(QLabel("Activo:"))
+        pf_row.addWidget(QLabel(tr("Activo:")))
         self._lbl_pf_active = QLabel("—")
         self._lbl_pf_active.setStyleSheet("color: #888;")
         pf_row.addWidget(self._lbl_pf_active)
         pf_row.addStretch()
         layout.addLayout(pf_row)
         layout.addWidget(_note(
-            "  ↳ 'Piso vocal': piso en la zona de mayor boost. 'Activo': % bins retenidos ahora."
+            tr("  ↳ 'Piso vocal': piso en la zona de mayor boost. 'Activo': % bins retenidos ahora.")
         ))
 
         self._s_pf_boost = SliderRow(
-            "Amplitud boost vocal:",
+            tr("Amplitud boost vocal:"),
             min_val=0.0, max_val=2.5,
             default=_DSP_DEF.perceptual_floor_boost,
             step=0.05, unit="", fmt="{:.2f}",
         )
         self._s_pf_boost._update_label = lambda v: self._s_pf_boost._val_lbl.setText(
-            f"+{v*100:.0f}%  ({'sin boost' if v < 0.05 else 'suave' if v < 0.5 else 'normal' if v < 1.2 else 'fuerte'})"
+            f"+{v*100:.0f}%  ({tr('sin boost') if v < 0.05 else tr('suave') if v < 0.5 else tr('normal') if v < 1.2 else tr('fuerte')})"
         )
         self._s_pf_boost._val_lbl.setFixedWidth(110)
         self._s_pf_boost.valueChanged.connect(self._on_pf_boost)
         layout.addWidget(self._s_pf_boost)
-        layout.addWidget(_note("  ↳ Cuánto se eleva el piso en la zona vocal. 75%=suave, 150%=normal, 250%=máximo."))
+        layout.addWidget(_note(tr("  ↳ Cuánto se eleva el piso en la zona vocal. 75%=suave, 150%=normal, 250%=máximo.")))
 
         self._s_pf_center = SliderRow(
-            "Centro del boost:",
+            tr("Centro del boost:"),
             min_val=200.0, max_val=1200.0,
             default=_DSP_DEF.perceptual_floor_center,
             step=25.0, unit="Hz", fmt="{:.0f}",
         )
         self._s_pf_center._update_label = lambda v: self._s_pf_center._val_lbl.setText(
-            f"{v:.0f} Hz  ({'grave' if v < 350 else 'vocal' if v < 700 else 'medio'})"
+            f"{v:.0f} Hz  ({tr('grave') if v < 350 else tr('vocal') if v < 700 else tr('medio')})"
         )
         self._s_pf_center._val_lbl.setFixedWidth(110)
         self._s_pf_center.valueChanged.connect(self._on_pf_center)
         layout.addWidget(self._s_pf_center)
-        layout.addWidget(_note("  ↳ Frecuencia de máximo boost. 500 Hz=AM/SSB típico. 350 Hz=SSB muy grave."))
+        layout.addWidget(_note(tr("  ↳ Frecuencia de máximo boost. 500 Hz=AM/SSB típico. 350 Hz=SSB muy grave.")))
 
         self._s_pf_rolloff_hz = SliderRow(
-            "Inicio del rolloff:",
+            tr("Inicio del rolloff:"),
             min_val=1000.0, max_val=6000.0,
             default=_DSP_DEF.perceptual_floor_rolloff_hz,
             step=100.0, unit="Hz", fmt="{:.0f}",
         )
         self._s_pf_rolloff_hz._update_label = lambda v: self._s_pf_rolloff_hz._val_lbl.setText(
-            f"{v:.0f} Hz  ({'pronto' if v < 2000 else 'normal' if v < 4000 else 'tarde'})"
+            f"{v:.0f} Hz  ({tr('pronto') if v < 2000 else tr('normal') if v < 4000 else tr('tarde')})"
         )
         self._s_pf_rolloff_hz._val_lbl.setFixedWidth(110)
         self._s_pf_rolloff_hz.valueChanged.connect(self._on_pf_rolloff_hz)
         layout.addWidget(self._s_pf_rolloff_hz)
-        layout.addWidget(_note("  ↳ A partir de qué frecuencia baja el piso. 3000 Hz=default."))
+        layout.addWidget(_note(tr("  ↳ A partir de qué frecuencia baja el piso. 3000 Hz=default.")))
 
         self._s_pf_rolloff_depth = SliderRow(
-            "Profundidad del rolloff:",
+            tr("Profundidad del rolloff:"),
             min_val=0.0, max_val=0.70,
             default=_DSP_DEF.perceptual_floor_rolloff_depth,
             step=0.05, unit="", fmt="{:.2f}",
         )
         self._s_pf_rolloff_depth._update_label = lambda v: self._s_pf_rolloff_depth._val_lbl.setText(
-            f"-{v*100:.0f}%  ({'sin rolloff' if v < 0.05 else 'suave' if v < 0.3 else 'normal' if v < 0.55 else 'fuerte'})"
+            f"-{v*100:.0f}%  ({tr('sin rolloff') if v < 0.05 else tr('suave') if v < 0.3 else tr('normal') if v < 0.55 else tr('fuerte')})"
         )
         self._s_pf_rolloff_depth._val_lbl.setFixedWidth(110)
         self._s_pf_rolloff_depth.valueChanged.connect(self._on_pf_rolloff_depth)
         layout.addWidget(self._s_pf_rolloff_depth)
-        layout.addWidget(_note("  ↳ Cuánto cae el piso en altas frecuencias. 55%=default."))
+        layout.addWidget(_note(tr("  ↳ Cuánto cae el piso en altas frecuencias. 55%=default.")))
         return group
 
     def _build_post_filter_group(self) -> QGroupBox:
-        group = QGroupBox("Post-filtro espectral  (activar en Módulos Activos)")
+        group = QGroupBox(tr("Post-filtro espectral  (activar en Módulos Activos)"))
         layout = QVBoxLayout(group)
 
         pf_row = QHBoxLayout()
-        pf_row.addWidget(QLabel("Reducción extra:"))
+        pf_row.addWidget(QLabel(tr("Reducción extra:")))
         self._lbl_pf_extra = QLabel("—")
         self._lbl_pf_extra.setStyleSheet("color: #888;")
         pf_row.addWidget(self._lbl_pf_extra)
         pf_row.addStretch()
         layout.addLayout(pf_row)
-        layout.addWidget(_note("  ↳ dB extra eliminados en bins de ruido vs cancelador base. 0 dB = sin efecto."))
+        layout.addWidget(_note(tr("  ↳ dB extra eliminados en bins de ruido vs cancelador base. 0 dB = sin efecto.")))
 
         self._s_post_filter = SliderRow(
-            "Agresividad:",
+            tr("Agresividad:"),
             min_val=0.0, max_val=4.0,
             default=_DSP_DEF.post_filter_strength,
             step=0.1, unit="", fmt="{:.1f}",
         )
         self._s_post_filter._update_label = lambda v: self._s_post_filter._val_lbl.setText(
-            f"{v:.1f}  ({'desactivado' if v == 0 else 'suave' if v < 0.8 else 'normal' if v < 2.0 else 'agresivo' if v < 3.2 else 'máximo'})"
+            f"{v:.1f}  ({tr('desactivado') if v == 0 else tr('suave') if v < 0.8 else tr('normal') if v < 2.0 else tr('agresivo') if v < 3.2 else tr('máximo')})"
         )
         self._s_post_filter._val_lbl.setFixedWidth(110)
         self._s_post_filter.valueChanged.connect(self._on_post_filter_strength)
         layout.addWidget(self._s_post_filter)
-        layout.addWidget(_note("  ↳ Supresión extra en bins de ruido para eliminar 'pitidos fantasma'. 1=moderado, 2=normal, 4=máximo."))
+        layout.addWidget(_note(tr("  ↳ Supresión extra en bins de ruido para eliminar 'pitidos fantasma'. 1=moderado, 2=normal, 4=máximo.")))
         return group
 
     def _build_pitch_group(self) -> QGroupBox:
-        group = QGroupBox("Refuerzo de pitch SSB  (activar en Módulos Activos)")
+        group = QGroupBox(tr("Refuerzo de pitch SSB  (activar en Módulos Activos)"))
         layout = QVBoxLayout(group)
 
         f0_row = QHBoxLayout()
-        f0_row.addWidget(QLabel("Pitch detectado:"))
+        f0_row.addWidget(QLabel(tr("Pitch detectado:")))
         self._lbl_pitch_f0 = QLabel("—")
         self._lbl_pitch_f0.setStyleSheet("color: #888;")
         f0_row.addWidget(self._lbl_pitch_f0)
         f0_row.addStretch()
         layout.addLayout(f0_row)
-        layout.addWidget(_note("  ↳ f0 de la voz en tiempo real. Con voz SSB clara debería marcar 80–400 Hz estable."))
+        layout.addWidget(_note(tr("  ↳ f0 de la voz en tiempo real. Con voz SSB clara debería marcar 80–400 Hz estable.")))
 
         self._s_pitch_strength = SliderRow(
-            "Protección de armónicos:",
+            tr("Protección de armónicos:"),
             min_val=0.0, max_val=1.0,
             default=_DSP_DEF.pitch_enhance_strength,
             step=0.05, unit="", fmt="{:.2f}",
         )
         self._s_pitch_strength._update_label = lambda v: self._s_pitch_strength._val_lbl.setText(
-            f"{v*100:.0f}%  ({'suave' if v < 0.4 else 'normal' if v < 0.75 else 'fuerte'})"
+            f"{v*100:.0f}%  ({tr('suave') if v < 0.4 else tr('normal') if v < 0.75 else tr('fuerte')})"
         )
         self._s_pitch_strength._val_lbl.setFixedWidth(110)
         self._s_pitch_strength.valueChanged.connect(self._on_pitch_strength)
         layout.addWidget(self._s_pitch_strength)
-        layout.addWidget(_note("  ↳ Cuánto eleva la probabilidad de voz en bins de armónicos. 70%=recomendado."))
+        layout.addWidget(_note(tr("  ↳ Cuánto eleva la probabilidad de voz en bins de armónicos. 70%=recomendado.")))
         return group
 
     def _build_leveler_group(self) -> QGroupBox:
-        group = QGroupBox("Nivelador de voz  (activar en Módulos Activos)")
+        group = QGroupBox(tr("Nivelador de voz  (activar en Módulos Activos)"))
         layout = QVBoxLayout(group)
 
         self._s_leveler_max = SliderRow(
-            "Ganancia máxima:",
+            tr("Ganancia máxima:"),
             min_val=0.0, max_val=20.0,
             default=_DSP_DEF.voice_leveler_max_db,
             step=1.0, unit="dB", fmt="{:.0f}",
         )
         self._s_leveler_max._update_label = lambda v: self._s_leveler_max._val_lbl.setText(
-            f"+{v:.0f} dB  ({'suave' if v < 7 else 'normal' if v < 14 else 'fuerte'})"
+            f"+{v:.0f} dB  ({tr('suave') if v < 7 else tr('normal') if v < 14 else tr('fuerte')})"
         )
         self._s_leveler_max._val_lbl.setFixedWidth(110)
         self._s_leveler_max.valueChanged.connect(self._pipeline.set_voice_leveler_max_db)
         layout.addWidget(self._s_leveler_max)
-        layout.addWidget(_note("  ↳ Tope de compensación para voz débil. Alto=iguala más las señales, pero levanta también el ruido que acompaña a la voz débil."))
+        layout.addWidget(_note(tr("  ↳ Tope de compensación para voz débil. Alto=iguala más las señales, pero levanta también el ruido que acompaña a la voz débil.")))
         return group
 
     # ------------------------------------------------------------------
@@ -956,19 +957,19 @@ class AdvancedCancellerTab(QWidget):
             self._lbl_sq_vp.setStyleSheet(f"color: {color_sq}; font-weight: bold;")
 
             gate_open = self._pipeline.squelch_gate_open
-            self._lbl_sq_gate.setText("ABIERTO" if gate_open else "CERRADO")
+            self._lbl_sq_gate.setText(tr("ABIERTO") if gate_open else tr("CERRADO"))
             self._lbl_sq_gate.setStyleSheet(
                 "color: #69f0ae; font-weight: bold;" if gate_open
                 else "color: #888; font-weight: bold;"
             )
         else:
-            self._lbl_sq_vp.setText("—  (desactivado)")
+            self._lbl_sq_vp.setText(tr("—  (desactivado)"))
             self._lbl_sq_vp.setStyleSheet("color: #888;")
             self._lbl_sq_gate.setText("—")
             self._lbl_sq_gate.setStyleSheet("color: #888;")
 
         if not self._pipeline.noise_has_profile:
-            self._lbl_noise_db.setText("sin perfil")
+            self._lbl_noise_db.setText(tr("sin perfil"))
             self._lbl_noise_db.setStyleSheet("color: #888;")
             self._lbl_noise_vp.setText("—")
             self._lbl_noise_vp.setStyleSheet("color: #888;")
@@ -985,10 +986,10 @@ class AdvancedCancellerTab(QWidget):
         # Fading compensation indicator
         if self._config.dsp.noise_fading_comp and self._pipeline.is_running():
             if self._pipeline.fading_active:
-                self._lbl_fading.setText("FADE")
+                self._lbl_fading.setText(tr("FADE"))
                 self._lbl_fading.setStyleSheet("color: #ffb74d; font-weight: bold;")
             else:
-                self._lbl_fading.setText("ok")
+                self._lbl_fading.setText(tr("ok"))
                 self._lbl_fading.setStyleSheet("color: #888;")
         else:
             self._lbl_fading.setText("—")
@@ -1003,10 +1004,10 @@ class AdvancedCancellerTab(QWidget):
                 color_ex = "#69f0ae" if extra_db < -5 else "#fff176"
                 self._lbl_pf_extra.setStyleSheet(f"color: {color_ex}; font-weight: bold;")
             else:
-                self._lbl_pf_extra.setText("0 dB  (sin ruido activo)")
+                self._lbl_pf_extra.setText(tr("0 dB  (sin ruido activo)"))
                 self._lbl_pf_extra.setStyleSheet("color: #888;")
         else:
-            self._lbl_pf_extra.setText("—  (desactivado)")
+            self._lbl_pf_extra.setText(tr("—  (desactivado)"))
             self._lbl_pf_extra.setStyleSheet("color: #888;")
 
         # Piso espectral perceptual
@@ -1024,7 +1025,7 @@ class AdvancedCancellerTab(QWidget):
             color_act = "#69f0ae" if active > 0.25 else "#fff176" if active > 0.05 else "#888"
             self._lbl_pf_active.setStyleSheet(f"color: {color_act}; font-weight: bold;")
         else:
-            self._lbl_pf_peak.setText("—  (desactivado)")
+            self._lbl_pf_peak.setText(tr("—  (desactivado)"))
             self._lbl_pf_peak.setStyleSheet("color: #888;")
             self._lbl_pf_active.setText("—")
             self._lbl_pf_active.setStyleSheet("color: #888;")
@@ -1036,10 +1037,10 @@ class AdvancedCancellerTab(QWidget):
                 self._lbl_pitch_f0.setText(f"{f0:.0f} Hz")
                 self._lbl_pitch_f0.setStyleSheet("color: #69f0ae; font-weight: bold;")
             else:
-                self._lbl_pitch_f0.setText("sin detección")
+                self._lbl_pitch_f0.setText(tr("sin detección"))
                 self._lbl_pitch_f0.setStyleSheet("color: #888;")
         else:
-            self._lbl_pitch_f0.setText("—  (desactivado)")
+            self._lbl_pitch_f0.setText(tr("—  (desactivado)"))
             self._lbl_pitch_f0.setStyleSheet("color: #888;")
 
     # ------------------------------------------------------------------

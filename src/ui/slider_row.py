@@ -1,4 +1,4 @@
-"""
+﻿"""
 ui.slider_row — widget reutilizable de control con slider.
 
 Combina una etiqueta, un QSlider horizontal y una etiqueta de valor con unidad.
@@ -7,6 +7,7 @@ Soporta cualquier rango y paso flotante (ej: -20 a +20 dB con step 0.5).
 """
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QSlider, QMenu
 from PySide6.QtCore import Qt, Signal
+from i18n import tr
 
 
 class SliderRow(QWidget):
@@ -107,6 +108,6 @@ class SliderRow(QWidget):
         self._update_label(current_val)
 
         menu = QMenu(self)
-        action = menu.addAction(f"↺  Restaurar por defecto  ({default_str})")
+        action = menu.addAction(tr("↺  Restaurar por defecto  ({val})").format(val=default_str))
         if menu.exec(self._slider.mapToGlobal(pos)) == action:
             self.set_value(self._default, emit=True)

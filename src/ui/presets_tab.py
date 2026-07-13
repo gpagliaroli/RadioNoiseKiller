@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import (
+﻿from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem,
     QPushButton, QLabel, QLineEdit, QMessageBox, QInputDialog,
 )
@@ -6,6 +6,7 @@ from PySide6.QtCore import Signal
 from config import AppConfig
 from pipeline import ProcessingPipeline
 from presets import PresetManager
+from i18n import tr
 
 
 class PresetsTab(QWidget):
@@ -51,7 +52,7 @@ class PresetsTab(QWidget):
         root.setContentsMargins(12, 12, 12, 12)
         root.setSpacing(8)
 
-        root.addWidget(QLabel("Presets guardados:"))
+        root.addWidget(QLabel(tr("Presets guardados:")))
         self._list = QListWidget()
         self._list.setAlternatingRowColors(True)
         self._list.currentRowChanged.connect(self._on_selection_changed)
@@ -59,46 +60,46 @@ class PresetsTab(QWidget):
         root.addWidget(self._list, 1)
 
         name_row = QHBoxLayout()
-        lbl_name = QLabel("Nombre:")
+        lbl_name = QLabel(tr("Nombre:"))
         lbl_name.setFixedWidth(60)
         name_row.addWidget(lbl_name)
         self._name_edit = QLineEdit()
-        self._name_edit.setPlaceholderText("Nombre del preset...")
+        self._name_edit.setPlaceholderText(tr("Nombre del preset..."))
         self._name_edit.textChanged.connect(self._update_button_states)
         name_row.addWidget(self._name_edit)
         root.addLayout(name_row)
 
         btn1 = QHBoxLayout()
-        self._btn_save_new  = QPushButton("Guardar como nuevo")
-        self._btn_overwrite = QPushButton("Sobrescribir seleccionado")
+        self._btn_save_new  = QPushButton(tr("Guardar como nuevo"))
+        self._btn_overwrite = QPushButton(tr("Sobrescribir seleccionado"))
         btn1.addWidget(self._btn_save_new)
         btn1.addWidget(self._btn_overwrite)
         root.addLayout(btn1)
 
         btn2 = QHBoxLayout()
-        self._btn_load   = QPushButton("Cargar")
-        self._btn_delete = QPushButton("Eliminar")
+        self._btn_load   = QPushButton(tr("Cargar"))
+        self._btn_delete = QPushButton(tr("Eliminar"))
         btn2.addWidget(self._btn_load)
         btn2.addWidget(self._btn_delete)
         root.addLayout(btn2)
 
-        self._btn_rename = QPushButton("Renombrar seleccionado")
+        self._btn_rename = QPushButton(tr("Renombrar seleccionado"))
         root.addWidget(self._btn_rename)
 
         active_row = QHBoxLayout()
-        lbl_act = QLabel("Preset activo:")
+        lbl_act = QLabel(tr("Preset activo:"))
         lbl_act.setFixedWidth(90)
         active_row.addWidget(lbl_act)
-        self._lbl_active = QLabel("(ninguno)")
+        self._lbl_active = QLabel(tr("(ninguno)"))
         self._lbl_active.setStyleSheet("color: #90caf9; font-weight: bold;")
         active_row.addWidget(self._lbl_active)
         active_row.addStretch()
         root.addLayout(active_row)
 
         note = QLabel(
-            "Cargar un preset aplica todos los ajustes DSP y Ganancia\n"
+            tr("Cargar un preset aplica todos los ajustes DSP y Ganancia\n"
             "en caliente, sin reiniciar el audio.\n"
-            "Doble-clic en la lista carga el preset directamente."
+            "Doble-clic en la lista carga el preset directamente.")
         )
         note.setStyleSheet("color: #888; font-size: 8pt;")
         root.addWidget(note)
@@ -127,8 +128,8 @@ class PresetsTab(QWidget):
             return
         if self._manager.exists(name):
             ans = QMessageBox.question(
-                self, "Confirmar reemplazo",
-                f"Ya existe un preset llamado '{name}'.\n\nDeseas reemplazarlo?",
+                self, tr("Confirmar reemplazo"),
+                tr("Ya existe un preset llamado '{name}'.\n\nDeseas reemplazarlo?").format(name=name),
             )
             if ans != QMessageBox.StandardButton.Yes:
                 return
@@ -156,7 +157,7 @@ class PresetsTab(QWidget):
             self._set_active(name)
             self.preset_loaded.emit()
         except Exception as e:
-            QMessageBox.warning(self, "Error al cargar preset", str(e))
+            QMessageBox.warning(self, tr("Error al cargar preset"), str(e))
 
     def _on_delete(self) -> None:
         item = self._list.currentItem()
@@ -164,15 +165,15 @@ class PresetsTab(QWidget):
             return
         name = item.text()
         ans = QMessageBox.question(
-            self, "Confirmar eliminacion",
-            f"Eliminar el preset '{name}'?",
+            self, tr("Confirmar eliminacion"),
+            tr("Eliminar el preset '{name}'?").format(name=name),
         )
         if ans != QMessageBox.StandardButton.Yes:
             return
         self._manager.delete(name)
         if self._active == name:
             self._active = None
-            self._lbl_active.setText("(ninguno)")
+            self._lbl_active.setText(tr("(ninguno)"))
             self._config.last_preset = ""
             self.state_changed.emit()
         self._refresh_list()
@@ -183,14 +184,14 @@ class PresetsTab(QWidget):
             return
         old = item.text()
         new, ok = QInputDialog.getText(
-            self, "Renombrar preset", "Nuevo nombre:", text=old
+            self, tr("Renombrar preset"), tr("Nuevo nombre:"), text=old
         )
         new = new.strip()
         if not ok or not new or new == old:
             return
         if self._manager.exists(new):
-            QMessageBox.warning(self, "Nombre en uso",
-                                f"Ya existe un preset llamado '{new}'.")
+            QMessageBox.warning(self, tr("Nombre en uso"),
+                                tr("Ya existe un preset llamado '{name}'.").format(name=new))
             return
         try:
             self._manager.rename(old, new)
@@ -199,7 +200,7 @@ class PresetsTab(QWidget):
             self._refresh_list()
             self._select_by_name(new)
         except Exception as e:
-            QMessageBox.warning(self, "Error al renombrar", str(e))
+            QMessageBox.warning(self, tr("Error al renombrar"), str(e))
 
     # ------------------------------------------------------------------ #
     # Helpers                                                              #
@@ -207,7 +208,7 @@ class PresetsTab(QWidget):
 
     def _set_active(self, name: str, modified: bool = False) -> None:
         self._active = name
-        self._lbl_active.setText(f"{name}  (modificado)" if modified else name)
+        self._lbl_active.setText(tr("{name}  (modificado)").format(name=name) if modified else name)
         if self._config.last_preset != name:
             self._config.last_preset = name
             self.state_changed.emit()

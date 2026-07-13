@@ -4,6 +4,7 @@ from collections import deque
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt, QTimer, QRectF, QPointF
 from PySide6.QtGui import QPainter, QPainterPath, QColor, QPen, QFont, QPolygonF, QBrush
+from i18n import tr
 
 
 class SpectrumWidget(QWidget):
@@ -208,7 +209,7 @@ class SpectrumWidget(QWidget):
             p.setFont(font)
             p.drawText(QRectF(ml, mt, pw, ph),
                        Qt.AlignCenter,
-                       "Activar el procesamiento para ver el espectro")
+                       tr("Activar el procesamiento para ver el espectro"))
             self._draw_axes(p, ml, mt, pw, ph)
             p.end()
             return

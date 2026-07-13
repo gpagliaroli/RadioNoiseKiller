@@ -461,13 +461,24 @@ Cambios v1.5 (pendiente de release):
   al final para empujar el índice nuevo al pipeline. `_populate_devices` refactorizado:
   `_fill_device_combos()` compartido entre el populate inicial (señales aún no conectadas) y el
   refresh. MANUAL.md Cap. 1 actualizado.
+- Internacionalización ES/EN: diccionario propio (`src/i18n.py` con `tr()` + catálogo
+  `src/i18n_en.py`) en vez de Qt Linguist — con dos idiomas evita el toolchain .ts/.qm y los
+  datas extra en los specs; el texto fuente español es la clave y una clave ausente devuelve
+  identidad (nunca rompe). `language` en AppConfig/settings.json; `set_language()` se llama UNA
+  vez en `MainWindow.__init__` tras `config.load()` y ANTES de `_build_ui()` — cambiar idioma
+  requiere reinicio (no hay retraducción en vivo). Combo "Idioma:" en el grupo Control.
+  ~250 strings envueltos en `tr()`; los textos con valores usan `tr("plantilla {x}").format(...)`
+  (NUNCA f-strings en texto traducible — el template debe traducirse antes de formatear).
+  Al agregar UI nueva: envolver strings visibles en `tr()` y agregar la clave a `i18n_en.py`;
+  el extractor de claves y el verificador de cobertura/placeholders viven en el scratchpad de la
+  sesión (extract_keys.py / check_catalog.py — regenerarlos si hace falta, son triviales).
+  Verificado offscreen: UI completa en EN sin fugas en español, ES intacto, 6 suites OK.
+  El manual sigue solo en español (traducirlo es una decisión aparte).
 
 Pendiente para Fase 2:
 - Validar build en Pi real (ARM64 Raspberry Pi OS Bookworm)
 - Soporte de múltiples canales de audio
-- Internacionalización: soporte multi-idioma en la UI, en principio español e inglés
-  (evaluar Qt Linguist / `QTranslator` — toda la UI hoy tiene strings hardcodeados en español;
-  alcanza también al manual si se decide traducirlo)
+- Traducir el manual al inglés (la UI ya es bilingüe desde v1.5; ver ítem de i18n arriba)
 - Reducir/optimizar el tamaño total de la app. **Primera pasada hecha (post-v1.4):** recorte de
   módulos Qt sin uso en ambos specs (`QT_EXCLUDES` + filtro `sin_basura_qt()`) — Windows dist
   218→166 MB, artifact Linux 189→167 MB. Smoke test Windows OK; **falta validar el bundle Linux

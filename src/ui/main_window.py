@@ -9,6 +9,7 @@ from PySide6.QtGui import QFont
 
 from audio.devices import list_devices, rescan_devices, AudioDevice
 from config import AppConfig, RadioMode, GainConfig
+from i18n import tr, set_language
 from pipeline import ProcessingPipeline
 from ui.vu_meter import VuMeter
 from ui.advanced_tab import AdvancedAudioTab, AdvancedImpulseTab, AdvancedCancellerTab
@@ -25,6 +26,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self._config = AppConfig()
         self._config.load(settings_path())
+        set_language(self._config.language)  # antes de construir cualquier widget
 
         self._pipeline = ProcessingPipeline(self._config)
         self._preset_manager = PresetManager(presets_dir())
@@ -46,7 +48,7 @@ class MainWindow(QMainWindow):
         self._apply_loaded_config()
 
         self._btn_start.setEnabled(True)
-        self._status_bar.showMessage("Listo. Presiona ACTIVAR para iniciar.")
+        self._status_bar.showMessage(tr("Listo. Presiona ACTIVAR para iniciar."))
         self._restore_or_center()
 
     # ------------------------------------------------------------------
@@ -70,21 +72,21 @@ class MainWindow(QMainWindow):
         root.setSpacing(6)
 
         self._tabs = QTabWidget()
-        self._tabs.addTab(self._build_main_tab(), "Principal")
+        self._tabs.addTab(self._build_main_tab(), tr("Principal"))
 
         self._adv_audio_tab     = AdvancedAudioTab(self._config, self._pipeline)
         self._adv_impulse_tab   = AdvancedImpulseTab(self._config, self._pipeline)
         self._adv_canceller_tab = AdvancedCancellerTab(self._config, self._pipeline)
-        self._tabs.addTab(self._adv_audio_tab,     "Avanzada Audio")
-        self._tabs.addTab(self._adv_impulse_tab,   "Avanzada Impulsos")
-        self._tabs.addTab(self._adv_canceller_tab, "Avanzada Cancelador")
-        self._tabs.addTab(self._build_spectrum_tab(), "Espectro")
+        self._tabs.addTab(self._adv_audio_tab,     tr("Avanzada Audio"))
+        self._tabs.addTab(self._adv_impulse_tab,   tr("Avanzada Impulsos"))
+        self._tabs.addTab(self._adv_canceller_tab, tr("Avanzada Cancelador"))
+        self._tabs.addTab(self._build_spectrum_tab(), tr("Espectro"))
         self._presets_tab = PresetsTab(
             self._config, self._pipeline, self._preset_manager
         )
         self._presets_tab.preset_loaded.connect(self.refresh_from_config)
         self._presets_tab.state_changed.connect(self._schedule_save)
-        self._tabs.addTab(self._presets_tab, "Presets")
+        self._tabs.addTab(self._presets_tab, tr("Presets"))
         self._tabs.currentChanged.connect(self._on_tab_changed)
 
         root.addWidget(self._tabs)
@@ -116,22 +118,22 @@ class MainWindow(QMainWindow):
         return scroll
 
     def _build_device_group(self) -> QGroupBox:
-        group = QGroupBox("Dispositivos de Audio")
+        group = QGroupBox(tr("Dispositivos de Audio"))
         layout = QVBoxLayout(group)
         self._combo_in  = QComboBox()
         self._combo_out = QComboBox()
-        in_row = self._labeled_row("Entrada:", self._combo_in)
+        in_row = self._labeled_row(tr("Entrada:"), self._combo_in)
         in_spacer = QLabel("")
         in_spacer.setFixedWidth(34)
         in_row.addWidget(in_spacer)
         layout.addLayout(in_row)
 
-        out_row = self._labeled_row("Salida:", self._combo_out)
+        out_row = self._labeled_row(tr("Salida:"), self._combo_out)
         self._btn_refresh_devices = QPushButton("⟳")
         self._btn_refresh_devices.setFixedWidth(34)
         self._btn_refresh_devices.setToolTip(
-            "Volver a buscar dispositivos de audio (hardware conectado o\n"
-            "desconectado con la aplicación abierta). Requiere procesamiento detenido."
+            tr("Volver a buscar dispositivos de audio (hardware conectado o\n"
+            "desconectado con la aplicación abierta). Requiere procesamiento detenido.")
         )
         self._btn_refresh_devices.clicked.connect(self._on_refresh_devices)
         out_row.addWidget(self._btn_refresh_devices)
@@ -139,30 +141,30 @@ class MainWindow(QMainWindow):
         return group
 
     def _build_control_group(self) -> QGroupBox:
-        group = QGroupBox("Control")
+        group = QGroupBox(tr("Control"))
         layout = QVBoxLayout(group)
 
         self._combo_mode = QComboBox()
         for mode in RadioMode:
             self._combo_mode.addItem(mode.value, mode)
         self._combo_mode.currentIndexChanged.connect(self._on_mode_changed)
-        mode_row = self._labeled_row("Modo:", self._combo_mode)
+        mode_row = self._labeled_row(tr("Modo:"), self._combo_mode)
         mode_spacer = QLabel("")
         mode_spacer.setFixedWidth(60)
         mode_row.addWidget(mode_spacer)
         layout.addLayout(mode_row)
 
         agc_row = QHBoxLayout()
-        agc_lbl = QLabel("AGC:")
+        agc_lbl = QLabel(tr("AGC:"))
         agc_lbl.setFixedWidth(70)
         agc_row.addWidget(agc_lbl)
         self._combo_agc = QComboBox()
         for label, preset in [
-            ("Desactivado", "off"),
-            ("Rápido",      "fast"),
-            ("Medio",       "medium"),
-            ("Lento",       "slow"),
-            ("Custom",      "custom"),
+            (tr("Desactivado"), "off"),
+            (tr("Rápido"),      "fast"),
+            (tr("Medio"),       "medium"),
+            (tr("Lento"),       "slow"),
+            ("Custom",          "custom"),
         ]:
             self._combo_agc.addItem(label, preset)
         self._combo_agc.setCurrentIndex(0)
@@ -174,13 +176,29 @@ class MainWindow(QMainWindow):
         agc_row.addWidget(self._label_agc_gain)
         layout.addLayout(agc_row)
 
-        self._check_bypass = QCheckBox("Bypass (sin procesamiento)")
+        self._check_bypass = QCheckBox(tr("Bypass (sin procesamiento)"))
         self._check_bypass.toggled.connect(self._pipeline.set_bypass)
         layout.addWidget(self._check_bypass)
+
+        lang_row = QHBoxLayout()
+        lang_lbl = QLabel(tr("Idioma:"))
+        lang_lbl.setFixedWidth(70)
+        lang_row.addWidget(lang_lbl)
+        self._combo_lang = QComboBox()
+        self._combo_lang.addItem("Español", "es")
+        self._combo_lang.addItem("English", "en")
+        for i in range(self._combo_lang.count()):
+            if self._combo_lang.itemData(i) == self._config.language:
+                self._combo_lang.setCurrentIndex(i)
+                break
+        self._combo_lang.currentIndexChanged.connect(self._on_language_changed)
+        lang_row.addWidget(self._combo_lang)
+        lang_row.addStretch()
+        layout.addLayout(lang_row)
         return group
 
     def _build_modules_group(self) -> QGroupBox:
-        group = QGroupBox("Módulos activos")
+        group = QGroupBox(tr("Módulos activos"))
         layout = QVBoxLayout(group)
 
         def _chk(label: str, tooltip: str) -> QCheckBox:
@@ -202,73 +220,73 @@ class MainWindow(QMainWindow):
             return cb
 
         self._chk_blanker = _chk(
-            "Supresor de impulsos",
-            "Elimina QRN, frituras y descargas atmosféricas cortas.",
+            tr("Supresor de impulsos"),
+            tr("Elimina QRN, frituras y descargas atmosféricas cortas."),
         )
         self._chk_bandpass_pre = _chk(
-            "Filtro de paso de banda  (pre)",
-            "Butterworth IIR antes del cancelador de ruido — limita el espectro que aprende el perfil.",
+            tr("Filtro de paso de banda  (pre)"),
+            tr("Butterworth IIR antes del cancelador de ruido — limita el espectro que aprende el perfil."),
         )
         self._chk_bandpass_post = _chk(
-            "Filtro de paso de banda  (post)",
-            "Butterworth IIR después del cancelador de ruido — elimina fugas espectrales del STFT.",
+            tr("Filtro de paso de banda  (post)"),
+            tr("Butterworth IIR después del cancelador de ruido — elimina fugas espectrales del STFT."),
         )
         self._chk_anf = _chk(
-            "ANF — Cancela heterodinos y tonos interferentes",
-            "Detecta bins espectrales que sobresalen sobre el ruido vecino y los atenúa.",
+            tr("ANF — Cancela heterodinos y tonos interferentes"),
+            tr("Detecta bins espectrales que sobresalen sobre el ruido vecino y los atenúa."),
         )
         self._chk_noise = _chk(
-            "Cancelador de ruido estacionario",
-            "Filtro de Wiener espectral. Requiere perfil aprendido.",
+            tr("Cancelador de ruido estacionario"),
+            tr("Filtro de Wiener espectral. Requiere perfil aprendido."),
         )
         self._chk_perceptual_floor = _chk_sub(
-            "Piso espectral perceptual  (curva de enmascaramiento auditivo)",
-            "Reemplaza el floor fijo por una curva que varía por frecuencia:\n"
+            tr("Piso espectral perceptual  (curva de enmascaramiento auditivo)"),
+            tr("Reemplaza el floor fijo por una curva que varía por frecuencia:\n"
             "  · +75% en ~500 Hz (fundamentales vocales, preserva la calidez)\n"
             "  · Neutro en 1000–3000 Hz (formantes, sin cambio)\n"
             "  · –55% sobre 3 kHz (ruido de alta frecuencia, suprime más)\n"
             "El slider 'Piso espectral' de Avanzada Ruido controla el nivel global.\n"
-            "Requiere cancelador activo.",
+            "Requiere cancelador activo."),
         )
         self._chk_post_filter = _chk_sub(
-            "Post-filtro espectral  (ruido musical residual)",
-            "Segunda pasada sobre bins de ruido para eliminar el 'ruido musical'\n"
+            tr("Post-filtro espectral  (ruido musical residual)"),
+            tr("Segunda pasada sobre bins de ruido para eliminar el 'ruido musical'\n"
             "(pitidos intermitentes) que deja el Wiener. Requiere cancelador activo.\n"
-            "Agresividad configurable en pestaña Avanzada Ruido.",
+            "Agresividad configurable en pestaña Avanzada Ruido."),
         )
         self._chk_pitch_enhance = _chk_sub(
-            "Refuerzo de pitch SSB  (detección por autocorrelación)",
-            "Detecta el tono fundamental de la voz SSB y protege sus armónicos\n"
+            tr("Refuerzo de pitch SSB  (detección por autocorrelación)"),
+            tr("Detecta el tono fundamental de la voz SSB y protege sus armónicos\n"
             "del cancelador de ruido. Útil para señales SSB débiles enterradas en ruido.\n"
-            "Sensibilidad configurable en pestaña Avanzada Ruido.",
+            "Sensibilidad configurable en pestaña Avanzada Ruido."),
         )
         self._chk_squelch = _chk_sub(
-            "Squelch de voz  (con música no utilizar!)",
-            "Silencia la salida cuando no hay voz detectada. Requiere perfil de ruido aprendido.",
+            tr("Squelch de voz  (con música no utilizar!)"),
+            tr("Silencia la salida cuando no hay voz detectada. Requiere perfil de ruido aprendido."),
         )
         self._chk_fading_comp = _chk_sub(
-            "Compensación fading HF  (onda corta con QSB)",
-            "Congela el estimador de ruido durante fades ionosféricos y acelera\n"
+            tr("Compensación fading HF  (onda corta con QSB)"),
+            tr("Congela el estimador de ruido durante fades ionosféricos y acelera\n"
             "la recuperación al volver la señal. Solo tiene efecto en modo Adaptativo (MCRA).\n"
-            "Sensibilidad y duración del freeze configurables en Avanzada Cancelador.",
+            "Sensibilidad y duración del freeze configurables en Avanzada Cancelador."),
         )
         self._chk_voice_leveler = _chk_sub(
-            "Nivelador de voz  (compensa condiciones de banda)",
-            "AGC de voz después del cancelador: mantiene la voz limpia a nivel\n"
+            tr("Nivelador de voz  (compensa condiciones de banda)"),
+            tr("AGC de voz después del cancelador: mantiene la voz limpia a nivel\n"
             "constante aunque el ruido (y por ende la cancelación) varíe.\n"
             "Solo adapta cuando detecta voz — el ruido residual entre\n"
-            "transmisiones no se re-amplifica. Requiere cancelador activo.",
+            "transmisiones no se re-amplifica. Requiere cancelador activo."),
         )
         self._chk_presence = _chk(
-            "EQ Voz  (presencia + cuerpo)",
-            "Dos picos de realce vocal configurables en pestaña Avanzada Audio:\n"
+            tr("EQ Voz  (presencia + cuerpo)"),
+            tr("Dos picos de realce vocal configurables en pestaña Avanzada Audio:\n"
             "  · Presencia (1000–2000 Hz): claridad e inteligibilidad\n"
             "  · Cuerpo (150–800 Hz): calidez y graves de la voz\n"
-            "Cada banda con ganancia 0 dB queda en passthrough.",
+            "Cada banda con ganancia 0 dB queda en passthrough."),
         )
         self._chk_exciter = _chk(
-            "Excitador armónico",
-            "Genera armónicos en 1–4 kHz para recuperar presencia y ataque de consonantes.",
+            tr("Excitador armónico"),
+            tr("Genera armónicos en 1–4 kHz para recuperar presencia y ataque de consonantes."),
         )
 
         self._chk_blanker.toggled.connect(lambda v: self._on_module_toggled("blanker_enabled", self._pipeline.set_blanker_enabled, v))
@@ -288,33 +306,33 @@ class MainWindow(QMainWindow):
         return group
 
     def _build_noise_group(self) -> QGroupBox:
-        group = QGroupBox("Cancelación de Ruido Estacionario")
+        group = QGroupBox(tr("Cancelación de Ruido Estacionario"))
         layout = QVBoxLayout(group)
 
         # Selector de modo de estimación de ruido
         mode_row = QHBoxLayout()
-        mode_lbl = QLabel("Modo:")
+        mode_lbl = QLabel(tr("Modo:"))
         mode_lbl.setFixedWidth(70)
         self._combo_noise_mode = QComboBox()
-        self._combo_noise_mode.addItem("Perfil estático",   "static")
-        self._combo_noise_mode.addItem("Adaptativo (MCRA)", "mcra")
+        self._combo_noise_mode.addItem(tr("Perfil estático"),   "static")
+        self._combo_noise_mode.addItem(tr("Adaptativo (MCRA)"), "mcra")
         self._combo_noise_mode.setToolTip(
-            "Perfil estático: aprendizaje manual de 5s.\n"
+            tr("Perfil estático: aprendizaje manual de 5s.\n"
             "Adaptativo (MCRA): estima el ruido automáticamente en tiempo real,\n"
-            "  se adapta a cambios de banda sin intervención del usuario."
+            "  se adapta a cambios de banda sin intervención del usuario.")
         )
         mode_row.addWidget(mode_lbl)
         mode_row.addWidget(self._combo_noise_mode)
         layout.addLayout(mode_row)
 
         btn_row = QHBoxLayout()
-        self._btn_learn = QPushButton("⏺  Aprender ruido")
+        self._btn_learn = QPushButton(tr("⏺  Aprender ruido"))
         self._btn_learn.setCheckable(True)
         self._btn_learn.setEnabled(False)
         self._btn_learn.toggled.connect(self._on_learn_toggled)
         btn_row.addWidget(self._btn_learn)
 
-        self._btn_clear_noise = QPushButton("Borrar perfil")
+        self._btn_clear_noise = QPushButton(tr("Borrar perfil"))
         self._btn_clear_noise.setEnabled(False)
         self._btn_clear_noise.clicked.connect(self._on_clear_noise_profile)
         btn_row.addWidget(self._btn_clear_noise)
@@ -323,7 +341,7 @@ class MainWindow(QMainWindow):
         self._combo_noise_mode.currentIndexChanged.connect(self._on_noise_mode_changed)
 
         intensity_row = QHBoxLayout()
-        intensity_lbl = QLabel("Intensidad:")
+        intensity_lbl = QLabel(tr("Intensidad:"))
         intensity_lbl.setMinimumWidth(80)
         intensity_row.addWidget(intensity_lbl)
         self._slider_noise = QSlider(Qt.Horizontal)
@@ -343,21 +361,21 @@ class MainWindow(QMainWindow):
         self._learn_timer.timeout.connect(self._on_learn_tick)
 
         db_row = QHBoxLayout()
-        db_row.addWidget(QLabel("Reducción activa:"))
+        db_row.addWidget(QLabel(tr("Reducción activa:")))
         self._lbl_noise_db = QLabel("—")
         self._lbl_noise_db.setStyleSheet("color: #888; font-weight: bold;")
         db_row.addWidget(self._lbl_noise_db)
         db_row.addStretch()
-        self._chk_noise_preview = QCheckBox("Preview: escuchar ruido eliminado")
+        self._chk_noise_preview = QCheckBox(tr("Preview: escuchar ruido eliminado"))
         self._chk_noise_preview.setToolTip(
-            "Emite el ruido que está siendo restado.\n"
-            "Si suena como voz, bajar la Intensidad."
+            tr("Emite el ruido que está siendo restado.\n"
+            "Si suena como voz, bajar la Intensidad.")
         )
         self._chk_noise_preview.toggled.connect(self._pipeline.set_noise_preview)
         db_row.addWidget(self._chk_noise_preview)
         layout.addLayout(db_row)
 
-        self._label_noise = QLabel("Sin perfil — activar procesamiento y presionar Aprender")
+        self._label_noise = QLabel(tr("Sin perfil — activar procesamiento y presionar Aprender"))
         self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
         layout.addWidget(self._label_noise)
 
@@ -369,13 +387,13 @@ class MainWindow(QMainWindow):
         return group
 
     def _build_level_group(self) -> QGroupBox:
-        group = QGroupBox("Niveles y Ganancia")
+        group = QGroupBox(tr("Niveles y Ganancia"))
         layout = QVBoxLayout(group)
-        self._vu_in  = VuMeter("IN ")
-        self._vu_out = VuMeter("OUT")
+        self._vu_in  = VuMeter(tr("IN "))
+        self._vu_out = VuMeter(tr("OUT"))
         layout.addWidget(self._vu_in)
         layout.addWidget(self._vu_out)
-        self._label_latency = QLabel("Latencia: --")
+        self._label_latency = QLabel(tr("Latencia: --"))
         self._label_latency.setAlignment(Qt.AlignRight)
         layout.addWidget(self._label_latency)
 
@@ -383,19 +401,19 @@ class MainWindow(QMainWindow):
         # se carga aparte con set_value() desde la config persistida.
         _gain_def = GainConfig()
         self._s_gain_in = SliderRow(
-            "Entrada:",
+            tr("Entrada:"),
             min_val=-20.0, max_val=20.0,
             default=_gain_def.input_gain_db,
             step=0.5, unit="dB", fmt="{:+.1f}",
         )
         self._s_gain_out = SliderRow(
-            "Salida:",
+            tr("Salida:"),
             min_val=-20.0, max_val=20.0,
             default=_gain_def.output_gain_db,
             step=0.5, unit="dB", fmt="{:+.1f}",
         )
         self._s_peak = SliderRow(
-            "Límite de picos:",
+            tr("Límite de picos:"),
             min_val=-20.0, max_val=0.0,
             default=_gain_def.peak_limit_db,
             step=0.5, unit="dBFS", fmt="{:+.1f}",
@@ -412,7 +430,7 @@ class MainWindow(QMainWindow):
 
         peak_row = QHBoxLayout()
         peak_row.setContentsMargins(0, 0, 0, 0)
-        lbl_peak_title = QLabel("Limitador de picos:")
+        lbl_peak_title = QLabel(tr("Limitador de picos:"))
         lbl_peak_title.setStyleSheet("color: #607d8b; font-size: 8pt;")
         lbl_peak_title.setFixedWidth(120)
         self._lbl_peak_active = QLabel("—")
@@ -420,7 +438,7 @@ class MainWindow(QMainWindow):
         peak_row.addWidget(lbl_peak_title)
         peak_row.addWidget(self._lbl_peak_active)
         peak_row.addSpacing(24)
-        lbl_lev_title = QLabel("Nivelador de voz:")
+        lbl_lev_title = QLabel(tr("Nivelador de voz:"))
         lbl_lev_title.setStyleSheet("color: #607d8b; font-size: 8pt;")
         self._lbl_leveler = QLabel("—")
         self._lbl_leveler.setStyleSheet("color: #555; font-size: 8pt; font-weight: bold;")
@@ -439,22 +457,22 @@ class MainWindow(QMainWindow):
 
         ctrl = QHBoxLayout()
 
-        self._chk_spec_pre = QCheckBox("Entrada")
+        self._chk_spec_pre = QCheckBox(tr("Entrada"))
         self._chk_spec_pre.setChecked(True)
         self._chk_spec_pre.setStyleSheet("color: #42a5f5; font-weight: bold;")
         self._chk_spec_pre.toggled.connect(self._spectrum_widget.set_show_pre)
 
-        self._chk_spec_post = QCheckBox("Salida")
+        self._chk_spec_post = QCheckBox(tr("Salida"))
         self._chk_spec_post.setChecked(True)
         self._chk_spec_post.setStyleSheet("color: #69f0ae; font-weight: bold;")
         self._chk_spec_post.toggled.connect(self._spectrum_widget.set_show_post)
 
-        self._chk_spec_cancelled = QCheckBox("Lo cancelado")
+        self._chk_spec_cancelled = QCheckBox(tr("Lo cancelado"))
         self._chk_spec_cancelled.setChecked(True)
         self._chk_spec_cancelled.setStyleSheet("color: #ff7043; font-weight: bold;")
         self._chk_spec_cancelled.toggled.connect(self._spectrum_widget.set_show_cancelled)
 
-        self._chk_spec_floor = QCheckBox("Piso de ruido")
+        self._chk_spec_floor = QCheckBox(tr("Piso de ruido"))
         self._chk_spec_floor.setChecked(True)
         self._chk_spec_floor.setStyleSheet("color: #ffd54f; font-weight: bold;")
         self._chk_spec_floor.toggled.connect(self._spectrum_widget.set_show_floor)
@@ -468,17 +486,17 @@ class MainWindow(QMainWindow):
         ctrl.addWidget(self._chk_spec_floor)
         ctrl.addStretch()
 
-        self._lbl_snr = QLabel("S/N: —")
+        self._lbl_snr = QLabel(tr("S/N: —"))
         self._lbl_snr.setStyleSheet("color: #888; font-weight: bold;")
         self._lbl_snr.setToolTip(
-            "Relación señal/ruido de banda completa (suavizada ~1s):\n"
+            tr("Relación señal/ruido de banda completa (suavizada ~1s):\n"
             "señal actual vs piso de ruido estimado por el cancelador.\n"
-            "Con solo ruido marca ~0 dB."
+            "Con solo ruido marca ~0 dB.")
         )
         ctrl.addWidget(self._lbl_snr)
         ctrl.addSpacing(16)
 
-        lbl_hint = QLabel("dBFS")
+        lbl_hint = QLabel(tr("dBFS"))
         lbl_hint.setStyleSheet("color: #607d8b; font-size: 7pt;")
         ctrl.addWidget(lbl_hint)
 
@@ -515,13 +533,13 @@ class MainWindow(QMainWindow):
             return row
 
         zoom_layout.addLayout(_slider_row(
-            "Máx Y:", "_lbl_db_range", "_sld_db_range",
+            tr("Máx Y:"), "_lbl_db_range", "_sld_db_range",
             -60, 0, 5, 10, self._config.window.spectrum_db_max,
             f"{self._config.window.spectrum_db_max} dBFS", 52,
             self._on_db_range_changed,
         ))
         zoom_layout.addLayout(_slider_row(
-            "Máx X:", "_lbl_freq_range", "_sld_freq_range",
+            tr("Máx X:"), "_lbl_freq_range", "_sld_freq_range",
             1, 12, 1, 2, self._config.window.spectrum_max_freq_hz // 1000,
             f"{self._config.window.spectrum_max_freq_hz // 1000} kHz", 40,
             self._on_freq_range_changed,
@@ -537,7 +555,7 @@ class MainWindow(QMainWindow):
         return tab
 
     def _build_start_button(self) -> QPushButton:
-        self._btn_start = QPushButton("▶  ACTIVAR")
+        self._btn_start = QPushButton(tr("▶  ACTIVAR"))
         self._btn_start.setMinimumHeight(44)
         self._btn_start.setEnabled(False)
         self._btn_start.setCheckable(True)
@@ -579,7 +597,7 @@ class MainWindow(QMainWindow):
         try:
             devices = rescan_devices()
         except Exception as e:
-            self._status_bar.showMessage(f"Error al re-enumerar dispositivos: {e}")
+            self._status_bar.showMessage(tr("Error al re-enumerar dispositivos: {e}").format(e=e))
             return
 
         for combo in (self._combo_in, self._combo_out):
@@ -596,8 +614,8 @@ class MainWindow(QMainWindow):
         self._on_input_device_changed(self._combo_in.currentIndex())
         self._on_output_device_changed(self._combo_out.currentIndex())
         self._status_bar.showMessage(
-            f"Dispositivos actualizados: {self._combo_in.count()} de entrada, "
-            f"{self._combo_out.count()} de salida."
+            tr("Dispositivos actualizados: {n} de entrada, {m} de salida.").format(
+                n=self._combo_in.count(), m=self._combo_out.count())
         )
 
     @staticmethod
@@ -652,7 +670,7 @@ class MainWindow(QMainWindow):
         self._pipeline.set_noise_mode(self._config.dsp.noise_mode)
         self._refresh_noise_profile_ui()
         if self._config.dsp.noise_mode != "static":
-            self._label_noise.setText("Adaptativo (MCRA) — activar procesamiento para calibrar")
+            self._label_noise.setText(tr("Adaptativo (MCRA) — activar procesamiento para calibrar"))
 
         if self._saved_input_device is not None:
             for i in range(self._combo_in.count()):
@@ -720,7 +738,7 @@ class MainWindow(QMainWindow):
                 break
         self._refresh_noise_profile_ui()
         if cfg.noise_mode != "static":
-            self._label_noise.setText("Adaptativo (MCRA) — estimando en tiempo real")
+            self._label_noise.setText(tr("Adaptativo (MCRA) — estimando en tiempo real"))
 
         # --- Slider de intensidad de ruido ---
         pct = round(cfg.noise_alpha * 100)
@@ -754,6 +772,18 @@ class MainWindow(QMainWindow):
         dev: AudioDevice | None = self._combo_out.itemData(idx)
         self._pipeline.set_output_device(dev)
         self._schedule_save()
+
+    def _on_language_changed(self, idx: int) -> None:
+        lang = self._combo_lang.itemData(idx)
+        if lang == self._config.language:
+            return
+        self._config.language = lang
+        self._schedule_save()
+        self._status_bar.showMessage(
+            tr("Idioma guardado — reiniciar la aplicación para aplicarlo.")
+            if lang == "es" else
+            "Language saved — restart the application to apply it."
+        )
 
     def _on_mode_changed(self, idx: int) -> None:
         mode: RadioMode = self._combo_mode.itemData(idx)
@@ -832,13 +862,13 @@ class MainWindow(QMainWindow):
 
         if has_prof:
             dur = self._pipeline.noise_duration_ms / 1000.0
-            self._label_noise.setText(f"Perfil activo: {dur:.1f}s aprendidos — sustracción ON")
+            self._label_noise.setText(tr("Perfil activo: {dur:.1f}s aprendidos — sustracción ON").format(dur=dur))
             self._label_noise.setStyleSheet("color: #69f0ae; font-size: 8pt;")
         elif is_running:
-            self._label_noise.setText("Sin perfil — presionar Aprender para calibrar")
+            self._label_noise.setText(tr("Sin perfil — presionar Aprender para calibrar"))
             self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
         else:
-            self._label_noise.setText("Sin perfil — activar procesamiento y presionar Aprender")
+            self._label_noise.setText(tr("Sin perfil — activar procesamiento y presionar Aprender"))
             self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
 
     # ------------------------------------------------------------------
@@ -852,7 +882,7 @@ class MainWindow(QMainWindow):
         if mode != "static":
             self._btn_learn.setVisible(False)
             self._btn_clear_noise.setVisible(False)
-            self._label_noise.setText("Adaptativo (MCRA) — activar procesamiento para calibrar")
+            self._label_noise.setText(tr("Adaptativo (MCRA) — activar procesamiento para calibrar"))
             self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
         else:
             self._refresh_noise_profile_ui()
@@ -863,8 +893,8 @@ class MainWindow(QMainWindow):
             self._learn_countdown = 5
             self._pipeline.start_noise_learning()
             self._spectrum_widget.start_floor_learning()
-            self._btn_learn.setText(f"⏹  Aprendiendo... {self._learn_countdown}s")
-            self._label_noise.setText("Aprendiendo ruido — mantener silencio en la banda")
+            self._btn_learn.setText(tr("⏹  Aprendiendo... {s}s").format(s=self._learn_countdown))
+            self._label_noise.setText(tr("Aprendiendo ruido — mantener silencio en la banda"))
             self._label_noise.setStyleSheet("color: #ffd600; font-size: 8pt;")
             self._btn_clear_noise.setEnabled(False)
             self._learn_timer.start()
@@ -872,13 +902,13 @@ class MainWindow(QMainWindow):
             self._learn_timer.stop()
             self._pipeline.stop_noise_learning()
             self._spectrum_widget.stop_floor_learning()
-            self._btn_learn.setText("⏺  Aprender ruido")
+            self._btn_learn.setText(tr("⏺  Aprender ruido"))
             self._refresh_noise_profile_ui()
 
     def _on_learn_tick(self) -> None:
         self._learn_countdown -= 1
         if self._learn_countdown > 0:
-            self._btn_learn.setText(f"⏹  Aprendiendo... {self._learn_countdown}s")
+            self._btn_learn.setText(tr("⏹  Aprendiendo... {s}s").format(s=self._learn_countdown))
         else:
             self._btn_learn.setChecked(False)
 
@@ -889,7 +919,7 @@ class MainWindow(QMainWindow):
             self._lbl_noise_db.setText("—")
             self._lbl_noise_db.setStyleSheet("color: #888; font-weight: bold;")
             if mode == "mcra":
-                self._label_noise.setText("Adaptativo (MCRA) — activar procesamiento para calibrar")
+                self._label_noise.setText(tr("Adaptativo (MCRA) — activar procesamiento para calibrar"))
                 self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
             return
 
@@ -897,7 +927,7 @@ class MainWindow(QMainWindow):
             if self._pipeline.noise_has_profile:
                 db = self._pipeline.noise_reduction_db
                 if db >= -0.5:
-                    self._lbl_noise_db.setText("~0 dB")
+                    self._lbl_noise_db.setText(tr("~0 dB"))
                     self._lbl_noise_db.setStyleSheet("color: #888; font-weight: bold;")
                 elif db >= -3.0:
                     self._lbl_noise_db.setText(f"{db:.1f} dB")
@@ -905,7 +935,7 @@ class MainWindow(QMainWindow):
                 else:
                     self._lbl_noise_db.setText(f"{db:.1f} dB")
                     self._lbl_noise_db.setStyleSheet("color: #69f0ae; font-weight: bold;")
-                self._label_noise.setText("Adaptativo (MCRA) — estimando en tiempo real")
+                self._label_noise.setText(tr("Adaptativo (MCRA) — estimando en tiempo real"))
                 self._label_noise.setStyleSheet("color: #69f0ae; font-size: 8pt;")
                 # Actualizar piso de ruido en el espectro con el estimado MCRA actual
                 floor_data = self._pipeline.get_noise_floor_data()
@@ -914,7 +944,7 @@ class MainWindow(QMainWindow):
             else:
                 self._lbl_noise_db.setText("—")
                 self._lbl_noise_db.setStyleSheet("color: #888; font-weight: bold;")
-                self._label_noise.setText("Adaptativo (MCRA) — calibrando (~200ms)...")
+                self._label_noise.setText(tr("Adaptativo (MCRA) — calibrando (~200ms)..."))
                 self._label_noise.setStyleSheet("color: #ffd600; font-size: 8pt;")
             return
 
@@ -931,7 +961,7 @@ class MainWindow(QMainWindow):
                 self._spectrum_widget.set_noise_floor_from_hz(*floor_data)
         db = self._pipeline.noise_reduction_db
         if db >= -0.5:
-            self._lbl_noise_db.setText("~0 dB  (sin ruido detectable)")
+            self._lbl_noise_db.setText(tr("~0 dB  (sin ruido detectable)"))
             self._lbl_noise_db.setStyleSheet("color: #888; font-weight: bold;")
         elif db >= -3.0:
             self._lbl_noise_db.setText(f"{db:.1f} dB")
@@ -962,17 +992,17 @@ class MainWindow(QMainWindow):
         if checked:
             try:
                 self._pipeline.start()
-                self._btn_start.setText("⏹  DETENER")
+                self._btn_start.setText(tr("⏹  DETENER"))
                 self._level_timer.start()
                 self._spectrum_widget.start()
-                self._status_bar.showMessage("Procesando...")
+                self._status_bar.showMessage(tr("Procesando..."))
                 self._btn_refresh_devices.setEnabled(False)
                 self._adv_audio_tab.set_processing_active(True)
                 self._adv_canceller_tab._update_stats()
                 self._refresh_noise_profile_ui()
             except Exception as e:
                 self._btn_start.setChecked(False)
-                self._status_bar.showMessage(f"Error: {e}")
+                self._status_bar.showMessage(tr("Error: {msg}").format(msg=e))
         else:
             if self._pipeline.noise_is_learning:
                 self._btn_learn.setChecked(False)
@@ -980,11 +1010,11 @@ class MainWindow(QMainWindow):
             self._refresh_noise_profile_ui()
             self._level_timer.stop()
             self._spectrum_widget.stop()
-            self._btn_start.setText("▶  ACTIVAR")
+            self._btn_start.setText(tr("▶  ACTIVAR"))
             self._vu_in.set_level(-60)
             self._vu_out.set_level(-60)
-            self._label_latency.setText("Latencia: --")
-            self._status_bar.showMessage("Detenido.")
+            self._label_latency.setText(tr("Latencia: --"))
+            self._status_bar.showMessage(tr("Detenido."))
             self._btn_refresh_devices.setEnabled(True)
             self._adv_audio_tab.set_processing_active(False)
 
@@ -998,20 +1028,20 @@ class MainWindow(QMainWindow):
 
     def _setup_pipeline_callbacks(self) -> None:
         self._pipeline.set_error_callback(
-            lambda msg: self._status_bar.showMessage(f"Error: {msg}") if hasattr(self, '_status_bar') else None
+            lambda msg: self._status_bar.showMessage(tr("Error: {msg}").format(msg=msg)) if hasattr(self, '_status_bar') else None
         )
 
     def _tick_levels(self) -> None:
         self._vu_in.set_level(self._pipeline.db_in)
         self._vu_out.set_level(self._pipeline.db_out)
         lat = self._pipeline.latency_ms
-        self._label_latency.setText(f"Latencia: {lat:.0f} ms" if lat > 0 else "Latencia: --")
+        self._label_latency.setText(tr("Latencia: {ms:.0f} ms").format(ms=lat) if lat > 0 else tr("Latencia: --"))
         if self._combo_agc.currentData() != "off":
             self._label_agc_gain.setText(f"{self._pipeline.agc_gain_db:+.0f} dB")
 
         red = self._pipeline.peak_reduction_db
         if red < -0.1:
-            self._lbl_peak_active.setText(f"ACTIVO  {red:.1f} dB")
+            self._lbl_peak_active.setText(tr("ACTIVO  {db:.1f} dB").format(db=red))
             color = "#ef5350" if red < -3.0 else "#ffa726"
             self._lbl_peak_active.setStyleSheet(f"color: {color}; font-size: 8pt; font-weight: bold;")
         else:
@@ -1026,7 +1056,7 @@ class MainWindow(QMainWindow):
                 self._lbl_leveler.setText(f"+{lev:.1f} dB")
                 self._lbl_leveler.setStyleSheet("color: #69f0ae; font-size: 8pt; font-weight: bold;")
             else:
-                self._lbl_leveler.setText("0 dB")
+                self._lbl_leveler.setText(tr("0 dB"))
                 self._lbl_leveler.setStyleSheet("color: #888; font-size: 8pt; font-weight: bold;")
         else:
             self._lbl_leveler.setText("—")
@@ -1039,7 +1069,7 @@ class MainWindow(QMainWindow):
             self._lbl_snr.setText(f"S/N: {snr:+.0f} dB")
             self._lbl_snr.setStyleSheet(f"color: {color_snr}; font-weight: bold;")
         else:
-            self._lbl_snr.setText("S/N: —")
+            self._lbl_snr.setText(tr("S/N: —"))
             self._lbl_snr.setStyleSheet("color: #888; font-weight: bold;")
 
     def _restore_or_center(self) -> None:

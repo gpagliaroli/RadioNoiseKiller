@@ -97,10 +97,12 @@ class AppConfig:
     gain:   GainConfig   = field(default_factory=GainConfig)
     window: WindowConfig = field(default_factory=WindowConfig)
     last_preset: str = ""   # nombre del último preset cargado/guardado (solo informativo)
+    language: str = "es"    # idioma de la UI ("es"/"en"); aplicar requiere reinicio
 
     def save(self, path: str) -> None:
         data = {
             "last_preset": self.last_preset,
+            "language": self.language,
             "audio": {
                 "block_size": self.audio.block_size,
                 "input_device": self.audio.input_device,
@@ -183,6 +185,8 @@ class AppConfig:
             return
 
         self.last_preset = str(data.get("last_preset", ""))
+        _lang = data.get("language", self.language)
+        self.language = _lang if _lang in ("es", "en") else "es"
 
         a = data.get("audio", {})
         self.audio.block_size = a.get("block_size", self.audio.block_size)

@@ -166,6 +166,7 @@ Controles principales de operación: modo de recepción, AGC y activación del p
 | **AGC** | Control Automático de Ganancia. **off** = sin AGC. **slow / medium / fast** = velocidad de respuesta. **Custom** = parámetros ajustables a mano (ver más abajo). Para SSB se recomienda *slow* o *medium*; para AM con señales estables, *off* o *slow*. |
 | **▶ ACTIVAR / ■ DETENER** | Inicia o detiene el procesamiento en tiempo real. Al activar, el audio fluye por todo el pipeline. |
 | **Bypass** | Pasa el audio directo de entrada a salida sin ningún procesamiento. Útil para comparar el sonido con y sin la aplicación activa. |
+| **Idioma** | Idioma de la interfaz: Español o English. El cambio se guarda al instante pero **requiere reiniciar la aplicación** para aplicarse. |
 
 ### AGC Personalizado (Custom)
 
