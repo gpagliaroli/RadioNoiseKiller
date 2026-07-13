@@ -481,6 +481,12 @@ Cambios v1.5 (pendiente de release):
   (Nota de testing: las ventanas lanzadas desde la sesión del agente no son enumerables —
   EnumWindows/MainWindowTitle no las ven; la verificación visual de posición/geometría en
   Windows real la tiene que hacer el usuario.)
+- Fix ventana cortada por el borde del monitor: el clamp de restauración solo garantizaba el
+  borde superior — con y bajo, el fondo de la app (ACTIVAR/status bar) quedaba fuera del monitor
+  y el scroll de Principal no aparecía (para Qt la ventana no era chica; el monitor la recortaba).
+  El clamp ahora usa el tamaño real de la ventana: x+ancho / y+alto dentro de la pantalla de
+  referencia, con margen estimado del marco (20/50 px — `frameGeometry` no incluye el marco antes
+  de `show()`). Verificado por el usuario.
 
 Pendiente para Fase 2:
 - Validar build en Pi real (ARM64 Raspberry Pi OS Bookworm)
