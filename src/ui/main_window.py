@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QGroupBox, QCheckBox, QTabWidget, QApplication,
     QScrollArea, QFrame,
 )
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, QPoint
 from PySide6.QtGui import QFont
 
 from audio.devices import list_devices, rescan_devices, AudioDevice
@@ -1073,7 +1073,17 @@ class MainWindow(QMainWindow):
             self._lbl_snr.setStyleSheet("color: #888; font-weight: bold;")
 
     def _restore_or_center(self) -> None:
-        screen = QApplication.primaryScreen().availableGeometry()
+        # Pantalla de referencia: la que contiene la posición guardada (setups
+        # multi-monitor — clampear contra la primaria mandaba la ventana al
+        # monitor principal). Si ese monitor ya no existe, cae a la primaria.
+        screen = None
+        if self._config.window.x is not None:
+            s = QApplication.screenAt(QPoint(self._config.window.x,
+                                             self._config.window.y))
+            if s is not None:
+                screen = s.availableGeometry()
+        if screen is None:
+            screen = QApplication.primaryScreen().availableGeometry()
         # Altura deseada: el contenido completo de la pestaña Principal (que
         # ahora vive en un scroll y ya no fuerza la altura de la ventana) más
         # tabs/botón/status. Si el monitor es más bajo, se recorta y aparece
@@ -1081,8 +1091,8 @@ class MainWindow(QMainWindow):
         desired_h = self._main_tab_inner.sizeHint().height() + 130
         self.resize(self.minimumWidth(), min(desired_h, screen.height() - 60))
         if self._config.window.x is not None:
-            # Clamp: una posición guardada en otro monitor/resolución no debe
-            # dejar la ventana fuera de la pantalla
+            # Clamp dentro de la pantalla de referencia: una posición guardada
+            # en un monitor desconectado no debe dejar la ventana fuera de vista
             x = max(screen.x(), min(self._config.window.x,
                                     screen.x() + screen.width() - 200))
             y = max(screen.y(), min(self._config.window.y,
