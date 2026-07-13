@@ -449,7 +449,13 @@ N llamadas `lineTo()` sobre `QPainterPath`, eliminando la contención de GIL con
 **WindowConfig:** `spectrum_db_max` y `spectrum_max_freq_hz` se persisten en `settings.json`
 bajo la clave `"window"` junto con la posición de la ventana.
 
-Cambios v1.5 (pendiente de release):
+**v1.5 publicada (julio 2026)** — release en GitHub con distribuibles Windows y Linux.
+Versión de app 1.5.0. **Manual bilingüe**: `MANUAL.md` (ES) + `MANUAL_EN.md` (EN) → PDFs
+`MANUAL_RadioNoiseKiller_v1.5.pdf` y `..._v1.5_EN.pdf` (30 págs c/u). **Al editar MANUAL.md hay
+que reflejar el cambio en MANUAL_EN.md** — la traducción es manual, no hay sincronización
+automática. Terminología EN alineada con `i18n_en.py`.
+
+Cambios v1.5:
 - Recorte de módulos Qt sin uso en ambos specs (−52 MB Windows, −21 MB artifact Linux; ver ítem
   del backlog más abajo — falta validar el bundle Linux en runtime).
 - Botón ⟳ para refrescar los dispositivos de audio sin reiniciar la app:
@@ -512,7 +518,6 @@ Cambios v1.5 (pendiente de release):
 Pendiente para Fase 2:
 - Validar build en Pi real (ARM64 Raspberry Pi OS Bookworm)
 - Soporte de múltiples canales de audio
-- Traducir el manual al inglés (la UI ya es bilingüe desde v1.5; ver ítem de i18n arriba)
 - Reducir/optimizar el tamaño total de la app. **Primera pasada hecha y validada en ambas
   plataformas (v1.5):** recorte de módulos Qt sin uso en ambos specs (`QT_EXCLUDES` + filtro
   `sin_basura_qt()`) — Windows dist 218→166 MB, artifact Linux 189→~170 MB (con libQt6OpenGL y
