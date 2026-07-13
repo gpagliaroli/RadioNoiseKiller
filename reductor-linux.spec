@@ -133,6 +133,21 @@ a.binaries = [b for b in a.binaries
 a.binaries = sin_basura_qt(a.binaries)
 a.datas    = sin_basura_qt(a.datas)
 
+# Los hooks de PyInstaller NO recolectan los plugins de decoración ni de
+# shell-integration de Qt Wayland (las carpetas quedan vacías en el bundle,
+# también pasaba en v1.4). Sin libbradient.so la ventana no tiene barra de
+# título bajo Wayland: "Could not create decoration from factory!".
+# Se agregan a mano desde el wheel de PySide6.
+import PySide6
+_qt_plugins = Path(PySide6.__file__).parent / "Qt" / "plugins"
+for _cat in ("wayland-decoration-client", "wayland-shell-integration"):
+    _d = _qt_plugins / _cat
+    if _d.is_dir():
+        for _so in sorted(_d.glob("*.so")):
+            a.binaries.append(
+                (f"PySide6/Qt/plugins/{_cat}/{_so.name}", str(_so), "BINARY"))
+            print(f"INFO: plugin wayland agregado a mano: {_cat}/{_so.name}")
+
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(
