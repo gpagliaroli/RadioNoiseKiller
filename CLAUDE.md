@@ -474,6 +474,13 @@ Cambios v1.5 (pendiente de release):
   sesión (extract_keys.py / check_catalog.py — regenerarlos si hace falta, son triviales).
   Verificado offscreen: UI completa en EN sin fugas en español, ES intacto, 6 suites OK.
   El manual sigue solo en español (traducirlo es una decisión aparte).
+- Fix posición de ventana en monitores secundarios: el clamp de v1.4 usaba siempre la pantalla
+  primaria y una posición guardada en un segundo monitor saltaba al principal al reabrir. Ahora
+  la pantalla de referencia es la que contiene el punto guardado (`QApplication.screenAt`);
+  monitor desconectado → fallback a primaria. Verificado por el usuario en setup dual-monitor.
+  (Nota de testing: las ventanas lanzadas desde la sesión del agente no son enumerables —
+  EnumWindows/MainWindowTitle no las ven; la verificación visual de posición/geometría en
+  Windows real la tiene que hacer el usuario.)
 
 Pendiente para Fase 2:
 - Validar build en Pi real (ARM64 Raspberry Pi OS Bookworm)
