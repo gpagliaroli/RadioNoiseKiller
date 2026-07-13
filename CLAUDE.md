@@ -455,7 +455,11 @@ Pendiente para Fase 2:
 - Internacionalización: soporte multi-idioma en la UI, en principio español e inglés
   (evaluar Qt Linguist / `QTranslator` — toda la UI hoy tiene strings hardcodeados en español;
   alcanza también al manual si se decide traducirlo)
-- Reducir/optimizar el tamaño total de la app (dist Windows ~218 MB, zip ~88 MB; Linux ~190 MB).
-  Sospechosos principales: módulos Qt de PySide6 que no se usan (excludes en los .spec),
-  submódulos de scipy no usados, traducciones/plugins de Qt. Medir primero qué pesa en
-  `dist/RadioNoiseKiller/_internal` antes de recortar
+- Reducir/optimizar el tamaño total de la app. **Primera pasada hecha (post-v1.4):** recorte de
+  módulos Qt sin uso en ambos specs (`QT_EXCLUDES` + filtro `sin_basura_qt()`) — Windows dist
+  218→166 MB, artifact Linux 189→167 MB. Smoke test Windows OK; **falta validar el bundle Linux
+  recortado en runtime** (especialmente Wayland — se filtró Qt6OpenGL y los plugins wayland-egl
+  podrían requerirlo; si falla, Qt cae a xcb). Sin recorte posible en scipy (los imports de
+  scipy.signal arrastran todo transitivamente — verificado) ni en las dos OpenBLAS (ABIs
+  distintas). Pendiente si se quiere más: UPX (no está instalado — el `upx=True` de los specs
+  hoy es no-op; ojo falsos positivos de antivirus)
