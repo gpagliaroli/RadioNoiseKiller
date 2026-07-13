@@ -1091,12 +1091,17 @@ class MainWindow(QMainWindow):
         desired_h = self._main_tab_inner.sizeHint().height() + 130
         self.resize(self.minimumWidth(), min(desired_h, screen.height() - 60))
         if self._config.window.x is not None:
-            # Clamp dentro de la pantalla de referencia: una posición guardada
-            # en un monitor desconectado no debe dejar la ventana fuera de vista
+            # Clamp dentro de la pantalla de referencia: la ventana COMPLETA
+            # debe quedar visible (clampear solo el borde superior dejaba el
+            # inferior colgando fuera del monitor — el fondo de la app quedaba
+            # cortado y el scroll de la pestaña nunca aparecía porque para Qt
+            # la ventana no era chica, era el monitor el que la recortaba).
+            # Márgenes de 20/50 px estimando el marco de la ventana (antes de
+            # show() frameGeometry aún no lo incluye).
             x = max(screen.x(), min(self._config.window.x,
-                                    screen.x() + screen.width() - 200))
+                                    screen.x() + screen.width() - self.width() - 20))
             y = max(screen.y(), min(self._config.window.y,
-                                    screen.y() + screen.height() - 200))
+                                    screen.y() + screen.height() - self.height() - 50))
             self.move(x, y)
         else:
             self.move(
