@@ -486,6 +486,22 @@ Cambios v1.5 (pendiente de release):
   embebido en el exe Windows (`icon=` del spec); `app.setWindowIcon()` en `main.py` vía
   `resource_path()` para ventana/taskbar en Windows y Linux (PNG en datas de ambos specs;
   decodifica con el PNG integrado de Qt6Gui — no necesita los plugins de imagen recortados).
+- Fix decoraciones Wayland (barra de título ausente en Linux, verificado por el usuario en la
+  notebook Ubuntu/GNOME): tres capas de causa. (1) Los hooks de PyInstaller NO recolectan los
+  plugins de `wayland-decoration-client` ni `wayland-shell-integration` — las carpetas quedaban
+  VACÍAS en el bundle desde el primer build de Linux (v1.2+, verificado descargando el zip de
+  v1.4: mismo hueco; todos los builds anteriores corrían sin barra de título bajo Wayland). El
+  spec de Linux los agrega a mano a `a.binaries` desde el PySide6 instalado. (2) En GNOME, Qt
+  elige la decoración `adwaita`, que requiere `libQt6Svg` (filtrada por el recorte) y NO cae a
+  `bradient` si falla la carga ("Could not create decoration from factory!"). (3) Fix final:
+  `pyi_rth_wayland.py` fuerza `QT_WAYLAND_DECORATION=bradient` vía setdefault — las DT_NEEDED de
+  bradient son idénticas a las del plugin de plataforma (si la app se ve, bradient carga seguro).
+  La barra sale con el estilo genérico de Qt; para el look GNOME nativo habría que restaurar
+  libQt6Svg (+0.6 MB) y verificar libQt6DBus. Método de diagnóstico que funcionó: comparar
+  contenido de bundles (zip release vs artifact) + leer DT_NEEDED de los .so del wheel con
+  pyelftools (está en el venv). `libQt6OpenGL` quedó restaurada en el bundle Linux por un
+  intento intermedio — bradient usa libGL del sistema, NO libQt6OpenGL; se puede re-recortar
+  si se busca achicar más.
 - Fix ventana cortada por el borde del monitor: el clamp de restauración solo garantizaba el
   borde superior — con y bajo, el fondo de la app (ACTIVAR/status bar) quedaba fuera del monitor
   y el scroll de Principal no aparecía (para Qt la ventana no era chica; el monitor la recortaba).
@@ -497,11 +513,11 @@ Pendiente para Fase 2:
 - Validar build en Pi real (ARM64 Raspberry Pi OS Bookworm)
 - Soporte de múltiples canales de audio
 - Traducir el manual al inglés (la UI ya es bilingüe desde v1.5; ver ítem de i18n arriba)
-- Reducir/optimizar el tamaño total de la app. **Primera pasada hecha (post-v1.4):** recorte de
-  módulos Qt sin uso en ambos specs (`QT_EXCLUDES` + filtro `sin_basura_qt()`) — Windows dist
-  218→166 MB, artifact Linux 189→167 MB. Smoke test Windows OK; **falta validar el bundle Linux
-  recortado en runtime** (especialmente Wayland — se filtró Qt6OpenGL y los plugins wayland-egl
-  podrían requerirlo; si falla, Qt cae a xcb). Sin recorte posible en scipy (los imports de
-  scipy.signal arrastran todo transitivamente — verificado) ni en las dos OpenBLAS (ABIs
-  distintas). Pendiente si se quiere más: UPX (no está instalado — el `upx=True` de los specs
-  hoy es no-op; ojo falsos positivos de antivirus)
+- Reducir/optimizar el tamaño total de la app. **Primera pasada hecha y validada en ambas
+  plataformas (v1.5):** recorte de módulos Qt sin uso en ambos specs (`QT_EXCLUDES` + filtro
+  `sin_basura_qt()`) — Windows dist 218→166 MB, artifact Linux 189→~170 MB (con libQt6OpenGL y
+  plugins wayland restaurados tras el fix de decoraciones). Sin recorte posible en scipy (los
+  imports de scipy.signal arrastran todo transitivamente — verificado) ni en las dos OpenBLAS
+  (ABIs distintas). Pendiente si se quiere más: UPX (no está instalado — el `upx=True` de los
+  specs hoy es no-op; ojo falsos positivos de antivirus) y re-recortar libQt6OpenGL en Linux
+  (bradient usa libGL del sistema, no la lib de Qt)
