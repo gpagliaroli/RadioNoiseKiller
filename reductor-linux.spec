@@ -114,7 +114,8 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[str(ROOT / "pyi_rth_gio.py"),
-                   str(ROOT / "pyi_rth_portaudio.py")],
+                   str(ROOT / "pyi_rth_portaudio.py"),
+                   str(ROOT / "pyi_rth_wayland.py")],
     excludes=["torch", "tensorflow", "matplotlib", "tkinter", "onnxruntime"]
              + QT_EXCLUDES,
     cipher=block_cipher,
