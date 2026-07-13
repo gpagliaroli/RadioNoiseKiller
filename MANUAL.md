@@ -140,11 +140,12 @@ Selecciona de dónde viene el audio (entrada) y a dónde va (salida). La aplicac
 |---------|-------------|
 | **Entrada** | Fuente de audio. Puede ser una entrada física (línea in, micrófono), una tarjeta de audio virtual (VB-Cable, etc.) o "Mezcla estéreo" para capturar lo que reproduce otra aplicación. |
 | **Salida** | Destino del audio procesado. Típicamente los parlantes o auriculares. |
+| **⟳ (refrescar)** | Vuelve a buscar los dispositivos de audio sin cerrar la aplicación — para cuando se conecta o desconecta hardware (interfaz USB, auriculares) con el programa ya abierto. La selección actual se conserva si el dispositivo sigue presente. Solo disponible con el procesamiento detenido. |
 
 ### Consejos
 
 - Si usás un SDR por software (HDSDR, SDR#, etc.), configurá en ese programa la salida hacia un **cable de audio virtual** y seleccioná ese cable como entrada aquí.
-- Si la lista aparece vacía o incompleta, reiniciar la aplicación suele resolver problemas de enumeración de dispositivos Windows.
+- Si la lista aparece vacía o incompleta, o se conectó hardware nuevo con el programa abierto, usar el botón **⟳** para re-enumerar los dispositivos (con el procesamiento detenido). Si aún así falta un dispositivo, reiniciar la aplicación.
 - El cambio de dispositivo requiere detener y volver a activar el procesamiento.
 
 ---

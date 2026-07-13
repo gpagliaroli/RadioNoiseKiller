@@ -449,6 +449,19 @@ N llamadas `lineTo()` sobre `QPainterPath`, eliminando la contención de GIL con
 **WindowConfig:** `spectrum_db_max` y `spectrum_max_freq_hz` se persisten en `settings.json`
 bajo la clave `"window"` junto con la posición de la ventana.
 
+Cambios v1.5 (pendiente de release):
+- Recorte de módulos Qt sin uso en ambos specs (−52 MB Windows, −21 MB artifact Linux; ver ítem
+  del backlog más abajo — falta validar el bundle Linux en runtime).
+- Botón ⟳ para refrescar los dispositivos de audio sin reiniciar la app:
+  `rescan_devices()` en `audio/devices.py` (`sd._terminate()` + `sd._initialize()` — PortAudio
+  congela la lista al inicializar; NUNCA llamar con un stream abierto). El botón se deshabilita
+  durante el procesamiento (`_on_toggle_processing`). El repoblado preserva la selección **por
+  nombre** (`_select_device_by_name`) porque los índices PortAudio pueden cambiar tras el rescan;
+  las señales de los combos van bloqueadas durante el refill y los handlers se llaman explícitamente
+  al final para empujar el índice nuevo al pipeline. `_populate_devices` refactorizado:
+  `_fill_device_combos()` compartido entre el populate inicial (señales aún no conectadas) y el
+  refresh. MANUAL.md Cap. 1 actualizado.
+
 Pendiente para Fase 2:
 - Validar build en Pi real (ARM64 Raspberry Pi OS Bookworm)
 - Soporte de múltiples canales de audio

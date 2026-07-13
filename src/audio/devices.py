@@ -107,6 +107,19 @@ def list_devices() -> list[AudioDevice]:
     return result
 
 
+def rescan_devices() -> list[AudioDevice]:
+    """
+    Reinicializa PortAudio y vuelve a enumerar el hardware.
+
+    PortAudio congela la lista de dispositivos al inicializarse; para ver
+    hardware conectado/desconectado después hay que terminar y reinicializar.
+    NO llamar con un stream abierto — la reinicialización lo invalida.
+    """
+    sd._terminate()
+    sd._initialize()
+    return list_devices()
+
+
 def get_default_input() -> "AudioDevice | None":
     devices = list_devices()
     for dev in devices:

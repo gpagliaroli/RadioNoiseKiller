@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont
 
-from audio.devices import list_devices, AudioDevice
+from audio.devices import list_devices, rescan_devices, AudioDevice
 from config import AppConfig, RadioMode, GainConfig
 from pipeline import ProcessingPipeline
 from ui.vu_meter import VuMeter
@@ -120,8 +120,22 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(group)
         self._combo_in  = QComboBox()
         self._combo_out = QComboBox()
-        layout.addLayout(self._labeled_row("Entrada:", self._combo_in))
-        layout.addLayout(self._labeled_row("Salida:", self._combo_out))
+        in_row = self._labeled_row("Entrada:", self._combo_in)
+        in_spacer = QLabel("")
+        in_spacer.setFixedWidth(34)
+        in_row.addWidget(in_spacer)
+        layout.addLayout(in_row)
+
+        out_row = self._labeled_row("Salida:", self._combo_out)
+        self._btn_refresh_devices = QPushButton("⟳")
+        self._btn_refresh_devices.setFixedWidth(34)
+        self._btn_refresh_devices.setToolTip(
+            "Volver a buscar dispositivos de audio (hardware conectado o\n"
+            "desconectado con la aplicación abierta). Requiere procesamiento detenido."
+        )
+        self._btn_refresh_devices.clicked.connect(self._on_refresh_devices)
+        out_row.addWidget(self._btn_refresh_devices)
+        layout.addLayout(out_row)
         return group
 
     def _build_control_group(self) -> QGroupBox:
@@ -539,7 +553,16 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _populate_devices(self) -> None:
-        devices = list_devices()
+        self._fill_device_combos(list_devices())
+        self._combo_in.currentIndexChanged.connect(self._on_input_device_changed)
+        self._combo_out.currentIndexChanged.connect(self._on_output_device_changed)
+        self._on_input_device_changed(0)
+        self._on_output_device_changed(0)
+
+    def _fill_device_combos(self, devices: list[AudioDevice]) -> None:
+        """Limpia y repuebla ambos combos. El caller maneja las señales
+        (en el primer populate aún no están conectadas; en el refresh van
+        bloqueadas para no disparar handlers por cada addItem)."""
         for combo in (self._combo_in, self._combo_out):
             combo.clear()
         for dev in devices:
@@ -548,10 +571,44 @@ class MainWindow(QMainWindow):
             if dev.supports_output():
                 self._combo_out.addItem(dev.display_name(), dev)
 
-        self._combo_in.currentIndexChanged.connect(self._on_input_device_changed)
-        self._combo_out.currentIndexChanged.connect(self._on_output_device_changed)
-        self._on_input_device_changed(0)
-        self._on_output_device_changed(0)
+    def _on_refresh_devices(self) -> None:
+        if self._pipeline.is_running():
+            return  # el botón se deshabilita al activar; guard por las dudas
+        prev_in:  AudioDevice | None = self._combo_in.currentData()
+        prev_out: AudioDevice | None = self._combo_out.currentData()
+        try:
+            devices = rescan_devices()
+        except Exception as e:
+            self._status_bar.showMessage(f"Error al re-enumerar dispositivos: {e}")
+            return
+
+        for combo in (self._combo_in, self._combo_out):
+            combo.blockSignals(True)
+        self._fill_device_combos(devices)
+        # Restaurar la selección por nombre — el índice PortAudio puede
+        # cambiar tras la reinicialización (hardware agregado/quitado).
+        self._select_device_by_name(self._combo_in, prev_in)
+        self._select_device_by_name(self._combo_out, prev_out)
+        for combo in (self._combo_in, self._combo_out):
+            combo.blockSignals(False)
+
+        # Empujar la selección al pipeline (los índices pueden ser nuevos)
+        self._on_input_device_changed(self._combo_in.currentIndex())
+        self._on_output_device_changed(self._combo_out.currentIndex())
+        self._status_bar.showMessage(
+            f"Dispositivos actualizados: {self._combo_in.count()} de entrada, "
+            f"{self._combo_out.count()} de salida."
+        )
+
+    @staticmethod
+    def _select_device_by_name(combo: QComboBox, prev: "AudioDevice | None") -> None:
+        if prev is None:
+            return
+        for i in range(combo.count()):
+            dev: AudioDevice = combo.itemData(i)
+            if dev and dev.name == prev.name:
+                combo.setCurrentIndex(i)
+                return
 
     def _apply_loaded_config(self) -> None:
         for cb, key, setter in [
@@ -909,6 +966,7 @@ class MainWindow(QMainWindow):
                 self._level_timer.start()
                 self._spectrum_widget.start()
                 self._status_bar.showMessage("Procesando...")
+                self._btn_refresh_devices.setEnabled(False)
                 self._adv_audio_tab.set_processing_active(True)
                 self._adv_canceller_tab._update_stats()
                 self._refresh_noise_profile_ui()
@@ -927,6 +985,7 @@ class MainWindow(QMainWindow):
             self._vu_out.set_level(-60)
             self._label_latency.setText("Latencia: --")
             self._status_bar.showMessage("Detenido.")
+            self._btn_refresh_devices.setEnabled(True)
             self._adv_audio_tab.set_processing_active(False)
 
     def _on_tab_changed(self, idx: int) -> None:
