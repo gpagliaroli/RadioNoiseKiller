@@ -460,7 +460,8 @@ Cambios v1.5 (pendiente de release):
   las señales de los combos van bloqueadas durante el refill y los handlers se llaman explícitamente
   al final para empujar el índice nuevo al pipeline. `_populate_devices` refactorizado:
   `_fill_device_combos()` compartido entre el populate inicial (señales aún no conectadas) y el
-  refresh. MANUAL.md Cap. 1 actualizado.
+  refresh. MANUAL.md Cap. 1 actualizado. Verificado por el usuario con hardware real (interfaz
+  USB conectada/desconectada con la app abierta: aparece y desaparece de los combos con ⟳).
 - Internacionalización ES/EN: diccionario propio (`src/i18n.py` con `tr()` + catálogo
   `src/i18n_en.py`) en vez de Qt Linguist — con dos idiomas evita el toolchain .ts/.qm y los
   datas extra en los specs; el texto fuente español es la clave y una clave ausente devuelve
