@@ -94,7 +94,7 @@ a = Analysis(
     [str(SRC / "main.py")],
     pathex=[str(SRC)],
     binaries=extra_binaries,
-    datas=[],
+    datas=[(str(ROOT / "Images" / "RNK_ico.png"), "Images")],
     hiddenimports=[
         "sounddevice",
         "cffi",

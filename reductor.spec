@@ -45,7 +45,7 @@ a = Analysis(
     [str(SRC / "main.py")],
     pathex=[str(SRC)],
     binaries=[],
-    datas=[],
+    datas=[(str(ROOT / "Images" / "RNK_ico.png"), "Images")],
     hiddenimports=[
         "sounddevice",
         "cffi",
@@ -89,7 +89,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,
+    icon=str(ROOT / "Images" / "RNK.ico"),
 )
 
 coll = COLLECT(

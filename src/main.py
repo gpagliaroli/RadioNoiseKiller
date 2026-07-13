@@ -8,13 +8,18 @@ os.environ.setdefault("OMP_NUM_THREADS", "1")
 os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
 os.environ.setdefault("MKL_NUM_THREADS", "1")
 from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QIcon
 from ui.main_window import MainWindow
+from utils import resource_path
 
 
 def main():
     app = QApplication(sys.argv)
     app.setApplicationName("RadioNoiseKiller")
     app.setApplicationVersion("1.4.0")
+    icon_path = resource_path(os.path.join("Images", "RNK_ico.png"))
+    if os.path.exists(icon_path):
+        app.setWindowIcon(QIcon(icon_path))
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
