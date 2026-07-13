@@ -482,6 +482,10 @@ Cambios v1.5 (pendiente de release):
   (Nota de testing: las ventanas lanzadas desde la sesión del agente no son enumerables —
   EnumWindows/MainWindowTitle no las ven; la verificación visual de posición/geometría en
   Windows real la tiene que hacer el usuario.)
+- Ícono de la app: `Images/RNK_ico.png` (logo del usuario) → `Images/RNK.ico` (Pillow, 7 tamaños)
+  embebido en el exe Windows (`icon=` del spec); `app.setWindowIcon()` en `main.py` vía
+  `resource_path()` para ventana/taskbar en Windows y Linux (PNG en datas de ambos specs;
+  decodifica con el PNG integrado de Qt6Gui — no necesita los plugins de imagen recortados).
 - Fix ventana cortada por el borde del monitor: el clamp de restauración solo garantizaba el
   borde superior — con y bajo, el fondo de la app (ACTIVAR/status bar) quedaba fuera del monitor
   y el scroll de Principal no aparecía (para Qt la ventana no era chica; el monitor la recortaba).
