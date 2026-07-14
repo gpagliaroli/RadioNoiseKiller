@@ -245,6 +245,32 @@ Bugs reales encontrados en revisión — cada uno es un patrón que puede reapar
    síntoma es "nunca termina de calibrar" (sin mensaje de error visible). Módulos con estado
    dependiente del hop (AGC) también deben actualizarse en `pipeline.start()`.
 
+## Empaquetado multiplataforma — invariantes (lecciones v1.4/v1.5)
+
+La app es Python + PySide6 empaquetada con PyInstaller para Windows y Linux. Los bugs de
+empaquetado se descubren en el hardware del usuario, no en CI — anticiparlos:
+
+1. **Plugins agregados a mano al spec: rastrear sus DT_NEEDED.** PyInstaller solo recorre
+   dependencias binarias de lo que él mismo recolecta. Al agregar un `.so`/`.dll` a `a.binaries`
+   después del `Analysis` (como los plugins de decoración Wayland), verificar con pyelftools
+   (está en el venv) que TODAS sus DT_NEEDED estén en el bundle o sean libs del sistema —
+   un plugin presente pero sin sus dependencias falla silencioso (dlopen) y el síntoma aparece
+   solo en runtime en la máquina del usuario.
+2. **Audio en Linux: preferir las libs del sistema.** `libasound` y `libportaudio` bundleadas
+   (las del runner de CI) no cargan los plugins ALSA/Pulse del host — dispositivos virtuales
+   desaparecen. Ambas se excluyen del bundle (ver `reductor-linux.spec`); no revertir.
+3. **Wayland necesita los plugins de decoración** (`wayland-decoration-client`) que los hooks de
+   PyInstaller NO recolectan, y `QT_WAYLAND_DECORATION=bradient` (hook `pyi_rth_wayland.py`)
+   porque en GNOME Qt elige `adwaita` (requiere libQt6Svg/DBus) y no hace fallback si falla.
+4. **Al recortar módulos Qt del bundle** (filtro `sin_basura_qt()`), validar en runtime en AMBAS
+   plataformas — las dependencias de plugins (decoraciones, plataformas) no son evidentes desde
+   Windows. Antes de recortar, medir qué pesa; después de recortar, smoke test + prueba real.
+5. **Validación en hardware real antes de cerrar.** Para features de UI/audio y cualquier cambio
+   de empaquetado: smoke test local no alcanza — la verificación final la hace el usuario en su
+   equipo (Windows multi-monitor, notebook Ubuntu/Wayland, interfaz USB de radio). No marcar
+   terminado ni publicar release sin esa confirmación; dejar registrado en CLAUDE.md qué quedó
+   verificado y qué pendiente.
+
 ## Configuración persistente
 
 `AppConfig.save()` / `AppConfig.load()` → `settings.json`
