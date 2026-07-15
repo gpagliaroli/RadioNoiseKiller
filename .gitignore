@@ -19,8 +19,9 @@ __pycache__/
 *.pyo
 .pytest_cache/
 
-# Configuración de usuario (no compartir)
-settings.json
+# Configuración de usuario de la APP (no compartir) — anclado a la raíz:
+# sin la barra inicial también ignoraría .claude/settings.json
+/settings.json
 
 # Archivos generados (se regeneran desde MANUAL.md)
 MANUAL_*.pdf

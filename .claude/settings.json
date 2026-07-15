@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".venv/Scripts/python.exe -c \"import json,sys,subprocess; p=json.load(sys.stdin).get('tool_input',{}).get('file_path',''); sys.exit(subprocess.call([sys.executable,'-m','ruff','check','--fix',p]) if p.endswith('.py') else 0)\" || true",
+            "timeout": 30,
+            "statusMessage": "ruff check --fix sobre el archivo editado"
+          }
+        ]
+      }
+    ]
+  }
+}

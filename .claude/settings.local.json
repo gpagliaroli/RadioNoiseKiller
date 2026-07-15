@@ -107,7 +107,12 @@
       "Bash(curl -s https://pypi.org/pypi/PySide6-Essentials/json)",
       "PowerShell(& .venv\\\\Scripts\\\\pip.exe install pyelftools -q; & .venv\\\\Scripts\\\\python.exe -c \"import elftools; print\\('pyelftools ok'\\)\")",
       "PowerShell(& .venv\\\\Scripts\\\\python.exe \"C:\\\\Users\\\\GPAGLI~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Disco-D-Proyectos-ByCoding-Reductor-Ruido-Radio\\\\96f7806c-f7a6-4320-a746-4c407e3e3204\\\\scratchpad\\\\check_needed.py\")",
-      "PowerShell(& .venv\\\\Scripts\\\\python.exe -m PyInstaller reductor.spec --clean --noconfirm --distpath dist_v15)"
+      "PowerShell(& .venv\\\\Scripts\\\\python.exe -m PyInstaller reductor.spec --clean --noconfirm --distpath dist_v15)",
+      "Skill(update-config)",
+      "PowerShell(& .venv\\\\Scripts\\\\python.exe -m ruff --version 2>&1 | Select-Object -First 1; $jq = Get-Command jq -ErrorAction SilentlyContinue; Write-Host \"jq: $\\(if \\($jq\\) { $jq.Source } else { 'NO disponible' }\\)\"; Test-Path .claude\\\\settings.json)",
+      "PowerShell(& .venv\\\\Scripts\\\\pip.exe install ruff -q; & .venv\\\\Scripts\\\\python.exe -m ruff --version)",
+      "Bash(.venv/Scripts/python.exe -c \"import json,sys,subprocess; p=json.load\\(sys.stdin\\).get\\('tool_input',{}\\).get\\('file_path',''\\); sys.exit\\(subprocess.call\\([sys.executable,'-m','ruff','check','--fix',p]\\) if p.endswith\\('.py'\\) else 0\\)\")",
+      "Bash(echo \"exit: $?\")"
     ]
   }
 }
