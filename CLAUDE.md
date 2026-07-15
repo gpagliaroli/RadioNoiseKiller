@@ -552,7 +552,7 @@ Cambios v1.6 (pendiente de release):
   algunos drivers. Con entrada mono el selector no tiene efecto (columna 0 siempre).
   `AudioConfig.channels` queda como campo legado sin uso. Decisión: NO se hace procesamiento
   dual independiente (nivel 2 descartado por el usuario — duplica CPU y UI sin caso de uso).
-  Manuales ES+EN actualizados (Cap. 1). PENDIENTE: validar con la interfaz USB real.
+  Manuales ES+EN actualizados (Cap. 1). Validado por el usuario con la interfaz USB real.
 
 Pendiente para Fase 2:
 - Validar build en Pi real (ARM64 Raspberry Pi OS Bookworm)
