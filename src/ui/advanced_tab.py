@@ -875,12 +875,12 @@ class AdvancedCancellerTab(QWidget):
 
         self._s_post_filter = SliderRow(
             tr("Agresividad:"),
-            min_val=0.0, max_val=6.0,
+            min_val=0.0, max_val=10.0,
             default=_DSP_DEF.post_filter_strength,
             step=0.1, unit="", fmt="{:.1f}",
         )
         self._s_post_filter._update_label = lambda v: self._s_post_filter._val_lbl.setText(
-            f"{v:.1f}  ({tr('desactivado') if v == 0 else tr('suave') if v < 0.8 else tr('normal') if v < 2.0 else tr('agresivo') if v < 3.5 else tr('muy agresivo') if v < 5.0 else tr('máximo')})"
+            f"{v:.1f}  ({tr('desactivado') if v == 0 else tr('suave') if v < 0.8 else tr('normal') if v < 2.0 else tr('agresivo') if v < 3.5 else tr('muy agresivo') if v < 6.5 else tr('máximo')})"
         )
         self._s_post_filter._val_lbl.setFixedWidth(130)
         self._s_post_filter.valueChanged.connect(self._on_post_filter_strength)

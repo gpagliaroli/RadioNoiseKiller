@@ -376,7 +376,7 @@ class NoiseProfiler:
 
     def set_post_filter_strength(self, v: float) -> None:
         # Clamp == rango del slider de Avanzada Cancelador (invariante 1)
-        self._post_filter_strength = float(np.clip(v, 0.0, 6.0))
+        self._post_filter_strength = float(np.clip(v, 0.0, 10.0))
         if self._post_filter_strength == 0.0:
             self._pf_extra_db = 0.0  # limpiar el indicador aunque no corra process()
 

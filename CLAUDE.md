@@ -553,11 +553,12 @@ Cambios v1.6 (pendiente de release):
   `AudioConfig.channels` queda como campo legado sin uso. Decisión: NO se hace procesamiento
   dual independiente (nivel 2 descartado por el usuario — duplica CPU y UI sin caso de uso).
   Manuales ES+EN actualizados (Cap. 1). Validado por el usuario con la interfaz USB real.
-- Post-filtro espectral: rango de agresividad ampliado 0–4 → 0–6 (pedido del usuario: en algunas
-  situaciones se quedaba corto). Clamp del setter actualizado en sync (invariante 1 — este mismo
-  slider ya mordió una vez). En bins de ruido puro la supresión satura en el suelo interno de
-  −46 dB; el rango alto (4–6) actúa sobre todo en bins intermedios voz/ruido. Etiqueta nueva
-  "muy agresivo" (3.5–5.0) agregada a i18n_en.py; manuales ES+EN actualizados.
+- Post-filtro espectral: rango de agresividad ampliado 0–4 → 0–6 → **0–10 EXPERIMENTAL** (pedido
+  del usuario: con 6 aún se escucha bien; está calibrando en el aire hasta dónde sirve — recortar
+  el tope al valor real que reporte). Clamp del setter actualizado en sync en cada cambio
+  (invariante 1 — este mismo slider ya mordió una vez). En bins de ruido puro la supresión satura
+  en el suelo interno de −46 dB; el rango alto actúa sobre todo en bins intermedios voz/ruido.
+  Etiqueta nueva "muy agresivo" en i18n_en.py; manuales ES+EN actualizados.
 - Fix indicador "Reducción extra" congelado (reportado por el usuario): `_pf_extra_db` solo se
   recalculaba dentro del bloque `strength > 0` — al bajar la agresividad a 0 el indicador quedaba
   con el último valor medido (invariante 5, otra instancia). Ahora se resetea a 0 en el else del
