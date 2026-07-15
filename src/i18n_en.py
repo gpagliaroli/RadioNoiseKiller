@@ -232,6 +232,23 @@ CATALOG = {
     "SSB – Hz superior:": "SSB – high Hz:",
     "Orden del filtro:": "Filter order:",
     "Orden {n}": "Order {n}",
+    "Salida independiente de la entrada": "Output independent from input",
+    "Con la casilla apagada, el filtro de salida usa los mismos límites que\n"
+    "el de entrada (comportamiento clásico). Activada, la salida tiene sus\n"
+    "propios límites: permite entrada angosta (menos soplido al cancelador)\n"
+    "con salida más ancha (la voz no se recorta dos veces en el borde).":
+        "With the box unchecked, the output filter uses the same limits as\n"
+        "the input one (classic behavior). Checked, the output has its own\n"
+        "limits: allows a narrow input (less hiss into the canceller) with\n"
+        "a wider output (the voice is not clipped twice at the band edge).",
+    "AM salida – Hz inferior:": "AM output – low Hz:",
+    "AM salida – Hz superior:": "AM output – high Hz:",
+    "SSB salida – Hz inferior:": "SSB output – low Hz:",
+    "SSB salida – Hz superior:": "SSB output – high Hz:",
+    "  ↳ Consejo: entrada angosta (p. ej. SSB hasta 2700 Hz) + salida más ancha "
+    "(3500–4000 Hz) conserva el borde superior de la voz y el brillo del excitador.":
+        "  ↳ Tip: narrow input (e.g. SSB up to 2700 Hz) + wider output "
+        "(3500–4000 Hz) preserves the upper edge of the voice and the exciter's brightness.",
     "Voz  (se aplica en tiempo real)": "Voice  (applied in real time)",
     "Frecuencia de cuerpo:": "Body frequency:",
     "grave": "low",

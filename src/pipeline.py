@@ -66,6 +66,9 @@ class ProcessingPipeline:
         self._voice_leveler_enabled: bool = config.dsp.voice_leveler_enabled
         self._bandpass     = BandpassFilter(config.dsp, config.audio.sample_rate)
         self._bandpass_out = BandpassFilter(config.dsp, config.audio.sample_rate)
+        if config.dsp.bandpass_out_independent:
+            for _m, (_lo, _hi) in config.dsp.bandpass_out_limits.items():
+                self._bandpass_out.set_limits(_m, int(_lo), int(_hi))
         self._anf = AdaptiveNotchFilter(
             sample_rate=config.audio.sample_rate,
             threshold=config.dsp.anf_threshold,
@@ -260,7 +263,24 @@ class ProcessingPipeline:
         self._config.dsp.bandpass_limits[mode] = (lo, hi)
         with self._lock:
             self._bandpass.set_limits(mode, lo, hi)
-            self._bandpass_out.set_limits(mode, lo, hi)
+            if not self._config.dsp.bandpass_out_independent:
+                self._bandpass_out.set_limits(mode, lo, hi)
+
+    def set_bandpass_out_independent(self, v: bool) -> None:
+        """Salida independiente de la entrada. Al cambiar, re-empuja al filtro
+        de salida los límites de la fuente que corresponde (ambos modos)."""
+        self._config.dsp.bandpass_out_independent = bool(v)
+        src = (self._config.dsp.bandpass_out_limits if v
+               else self._config.dsp.bandpass_limits)
+        with self._lock:
+            for m, (lo, hi) in src.items():
+                self._bandpass_out.set_limits(m, int(lo), int(hi))
+
+    def set_bandpass_out_limits(self, mode: RadioMode, lo: int, hi: int) -> None:
+        self._config.dsp.bandpass_out_limits[mode] = (lo, hi)
+        if self._config.dsp.bandpass_out_independent:
+            with self._lock:
+                self._bandpass_out.set_limits(mode, lo, hi)
 
     def set_filter_order(self, order: int) -> None:
         self._config.dsp.filter_order = order
@@ -293,6 +313,10 @@ class ProcessingPipeline:
         self.set_bandpass_post_enabled(dsp.bandpass_post_enabled)
         for mode, (lo, hi) in dsp.bandpass_limits.items():
             self.set_bandpass_limits(mode, int(lo), int(hi))
+        for mode, (lo, hi) in dsp.bandpass_out_limits.items():
+            self.set_bandpass_out_limits(mode, int(lo), int(hi))
+        # último: re-empuja los límites de la fuente correcta al filtro de salida
+        self.set_bandpass_out_independent(dsp.bandpass_out_independent)
         self.set_filter_order(dsp.filter_order)
 
         self.set_anf_enabled(dsp.anf_enabled)

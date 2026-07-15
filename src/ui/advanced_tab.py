@@ -1,7 +1,7 @@
 ﻿import math
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QGroupBox, QLabel,
-    QScrollArea, QPushButton, QHBoxLayout, QFrame,
+    QScrollArea, QPushButton, QHBoxLayout, QFrame, QCheckBox,
 )
 from PySide6.QtCore import Qt, QTimer
 from config import AppConfig, RadioMode, AudioConfig, DSPConfig
@@ -75,6 +75,10 @@ class AdvancedAudioTab(QWidget):
         bp = dsp.bandpass_pre_enabled or dsp.bandpass_post_enabled
         for s in (self._s_am_lo, self._s_am_hi, self._s_ssb_lo, self._s_ssb_hi, self._s_order):
             s.set_enabled(bp)
+        self._chk_bp_out.setEnabled(dsp.bandpass_post_enabled)
+        for s in (self._s_out_am_lo, self._s_out_am_hi,
+                  self._s_out_ssb_lo, self._s_out_ssb_hi):
+            s.set_enabled(dsp.bandpass_post_enabled and dsp.bandpass_out_independent)
         for s in (self._s_presence_freq, self._s_presence, self._s_presence_q,
                   self._s_body_freq, self._s_body):
             s.set_enabled(dsp.presence_enabled)
@@ -210,6 +214,31 @@ class AdvancedAudioTab(QWidget):
             lambda v: self._pipeline.set_filter_order(_FILTER_ORDERS[int(v)])
         )
         layout.addWidget(self._s_order)
+
+        self._chk_bp_out = QCheckBox(tr("Salida independiente de la entrada"))
+        self._chk_bp_out.setToolTip(tr(
+            "Con la casilla apagada, el filtro de salida usa los mismos límites que\n"
+            "el de entrada (comportamiento clásico). Activada, la salida tiene sus\n"
+            "propios límites: permite entrada angosta (menos soplido al cancelador)\n"
+            "con salida más ancha (la voz no se recorta dos veces en el borde)."
+        ))
+        self._chk_bp_out.toggled.connect(self._on_bp_out_independent)
+        layout.addWidget(self._chk_bp_out)
+
+        self._s_out_am_lo  = _freq_slider(tr("AM salida – Hz inferior:"),  _DSP_DEF.bandpass_out_limits[RadioMode.AM][0])
+        self._s_out_am_hi  = _freq_slider(tr("AM salida – Hz superior:"),  _DSP_DEF.bandpass_out_limits[RadioMode.AM][1],  hi=10000)
+        self._s_out_ssb_lo = _freq_slider(tr("SSB salida – Hz inferior:"), _DSP_DEF.bandpass_out_limits[RadioMode.SSB][0])
+        self._s_out_ssb_hi = _freq_slider(tr("SSB salida – Hz superior:"), _DSP_DEF.bandpass_out_limits[RadioMode.SSB][1], hi=6000)
+
+        self._s_out_am_lo.valueChanged.connect(lambda v: self._on_bp_out(RadioMode.AM,  lo=int(v)))
+        self._s_out_am_hi.valueChanged.connect(lambda v: self._on_bp_out(RadioMode.AM,  hi=int(v)))
+        self._s_out_ssb_lo.valueChanged.connect(lambda v: self._on_bp_out(RadioMode.SSB, lo=int(v)))
+        self._s_out_ssb_hi.valueChanged.connect(lambda v: self._on_bp_out(RadioMode.SSB, hi=int(v)))
+
+        for s in (self._s_out_am_lo, self._s_out_am_hi, self._s_out_ssb_lo, self._s_out_ssb_hi):
+            layout.addWidget(s)
+        layout.addWidget(_note(tr("  ↳ Consejo: entrada angosta (p. ej. SSB hasta 2700 Hz) + salida más ancha "
+                                  "(3500–4000 Hz) conserva el borde superior de la voz y el brillo del excitador.")))
         return group
 
     def _build_voice_group(self) -> QGroupBox:
@@ -343,6 +372,13 @@ class AdvancedAudioTab(QWidget):
         self._s_am_hi.set_value(cfg.bandpass_limits[RadioMode.AM][1])
         self._s_ssb_lo.set_value(cfg.bandpass_limits[RadioMode.SSB][0])
         self._s_ssb_hi.set_value(cfg.bandpass_limits[RadioMode.SSB][1])
+        self._chk_bp_out.blockSignals(True)
+        self._chk_bp_out.setChecked(cfg.bandpass_out_independent)
+        self._chk_bp_out.blockSignals(False)
+        self._s_out_am_lo.set_value(cfg.bandpass_out_limits[RadioMode.AM][0])
+        self._s_out_am_hi.set_value(cfg.bandpass_out_limits[RadioMode.AM][1])
+        self._s_out_ssb_lo.set_value(cfg.bandpass_out_limits[RadioMode.SSB][0])
+        self._s_out_ssb_hi.set_value(cfg.bandpass_out_limits[RadioMode.SSB][1])
         self._s_order.set_value(
             _FILTER_ORDERS.index(cfg.filter_order)
             if cfg.filter_order in _FILTER_ORDERS else 1
@@ -405,6 +441,18 @@ class AdvancedAudioTab(QWidget):
         if lo >= hi:
             return
         self._pipeline.set_bandpass_limits(mode, lo, hi)
+
+    def _on_bp_out_independent(self, checked: bool) -> None:
+        self._pipeline.set_bandpass_out_independent(checked)
+        self.refresh_enabled_states()
+
+    def _on_bp_out(self, mode: RadioMode, lo: int = None, hi: int = None) -> None:
+        cur_lo, cur_hi = self._config.dsp.bandpass_out_limits[mode]
+        lo = lo if lo is not None else cur_lo
+        hi = hi if hi is not None else cur_hi
+        if lo >= hi:
+            return
+        self._pipeline.set_bandpass_out_limits(mode, lo, hi)
 
     def _on_block_size(self, idx: float) -> None:
         self._config.audio.block_size = _BLOCK_SIZES[int(idx)]

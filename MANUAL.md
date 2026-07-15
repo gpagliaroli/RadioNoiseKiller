@@ -202,7 +202,6 @@ Cada casilla de verificación activa o desactiva un módulo del pipeline de form
 |--------|-----------------|
 | **Supresor de impulsos** | Siempre en bandas con QRN (tormentas, ruido industrial). Desactivar si la señal es limpia para ahorrar CPU. |
 | **Filtro de paso de banda (pre)** | Casi siempre activo. Limita el espectro antes del cancelador. |
-| **Filtro de paso de banda (post)** | Casi siempre activo junto con el pre. Limpia artefactos del procesamiento espectral. |
 | **ANF — Cancela heterodinos y tonos** | Activar cuando se escuchen tonos constantes (pito, zumbido). Desactivar con señales de datos/digitales (PSK, FT8) ya que los tomaría por interferencia. |
 | **Cancelador de ruido estacionario** | El módulo principal. Activar una vez aprendido el perfil de ruido. |
 | &nbsp;&nbsp;&nbsp;↳ **Piso espectral perceptual** | Sub-módulo del cancelador. Reemplaza el piso fijo por una curva que varía con la frecuencia: eleva el piso en la zona vocal (~500 Hz, preserva la calidez de la voz) y lo baja en alta frecuencia (suprime más el soplido). Curva configurable en Avanzada Cancelador. |
@@ -211,6 +210,7 @@ Cada casilla de verificación activa o desactiva un módulo del pipeline de form
 | &nbsp;&nbsp;&nbsp;↳ **Squelch de voz** | Sub-módulo del cancelador. Silencia el audio entre transmisiones con cierre progresivo (sin gorgojeo ni cola de ruido). **No usar con música.** Indicador de nivel de voz y estado del gate en Avanzada Cancelador. |
 | &nbsp;&nbsp;&nbsp;↳ **Compensación fading HF** | Sub-módulo del cancelador, solo modo Adaptativo. Congela el estimador de ruido durante fades ionosféricos (QSB) y acelera la recuperación al volver la señal. Sensibilidad y duración en Avanzada Cancelador. |
 | &nbsp;&nbsp;&nbsp;↳ **Nivelador de voz** | Sub-módulo del cancelador. AGC de voz aplicado *después* de la reducción de ruido: mantiene la voz limpia a nivel constante aunque las condiciones de la banda (y la cantidad de cancelación) varíen. Solo adapta cuando detecta voz — el ruido entre transmisiones no se re-amplifica. |
+| **Filtro de paso de banda (post)** | Casi siempre activo junto con el pre. Limpia artefactos del procesamiento espectral. Corre después del cancelador y el squelch (el orden de esta lista refleja el pipeline). Sus límites pueden independizarse de la entrada (ver Cap. 5). |
 | **EQ Voz (presencia + cuerpo)** | Dos bandas paramétricas: presencia (claridad, 1–2 kHz) y cuerpo (calidez, 150–800 Hz). Activar para modelar la voz con señales debilitadas o muy filtradas. |
 | **Excitador armónico** | Para señales de voz opacas, sin brillo. Añade presencia. Comparar con y sin para decidir. |
 
@@ -268,6 +268,17 @@ Ambos se activan/desactivan de forma independiente desde **Módulos Activos**.
 | **SSB Hz inferior** | 50–1000 Hz | — | 200 Hz | Corte inferior para SSB. |
 | **SSB Hz superior** | 1000–5000 Hz | — | 3000 Hz | Corte superior para SSB. |
 | **Orden del filtro** | 2 / 4 / 6 / 8 | 4 | 4 | Pendiente del filtro. Mayor orden = corte más abrupto = mejor rechazo fuera de banda, pero mayor latencia de fase. Para uso normal, orden 4 es adecuado. |
+
+### Salida independiente de la entrada
+
+Por defecto, el filtro de salida usa **los mismos límites** que el de entrada. La casilla **"Salida independiente de la entrada"** habilita cuatro sliders propios (AM/SSB salida, inferior/superior) para desacoplarlos.
+
+¿Para qué? Dos filtros iguales en cascada duplican la atenuación en el borde de banda: la parte alta de la voz llega **doblemente apagada**. Con salida independiente se puede usar:
+
+- **Entrada angosta** (p. ej. SSB hasta 2700 Hz): menos soplido entra al cancelador de ruido.
+- **Salida más ancha** (3500–4000 Hz): la voz conserva su borde superior natural y el brillo que regenera el Excitador armónico pasa completo. El filtro de salida sigue limpiando artefactos por encima de su propio corte.
+
+Regla práctica: la salida **igual o más ancha** que la entrada. Más angosta que la entrada re-recorta señal útil sin beneficio.
 
 ### Consejos
 

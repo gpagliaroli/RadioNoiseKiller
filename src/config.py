@@ -72,6 +72,11 @@ class DSPConfig:
         RadioMode.AM:  (300, 5000),
         RadioMode.SSB: (200, 3000),
     })
+    bandpass_out_independent: bool = False  # False = la salida sigue a la entrada (legado)
+    bandpass_out_limits: dict = field(default_factory=lambda: {
+        RadioMode.AM:  (300, 5000),
+        RadioMode.SSB: (200, 3000),
+    })
     filter_order: int = 4
 
 
@@ -162,6 +167,11 @@ class AppConfig:
                 "bandpass_limits": {
                     m.value: list(v)
                     for m, v in self.dsp.bandpass_limits.items()
+                },
+                "bandpass_out_independent": self.dsp.bandpass_out_independent,
+                "bandpass_out_limits": {
+                    m.value: list(v)
+                    for m, v in self.dsp.bandpass_out_limits.items()
                 },
             },
             "gain": {
@@ -260,6 +270,13 @@ class AppConfig:
                 mode_str = "SSB"
             try:
                 self.dsp.bandpass_limits[RadioMode(mode_str)] = tuple(limits)
+            except ValueError:
+                pass
+        self.dsp.bandpass_out_independent = bool(d.get("bandpass_out_independent",
+                                                       self.dsp.bandpass_out_independent))
+        for mode_str, limits in d.get("bandpass_out_limits", {}).items():
+            try:
+                self.dsp.bandpass_out_limits[RadioMode(mode_str)] = tuple(limits)
             except ValueError:
                 pass
 

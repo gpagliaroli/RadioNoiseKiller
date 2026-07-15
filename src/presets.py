@@ -118,6 +118,8 @@ class PresetManager:
                 "bandpass_pre_enabled":      dsp.bandpass_pre_enabled,
                 "bandpass_post_enabled":     dsp.bandpass_post_enabled,
                 "bandpass_limits":           {m.value: list(v) for m, v in dsp.bandpass_limits.items()},
+                "bandpass_out_independent":  dsp.bandpass_out_independent,
+                "bandpass_out_limits":       {m.value: list(v) for m, v in dsp.bandpass_out_limits.items()},
                 "filter_order":              dsp.filter_order,
                 "anf_enabled":               dsp.anf_enabled,
                 "anf_threshold":             dsp.anf_threshold,
@@ -188,6 +190,13 @@ class PresetManager:
         for mode_str, limits in d.get("bandpass_limits", {}).items():
             try:
                 dsp.bandpass_limits[RadioMode(mode_str)] = tuple(limits)
+            except ValueError:
+                pass
+        dsp.bandpass_out_independent = bool(d.get("bandpass_out_independent",
+                                                  dsp.bandpass_out_independent))
+        for mode_str, limits in d.get("bandpass_out_limits", {}).items():
+            try:
+                dsp.bandpass_out_limits[RadioMode(mode_str)] = tuple(limits)
             except ValueError:
                 pass
         dsp.filter_order    = int(d.get("filter_order",   dsp.filter_order))

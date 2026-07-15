@@ -553,6 +553,23 @@ Cambios v1.6 (pendiente de release):
   `AudioConfig.channels` queda como campo legado sin uso. Decisión: NO se hace procesamiento
   dual independiente (nivel 2 descartado por el usuario — duplica CPU y UI sin caso de uso).
   Manuales ES+EN actualizados (Cap. 1). Validado por el usuario con la interfaz USB real.
+- Filtro de paso de banda de salida independiente de la entrada (checkbox "Salida independiente"
+  + 4 sliders en Filtros DSP, Avanzada Audio): `bandpass_out_independent` +
+  `bandpass_out_limits` en DSPConfig, persistidos en settings.json y presets. Con la casilla
+  apagada la salida sigue a la entrada (comportamiento legado, default). Motivación: dos
+  Butterworth orden 4 en cascada con el mismo corte = orden 8 efectivo en el borde — la voz
+  llega doblemente apagada; entrada angosta (2.7k, menos soplido al cancelador) + salida ancha
+  (3.5-4k) conserva el borde de la voz. DATO CLAVE del análisis: el excitador corre DESPUÉS del
+  filtro post (pipeline.py ~828-832: post → EQ → exciter), así que sus armónicos nunca fueron
+  recortados — el beneficio real de la independencia es el des-apilado del rolloff en cascada.
+  `set_bandpass_limits` NO toca la salida si independiente; `set_bandpass_out_independent`
+  re-empuja los límites de la fuente correcta a ambos modos; en `apply_config` va DESPUÉS de
+  los límites (orden importa). `refresh_enabled_states`: checkbox requiere post habilitado,
+  sliders requieren además la casilla activa. OJO: `SliderRow.set_enabled` deshabilita los
+  HIJOS, no el contenedor — testear con `_slider.isEnabled()`, no con `isEnabled()` del row.
+- Reorden de Módulos Activos (pedido del usuario): "Filtro de paso de banda (post)" movido
+  a justo antes de "EQ Voz" — refleja el orden real del pipeline (cancelador → squelch →
+  post → EQ → excitador). Tablas del Cap. 3 de ambos manuales reordenadas igual.
 - Post-filtro espectral: rango de agresividad ampliado 0–4 → **0–10, validado en el aire por el
   usuario** ("estos valores van bien"). Clamp del setter actualizado en sync en cada cambio
   (invariante 1 — este mismo slider ya mordió una vez). En bins de ruido puro la supresión satura

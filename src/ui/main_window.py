@@ -250,10 +250,6 @@ class MainWindow(QMainWindow):
             tr("Filtro de paso de banda  (pre)"),
             tr("Butterworth IIR antes del cancelador de ruido — limita el espectro que aprende el perfil."),
         )
-        self._chk_bandpass_post = _chk(
-            tr("Filtro de paso de banda  (post)"),
-            tr("Butterworth IIR después del cancelador de ruido — elimina fugas espectrales del STFT."),
-        )
         self._chk_anf = _chk(
             tr("ANF — Cancela heterodinos y tonos interferentes"),
             tr("Detecta bins espectrales que sobresalen sobre el ruido vecino y los atenúa."),
@@ -299,6 +295,12 @@ class MainWindow(QMainWindow):
             "constante aunque el ruido (y por ende la cancelación) varíe.\n"
             "Solo adapta cuando detecta voz — el ruido residual entre\n"
             "transmisiones no se re-amplifica. Requiere cancelador activo."),
+        )
+        # (post) va aquí — refleja el orden real del pipeline:
+        # cancelador → squelch → bandpass POST → EQ voz → excitador
+        self._chk_bandpass_post = _chk(
+            tr("Filtro de paso de banda  (post)"),
+            tr("Butterworth IIR después del cancelador de ruido — elimina fugas espectrales del STFT."),
         )
         self._chk_presence = _chk(
             tr("EQ Voz  (presencia + cuerpo)"),
