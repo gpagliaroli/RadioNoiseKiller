@@ -232,6 +232,12 @@ class ProcessingPipeline:
     def set_output_device(self, device: AudioDevice | None) -> None:
         self._config.audio.output_device = device.index if device else None
 
+    def set_input_channel(self, mode: str) -> None:
+        """Canal tomado de entradas estéreo: "left"/"right"/"mix". Aplica en
+        vivo — el callback del stream lee config.audio.input_channel por bloque."""
+        if mode in ("left", "right", "mix"):
+            self._config.audio.input_channel = mode
+
     # ------------------------------------------------------------------
     # API pública — ajustes live (pestaña Avanzada)
     # ------------------------------------------------------------------

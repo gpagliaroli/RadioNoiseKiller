@@ -541,9 +541,21 @@ Cambios v1.5:
   referencia, con margen estimado del marco (20/50 px — `frameGeometry` no incluye el marco antes
   de `show()`). Verificado por el usuario.
 
+Cambios v1.6 (pendiente de release):
+- Selector de canal de entrada ("Canal:" en Dispositivos de Audio): `input_channel` en
+  AudioConfig ("left"/"right"/"mix", persistido). El stream abre SIEMPRE estéreo cuando el
+  dispositivo lo permite (`min(2, max_channels)` por dispositivo, consultado en `start()`) y
+  `pick_input_channel()` reduce a mono en el callback — el DSP sigue mono, sin costo extra.
+  El cambio es EN VIVO: el callback lee `config.audio.input_channel` por bloque (lectura de
+  atributo str — atómica, sin lock). Salida dual-mono (`audio_out[:, np.newaxis]` broadcastea
+  a todos los canales) — arregla auricular único/fallo de apertura con salida de 1 canal en
+  algunos drivers. Con entrada mono el selector no tiene efecto (columna 0 siempre).
+  `AudioConfig.channels` queda como campo legado sin uso. Decisión: NO se hace procesamiento
+  dual independiente (nivel 2 descartado por el usuario — duplica CPU y UI sin caso de uso).
+  Manuales ES+EN actualizados (Cap. 1). PENDIENTE: validar con la interfaz USB real.
+
 Pendiente para Fase 2:
 - Validar build en Pi real (ARM64 Raspberry Pi OS Bookworm)
-- Soporte de múltiples canales de audio
 - Reducir/optimizar el tamaño total de la app. **Primera pasada hecha y validada en ambas
   plataformas (v1.5):** recorte de módulos Qt sin uso en ambos specs (`QT_EXCLUDES` + filtro
   `sin_basura_qt()`) — Windows dist 218→166 MB, artifact Linux 189→~170 MB (con libQt6OpenGL y

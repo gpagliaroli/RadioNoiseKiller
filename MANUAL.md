@@ -141,12 +141,15 @@ Selecciona de dónde viene el audio (entrada) y a dónde va (salida). La aplicac
 | **Entrada** | Fuente de audio. Puede ser una entrada física (línea in, micrófono), una tarjeta de audio virtual (VB-Cable, etc.) o "Mezcla estéreo" para capturar lo que reproduce otra aplicación. |
 | **Salida** | Destino del audio procesado. Típicamente los parlantes o auriculares. |
 | **⟳ (refrescar)** | Vuelve a buscar los dispositivos de audio sin cerrar la aplicación — para cuando se conecta o desconecta hardware (interfaz USB, auriculares) con el programa ya abierto. La selección actual se conserva si el dispositivo sigue presente. Solo disponible con el procesamiento detenido. |
+| **Canal** | Canal tomado de la entrada cuando es estéreo: **Izquierdo** (default), **Derecho** o **Mezcla L+R**. Se aplica en vivo, sin reiniciar el procesamiento. Con entradas mono no tiene efecto. |
 
 ### Consejos
 
 - Si usás un SDR por software (HDSDR, SDR#, etc.), configurá en ese programa la salida hacia un **cable de audio virtual** y seleccioná ese cable como entrada aquí.
 - Si la lista aparece vacía o incompleta, o se conectó hardware nuevo con el programa abierto, usar el botón **⟳** para re-enumerar los dispositivos (con el procesamiento detenido). Si aún así falta un dispositivo, reiniciar la aplicación.
 - El cambio de dispositivo requiere detener y volver a activar el procesamiento.
+- Si no se escucha nada con una interfaz USB estéreo, probar **Canal: Derecho** — es común que el audio de la radio venga cableado por ese canal.
+- En radios con **doble receptor** (RX principal por el canal izquierdo, sub-RX por el derecho), el selector de Canal permite elegir cuál procesar. La salida procesada suena siempre en ambos oídos.
 
 ---
 

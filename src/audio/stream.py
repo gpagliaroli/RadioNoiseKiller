@@ -6,7 +6,6 @@ El procesador recibe bloques de audio float32 mono a 48kHz y devuelve el audio p
 No hacer operaciones bloqueantes (I/O, locks lentos) dentro del callback.
 """
 import threading
-import queue
 import numpy as np
 import sounddevice as sd
 from collections.abc import Callable
@@ -14,6 +13,19 @@ from config import AudioConfig
 
 
 AudioCallback = Callable[[np.ndarray], np.ndarray]
+
+
+def pick_input_channel(indata: np.ndarray, mode: str) -> np.ndarray:
+    """Reduce el bloque de entrada a mono según el canal elegido.
+
+    mode: "left" | "right" | "mix". Con entrada mono se ignora (columna 0).
+    Devuelve SIEMPRE una copia (el buffer de PortAudio se reutiliza).
+    """
+    if indata.shape[1] == 1 or mode == "left":
+        return indata[:, 0].copy()
+    if mode == "right":
+        return indata[:, 1].copy()
+    return (indata[:, 0] + indata[:, 1]) * 0.5  # mix — ya es un array nuevo
 
 
 class AudioStream:
@@ -35,17 +47,32 @@ class AudioStream:
         with self._lock:
             if self._running:
                 return
+            # Abrir estéreo cuando el dispositivo lo permite: la entrada para
+            # poder elegir canal (interfaces con la radio en el canal derecho,
+            # doble receptor), la salida en dual-mono (con salida de 1 canal
+            # algunos drivers reproducen en un solo auricular o fallan al abrir).
+            in_ch  = min(2, max(1, self._device_max(self._config.input_device,  "input")))
+            out_ch = min(2, max(1, self._device_max(self._config.output_device, "output")))
             self._stream = sd.Stream(
                 samplerate=self._config.sample_rate,
                 blocksize=self._config.block_size,
                 device=(self._config.input_device, self._config.output_device),
-                channels=self._config.channels,
+                channels=(in_ch, out_ch),
                 dtype=self._config.dtype,
                 callback=self._callback,
                 finished_callback=self._on_finished,
             )
             self._stream.start()
             self._running = True
+
+    @staticmethod
+    def _device_max(device: "int | None", kind: str) -> int:
+        try:
+            info = sd.query_devices(device, kind) if device is not None \
+                else sd.query_devices(kind=kind)
+            return int(info[f"max_{kind}_channels"])
+        except Exception:
+            return 1
 
     def stop(self) -> None:
         with self._lock:
@@ -83,7 +110,9 @@ class AudioStream:
         if status.output_underflow:
             self._underrun_count += 1
 
-        audio_in = indata[:, 0].copy()  # mono
+        # Lectura por bloque: cambiar input_channel en la UI aplica en vivo
+        # (lectura de atributo str — atómica, sin lock)
+        audio_in = pick_input_channel(indata, self._config.input_channel)
         try:
             audio_out = self._processor(audio_in)
         except Exception:
@@ -91,10 +120,8 @@ class AudioStream:
             traceback.print_exc()
             audio_out = audio_in
 
-        if self._config.channels == 1:
-            outdata[:, 0] = audio_out
-        else:
-            outdata[:] = audio_out[:, np.newaxis]
+        # Dual-mono: la misma señal procesada a todos los canales de salida
+        outdata[:] = audio_out[:, np.newaxis]
 
     def _on_finished(self) -> None:
         self._running = False

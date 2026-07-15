@@ -138,6 +138,29 @@ class MainWindow(QMainWindow):
         self._btn_refresh_devices.clicked.connect(self._on_refresh_devices)
         out_row.addWidget(self._btn_refresh_devices)
         layout.addLayout(out_row)
+
+        chan_row = QHBoxLayout()
+        chan_lbl = QLabel(tr("Canal:"))
+        chan_lbl.setFixedWidth(70)
+        chan_row.addWidget(chan_lbl)
+        self._combo_channel = QComboBox()
+        for label, mode in [
+            (tr("Izquierdo"),   "left"),
+            (tr("Derecho"),     "right"),
+            (tr("Mezcla L+R"),  "mix"),
+        ]:
+            self._combo_channel.addItem(label, mode)
+        self._combo_channel.setToolTip(tr(
+            "Canal tomado de entradas estéreo. Útil si la radio entrega el audio\n"
+            "por el canal derecho, o para elegir receptor en radios con doble RX\n"
+            "(principal=izquierdo, sub=derecho). Se aplica en vivo."
+        ))
+        self._combo_channel.currentIndexChanged.connect(self._on_input_channel_changed)
+        chan_row.addWidget(self._combo_channel)
+        chan_spacer = QLabel("")
+        chan_spacer.setFixedWidth(34)
+        chan_row.addWidget(chan_spacer)
+        layout.addLayout(chan_row)
         return group
 
     def _build_control_group(self) -> QGroupBox:
@@ -672,6 +695,13 @@ class MainWindow(QMainWindow):
         if self._config.dsp.noise_mode != "static":
             self._label_noise.setText(tr("Adaptativo (MCRA) — activar procesamiento para calibrar"))
 
+        for i in range(self._combo_channel.count()):
+            if self._combo_channel.itemData(i) == self._config.audio.input_channel:
+                self._combo_channel.blockSignals(True)
+                self._combo_channel.setCurrentIndex(i)
+                self._combo_channel.blockSignals(False)
+                break
+
         if self._saved_input_device is not None:
             for i in range(self._combo_in.count()):
                 dev: AudioDevice = self._combo_in.itemData(i)
@@ -762,6 +792,11 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     # Eventos de la UI
     # ------------------------------------------------------------------
+
+    def _on_input_channel_changed(self, idx: int) -> None:
+        mode = self._combo_channel.itemData(idx)
+        self._pipeline.set_input_channel(mode)
+        self._schedule_save()
 
     def _on_input_device_changed(self, idx: int) -> None:
         dev: AudioDevice | None = self._combo_in.itemData(idx)

@@ -27,6 +27,16 @@ CATALOG = {
         "Rescan audio devices (hardware plugged or unplugged\n"
         "while the application is open). Requires processing stopped.",
     "Error al re-enumerar dispositivos: {e}": "Error rescanning devices: {e}",
+    "Canal:": "Channel:",
+    "Izquierdo": "Left",
+    "Derecho": "Right",
+    "Mezcla L+R": "L+R mix",
+    "Canal tomado de entradas estéreo. Útil si la radio entrega el audio\n"
+    "por el canal derecho, o para elegir receptor en radios con doble RX\n"
+    "(principal=izquierdo, sub=derecho). Se aplica en vivo.":
+        "Channel taken from stereo inputs. Useful when the radio delivers audio\n"
+        "on the right channel, or to pick a receiver on dual-RX radios\n"
+        "(main=left, sub=right). Applies live.",
     "Dispositivos actualizados: {n} de entrada, {m} de salida.":
         "Devices updated: {n} input, {m} output.",
 

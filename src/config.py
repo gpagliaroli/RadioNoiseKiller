@@ -12,10 +12,11 @@ class RadioMode(Enum):
 class AudioConfig:
     sample_rate: int = 48000
     block_size: int = 480       # hop_size del modelo; 480 = 10ms @ 48kHz
-    channels: int = 1
+    channels: int = 1           # (legado — el stream calcula los canales por dispositivo)
     dtype: str = "float32"
     input_device: int | None = None
     output_device: int | None = None
+    input_channel: str = "left"  # "left" | "right" | "mix" — canal tomado de entradas estéreo
 
 
 @dataclass
@@ -107,6 +108,7 @@ class AppConfig:
                 "block_size": self.audio.block_size,
                 "input_device": self.audio.input_device,
                 "output_device": self.audio.output_device,
+                "input_channel": self.audio.input_channel,
             },
             "dsp": {
                 "mode": self.dsp.mode.value,
@@ -192,6 +194,8 @@ class AppConfig:
         self.audio.block_size = a.get("block_size", self.audio.block_size)
         self.audio.input_device = a.get("input_device", self.audio.input_device)
         self.audio.output_device = a.get("output_device", self.audio.output_device)
+        _ic = a.get("input_channel", self.audio.input_channel)
+        self.audio.input_channel = _ic if _ic in ("left", "right", "mix") else "left"
 
         d = data.get("dsp", {})
         try:

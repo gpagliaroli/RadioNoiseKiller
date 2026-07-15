@@ -141,12 +141,15 @@ Selects where the audio comes from (input) and where it goes (output). On Window
 | **Input** | Audio source. It can be a physical input (line in, microphone), a virtual audio device (VB-Cable, etc.) or "Stereo Mix" to capture what another application plays. |
 | **Output** | Destination of the processed audio. Typically your speakers or headphones. |
 | **⟳ (rescan)** | Rescans the audio devices without closing the application — for when hardware (USB interface, headphones) is plugged or unplugged while the program is open. The current selection is kept if the device is still present. Only available while processing is stopped. |
+| **Channel** | Channel taken from the input when it is stereo: **Left** (default), **Right** or **L+R mix**. Applies live, without restarting processing. Has no effect with mono inputs. |
 
 ### Tips
 
 - If you use a software SDR (HDSDR, SDR#, etc.), configure that program to output to a **virtual audio cable** and select that cable as the input here.
 - If the list is empty or incomplete, or new hardware was plugged in while the program was open, use the **⟳** button to rescan the devices (with processing stopped). If a device is still missing, restart the application.
 - Changing devices requires stopping and re-starting processing.
+- If you hear nothing from a stereo USB interface, try **Channel: Right** — radio audio is often wired to that channel.
+- On **dual-receiver** radios (main RX on the left channel, sub-RX on the right), the Channel selector picks which one to process. The processed output always plays in both ears.
 
 ---
 
