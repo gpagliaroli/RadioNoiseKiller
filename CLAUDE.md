@@ -567,6 +567,21 @@ Cambios v1.6 (pendiente de release):
   los límites (orden importa). `refresh_enabled_states`: checkbox requiere post habilitado,
   sliders requieren además la casilla activa. OJO: `SliderRow.set_enabled` deshabilita los
   HIJOS, no el contenedor — testear con `_slider.isEnabled()`, no con `isEnabled()` del row.
+- **Fix crítico de la revisión de código pre-release: `BandpassFilter` escribía en el DSPConfig
+  COMPARTIDO** (`set_limits`/`set_mode`/`set_order` mutaban `config.bandpass_limits`, `.mode` y
+  `.filter_order`). Con el filtro de salida independiente, mover un slider de salida corrompía
+  los límites de ENTRADA en config (misma dict compartida entre ambas instancias): al reiniciar
+  la app la entrada heredaba los límites de salida, y un cambio de modo AM↔SSB rediseñaba la
+  salida con los límites de entrada. Refactor: cada instancia tiene copia PROPIA de
+  mode/order/limits y NUNCA escribe en config (la persistencia la maneja el pipeline, que ya
+  duplicaba esas escrituras). **Invariante nuevo: los módulos DSP no escriben en config** —
+  reciben valores por setter y guardan estado propio; config es del pipeline/UI.
+  Lección de testing: el test original tocaba la entrada DESPUÉS de la salida y re-escribía la
+  dict corrupta — probar mutaciones cruzadas en AMBOS órdenes.
+- Fixes menores de la misma revisión: `_snr_db` no se reseteaba en `reset()`/`set_mode` (S/N
+  viejo tras reiniciar stream); indicadores Reducción/Voz y S/N mostraban valores congelados
+  con el cancelador desactivado pero con perfil (invariante 5, lado UI — ahora muestran
+  "— (desactivado)").
 - Reorden de Módulos Activos (pedido del usuario): "Filtro de paso de banda (post)" movido
   a justo antes de "EQ Voz" — refleja el orden real del pipeline (cancelador → squelch →
   post → EQ → excitador). Tablas del Cap. 3 de ambos manuales reordenadas igual.

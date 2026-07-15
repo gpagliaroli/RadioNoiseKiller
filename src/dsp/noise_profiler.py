@@ -200,6 +200,7 @@ class NoiseProfiler:
         self._voice_prob     = 0.0
         self._voice_prob_sq  = 0.0
         self._spec_conf      = 0.0
+        self._snr_db         = 0.0
         self._fading_energy_ema = None
         self._mcra_freeze_count = 0
         self._fading_active     = False
@@ -245,6 +246,7 @@ class NoiseProfiler:
         self._voice_prob         = 0.0
         self._voice_prob_sq      = 0.0
         self._spec_conf          = 0.0
+        self._snr_db             = 0.0
         self._vad_energy_fast    = None
         self._vad_energy_min     = None
         self._vad_energy_fast_sq = None

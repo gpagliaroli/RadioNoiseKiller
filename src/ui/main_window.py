@@ -1106,8 +1106,10 @@ class MainWindow(QMainWindow):
             self._lbl_leveler.setText("—")
             self._lbl_leveler.setStyleSheet("color: #555; font-size: 8pt; font-weight: bold;")
 
-        # Indicador S/N (pestaña Espectro)
-        if self._pipeline.is_running() and self._pipeline.noise_has_profile:
+        # Indicador S/N (pestaña Espectro) — requiere cancelador ACTIVO: el
+        # profiler solo actualiza snr_db cuando procesa (desactivado = congelado)
+        if (self._pipeline.is_running() and self._pipeline.noise_has_profile
+                and self._config.dsp.noise_enabled):
             snr = self._pipeline.snr_db
             color_snr = "#69f0ae" if snr > 15 else "#fff176" if snr > 6 else "#90a4ae"
             self._lbl_snr.setText(f"S/N: {snr:+.0f} dB")

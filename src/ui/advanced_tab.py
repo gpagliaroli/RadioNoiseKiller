@@ -1016,7 +1016,14 @@ class AdvancedCancellerTab(QWidget):
             self._lbl_sq_gate.setText("—")
             self._lbl_sq_gate.setStyleSheet("color: #888;")
 
-        if not self._pipeline.noise_has_profile:
+        if not self._config.dsp.noise_enabled:
+            # Cancelador desactivado: reduction_db/voice_prob quedan congelados
+            # en el profiler — mostrar el estado real, no el último valor medido
+            self._lbl_noise_db.setText(tr("—  (desactivado)"))
+            self._lbl_noise_db.setStyleSheet("color: #888;")
+            self._lbl_noise_vp.setText("—")
+            self._lbl_noise_vp.setStyleSheet("color: #888;")
+        elif not self._pipeline.noise_has_profile:
             self._lbl_noise_db.setText(tr("sin perfil"))
             self._lbl_noise_db.setStyleSheet("color: #888;")
             self._lbl_noise_vp.setText("—")

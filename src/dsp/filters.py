@@ -17,30 +17,38 @@ class BandpassFilter:
     """
 
     def __init__(self, config: DSPConfig, sample_rate: int = 48000):
-        self._sr = sample_rate
-        self._config = config
+        self._sr    = sample_rate
+        self._mode  = config.mode
+        self._order = config.filter_order
+        # Copia PROPIA de los límites: cada instancia (entrada/salida) es dueña
+        # de los suyos. Nunca escribir en el DSPConfig compartido desde acá —
+        # con el filtro de salida independiente (v1.6), el set_limits del filtro
+        # de salida corrompía los límites de ENTRADA del config (misma dict), y
+        # un cambio de modo rediseñaba la salida con los límites de entrada.
+        # La persistencia en config la maneja el pipeline, no el filtro.
+        self._limits = {m: tuple(v) for m, v in config.bandpass_limits.items()}
         self._sos: np.ndarray | None = None
         self._zi: np.ndarray | None = None
-        self._set_mode(config.mode)
+        self._design()
 
     def set_mode(self, mode: RadioMode) -> None:
-        self._config.mode = mode
-        self._set_mode(mode)
+        self._mode = mode
+        self._design()
 
     def set_limits(self, mode: RadioMode, lo: int, hi: int) -> None:
-        self._config.bandpass_limits[mode] = (lo, hi)
-        if self._config.mode == mode:
-            self._set_mode(mode)
+        self._limits[mode] = (int(lo), int(hi))
+        if self._mode == mode:
+            self._design()
 
     def set_order(self, order: int) -> None:
-        self._config.filter_order = order
-        self._set_mode(self._config.mode)
+        self._order = int(order)
+        self._design()
 
-    def _set_mode(self, mode: RadioMode) -> None:
-        lo, hi = self._config.bandpass_limits[mode]
+    def _design(self) -> None:
+        lo, hi = self._limits[self._mode]
         nyq = self._sr / 2.0
         self._sos = butter(
-            self._config.filter_order,
+            self._order,
             [lo / nyq, hi / nyq],
             btype="bandpass",
             output="sos",
