@@ -1032,6 +1032,11 @@ class MainWindow(QMainWindow):
                 self._spectrum_widget.start()
                 self._status_bar.showMessage(tr("Procesando..."))
                 self._btn_refresh_devices.setEnabled(False)
+                # Cambiar de dispositivo requiere reiniciar el procesamiento:
+                # deshabilitados para que no parezca que aplica en vivo.
+                # (El combo Canal sí aplica en vivo — queda habilitado.)
+                self._combo_in.setEnabled(False)
+                self._combo_out.setEnabled(False)
                 self._adv_audio_tab.set_processing_active(True)
                 self._adv_canceller_tab._update_stats()
                 self._refresh_noise_profile_ui()
@@ -1051,6 +1056,8 @@ class MainWindow(QMainWindow):
             self._label_latency.setText(tr("Latencia: --"))
             self._status_bar.showMessage(tr("Detenido."))
             self._btn_refresh_devices.setEnabled(True)
+            self._combo_in.setEnabled(True)
+            self._combo_out.setEnabled(True)
             self._adv_audio_tab.set_processing_active(False)
 
     def _on_tab_changed(self, idx: int) -> None:

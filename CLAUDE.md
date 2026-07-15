@@ -553,6 +553,11 @@ Cambios v1.6 (pendiente de release):
   `AudioConfig.channels` queda como campo legado sin uso. Decisión: NO se hace procesamiento
   dual independiente (nivel 2 descartado por el usuario — duplica CPU y UI sin caso de uso).
   Manuales ES+EN actualizados (Cap. 1). Validado por el usuario con la interfaz USB real.
+- Combos Entrada/Salida deshabilitados durante el procesamiento (reportado por el usuario:
+  se podían cambiar pero sin efecto — el cambio de dispositivo requiere reinicio del stream).
+  Mismo patrón que el botón ⟳ en `_on_toggle_processing`; el combo Canal queda habilitado
+  porque sí aplica en vivo. Los combos ya deshabilitados NO deben deshabilitarse en el
+  branch de error de `start()` (el disable va después del start exitoso).
 
 Pendiente para Fase 2:
 - Validar build en Pi real (ARM64 Raspberry Pi OS Bookworm)

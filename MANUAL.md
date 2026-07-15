@@ -147,7 +147,7 @@ Selecciona de dónde viene el audio (entrada) y a dónde va (salida). La aplicac
 
 - Si usás un SDR por software (HDSDR, SDR#, etc.), configurá en ese programa la salida hacia un **cable de audio virtual** y seleccioná ese cable como entrada aquí.
 - Si la lista aparece vacía o incompleta, o se conectó hardware nuevo con el programa abierto, usar el botón **⟳** para re-enumerar los dispositivos (con el procesamiento detenido). Si aún así falta un dispositivo, reiniciar la aplicación.
-- El cambio de dispositivo requiere detener y volver a activar el procesamiento.
+- El cambio de dispositivo requiere detener y volver a activar el procesamiento — por eso los selectores de Entrada/Salida se deshabilitan mientras el procesamiento está activo (el de Canal queda habilitado: aplica en vivo).
 - Si no se escucha nada con una interfaz USB estéreo, probar **Canal: Derecho** — es común que el audio de la radio venga cableado por ese canal.
 - En radios con **doble receptor** (RX principal por el canal izquierdo, sub-RX por el derecho), el selector de Canal permite elegir cuál procesar. La salida procesada suena siempre en ambos oídos.
 

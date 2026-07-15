@@ -147,7 +147,7 @@ Selects where the audio comes from (input) and where it goes (output). On Window
 
 - If you use a software SDR (HDSDR, SDR#, etc.), configure that program to output to a **virtual audio cable** and select that cable as the input here.
 - If the list is empty or incomplete, or new hardware was plugged in while the program was open, use the **⟳** button to rescan the devices (with processing stopped). If a device is still missing, restart the application.
-- Changing devices requires stopping and re-starting processing.
+- Changing devices requires stopping and re-starting processing — that is why the Input/Output selectors are disabled while processing is active (the Channel selector stays enabled: it applies live).
 - If you hear nothing from a stereo USB interface, try **Channel: Right** — radio audio is often wired to that channel.
 - On **dual-receiver** radios (main RX on the left channel, sub-RX on the right), the Channel selector picks which one to process. The processed output always plays in both ears.
 
