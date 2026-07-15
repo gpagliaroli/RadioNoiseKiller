@@ -376,6 +376,8 @@ class NoiseProfiler:
 
     def set_post_filter_strength(self, v: float) -> None:
         self._post_filter_strength = float(np.clip(v, 0.0, 4.0))
+        if self._post_filter_strength == 0.0:
+            self._pf_extra_db = 0.0  # limpiar el indicador aunque no corra process()
 
     def set_pitch_enabled(self, v: bool) -> None:
         self._pitch_enabled = bool(v)
@@ -815,12 +817,19 @@ class NoiseProfiler:
                     log_gain_db = 20.0 * np.log10(np.maximum(gain_out[noise_mask], 1e-6))
                     extra_exp   = np.float32(self._post_filter_strength) * p_noise[noise_mask]
                     self._pf_extra_db = float(np.mean(extra_exp * log_gain_db))
+                else:
+                    self._pf_extra_db = 0.0
                 gain_out = np.power(
                     gain_out,
                     np.float32(1.0) + np.float32(self._post_filter_strength) * p_noise,
                 ).astype(np.float32)
                 # Usar un suelo mínimo bajo (no el _eff_floor) para no anular la supresión extra
                 gain_out = np.maximum(gain_out, np.float32(0.005))
+            else:
+                # Post-filtro inactivo (checkbox off o agresividad 0): el indicador
+                # debe volver a 0 — sin esto queda congelado en el último valor
+                # medido (invariante 5: indicadores siempre actualizados)
+                self._pf_extra_db = 0.0
 
             self._last_reduction_db = 20.0 * np.log10(max(float(np.mean(gain_out)), 1e-6))
 

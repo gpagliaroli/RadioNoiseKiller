@@ -553,6 +553,11 @@ Cambios v1.6 (pendiente de release):
   `AudioConfig.channels` queda como campo legado sin uso. Decisión: NO se hace procesamiento
   dual independiente (nivel 2 descartado por el usuario — duplica CPU y UI sin caso de uso).
   Manuales ES+EN actualizados (Cap. 1). Validado por el usuario con la interfaz USB real.
+- Fix indicador "Reducción extra" congelado (reportado por el usuario): `_pf_extra_db` solo se
+  recalculaba dentro del bloque `strength > 0` — al bajar la agresividad a 0 el indicador quedaba
+  con el último valor medido (invariante 5, otra instancia). Ahora se resetea a 0 en el else del
+  frame, cuando no hay bins de ruido, y en `set_post_filter_strength(0)` (cubre el caso con el
+  procesamiento detenido).
 - Combos Entrada/Salida deshabilitados durante el procesamiento (reportado por el usuario:
   se podían cambiar pero sin efecto — el cambio de dispositivo requiere reinicio del stream).
   Mismo patrón que el botón ⟳ en `_on_toggle_processing`; el combo Canal queda habilitado
