@@ -449,7 +449,9 @@ The post-filter applies a second pass over those bins using the same voice-proba
 |---------|-------|---------|-------------|
 | **Aggressiveness** | 0.0 – 10.0 | 1.0 | Strength of the second pass. **0** = off (even with the checkbox enabled). **1** = moderate: pure-noise bins get `gain²` (doubles the reduction in dB). **2** = normal: `gain³`. **4** = very aggressive: `gain⁵`. **10** = maximum: `gain¹¹` — on pure-noise bins suppression saturates at the internal floor (−46 dB); the high range mostly acts on intermediate voice/noise bins. Start at 1.0 and raise it, watching the Extra reduction indicator, until the musical noise disappears. |
 
-> **Note:** High values (>2.5) with very low SNR signals can over-suppress the edges of voice transitions — and above 4 the effect on intermediate bins is strong. If the voice starts to sound clipped or dull, reduce.
+> **Note:** High values (>2.5) with very low SNR signals can over-suppress the edges of voice transitions — and above 4 the effect on intermediate bins is strong: it can reduce voice clarity (word endings, breaths). If the voice starts to sound clipped or dull, reduce. On pure background noise there is no audible difference beyond ~5 (suppression already saturates); the high range is heard on the noise riding along with the voice.
+
+> **Tip — low Intensity + high post-filter:** a very effective combination is to **lower the canceller's Intensity** (50–60%) and compensate with **high post-filter Aggressiveness** (5–8). The low Intensity lets the voice through almost untouched — without the dullness that appears when raising it — while the post-filter handles the remaining noise, acting only on the bins the detector marks as noise. On many signals this yields better cancellation **with a more natural voice** than raising the Intensity alone. It is worth trying both approaches on each signal and keeping whichever sounds best.
 
 ### SSB pitch enhancement
 

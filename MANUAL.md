@@ -449,7 +449,9 @@ El post-filtro aplica una segunda pasada sobre esos bins usando la misma informa
 |---------|-------|---------|-------------|
 | **Agresividad** | 0,0 – 10,0 | 1,0 | Fuerza de la segunda pasada. **0** = desactivado (aunque el checkbox esté activo). **1** = moderado: los bins de ruido puro reciben `gain²` (duplica la reducción en dB). **2** = normal: `gain³`. **4** = muy agresivo: `gain⁵`. **10** = máximo: `gain¹¹` — en bins de ruido puro la supresión satura en el suelo interno (−46 dB); el rango alto actúa sobre todo en los bins intermedios voz/ruido. Empezar en 1,0 y subir según el indicador Reducción extra hasta que el ruido musical desaparezca. |
 
-> **Nota:** Valores altos (>2,5) con señales de SNR muy bajo pueden producir supresión excesiva en los bordes de las transiciones de voz — y por encima de 4 el efecto sobre los bins intermedios es fuerte. Si la voz empieza a sonar recortada u opaca, reducir.
+> **Nota:** Valores altos (>2,5) con señales de SNR muy bajo pueden producir supresión excesiva en los bordes de las transiciones de voz — y por encima de 4 el efecto sobre los bins intermedios es fuerte: puede restar claridad a la voz (consonantes finales, respiraciones). Si la voz empieza a sonar recortada u opaca, reducir. En el ruido de fondo puro no hay diferencia audible más allá de ~5 (la supresión ya satura); el rango alto se nota en el ruido pegado a la voz.
+
+> **Consejo — Intensidad baja + post-filtro alto:** una combinación muy efectiva es **bajar la Intensidad del cancelador** (50–60%) y compensar con **Agresividad alta del post-filtro** (5–8). La Intensidad baja deja pasar la voz casi intacta — sin la opacidad que aparece al subirla — y el post-filtro se encarga del ruido restante actuando solo sobre los bins que el detector marca como ruido. En muchas señales el resultado es mejor cancelación **con voz más natural** que subir la Intensidad sola. Vale la pena probar ambos enfoques en cada señal y quedarse con el que suene mejor.
 
 ### Refuerzo de pitch SSB
 

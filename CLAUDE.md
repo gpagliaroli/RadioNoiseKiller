@@ -553,12 +553,16 @@ Cambios v1.6 (pendiente de release):
   `AudioConfig.channels` queda como campo legado sin uso. Decisión: NO se hace procesamiento
   dual independiente (nivel 2 descartado por el usuario — duplica CPU y UI sin caso de uso).
   Manuales ES+EN actualizados (Cap. 1). Validado por el usuario con la interfaz USB real.
-- Post-filtro espectral: rango de agresividad ampliado 0–4 → 0–6 → **0–10 EXPERIMENTAL** (pedido
-  del usuario: con 6 aún se escucha bien; está calibrando en el aire hasta dónde sirve — recortar
-  el tope al valor real que reporte). Clamp del setter actualizado en sync en cada cambio
+- Post-filtro espectral: rango de agresividad ampliado 0–4 → **0–10, validado en el aire por el
+  usuario** ("estos valores van bien"). Clamp del setter actualizado en sync en cada cambio
   (invariante 1 — este mismo slider ya mordió una vez). En bins de ruido puro la supresión satura
-  en el suelo interno de −46 dB; el rango alto actúa sobre todo en bins intermedios voz/ruido.
-  Etiqueta nueva "muy agresivo" en i18n_en.py; manuales ES+EN actualizados.
+  en el suelo interno de −46 dB (~sin diferencia audible más allá de 5); el rango alto actúa en
+  bins intermedios voz/ruido. Etiqueta nueva "muy agresivo" en i18n_en.py.
+  **Técnica de operación descubierta por el usuario (documentada en ambos manuales):** bajar la
+  Intensidad del cancelador (50–60%) y compensar con post-filtro alto (5–8) da mejor cancelación
+  con voz más natural que subir la Intensidad sola — la Intensidad baja no opaca la voz y el
+  post-filtro limpia el ruido actuando solo sobre bins que el VAD marca como ruido. Tenerla en
+  cuenta como receta recomendada en futuros presets de fábrica.
 - Fix indicador "Reducción extra" congelado (reportado por el usuario): `_pf_extra_db` solo se
   recalculaba dentro del bloque `strength > 0` — al bajar la agresividad a 0 el indicador quedaba
   con el último valor medido (invariante 5, otra instancia). Ahora se resetea a 0 en el else del
