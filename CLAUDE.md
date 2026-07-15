@@ -541,7 +541,12 @@ Cambios v1.5:
   referencia, con margen estimado del marco (20/50 px — `frameGeometry` no incluye el marco antes
   de `show()`). Verificado por el usuario.
 
-Cambios v1.6 (pendiente de release):
+**v1.6 publicada (julio 2026)** — release en GitHub con distribuibles Windows y Linux.
+Versión de app 1.6.0, manuales `MANUAL_RadioNoiseKiller_v1.6.pdf` (ES, 32 págs) y
+`..._v1.6_EN.pdf` (EN, 30 págs). Filtro de salida independiente validado por el usuario
+en el aire antes del release.
+
+Cambios v1.6:
 - Selector de canal de entrada ("Canal:" en Dispositivos de Audio): `input_channel` en
   AudioConfig ("left"/"right"/"mix", persistido). El stream abre SIEMPRE estéreo cuando el
   dispositivo lo permite (`min(2, max_channels)` por dispositivo, consultado en `start()`) y

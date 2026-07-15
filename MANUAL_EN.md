@@ -1,6 +1,6 @@
-# RadioNoiseKiller — User Manual
+﻿# RadioNoiseKiller — User Manual
 
-**Version 1.5**
+**Version 1.6**
 
 ---
 
@@ -795,4 +795,4 @@ The **Max Y** and **Max X** sliders of the spectrum viewer are also saved in `se
 
 ---
 
-*RadioNoiseKiller — version 1.5*
+*RadioNoiseKiller — version 1.6*
