@@ -606,6 +606,19 @@ Cambios v1.6 (pendiente de release):
   porque sí aplica en vivo. Los combos ya deshabilitados NO deben deshabilitarse en el
   branch de error de `start()` (el disable va después del start exitoso).
 
+Backlog v1.7 (acordado con el usuario tras la revisión de código de julio 2026):
+- **Grabación a WAV**: botón grabar que guarde lo que se está escuchando — procesado, o
+  crudo+procesado en paralelo para comparar antes/después. Alto valor para documentar QSOs.
+- **Waterfall en la pestaña Espectro**: cascada con historia (~30s) además del espectro
+  instantáneo — permite VER el QSB, heterodinos intermitentes y QRM.
+- **Preset de fábrica "Voz natural"**: la receta del usuario (Intensidad 50–60% + post-filtro
+  5–8), solo armar el JSON en Presets/.
+- **Perfiles de ruido nombrados**: guardar/cargar múltiples perfiles estáticos ("40m casa",
+  "20m campo") como se hace con los presets.
+- **tests/test_ui.py permanente**: formalizar los tests offscreen (estados de habilitación,
+  indicadores, orden de módulos, restauración de combos) — la categoría más frecuente de
+  regresiones es la UI (invariantes 5 y 8).
+
 Pendiente para Fase 2:
 - Validar build en Pi real (ARM64 Raspberry Pi OS Bookworm)
 - Reducir/optimizar el tamaño total de la app. **Primera pasada hecha y validada en ambas
