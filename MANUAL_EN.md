@@ -447,9 +447,9 @@ The post-filter applies a second pass over those bins using the same voice-proba
 
 | Control | Range | Default | Description |
 |---------|-------|---------|-------------|
-| **Aggressiveness** | 0.0 – 4.0 | 1.0 | Strength of the second pass. **0** = off (even with the checkbox enabled). **1** = moderate: pure-noise bins get `gain²` (doubles the reduction in dB). **2** = normal: `gain³`. **4** = maximum: `gain⁵` — near-total silence on noise bins. Start at 1.0 and raise it, watching the Extra reduction indicator, until the musical noise disappears. |
+| **Aggressiveness** | 0.0 – 6.0 | 1.0 | Strength of the second pass. **0** = off (even with the checkbox enabled). **1** = moderate: pure-noise bins get `gain²` (doubles the reduction in dB). **2** = normal: `gain³`. **4** = very aggressive: `gain⁵`. **6** = maximum: `gain⁷` — on pure-noise bins suppression saturates at the internal floor (−46 dB); the high range mostly acts on intermediate voice/noise bins. Start at 1.0 and raise it, watching the Extra reduction indicator, until the musical noise disappears. |
 
-> **Note:** High values (>2.5) with very low SNR signals can over-suppress the edges of voice transitions. If the voice starts to sound clipped, reduce to 0.5–1.5.
+> **Note:** High values (>2.5) with very low SNR signals can over-suppress the edges of voice transitions — and above 4 the effect on intermediate bins is strong. If the voice starts to sound clipped or dull, reduce.
 
 ### SSB pitch enhancement
 

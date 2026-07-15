@@ -60,7 +60,7 @@ class DSPConfig:
     perceptual_floor_rolloff_hz:    float = 3000.0 # Hz, inicio del rolloff de alta frecuencia
     perceptual_floor_rolloff_depth: float = 0.55   # profundidad máxima del rolloff (0–0.7)
     post_filter_enabled:    bool  = False  # post-filtro espectral contra ruido musical residual
-    post_filter_strength:   float = 1.0   # agresividad del post-filtro (0=off, 1=moderado, 2=agresivo)
+    post_filter_strength:   float = 1.0   # agresividad del post-filtro (0=off, 1=moderado, 6=máximo)
     pitch_enhance_enabled:  bool  = False  # refuerzo de armónicos SSB via autocorrelación
     pitch_enhance_strength: float = 0.7    # qué tanto elevar p_speech en bins de armónicos (0-1)
     noise_fading_comp:      bool  = False  # compensación de fading HF: freeze MCRA + release rápido

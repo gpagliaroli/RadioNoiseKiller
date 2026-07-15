@@ -447,9 +447,9 @@ El post-filtro aplica una segunda pasada sobre esos bins usando la misma informa
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
-| **Agresividad** | 0,0 – 4,0 | 1,0 | Fuerza de la segunda pasada. **0** = desactivado (aunque el checkbox esté activo). **1** = moderado: los bins de ruido puro reciben `gain²` (duplica la reducción en dB). **2** = normal: `gain³`. **4** = máximo: `gain⁵` — silencio casi total en los bins de ruido. Empezar en 1,0 y subir según el indicador Reducción extra hasta que el ruido musical desaparezca. |
+| **Agresividad** | 0,0 – 6,0 | 1,0 | Fuerza de la segunda pasada. **0** = desactivado (aunque el checkbox esté activo). **1** = moderado: los bins de ruido puro reciben `gain²` (duplica la reducción en dB). **2** = normal: `gain³`. **4** = muy agresivo: `gain⁵`. **6** = máximo: `gain⁷` — en bins de ruido puro la supresión satura en el suelo interno (−46 dB); el rango alto actúa sobre todo en los bins intermedios voz/ruido. Empezar en 1,0 y subir según el indicador Reducción extra hasta que el ruido musical desaparezca. |
 
-> **Nota:** Valores altos (>2,5) con señales de SNR muy bajo pueden producir supresión excesiva en los bordes de las transiciones de voz. Si la voz empieza a sonar recortada, reducir a 0,5–1,5.
+> **Nota:** Valores altos (>2,5) con señales de SNR muy bajo pueden producir supresión excesiva en los bordes de las transiciones de voz — y por encima de 4 el efecto sobre los bins intermedios es fuerte. Si la voz empieza a sonar recortada u opaca, reducir.
 
 ### Refuerzo de pitch SSB
 

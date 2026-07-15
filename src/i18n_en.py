@@ -357,8 +357,9 @@ CATALOG = {
         "  ↳ Extra dB removed on noise bins vs the base canceller. 0 dB = no effect.",
     "Agresividad:": "Aggressiveness:",
     "desactivado": "off",
-    "  ↳ Supresión extra en bins de ruido para eliminar 'pitidos fantasma'. 1=moderado, 2=normal, 4=máximo.":
-        "  ↳ Extra suppression on noise bins to remove 'ghost birdies'. 1=moderate, 2=normal, 4=maximum.",
+    "muy agresivo": "very aggressive",
+    "  ↳ Supresión extra en bins de ruido para eliminar 'pitidos fantasma'. 1=moderado, 2=normal, 4+=muy agresivo (vigilar que la voz no se recorte).":
+        "  ↳ Extra suppression on noise bins to remove 'ghost birdies'. 1=moderate, 2=normal, 4+=very aggressive (watch for voice clipping).",
     "Refuerzo de pitch SSB  (activar en Módulos Activos)":
         "SSB pitch enhancement  (enable in Active Modules)",
     "Pitch detectado:": "Detected pitch:",
