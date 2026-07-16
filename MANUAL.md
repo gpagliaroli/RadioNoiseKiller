@@ -218,7 +218,7 @@ Cada casilla de verificación activa o desactiva un módulo del pipeline de form
 
 ## Capítulo 4 — Supresor de Impulsos
 
-**Ubicación:** Pestaña Avanzada Impulsos → grupo "Supresor de Impulsos"
+**Ubicación:** Pestaña Avanzada Impulsos → grupo "Supresor de impulsos"
 
 ### Descripción
 
@@ -248,7 +248,7 @@ El indicador **Actividad** muestra en tiempo real cuántos impulsos por segundo 
 
 ## Capítulo 5 — Filtro de Paso de Banda
 
-**Ubicación:** Pestaña Avanzada Audio → grupo "Filtros DSP"
+**Ubicación:** Pestaña Avanzada Audio → grupo "Filtro de paso de banda"
 
 ### Descripción
 
@@ -290,7 +290,7 @@ Regla práctica: la salida **igual o más ancha** que la entrada. Más angosta q
 
 ## Capítulo 6 — ANF: Filtro de Muesca Espectral
 
-**Ubicación:** Pestaña Avanzada Impulsos → grupo "ANF"
+**Ubicación:** Pestaña Avanzada Impulsos → grupo "ANF — Cancela heterodinos y tonos interferentes"
 
 ### Descripción
 
@@ -313,7 +313,7 @@ El indicador **Actividad** muestra cuántos tonos están siendo muescados en est
 
 ## Capítulo 7 — Cancelador de Ruido Estacionario
 
-**Ubicación:** Pestaña Principal → grupo "Cancelación de Ruido Estacionario" y Pestaña Avanzada Cancelador → grupo "Cancelador de Ruido"
+**Ubicación:** Pestaña Principal → grupo "Cancelación de Ruido Estacionario" y Pestaña Avanzada Cancelador → grupo "Cancelador de ruido estacionario"
 
 ### Descripción
 
@@ -557,7 +557,7 @@ El indicador **Nivel de voz** y el estado del **Gate** en la pestaña Avanzada C
 
 ## Capítulo 9 — EQ de Voz (Presencia + Cuerpo)
 
-**Ubicación:** Pestaña Avanzada Audio → grupo "Voz"  
+**Ubicación:** Pestaña Avanzada Audio → grupo "EQ Voz"  
 **Activar:** Módulos Activos → casilla "EQ Voz (presencia + cuerpo)"
 
 ### Descripción
@@ -585,7 +585,7 @@ Ambas bandas pueden usarse a la vez: cuerpo +4 dB y presencia +4 dB producen una
 
 ## Capítulo 10 — Excitador Armónico
 
-**Ubicación:** Pestaña Avanzada Audio → grupo "Excitador Armónico"
+**Ubicación:** Pestaña Avanzada Audio → grupo "Excitador armónico"
 
 ### Descripción
 

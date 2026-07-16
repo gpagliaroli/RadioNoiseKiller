@@ -215,7 +215,7 @@ class AdvancedAudioTab(QWidget):
         return group
 
     def _build_dsp_group(self) -> QGroupBox:
-        group = QGroupBox(tr("Filtros DSP  (se aplican en tiempo real)"))
+        group = QGroupBox(tr("Filtro de paso de banda  (pre y post — en tiempo real)"))
         layout = QVBoxLayout(group)
 
         self._s_am_lo  = _freq_slider(tr("AM – Hz inferior:"),  _DSP_DEF.bandpass_limits[RadioMode.AM][0])
@@ -272,7 +272,7 @@ class AdvancedAudioTab(QWidget):
         return group
 
     def _build_voice_group(self) -> QGroupBox:
-        group = QGroupBox(tr("Voz  (se aplica en tiempo real)"))
+        group = QGroupBox(tr("EQ Voz  (presencia + cuerpo)"))
         layout = QVBoxLayout(group)
 
         self._s_body_freq = SliderRow(
@@ -361,7 +361,7 @@ class AdvancedAudioTab(QWidget):
         return group
 
     def _build_exciter_group(self) -> QGroupBox:
-        group = QGroupBox(tr("Excitador Armónico  (se aplica en tiempo real)"))
+        group = QGroupBox(tr("Excitador armónico  (se aplica en tiempo real)"))
         layout = QVBoxLayout(group)
 
         self._s_exciter_drive = SliderRow(
@@ -543,7 +543,7 @@ class AdvancedImpulseTab(QWidget):
     # ------------------------------------------------------------------
 
     def _build_blanker_group(self) -> QGroupBox:
-        group = QGroupBox(tr("Supresor de Impulsos  (se aplica en tiempo real)"))
+        group = QGroupBox(tr("Supresor de impulsos  (se aplica en tiempo real)"))
         layout = QVBoxLayout(group)
 
         hits_row = QHBoxLayout()
@@ -584,7 +584,7 @@ class AdvancedImpulseTab(QWidget):
         return group
 
     def _build_anf_group(self) -> QGroupBox:
-        group = QGroupBox(tr("ANF — Filtro de Muesca Espectral  (parámetros técnicos)"))
+        group = QGroupBox(tr("ANF — Cancela heterodinos y tonos interferentes"))
         layout = QVBoxLayout(group)
 
         anf_row = QHBoxLayout()
@@ -723,7 +723,7 @@ class AdvancedCancellerTab(QWidget):
     # ------------------------------------------------------------------
 
     def _build_canceller_group(self) -> QGroupBox:
-        group = QGroupBox(tr("Cancelador de Ruido  (Wiener Log-MMSE)"))
+        group = QGroupBox(tr("Cancelador de ruido estacionario  (Wiener Log-MMSE)"))
         layout = QVBoxLayout(group)
 
         noise_row = QHBoxLayout()

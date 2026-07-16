@@ -225,7 +225,8 @@ CATALOG = {
     "Release:": "Release:",
     "  ↳ Cuán rápido recupera ganancia al caer la señal. Lento=estable en QSB, rápido=sigue el fading.":
         "  ↳ How fast gain recovers when the signal drops. Slow=stable in QSB, fast=tracks the fading.",
-    "Filtros DSP  (se aplican en tiempo real)": "DSP Filters  (applied in real time)",
+    "Filtro de paso de banda  (pre y post — en tiempo real)":
+        "Bandpass filter  (pre & post — real time)",
     "AM – Hz inferior:": "AM – low Hz:",
     "AM – Hz superior:": "AM – high Hz:",
     "SSB – Hz inferior:": "SSB – low Hz:",
@@ -249,7 +250,6 @@ CATALOG = {
     "(3500–4000 Hz) conserva el borde superior de la voz y el brillo del excitador.":
         "  ↳ Tip: narrow input (e.g. SSB up to 2700 Hz) + wider output "
         "(3500–4000 Hz) preserves the upper edge of the voice and the exciter's brightness.",
-    "Voz  (se aplica en tiempo real)": "Voice  (applied in real time)",
     "Frecuencia de cuerpo:": "Body frequency:",
     "grave": "low",
     "cuerpo": "body",
@@ -272,7 +272,7 @@ CATALOG = {
     "agudo": "high",
     "  ↳ Corrige offset de BFO en SSB. +100 Hz si la voz suena grave, -100 Hz si suena aguda.":
         "  ↳ Corrects SSB BFO offset. +100 Hz if the voice sounds low, -100 Hz if it sounds high.",
-    "Excitador Armónico  (se aplica en tiempo real)": "Harmonic Exciter  (applied in real time)",
+    "Excitador armónico  (se aplica en tiempo real)": "Harmonic exciter  (applied in real time)",
     "Drive:": "Drive:",
     "suave": "soft",
     "agresivo": "aggressive",
@@ -283,7 +283,7 @@ CATALOG = {
         "  ↳ Level of harmonics mixed in. 20–40% = useful range without sounding artificial.",
 
     # --- Avanzada Impulsos ---
-    "Supresor de Impulsos  (se aplica en tiempo real)": "Impulse Suppressor  (applied in real time)",
+    "Supresor de impulsos  (se aplica en tiempo real)": "Impulse suppressor  (applied in real time)",
     "Actividad:": "Activity:",
     "Umbral de trama (10 ms):": "Frame threshold (10 ms):",
     "  ↳ Bajo=captura más impulsos (QRN fuerte). Alto=solo blancos muy grandes.":
@@ -291,8 +291,6 @@ CATALOG = {
     "Umbral micro (0.67 ms):": "Micro threshold (0.67 ms):",
     "  ↳ Detecta frituras y crackles cortos. Bajo=elimina más, puede recortar consonantes.":
         "  ↳ Catches short crackle and static. Low=removes more, may clip consonants.",
-    "ANF — Filtro de Muesca Espectral  (parámetros técnicos)":
-        "ANF — Spectral Notch Filter  (technical parameters)",
     "Sensibilidad:": "Sensitivity:",
     "alta": "high",
     "baja": "low",
@@ -305,7 +303,8 @@ CATALOG = {
     "tonos": "tones",
 
     # --- Avanzada Cancelador ---
-    "Cancelador de Ruido  (Wiener Log-MMSE)": "Noise Canceller  (Log-MMSE Wiener)",
+    "Cancelador de ruido estacionario  (Wiener Log-MMSE)":
+        "Stationary noise canceller  (Log-MMSE Wiener)",
     "Reducción:": "Reduction:",
     "Voz:": "Voice:",
     "Piso espectral:": "Spectral floor:",

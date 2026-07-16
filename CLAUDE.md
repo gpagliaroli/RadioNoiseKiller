@@ -612,6 +612,15 @@ Cambios v1.6:
   branch de error de `start()` (el disable va después del start exitoso).
 
 Cambios v1.7 (pendiente de release):
+- UX: títulos de los grupos de Avanzadas alineados con los nombres de los checkboxes de
+  "Módulos activos" (pedido del usuario — el nombre distinto dificultaba encontrar los
+  controles): "Filtros DSP"→"Filtro de paso de banda (pre y post)", "Voz"→"EQ Voz (presencia
+  + cuerpo)", "ANF — Filtro de Muesca Espectral"→"ANF — Cancela heterodinos y tonos
+  interferentes", "Cancelador de Ruido"→"Cancelador de ruido estacionario", más ajustes de
+  mayúsculas (Supresor de impulsos, Excitador armónico). **Regla de UX nueva: todo grupo de
+  Avanzadas que corresponda a un módulo usa EXACTAMENTE el nombre base del checkbox.**
+  Claves i18n renombradas en sync (verificador de cobertura: 0 faltantes/0 huérfanas);
+  referencias de "Ubicación" en manuales ES+EN actualizadas.
 - UX: grupo "Nivelador de voz" movido de Avanzada Cancelador a **Avanzada Audio** (junto al AGC
   Personalizado — el usuario reportó que confundía encontrarlo en Cancelador; conceptualmente es
   un AGC). Nuevo indicador "Actividad" dentro del grupo con la ganancia en vivo (mismo dato que

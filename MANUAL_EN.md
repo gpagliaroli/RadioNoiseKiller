@@ -218,7 +218,7 @@ Each checkbox enables or disables one pipeline module independently and in real 
 
 ## Chapter 4 — Impulse Suppressor
 
-**Location:** Advanced Impulse tab → "Impulse Suppressor" group
+**Location:** Advanced Impulse tab → "Impulse suppressor" group
 
 ### Description
 
@@ -248,7 +248,7 @@ The **Activity** indicator shows in real time how many impulses per second are b
 
 ## Chapter 5 — Bandpass Filter
 
-**Location:** Advanced Audio tab → "DSP Filters" group
+**Location:** Advanced Audio tab → "Bandpass filter" group
 
 ### Description
 
@@ -290,7 +290,7 @@ Rule of thumb: output **equal to or wider** than the input. Narrower than the in
 
 ## Chapter 6 — ANF: Spectral Notch Filter
 
-**Location:** Advanced Impulse tab → "ANF" group
+**Location:** Advanced Impulse tab → "ANF — Removes heterodynes and interfering tones" group
 
 ### Description
 
@@ -313,7 +313,7 @@ The **Activity** indicator shows how many tones are being notched at this moment
 
 ## Chapter 7 — Stationary Noise Canceller
 
-**Location:** Main tab → "Stationary Noise Cancellation" group and Advanced Canceller tab → "Noise Canceller" group
+**Location:** Main tab → "Stationary Noise Cancellation" group and Advanced Canceller tab → "Stationary noise canceller" group
 
 ### Description
 
@@ -557,7 +557,7 @@ The **Voice level** indicator and the **Gate** state on the Advanced Canceller t
 
 ## Chapter 9 — Voice EQ (Presence + Body)
 
-**Location:** Advanced Audio tab → "Voice" group  
+**Location:** Advanced Audio tab → "Voice EQ" group  
 **Enable:** Active Modules → "Voice EQ (presence + body)" checkbox
 
 ### Description
@@ -585,7 +585,7 @@ Both bands can be used at once: body +4 dB and presence +4 dB produce a fuller, 
 
 ## Chapter 10 — Harmonic Exciter
 
-**Location:** Advanced Audio tab → "Harmonic Exciter" group
+**Location:** Advanced Audio tab → "Harmonic exciter" group
 
 ### Description
 
