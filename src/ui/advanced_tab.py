@@ -966,7 +966,7 @@ class AdvancedCancellerTab(QWidget):
         return group
 
     def _build_pitch_group(self) -> QGroupBox:
-        group = QGroupBox(tr("Refuerzo de pitch SSB  (activar en Módulos Activos)"))
+        group = QGroupBox(tr("Refuerzo de pitch de voz  (activar en Módulos Activos)"))
         layout = QVBoxLayout(group)
 
         f0_row = QHBoxLayout()
@@ -976,7 +976,7 @@ class AdvancedCancellerTab(QWidget):
         f0_row.addWidget(self._lbl_pitch_f0)
         f0_row.addStretch()
         layout.addLayout(f0_row)
-        layout.addWidget(_note(tr("  ↳ f0 de la voz en tiempo real. Con voz SSB clara debería marcar 80–400 Hz estable.")))
+        layout.addWidget(_note(tr("  ↳ f0 de la voz en tiempo real. Con voz clara debería marcar 80–400 Hz estable.")))
 
         self._s_pitch_strength = SliderRow(
             tr("Protección de armónicos:"),
@@ -1095,7 +1095,7 @@ class AdvancedCancellerTab(QWidget):
             self._lbl_pf_active.setText("—")
             self._lbl_pf_active.setStyleSheet("color: #888;")
 
-        # Refuerzo de pitch SSB
+        # Refuerzo de pitch de voz
         if self._config.dsp.pitch_enhance_enabled:
             f0 = self._pipeline.pitch_f0
             if f0 is not None:

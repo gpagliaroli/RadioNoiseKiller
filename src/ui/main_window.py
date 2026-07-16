@@ -270,9 +270,10 @@ class MainWindow(QMainWindow):
             "Agresividad configurable en pestaña Avanzada Ruido."),
         )
         self._chk_pitch_enhance = _chk_sub(
-            tr("Refuerzo de pitch SSB  (detección por autocorrelación)"),
-            tr("Detecta el tono fundamental de la voz SSB y protege sus armónicos\n"
-            "del cancelador de ruido. Útil para señales SSB débiles enterradas en ruido.\n"
+            tr("Refuerzo de pitch de voz  (detección por autocorrelación)"),
+            tr("Detecta el tono fundamental de la voz y protege sus armónicos\n"
+            "del cancelador de ruido. Mejora la inteligibilidad de señales de voz\n"
+            "débiles enterradas en ruido, tanto en AM como en SSB.\n"
             "Sensibilidad configurable en pestaña Avanzada Ruido."),
         )
         self._chk_squelch = _chk_sub(

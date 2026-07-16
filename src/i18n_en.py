@@ -98,13 +98,15 @@ CATALOG = {
         "Second pass over noise bins to remove the 'musical noise'\n"
         "(intermittent birdies) the Wiener filter leaves behind. Requires the canceller enabled.\n"
         "Aggressiveness adjustable in the Advanced Canceller tab.",
-    "Refuerzo de pitch SSB  (detección por autocorrelación)":
-        "SSB pitch enhancement  (autocorrelation detection)",
-    "Detecta el tono fundamental de la voz SSB y protege sus armónicos\n"
-    "del cancelador de ruido. Útil para señales SSB débiles enterradas en ruido.\n"
+    "Refuerzo de pitch de voz  (detección por autocorrelación)":
+        "Voice pitch enhancement  (autocorrelation detection)",
+    "Detecta el tono fundamental de la voz y protege sus armónicos\n"
+    "del cancelador de ruido. Mejora la inteligibilidad de señales de voz\n"
+    "débiles enterradas en ruido, tanto en AM como en SSB.\n"
     "Sensibilidad configurable en pestaña Avanzada Ruido.":
-        "Detects the fundamental pitch of SSB voice and protects its harmonics\n"
-        "from the noise canceller. Useful for weak SSB signals buried in noise.\n"
+        "Detects the fundamental pitch of the voice and protects its harmonics\n"
+        "from the noise canceller. Improves intelligibility of weak voice\n"
+        "signals buried in noise, on both AM and SSB.\n"
         "Sensitivity adjustable in the Advanced Canceller tab.",
     "Squelch de voz  (con música no utilizar!)": "Voice squelch  (do not use with music!)",
     "Silencia la salida cuando no hay voz detectada. Requiere perfil de ruido aprendido.":
@@ -377,11 +379,11 @@ CATALOG = {
     "muy agresivo": "very aggressive",
     "  ↳ Supresión extra en bins de ruido para eliminar 'pitidos fantasma'. 1=moderado, 2=normal, 4+=muy agresivo (vigilar que la voz no se recorte).":
         "  ↳ Extra suppression on noise bins to remove 'ghost birdies'. 1=moderate, 2=normal, 4+=very aggressive (watch for voice clipping).",
-    "Refuerzo de pitch SSB  (activar en Módulos Activos)":
-        "SSB pitch enhancement  (enable in Active Modules)",
+    "Refuerzo de pitch de voz  (activar en Módulos Activos)":
+        "Voice pitch enhancement  (enable in Active Modules)",
     "Pitch detectado:": "Detected pitch:",
-    "  ↳ f0 de la voz en tiempo real. Con voz SSB clara debería marcar 80–400 Hz estable.":
-        "  ↳ Voice f0 in real time. With clear SSB voice it should read a stable 80–400 Hz.",
+    "  ↳ f0 de la voz en tiempo real. Con voz clara debería marcar 80–400 Hz estable.":
+        "  ↳ Voice f0 in real time. With clear voice it should read a stable 80–400 Hz.",
     "Protección de armónicos:": "Harmonic protection:",
     "  ↳ Cuánto eleva la probabilidad de voz en bins de armónicos. 70%=recomendado.":
         "  ↳ How much it raises voice probability on harmonic bins. 70%=recommended.",

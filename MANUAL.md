@@ -101,7 +101,7 @@ El audio recorre los siguientes procesos en orden. Cada etapa puede activarse o 
                            │
          [ Cancelador de Ruido Estacionario ]
            Filtro Wiener espectral adaptativo
-          ├─ sub: Refuerzo de pitch SSB (opcional)
+          ├─ sub: Refuerzo de pitch de voz (opcional)
           └─ sub: Post-filtro espectral  (opcional)
                            │
                [ Squelch de Voz  (opcional) ]
@@ -209,7 +209,7 @@ Cada casilla de verificación activa o desactiva un módulo del pipeline de form
 | **Cancelador de ruido estacionario** | El módulo principal. Activar una vez aprendido el perfil de ruido. |
 | &nbsp;&nbsp;&nbsp;↳ **Piso espectral perceptual** | Sub-módulo del cancelador. Reemplaza el piso fijo por una curva que varía con la frecuencia: eleva el piso en la zona vocal (~500 Hz, preserva la calidez de la voz) y lo baja en alta frecuencia (suprime más el soplido). Curva configurable en Avanzada Cancelador. |
 | &nbsp;&nbsp;&nbsp;↳ **Post-filtro espectral** | Sub-módulo del cancelador. Elimina el "ruido musical" (pitidos intermitentes) que el Wiener deja como residuo. Activar cuando se note ese artefacto. Agresividad configurable en Avanzada Cancelador. |
-| &nbsp;&nbsp;&nbsp;↳ **Refuerzo de pitch SSB** | Sub-módulo del cancelador. Para señales SSB muy débiles: detecta el tono fundamental de la voz y protege sus armónicos de ser suprimidos. Activar solo si la voz suena "fantasmal" con el cancelador al máximo. Sensibilidad configurable en Avanzada Cancelador. |
+| &nbsp;&nbsp;&nbsp;↳ **Refuerzo de pitch de voz** | Sub-módulo del cancelador. Para señales de voz muy débiles (AM o SSB): detecta el tono fundamental de la voz y protege sus armónicos de ser suprimidos — mejora la inteligibilidad. Activar si la voz suena "fantasmal" con el cancelador al máximo. Sensibilidad configurable en Avanzada Cancelador. |
 | &nbsp;&nbsp;&nbsp;↳ **Squelch de voz** | Sub-módulo del cancelador. Silencia el audio entre transmisiones con cierre progresivo (sin gorgojeo ni cola de ruido). **No usar con música.** Indicador de nivel de voz y estado del gate en Avanzada Cancelador. |
 | &nbsp;&nbsp;&nbsp;↳ **Compensación fading HF** | Sub-módulo del cancelador, solo modo Adaptativo. Congela el estimador de ruido durante fades ionosféricos (QSB) y acelera la recuperación al volver la señal. Sensibilidad y duración en Avanzada Cancelador. |
 | &nbsp;&nbsp;&nbsp;↳ **Nivelador de voz** | Sub-módulo del cancelador. AGC de voz aplicado *después* de la reducción de ruido: mantiene la voz limpia a nivel constante aunque las condiciones de la banda (y la cantidad de cancelación) varíen. Solo adapta cuando detecta voz — el ruido entre transmisiones no se re-amplifica. |
@@ -467,30 +467,30 @@ El post-filtro aplica una segunda pasada sobre esos bins usando la misma informa
 
 > **Consejo — Intensidad baja + post-filtro alto:** una combinación muy efectiva es **bajar la Intensidad del cancelador** (50–60%) y compensar con **Agresividad alta del post-filtro** (5–8). La Intensidad baja deja pasar la voz casi intacta — sin la opacidad que aparece al subirla — y el post-filtro se encarga del ruido restante actuando solo sobre los bins que el detector marca como ruido. En muchas señales el resultado es mejor cancelación **con voz más natural** que subir la Intensidad sola. Vale la pena probar ambos enfoques en cada señal y quedarse con el que suene mejor.
 
-### Refuerzo de pitch SSB
+### Refuerzo de pitch de voz
 
-**Activar:** Módulos Activos → casilla "Refuerzo de pitch SSB (detección por autocorrelación)"  
+**Activar:** Módulos Activos → casilla "Refuerzo de pitch de voz (detección por autocorrelación)"  
 **Ajustar:** Pestaña Avanzada Cancelador → slider "Protección de armónicos"
 
-En señales SSB muy débiles enterradas en ruido, el cancelador de Wiener puede suprimir los armónicos de la voz junto con el ruido porque el VAD no logra distinguirlos. El resultado es una voz que suena "fantasmal", de tono cambiante o con pérdida de naturalidad.
+En señales de voz muy débiles enterradas en ruido, el cancelador de Wiener puede suprimir los armónicos de la voz junto con el ruido porque el VAD no logra distinguirlos. El resultado es una voz que suena "fantasmal", de tono cambiante o con pérdida de naturalidad.
 
 Este módulo detecta en tiempo real el **tono fundamental** (f0) de la voz mediante autocorrelación sobre una ventana de 42ms, busca f0 en el rango 80–400 Hz, y levanta la probabilidad de voz (`p_speech`) en todos los bins que corresponden a armónicos de ese f0. El cancelador entonces los trata como voz y los deja pasar.
 
 - La detección funciona con un **umbral de confianza**: si la señal no es suficientemente periódica (no hay voz clara), no modifica nada.
 - **Hold de 3 frames:** ante breves gaps de detección, el último f0 válido se mantiene para evitar fluctuaciones.
-- **Solo para SSB.** En AM con ruido, el ensanchamiento de banda hace que la detección de f0 sea poco fiable.
+- **Funciona en AM y en SSB.** En AM la demodulación preserva la estructura armónica de la voz de forma exacta, así que la detección es igual de fiable; el umbral de confianza protege en condiciones muy ruidosas. En SSB, un BFO desajustado corre los armónicos y puede degradar la detección — ajustar el clarificador si el indicador nunca detecta.
 
 **Indicador en tiempo real:**
 
 | Indicador | Descripción |
 |-----------|-------------|
-| **Pitch detectado** | f0 de la voz en Hz, en tiempo real. Verde = detección activa (la máscara de armónicos está protegiendo la voz). "sin detección" (gris) = no hay señal periódica — el módulo está en passthrough. Con voz SSB clara debería marcar un valor estable en 80–400 Hz; si fluctúa erráticamente o nunca detecta, la señal es demasiado ruidosa o el clarificador de la radio está desajustado. |
+| **Pitch detectado** | f0 de la voz en Hz, en tiempo real. Verde = detección activa (la máscara de armónicos está protegiendo la voz). "sin detección" (gris) = no hay señal periódica — el módulo está en passthrough. Con voz clara debería marcar un valor estable en 80–400 Hz; si fluctúa erráticamente o nunca detecta, la señal es demasiado ruidosa o (en SSB) el clarificador de la radio está desajustado. |
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
 | **Protección de armónicos** | 0% – 100% | 70% | Cuánto se eleva `p_speech` en los bins armónicos. **70%** es el punto de equilibrio: protege la voz sin degradar la supresión del ruido. **>85%**: bins de armónicos casi nunca se suprimen — útil para señales muy débiles. **<40%**: efecto mínimo. |
 
-> **Cuándo activarlo:** cuando la voz suena "fantasmal" o "robótica" con el cancelador en modo MCRA o con intensidad alta, y la señal es SSB DX débil. En condiciones normales, dejarlo desactivado.
+> **Cuándo activarlo:** cuando la voz suena "fantasmal" o "robótica" con el cancelador en modo MCRA o con intensidad alta, en señales débiles de AM o SSB — mejora la inteligibilidad en ambos modos. En condiciones normales, dejarlo desactivado.
 
 ### Nivelador de voz
 
@@ -664,7 +664,7 @@ En la misma fila aparece el indicador **"Nivelador de voz"** con la ganancia que
 | Cancelador de ruido | ✅ Activo | Aprender perfil primero (o modo Adaptativo) |
 | ↳ Piso espectral perceptual | ⬜ Opcional | Activar si la voz suena fría o hueca |
 | ↳ Post-filtro espectral | ⬜ Opcional | Activar si se escuchan pitidos intermitentes residuales |
-| ↳ Refuerzo de pitch SSB | ⬜ Opcional | Solo para señales SSB DX muy débiles |
+| ↳ Refuerzo de pitch de voz | ⬜ Opcional | Para señales SSB DX muy débiles — mejora la inteligibilidad |
 | Compensación fading HF | ⬜ Opcional | Activar con QSB perceptible (solo modo Adaptativo) |
 | ↳ Nivelador de voz | ⬜ Opcional | Activar con estaciones de niveles dispares o QSB fuerte |
 | Squelch | ✅ Activo | Umbral 15%, retención 300 ms |
@@ -682,7 +682,7 @@ En la misma fila aparece el indicador **"Nivelador de voz"** con la ganancia que
 | Cancelador de ruido | ✅ Activo | Aprender perfil primero (o modo Adaptativo) |
 | ↳ Piso espectral perceptual | ⬜ Opcional | Activar si la voz suena fría o hueca |
 | ↳ Post-filtro espectral | ⬜ Opcional | Activar si quedan pitidos residuales |
-| ↳ Refuerzo de pitch SSB | ❌ No usar | No fiable con la banda ancha de AM |
+| ↳ Refuerzo de pitch de voz | ⬜ Opcional | También ayuda en AM: la demodulación preserva los armónicos de la voz |
 | Compensación fading HF | ⬜ Opcional | Solo onda corta con QSB (modo Adaptativo); en AM local con música puede disparar en falso |
 | ↳ Nivelador de voz | ❌ No usar | Con música el gate de voz congela la ganancia de forma errática |
 | Squelch | ❌ No usar | Produce bombeo con música |

@@ -612,6 +612,14 @@ Cambios v1.6:
   branch de error de `start()` (el disable va después del start exitoso).
 
 Cambios v1.7 (pendiente de release):
+- "Refuerzo de pitch SSB" renombrado a **"Refuerzo de pitch de voz"** (checkbox, grupo, i18n,
+  manuales): el usuario validó en el aire que también mejora la inteligibilidad en AM — y
+  técnicamente es esperable: la demodulación AM preserva la estructura armónica exacta (los
+  armónicos quedan en múltiplos enteros de f0, que es lo que asume la máscara), mientras que
+  en SSB un BFO desajustado los corre. La cautela original "no fiable en AM" era conservadora;
+  el umbral de confianza de la autocorrelación ya protege en condiciones muy ruidosas. La
+  recomendación del manual para AM pasó de "No usar" a "Opcional". Los nombres internos
+  (`pitch_enhance_*`) no cambian — compatibilidad de settings/presets.
 - UX: selector de idioma movido del grupo Control a la **barra de estado** (esquina derecha,
   `addPermanentWidget`, con 🌐 en los ítems y tooltip) — es una preferencia de aplicación que
   se cambia una vez, no un control de operación; ahora es visible desde cualquier pestaña.

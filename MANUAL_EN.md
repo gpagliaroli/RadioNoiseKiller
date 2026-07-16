@@ -101,7 +101,7 @@ Audio flows through the following processes in order. Each stage can be enabled 
                            │
           [ Stationary Noise Canceller ]
             Adaptive spectral Wiener filter
-          ├─ sub: SSB pitch enhancement (optional)
+          ├─ sub: Voice pitch enhancement (optional)
           └─ sub: Spectral post-filter   (optional)
                            │
                [ Voice Squelch  (optional) ]
@@ -209,7 +209,7 @@ Each checkbox enables or disables one pipeline module independently and in real 
 | **Stationary noise canceller** | The main module. Enable once the noise profile has been learned. |
 | &nbsp;&nbsp;&nbsp;↳ **Perceptual spectral floor** | Canceller sub-module. Replaces the fixed floor with a frequency-dependent curve: raises the floor in the vocal zone (~500 Hz, preserves voice warmth) and lowers it at high frequency (suppresses hiss harder). Curve adjustable in Advanced Canceller. |
 | &nbsp;&nbsp;&nbsp;↳ **Spectral post-filter** | Canceller sub-module. Removes the "musical noise" (intermittent birdies) the Wiener filter leaves behind. Enable when you notice that artifact. Aggressiveness adjustable in Advanced Canceller. |
-| &nbsp;&nbsp;&nbsp;↳ **SSB pitch enhancement** | Canceller sub-module. For very weak SSB signals: detects the voice's fundamental pitch and protects its harmonics from being suppressed. Enable only if the voice sounds "ghostly" with the canceller at maximum. Sensitivity adjustable in Advanced Canceller. |
+| &nbsp;&nbsp;&nbsp;↳ **Voice pitch enhancement** | Canceller sub-module. For very weak voice signals (AM or SSB): detects the voice's fundamental pitch and protects its harmonics from being suppressed — improves intelligibility. Enable if the voice sounds "ghostly" with the canceller at maximum. Sensitivity adjustable in Advanced Canceller. |
 | &nbsp;&nbsp;&nbsp;↳ **Voice squelch** | Canceller sub-module. Mutes the audio between transmissions with a progressive close (no warble, no noise tail). **Do not use with music.** Voice level and gate indicators in Advanced Canceller. |
 | &nbsp;&nbsp;&nbsp;↳ **HF fading compensation** | Canceller sub-module, Adaptive mode only. Freezes the noise estimator during ionospheric fades (QSB) and speeds up recovery when the signal returns. Sensitivity and duration in Advanced Canceller. |
 | &nbsp;&nbsp;&nbsp;↳ **Voice leveler** | Canceller sub-module. A voice AGC applied *after* noise reduction: keeps the clean voice at a constant level even as band conditions (and the amount of cancellation) vary. Only adapts while voice is detected — noise between transmissions is not re-amplified. |
@@ -467,30 +467,30 @@ The post-filter applies a second pass over those bins using the same voice-proba
 
 > **Tip — low Intensity + high post-filter:** a very effective combination is to **lower the canceller's Intensity** (50–60%) and compensate with **high post-filter Aggressiveness** (5–8). The low Intensity lets the voice through almost untouched — without the dullness that appears when raising it — while the post-filter handles the remaining noise, acting only on the bins the detector marks as noise. On many signals this yields better cancellation **with a more natural voice** than raising the Intensity alone. It is worth trying both approaches on each signal and keeping whichever sounds best.
 
-### SSB pitch enhancement
+### Voice pitch enhancement
 
-**Enable:** Active Modules → "SSB pitch enhancement (autocorrelation detection)" checkbox  
+**Enable:** Active Modules → "Voice pitch enhancement (autocorrelation detection)" checkbox  
 **Adjust:** Advanced Canceller tab → "Harmonic protection" slider
 
-On very weak SSB signals buried in noise, the Wiener canceller can suppress the voice harmonics along with the noise because the VAD cannot tell them apart. The result is a voice that sounds "ghostly", with shifting tone or lost naturalness.
+On very weak voice signals buried in noise, the Wiener canceller can suppress the voice harmonics along with the noise because the VAD cannot tell them apart. The result is a voice that sounds "ghostly", with shifting tone or lost naturalness.
 
 This module detects the voice's **fundamental pitch** (f0) in real time via autocorrelation over a 42 ms window, searches for f0 in the 80–400 Hz range, and raises the voice probability (`p_speech`) on all bins corresponding to harmonics of that f0. The canceller then treats them as voice and lets them through.
 
 - Detection uses a **confidence threshold**: if the signal is not periodic enough (no clear voice), nothing is modified.
 - **3-frame hold:** on brief detection gaps, the last valid f0 is kept to avoid fluttering.
-- **SSB only.** On noisy AM, the wider bandwidth makes f0 detection unreliable.
+- **Works on both AM and SSB.** On AM, demodulation preserves the voice's harmonic structure exactly, so detection is just as reliable; the confidence threshold protects in very noisy conditions. On SSB, an off-tune BFO shifts the harmonics and can degrade detection — adjust the clarifier if the indicator never detects.
 
 **Real-time indicator:**
 
 | Indicator | Description |
 |-----------|-------------|
-| **Detected pitch** | The voice's f0 in Hz, in real time. Green = detection active (the harmonic mask is protecting the voice). "no detection" (gray) = no periodic signal — the module is in passthrough. With clear SSB voice it should read a stable value between 80–400 Hz; if it flutters erratically or never detects, the signal is too noisy or the radio's clarifier is off-tune. |
+| **Detected pitch** | The voice's f0 in Hz, in real time. Green = detection active (the harmonic mask is protecting the voice). "no detection" (gray) = no periodic signal — the module is in passthrough. With clear voice it should read a stable value between 80–400 Hz; if it flutters erratically or never detects, the signal is too noisy or (on SSB) the radio's clarifier is off-tune. |
 
 | Control | Range | Default | Description |
 |---------|-------|---------|-------------|
 | **Harmonic protection** | 0% – 100% | 70% | How much `p_speech` is raised on harmonic bins. **70%** is the balance point: protects the voice without degrading noise suppression. **>85%**: harmonic bins are almost never suppressed — useful for very weak signals. **<40%**: minimal effect. |
 
-> **When to enable it:** when the voice sounds "ghostly" or "robotic" with the canceller in MCRA mode or at high intensity, and the signal is weak SSB DX. Under normal conditions, leave it off.
+> **When to enable it:** when the voice sounds "ghostly" or "robotic" with the canceller in MCRA mode or at high intensity, on weak AM or SSB signals — it improves intelligibility in both modes. Under normal conditions, leave it off.
 
 ### Voice leveler
 
@@ -664,7 +664,7 @@ On the same row, the **"Voice leveler"** indicator shows the gain that module is
 | Noise canceller | ✅ On | Learn the profile first (or Adaptive mode) |
 | ↳ Perceptual spectral floor | ⬜ Optional | Enable if the voice sounds cold or hollow |
 | ↳ Spectral post-filter | ⬜ Optional | Enable if residual intermittent birdies are heard |
-| ↳ SSB pitch enhancement | ⬜ Optional | Only for very weak SSB DX signals |
+| ↳ Voice pitch enhancement | ⬜ Optional | For very weak SSB DX signals — improves intelligibility |
 | HF fading compensation | ⬜ Optional | Enable with noticeable QSB (Adaptive mode only) |
 | ↳ Voice leveler | ⬜ Optional | Enable with stations at uneven levels or strong QSB |
 | Squelch | ✅ On | Threshold 15%, hold 300 ms |
@@ -682,7 +682,7 @@ On the same row, the **"Voice leveler"** indicator shows the gain that module is
 | Noise canceller | ✅ On | Learn the profile first (or Adaptive mode) |
 | ↳ Perceptual spectral floor | ⬜ Optional | Enable if the voice sounds cold or hollow |
 | ↳ Spectral post-filter | ⬜ Optional | Enable if residual birdies remain |
-| ↳ SSB pitch enhancement | ❌ Do not use | Unreliable with AM's wide bandwidth |
+| ↳ Voice pitch enhancement | ⬜ Optional | Also helps on AM: demodulation preserves the voice harmonics |
 | HF fading compensation | ⬜ Optional | Shortwave with QSB only (Adaptive mode); on local AM with music it can false-trigger |
 | ↳ Voice leveler | ❌ Do not use | With music the voice gate freezes the gain erratically |
 | Squelch | ❌ Do not use | Produces pumping with music |
