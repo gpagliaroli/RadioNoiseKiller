@@ -401,6 +401,8 @@ El indicador en Avanzada Cancelador muestra **FADE** (naranja) cuando hay un eve
 | **Anti-gorgojeo (β)** | 90% – 99% (pasos de 0,1%) | 97% | Velocidad con que los gains retornan al piso después de detectar voz. Alto (97–99%) = transiciones suaves, sin gorgojeo. Bajo (90–95%) = más reactivo pero con riesgo de gorgojeo audible. La resolución fina de 0,1% permite calibrar con precisión en el extremo alto, donde cada décima cambia el release de forma audible (98,0% ≈ 0,5 s; 98,5% ≈ 0,7 s; 99,0% ≈ 1 s). El máximo elimina el gorgojeo más persistente pero puede dejar una "cola" de ruido tras cada transmisión — usarlo solo si 97–98% no alcanza. |
 | **Velocidad de ataque** | 50% – 92% | 80% | Velocidad con que el cancelador "abre" los bins de voz cuando detecta una señal. Bajo (50–70%) = ataque rápido, consonantes más nítidas. Alto (>85%) = ataque suave, menos artefactos en transiciones. |
 
+> **Consejo — calibrar la Intensidad con el Preview:** activar **"Preview: escuchar ruido eliminado"** y subir la **Intensidad** escuchando lo que se elimina: mientras en el preview se escuche solo ruido, se puede seguir subiendo; en el punto donde empieza a filtrarse voz en lo eliminado, bajar un paso y dejarlo ahí. Ese es el máximo de cancelación que no modifica la voz. Desactivar el preview al terminar.
+
 ### Relación entre Piso y Anti-gorgojeo
 
 Estos dos parámetros interactúan. La regla práctica:

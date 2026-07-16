@@ -401,6 +401,8 @@ The indicator in Advanced Canceller shows **FADE** (orange) while a fading event
 | **Anti-warble (β)** | 90% – 99% (0.1% steps) | 97% | How fast the gains return to the floor after voice is detected. High (97–99%) = smooth transitions, no warble. Low (90–95%) = more reactive but with a risk of audible warble. The fine 0.1% resolution allows precise calibration at the high end, where each tenth audibly changes the release (98.0% ≈ 0.5 s; 98.5% ≈ 0.7 s; 99.0% ≈ 1 s). The maximum removes the most persistent warble but can leave a noise "tail" after each transmission — use it only if 97–98% is not enough. |
 | **Attack speed** | 50% – 92% | 80% | How fast the canceller "opens" voice bins when a signal is detected. Low (50–70%) = fast attack, crisper consonants. High (>85%) = soft attack, fewer transition artifacts. |
 
+> **Tip — calibrating Intensity with the Preview:** enable **"Preview: listen to removed noise"** and raise the **Intensity** while listening to what is being removed: as long as the preview contains only noise, you can keep raising it; at the point where voice starts leaking into the removed audio, back off one step and leave it there. That is the maximum cancellation that does not touch the voice. Disable the preview when done.
+
 ### Floor vs. Anti-warble
 
 These two parameters interact. The practical rule:

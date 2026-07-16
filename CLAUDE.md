@@ -612,6 +612,10 @@ Cambios v1.6:
   branch de error de `start()` (el disable va después del start exitoso).
 
 Cambios v1.7 (pendiente de release):
+- Técnica de operación del usuario documentada en manuales (Cap. 7): **calibrar la Intensidad
+  con el Preview** — activar "escuchar ruido eliminado" y subir Intensidad mientras lo
+  eliminado sea solo ruido; donde empieza a filtrarse voz, bajar un paso. Máxima cancelación
+  sin tocar la voz. (Complementa la técnica Intensidad baja + post-filtro alto de v1.6.)
 - "Refuerzo de pitch SSB" renombrado a **"Refuerzo de pitch de voz"** (checkbox, grupo, i18n,
   manuales): el usuario validó en el aire que también mejora la inteligibilidad en AM — y
   técnicamente es esperable: la demodulación AM preserva la estructura armónica exacta (los
