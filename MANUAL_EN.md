@@ -653,6 +653,15 @@ On the same row, the **"Voice leveler"** indicator shows the gain that module is
 - **Yellow** (-6 to -3 dB): high level, normal on voice peaks.
 - **Red** (above -3 dB): saturation — reduce the input gain.
 
+### WAV recording
+
+At the bottom of the group, the **"⏺ Record"** button saves what you are hearing (the processed output) to a WAV file (mono, 16-bit, 48 kHz) inside the **`Grabaciones/`** folder, next to the executable. Files are named automatically by date and time (`RNK_2026-07-16_21-30-05_procesado.wav`).
+
+- Available only **while processing is active**. When pressed, the button changes to "⏹ Stop recording" and the red **REC mm:ss** counter appears.
+- The **"include unprocessed input"** checkbox also records a second file (`..._entrada.wav`) with the signal as it arrives from the radio — ideal for before/after comparison or documenting what the application does. Applies when the next recording starts.
+- Stopping processing with a recording in progress closes the file cleanly and automatically; the status bar shows the saved duration.
+- Approximate size: ~5.6 MB per minute per file. Writing runs on a separate thread: recording does not affect audio latency or smoothness.
+
 ---
 
 ## Recommended starting configuration

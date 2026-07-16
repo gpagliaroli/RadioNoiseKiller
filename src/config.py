@@ -17,6 +17,7 @@ class AudioConfig:
     input_device: int | None = None
     output_device: int | None = None
     input_channel: str = "left"  # "left" | "right" | "mix" — canal tomado de entradas estéreo
+    record_raw_input: bool = False  # grabar también la entrada sin procesar (2do WAV)
 
 
 @dataclass
@@ -115,6 +116,7 @@ class AppConfig:
                 "input_device": self.audio.input_device,
                 "output_device": self.audio.output_device,
                 "input_channel": self.audio.input_channel,
+                "record_raw_input": self.audio.record_raw_input,
             },
             "dsp": {
                 "mode": self.dsp.mode.value,
@@ -208,6 +210,8 @@ class AppConfig:
         self.audio.output_device = a.get("output_device", self.audio.output_device)
         _ic = a.get("input_channel", self.audio.input_channel)
         self.audio.input_channel = _ic if _ic in ("left", "right", "mix") else "left"
+        self.audio.record_raw_input = bool(a.get("record_raw_input",
+                                                 self.audio.record_raw_input))
 
         d = data.get("dsp", {})
         try:

@@ -469,6 +469,35 @@ class MainWindow(QMainWindow):
         peak_row.addStretch()
         layout.addLayout(peak_row)
 
+        # --- Grabación a WAV ---
+        rec_row = QHBoxLayout()
+        self._btn_record = QPushButton(tr("⏺  Grabar"))
+        self._btn_record.setCheckable(True)
+        self._btn_record.setEnabled(False)   # requiere procesamiento activo
+        self._btn_record.setFixedWidth(150)
+        self._btn_record.setToolTip(tr(
+            "Graba la salida procesada a un archivo WAV (16-bit, 48 kHz)\n"
+            "en la carpeta Grabaciones/, junto al ejecutable.\n"
+            "Disponible con el procesamiento activo."
+        ))
+        self._btn_record.clicked.connect(self._on_record_toggled)
+        rec_row.addWidget(self._btn_record)
+        self._lbl_rec_time = QLabel("")
+        self._lbl_rec_time.setStyleSheet("color: #ef5350; font-weight: bold;")
+        self._lbl_rec_time.setFixedWidth(80)
+        rec_row.addWidget(self._lbl_rec_time)
+        self._chk_record_raw = QCheckBox(tr("incluir entrada sin procesar"))
+        self._chk_record_raw.setToolTip(tr(
+            "Graba además un segundo WAV con la señal de entrada tal como\n"
+            "llega de la radio — para comparar el antes/después.\n"
+            "Se aplica al iniciar la próxima grabación."
+        ))
+        self._chk_record_raw.setChecked(self._config.audio.record_raw_input)
+        self._chk_record_raw.toggled.connect(self._on_record_raw_toggled)
+        rec_row.addWidget(self._chk_record_raw)
+        rec_row.addStretch()
+        layout.addLayout(rec_row)
+
         return group
 
     def _build_spectrum_tab(self) -> QWidget:
@@ -792,6 +821,37 @@ class MainWindow(QMainWindow):
     # Eventos de la UI
     # ------------------------------------------------------------------
 
+    def _on_record_toggled(self, checked: bool) -> None:
+        if checked:
+            if not self._pipeline.is_running():
+                self._btn_record.setChecked(False)
+                return
+            try:
+                self._pipeline.start_recording()
+            except OSError as e:
+                self._btn_record.setChecked(False)
+                self._status_bar.showMessage(
+                    tr("Error al iniciar la grabación: {e}").format(e=e))
+                return
+            self._btn_record.setText(tr("⏹  Detener grabación"))
+            self._status_bar.showMessage(tr("Grabando en Grabaciones/ ..."))
+        else:
+            self._finish_recording()
+
+    def _finish_recording(self) -> None:
+        """Cierra la grabación y resetea la UI. Seguro de llamar siempre."""
+        secs = self._pipeline.stop_recording()
+        self._btn_record.setChecked(False)
+        self._btn_record.setText(tr("⏺  Grabar"))
+        self._lbl_rec_time.setText("")
+        if secs > 0:
+            self._status_bar.showMessage(
+                tr("Grabación guardada en Grabaciones/  ({s:.0f} s)").format(s=secs))
+
+    def _on_record_raw_toggled(self, checked: bool) -> None:
+        self._config.audio.record_raw_input = bool(checked)
+        self._schedule_save()
+
     def _on_input_channel_changed(self, idx: int) -> None:
         mode = self._combo_channel.itemData(idx)
         self._pipeline.set_input_channel(mode)
@@ -1030,6 +1090,7 @@ class MainWindow(QMainWindow):
                 self._level_timer.start()
                 self._spectrum_widget.start()
                 self._status_bar.showMessage(tr("Procesando..."))
+                self._btn_record.setEnabled(True)
                 self._btn_refresh_devices.setEnabled(False)
                 # Cambiar de dispositivo requiere reiniciar el procesamiento:
                 # deshabilitados para que no parezca que aplica en vivo.
@@ -1045,6 +1106,9 @@ class MainWindow(QMainWindow):
         else:
             if self._pipeline.noise_is_learning:
                 self._btn_learn.setChecked(False)
+            if self._pipeline.is_recording:
+                self._finish_recording()   # antes de stop(): conserva la duración
+            self._btn_record.setEnabled(False)
             self._pipeline.stop()
             self._refresh_noise_profile_ui()
             self._level_timer.stop()
@@ -1109,6 +1173,19 @@ class MainWindow(QMainWindow):
         self._lbl_leveler.setStyleSheet(f"color: {lev_color}; font-size: 8pt; font-weight: bold;")
         self._adv_audio_tab._lbl_leveler_act.setText(lev_text)
         self._adv_audio_tab._lbl_leveler_act.setStyleSheet(f"color: {lev_color}; font-weight: bold;")
+
+        # Grabación: tiempo transcurrido, y detección de muerte por error de
+        # disco (el writer marca recording=False solo; el botón queda checked)
+        if self._btn_record.isChecked():
+            if self._pipeline.is_recording:
+                s = int(self._pipeline.recording_seconds)
+                self._lbl_rec_time.setText(f"REC {s // 60:02d}:{s % 60:02d}")
+            else:
+                err = self._pipeline.recording_error
+                self._finish_recording()
+                if err:
+                    self._status_bar.showMessage(
+                        tr("Error de grabación: {e}").format(e=err))
 
         # Indicador S/N (pestaña Espectro) — requiere cancelador ACTIVO: el
         # profiler solo actualiza snr_db cuando procesa (desactivado = congelado)

@@ -5,6 +5,7 @@ import numpy as np
 from config import AppConfig, RadioMode
 from audio.stream import AudioStream
 from audio.devices import AudioDevice
+from audio.recorder import WavRecorder
 from dsp.agc import AGC
 from dsp.anf import AdaptiveNotchFilter
 from dsp.exciter import AuralExciter
@@ -120,6 +121,7 @@ class ProcessingPipeline:
         )
         self._level_in  = LevelMeter(sample_rate=config.audio.sample_rate)
         self._level_out = LevelMeter(sample_rate=config.audio.sample_rate)
+        self._recorder  = WavRecorder(config.audio.sample_rate)
         self._stream: AudioStream | None = None
 
         self._db_in:      float = -60.0
@@ -367,6 +369,46 @@ class ProcessingPipeline:
         self.set_input_gain_db(gain.input_gain_db)
         self.set_output_gain_db(gain.output_gain_db)
         self.set_peak_limit_db(gain.peak_limit_db)
+
+    # ------------------------------------------------------------------
+    # API pública — grabación a WAV
+    # ------------------------------------------------------------------
+
+    def start_recording(self, directory: "str | None" = None) -> str:
+        """Empieza a grabar la salida procesada (y la entrada cruda si
+        config.audio.record_raw_input). Devuelve la ruta base de los archivos.
+        Requiere el procesamiento activo (sin audio fluyendo no hay qué grabar)."""
+        import datetime
+        import os
+        from utils import recordings_dir
+        base_dir = directory if directory else recordings_dir()
+        stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        base = os.path.join(base_dir, f"RNK_{stamp}")
+        # Dos grabaciones en el mismo segundo no deben pisarse
+        n = 2
+        while os.path.exists(base + "_procesado.wav"):
+            base = os.path.join(base_dir, f"RNK_{stamp}_{n}")
+            n += 1
+        raw_path = (base + "_entrada.wav"
+                    if self._config.audio.record_raw_input else None)
+        self._recorder.start(base + "_procesado.wav", raw_path)
+        return base
+
+    def stop_recording(self) -> float:
+        """Detiene la grabación. Devuelve los segundos grabados."""
+        return self._recorder.stop()
+
+    @property
+    def is_recording(self) -> bool:
+        return self._recorder.recording
+
+    @property
+    def recording_seconds(self) -> float:
+        return self._recorder.seconds
+
+    @property
+    def recording_error(self) -> "str | None":
+        return self._recorder.error
 
     # ------------------------------------------------------------------
     # API pública — cancelación de ruido estacionario
@@ -713,6 +755,10 @@ class ProcessingPipeline:
                 self._proc_thread.join(timeout=1.0)
             self._proc_thread = None
 
+        # Cerrar la grabación en curso (header del WAV finalizado limpio)
+        if self._recorder.recording:
+            self._recorder.stop()
+
     def is_running(self) -> bool:
         return self._running
 
@@ -757,6 +803,10 @@ class ProcessingPipeline:
                 break
 
             try:
+                # Referencia al chunk crudo para la grabación (ninguna etapa
+                # muta el array original in place — el blanker copia primero)
+                raw_chunk = chunk
+
                 # Supresor de impulsiones en dos niveles
                 frame_energy = float(np.dot(chunk, chunk)) / len(chunk)
                 if frame_energy < energy_hist:
@@ -858,6 +908,11 @@ class ProcessingPipeline:
 
                 out_frame = self._freq_shifter.process(out_frame)
                 self._spec_post_frames.append(out_frame.copy())
+
+                if self._recorder.recording:
+                    self._recorder.feed(
+                        out_frame,
+                        raw_chunk if self._recorder.wants_raw else None)
 
                 try:
                     self._out_queue.put_nowait(out_frame)

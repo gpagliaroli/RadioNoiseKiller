@@ -175,6 +175,28 @@ CATALOG = {
         "Adaptive (MCRA) — calibrating (~200ms)...",
     "~0 dB  (sin ruido detectable)": "~0 dB  (no detectable noise)",
 
+    # --- Grabación a WAV ---
+    "⏺  Grabar": "⏺  Record",
+    "⏹  Detener grabación": "⏹  Stop recording",
+    "Graba la salida procesada a un archivo WAV (16-bit, 48 kHz)\n"
+    "en la carpeta Grabaciones/, junto al ejecutable.\n"
+    "Disponible con el procesamiento activo.":
+        "Records the processed output to a WAV file (16-bit, 48 kHz)\n"
+        "in the Grabaciones/ folder, next to the executable.\n"
+        "Available while processing is active.",
+    "incluir entrada sin procesar": "include unprocessed input",
+    "Graba además un segundo WAV con la señal de entrada tal como\n"
+    "llega de la radio — para comparar el antes/después.\n"
+    "Se aplica al iniciar la próxima grabación.":
+        "Also records a second WAV with the input signal as it\n"
+        "arrives from the radio — for before/after comparison.\n"
+        "Applies when the next recording starts.",
+    "Error al iniciar la grabación: {e}": "Error starting the recording: {e}",
+    "Grabando en Grabaciones/ ...": "Recording to Grabaciones/ ...",
+    "Grabación guardada en Grabaciones/  ({s:.0f} s)":
+        "Recording saved to Grabaciones/  ({s:.0f} s)",
+    "Error de grabación: {e}": "Recording error: {e}",
+
     # --- Niveles y ganancia ---
     "Niveles y Ganancia": "Levels & Gain",
     "Latencia: --": "Latency: --",

@@ -86,5 +86,45 @@ assert peak_off > 0.5, f"control negativo: sin blanker el impulso debe pasar (pi
 assert hits_off == 0, "blanker OFF no debe contar hits"
 print("Supresor de impulsos: OK")
 
+# ------------------------------------------------------------------
+# Grabación a WAV (headless): graba N frames y verifica los archivos
+# ------------------------------------------------------------------
+print("\nGrabacion WAV...")
+import glob
+import os
+import tempfile
+import wave
+
+rec_dir = tempfile.mkdtemp()
+c = AppConfig()
+c.dsp.noise_enabled = False
+c.audio.record_raw_input = True        # dos archivos: procesado + entrada
+p = ProcessingPipeline(c)
+p.start(headless=True)
+rng_r = np.random.default_rng(11)
+h = c.audio.block_size
+p.start_recording(directory=rec_dir)
+N_FRAMES = 50
+for _ in range(N_FRAMES):
+    p._process(rng_r.standard_normal(h).astype(np.float32) * 0.1)
+    time.sleep(0.004)
+time.sleep(0.3)                        # dejar drenar la cola del escritor
+secs = p.stop_recording()
+p.stop()
+
+wavs = sorted(glob.glob(os.path.join(rec_dir, "*.wav")))
+assert len(wavs) == 2, f"esperaba 2 WAV (procesado+entrada), hay {len(wavs)}: {wavs}"
+for path in wavs:
+    with wave.open(path, "rb") as w:
+        assert w.getframerate() == 48000, f"sample rate {w.getframerate()}"
+        assert w.getnchannels() == 1 and w.getsampwidth() == 2, "formato no es mono 16-bit"
+        n = w.getnframes()
+        data = np.frombuffer(w.readframes(n), dtype=np.int16)
+    assert n > 0, f"{os.path.basename(path)} vacio"
+    assert np.max(np.abs(data)) > 100, f"{os.path.basename(path)} sin contenido"
+    print(f"  {os.path.basename(path)}: {n} muestras, pico {np.max(np.abs(data))}")
+assert secs > 0, "stop_recording devolvio 0 segundos"
+print(f"Grabacion WAV: OK ({secs:.2f} s grabados)")
+
 print(f"\nErrores: {errors if errors else 'ninguno'}")
 print("\nPipeline: OK")

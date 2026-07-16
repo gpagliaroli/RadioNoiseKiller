@@ -29,6 +29,18 @@ def settings_path() -> str:
     return os.path.join(project_root, "settings.json")
 
 
+def recordings_dir() -> str:
+    """Ruta a la carpeta Grabaciones/ (junto al .exe en bundle, en raíz en
+    desarrollo). La crea si no existe."""
+    if hasattr(sys, "_MEIPASS"):
+        base = os.path.dirname(sys.executable)
+    else:
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    path = os.path.join(base, "Grabaciones")
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
 def presets_dir() -> str:
     """Ruta a la carpeta Presets/ (junto al .exe en bundle, en raíz en desarrollo).
     La crea si no existe."""

@@ -23,6 +23,9 @@ __pycache__/
 # sin la barra inicial también ignoraría .claude/settings.json
 /settings.json
 
+# Grabaciones del usuario
+Grabaciones/
+
 # Archivos generados (se regeneran desde MANUAL.md)
 MANUAL_*.pdf
 

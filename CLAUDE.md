@@ -612,6 +612,21 @@ Cambios v1.6:
   branch de error de `start()` (el disable va después del start exitoso).
 
 Cambios v1.7 (pendiente de release):
+- **Grabación a WAV** (backlog v1.7 #1): botón "⏺ Grabar" al pie de Niveles y Ganancia +
+  contador REC mm:ss + checkbox "incluir entrada sin procesar" (2do WAV `_entrada` para el
+  antes/después; la decisión se fija al INICIAR — `wants_raw` en el recorder — para que
+  ambos archivos queden sincronizados). Archivos WAV mono 16-bit 48kHz en `Grabaciones/`
+  (junto al exe, gitignoreada), nombre por timestamp con guard anti-colisión (mismo segundo →
+  sufijo _2). Arquitectura: `audio/recorder.py` (WavRecorder) con **hilo escritor propio** —
+  el hilo DSP solo encola (`feed` = put_nowait; cola llena → descarta frames, nunca traba el
+  audio); el escritor cierra los archivos SIEMPRE (finally → header WAV válido incluso tras
+  error de disco). Error de disco: el writer marca recording=False y `_tick_levels` lo detecta
+  (botón checked + not recording) → cierra UI y muestra el error. Auto-stop al DETENER
+  procesamiento (en la UI ANTES de pipeline.stop() para conservar la duración; pipeline.stop()
+  también cierra por las dudas). `record_raw_input` en AudioConfig (settings, NO presets).
+  Test en test_pipeline (graba 50 frames headless → 2 WAV con 24000 muestras y formato
+  correcto). OJO hook ruff: al agregar un import en un Edit y su uso en el SIGUIENTE, el hook
+  borra el import como no-usado entre ambos — agregar import y uso en el mismo Edit, o re-agregar.
 - Técnicas de operación del usuario documentadas en manuales: **calibrar la Intensidad con el
   Preview** (Cap. 7 — subir Intensidad mientras lo eliminado sea solo ruido; donde se filtra
   voz, bajar un paso: máxima cancelación sin tocar la voz) y **activar módulos de a uno**

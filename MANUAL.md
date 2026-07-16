@@ -653,6 +653,15 @@ En la misma fila aparece el indicador **"Nivelador de voz"** con la ganancia que
 - **Amarillo** (-6 a -3 dB): nivel alto, normal en picos de voz.
 - **Rojo** (por encima de -3 dB): saturación — reducir la ganancia de entrada.
 
+### Grabación a WAV
+
+Al pie del grupo, el botón **"⏺ Grabar"** guarda lo que estás escuchando (la salida procesada) en un archivo WAV (mono, 16-bit, 48 kHz) dentro de la carpeta **`Grabaciones/`**, junto al ejecutable. Los archivos se nombran automáticamente por fecha y hora (`RNK_2026-07-16_21-30-05_procesado.wav`).
+
+- Disponible solo **con el procesamiento activo**. Al pulsarlo, el botón cambia a "⏹ Detener grabación" y aparece el contador **REC mm:ss** en rojo.
+- La casilla **"incluir entrada sin procesar"** graba además un segundo archivo (`..._entrada.wav`) con la señal tal como llega de la radio — ideal para comparar el antes/después o documentar el efecto de la aplicación. Se aplica al iniciar la próxima grabación.
+- Al detener el procesamiento con una grabación en curso, el archivo se cierra limpio automáticamente; la barra de estado muestra la duración guardada.
+- Tamaño aproximado: ~5,6 MB por minuto por archivo. La escritura corre en un hilo separado: grabar no afecta la latencia ni la fluidez del audio.
+
 ---
 
 ## Configuración recomendada para empezar
