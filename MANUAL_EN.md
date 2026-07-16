@@ -169,7 +169,10 @@ The main operating controls: reception mode, AGC and processing activation.
 | **AGC** | Automatic Gain Control. **off** = no AGC. **slow / medium / fast** = response speed. **Custom** = hand-adjustable parameters (see below). For SSB, *slow* or *medium* is recommended; for AM with stable signals, *off* or *slow*. |
 | **▶ START / ■ STOP** | Starts or stops real-time processing. When started, audio flows through the whole pipeline. |
 | **Bypass** | Passes audio straight from input to output with no processing. Useful for comparing the sound with and without the application active. |
-| **Language** | Interface language: Español or English. The change is saved instantly but **requires restarting the application** to take effect. |
+
+### Interface language
+
+The language selector (🌐 Español / English) sits in the **right corner of the status bar** (bottom edge of the window), visible from any tab. The change is saved instantly but **requires restarting the application** to take effect.
 
 ### Custom AGC
 

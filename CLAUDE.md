@@ -612,6 +612,10 @@ Cambios v1.6:
   branch de error de `start()` (el disable va después del start exitoso).
 
 Cambios v1.7 (pendiente de release):
+- UX: selector de idioma movido del grupo Control a la **barra de estado** (esquina derecha,
+  `addPermanentWidget`, con 🌐 en los ítems y tooltip) — es una preferencia de aplicación que
+  se cambia una vez, no un control de operación; ahora es visible desde cualquier pestaña.
+  Clave i18n "Idioma:" reemplazada por el tooltip; manuales ES+EN (Cap. 2, sección propia).
 - UX: ancho de ventana por defecto 800→960 (a 800 las filas de sliders de Avanzadas quedan
   apretadas) y **el ancho elegido por el usuario se persiste** (`WindowConfig.w`, guardado en
   closeEvent como x/y). Clamp en `_restore_or_center`: [mínimo 800, min(máximo 1100,

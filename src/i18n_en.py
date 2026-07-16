@@ -49,7 +49,8 @@ CATALOG = {
     "Medio": "Medium",
     "Lento": "Slow",
     "Bypass (sin procesamiento)": "Bypass (no processing)",
-    "Idioma:": "Language:",
+    "Idioma de la interfaz — requiere reiniciar la aplicación":
+        "Interface language — requires restarting the application",
     "Idioma guardado — reiniciar la aplicación para aplicarlo.":
         "Language saved — restart the application to apply it.",
     "▶  ACTIVAR": "▶  START",

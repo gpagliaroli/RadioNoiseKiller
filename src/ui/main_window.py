@@ -94,6 +94,18 @@ class MainWindow(QMainWindow):
 
         self._status_bar = QStatusBar()
         self.setStatusBar(self._status_bar)
+        # Selector de idioma: preferencia de aplicación (se cambia una vez) —
+        # vive en la barra de estado, no entre los controles de operación
+        self._combo_lang = QComboBox()
+        self._combo_lang.addItem("🌐 Español", "es")
+        self._combo_lang.addItem("🌐 English", "en")
+        for i in range(self._combo_lang.count()):
+            if self._combo_lang.itemData(i) == self._config.language:
+                self._combo_lang.setCurrentIndex(i)
+                break
+        self._combo_lang.setToolTip(tr("Idioma de la interfaz — requiere reiniciar la aplicación"))
+        self._combo_lang.currentIndexChanged.connect(self._on_language_changed)
+        self._status_bar.addPermanentWidget(self._combo_lang)
 
         self._apply_dark_style()
 
@@ -202,22 +214,6 @@ class MainWindow(QMainWindow):
         self._check_bypass = QCheckBox(tr("Bypass (sin procesamiento)"))
         self._check_bypass.toggled.connect(self._pipeline.set_bypass)
         layout.addWidget(self._check_bypass)
-
-        lang_row = QHBoxLayout()
-        lang_lbl = QLabel(tr("Idioma:"))
-        lang_lbl.setFixedWidth(70)
-        lang_row.addWidget(lang_lbl)
-        self._combo_lang = QComboBox()
-        self._combo_lang.addItem("Español", "es")
-        self._combo_lang.addItem("English", "en")
-        for i in range(self._combo_lang.count()):
-            if self._combo_lang.itemData(i) == self._config.language:
-                self._combo_lang.setCurrentIndex(i)
-                break
-        self._combo_lang.currentIndexChanged.connect(self._on_language_changed)
-        lang_row.addWidget(self._combo_lang)
-        lang_row.addStretch()
-        layout.addLayout(lang_row)
         return group
 
     def _build_modules_group(self) -> QGroupBox:
