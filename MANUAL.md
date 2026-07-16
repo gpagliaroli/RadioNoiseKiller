@@ -217,6 +217,8 @@ Cada casilla de verificación activa o desactiva un módulo del pipeline de form
 | **EQ Voz (presencia + cuerpo)** | Dos bandas paramétricas: presencia (claridad, 1–2 kHz) y cuerpo (calidez, 150–800 Hz). Activar para modelar la voz con señales debilitadas o muy filtradas. |
 | **Excitador armónico** | Para señales de voz opacas, sin brillo. Añade presencia. Comparar con y sin para decidir. |
 
+> **Consejo — activar de a uno:** al armar una configuración (o al recibir una señal nueva), activar y desactivar los módulos **de a uno por vez**, escuchando el efecto que produce cada uno. Como todos los cambios aplican en vivo, se oye la diferencia al instante: eso permite ajustar mejor cada módulo — o directamente quitarlo si en esa señal no aporta. Activar todo junto de entrada hace imposible saber qué está ayudando y qué no.
+
 ---
 
 ## Capítulo 4 — Supresor de Impulsos

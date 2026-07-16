@@ -217,6 +217,8 @@ Each checkbox enables or disables one pipeline module independently and in real 
 | **Voice EQ (presence + body)** | Two parametric bands: presence (clarity, 1–2 kHz) and body (warmth, 150–800 Hz). Enable to shape the voice on weakened or heavily filtered signals. |
 | **Harmonic exciter** | For dull voice signals lacking brightness. Adds presence. Compare with and without to decide. |
 
+> **Tip — enable one at a time:** when building a configuration (or on a new signal), enable and disable the modules **one at a time**, listening to the effect each one produces. Since all changes apply live, you hear the difference instantly: that lets you tune each module better — or simply drop it if it brings nothing on that signal. Enabling everything at once makes it impossible to tell what is helping and what is not.
+
 ---
 
 ## Chapter 4 — Impulse Suppressor
