@@ -1056,6 +1056,10 @@ class MainWindow(QMainWindow):
             self._vu_in.set_level(-60)
             self._vu_out.set_level(-60)
             self._label_latency.setText(tr("Latencia: --"))
+            self._lbl_leveler.setText("—")
+            self._lbl_leveler.setStyleSheet("color: #555; font-size: 8pt; font-weight: bold;")
+            self._adv_audio_tab._lbl_leveler_act.setText("—")
+            self._adv_audio_tab._lbl_leveler_act.setStyleSheet("color: #555;")
             self._status_bar.showMessage(tr("Detenido."))
             self._btn_refresh_devices.setEnabled(True)
             self._combo_in.setEnabled(True)
@@ -1092,19 +1096,22 @@ class MainWindow(QMainWindow):
             self._lbl_peak_active.setText("—")
             self._lbl_peak_active.setStyleSheet("color: #555; font-size: 8pt; font-weight: bold;")
 
-        # Indicador del nivelador de voz (junto al del limitador)
+        # Indicador del nivelador de voz — en la pestaña Principal (junto al
+        # limitador) y en el grupo Nivelador de Avanzada Audio (mismo dato,
+        # para verlo mientras se ajusta la Ganancia máxima)
         if (self._config.dsp.voice_leveler_enabled and self._config.dsp.noise_enabled
                 and self._pipeline.is_running()):
             lev = self._pipeline.voice_leveler_gain_db
             if lev > 0.5:
-                self._lbl_leveler.setText(f"+{lev:.1f} dB")
-                self._lbl_leveler.setStyleSheet("color: #69f0ae; font-size: 8pt; font-weight: bold;")
+                lev_text, lev_color = f"+{lev:.1f} dB", "#69f0ae"
             else:
-                self._lbl_leveler.setText(tr("0 dB"))
-                self._lbl_leveler.setStyleSheet("color: #888; font-size: 8pt; font-weight: bold;")
+                lev_text, lev_color = tr("0 dB"), "#888"
         else:
-            self._lbl_leveler.setText("—")
-            self._lbl_leveler.setStyleSheet("color: #555; font-size: 8pt; font-weight: bold;")
+            lev_text, lev_color = "—", "#555"
+        self._lbl_leveler.setText(lev_text)
+        self._lbl_leveler.setStyleSheet(f"color: {lev_color}; font-size: 8pt; font-weight: bold;")
+        self._adv_audio_tab._lbl_leveler_act.setText(lev_text)
+        self._adv_audio_tab._lbl_leveler_act.setStyleSheet(f"color: {lev_color}; font-weight: bold;")
 
         # Indicador S/N (pestaña Espectro) — requiere cancelador ACTIVO: el
         # profiler solo actualiza snr_db cuando procesa (desactivado = congelado)

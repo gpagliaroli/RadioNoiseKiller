@@ -611,6 +611,14 @@ Cambios v1.6:
   porque sí aplica en vivo. Los combos ya deshabilitados NO deben deshabilitarse en el
   branch de error de `start()` (el disable va después del start exitoso).
 
+Cambios v1.7 (pendiente de release):
+- UX: grupo "Nivelador de voz" movido de Avanzada Cancelador a **Avanzada Audio** (junto al AGC
+  Personalizado — el usuario reportó que confundía encontrarlo en Cancelador; conceptualmente es
+  un AGC). Nuevo indicador "Actividad" dentro del grupo con la ganancia en vivo (mismo dato que
+  el de la pestaña Principal, ambos actualizados desde `_tick_levels` y reseteados a "—" al
+  detener). El slider sigue requiriendo cancelador + módulo activos (invariante 2); su
+  enabled/load viven ahora en `AdvancedAudioTab`. Manuales ES+EN actualizados (Cap. 7).
+
 Backlog v1.7 (acordado con el usuario tras la revisión de código de julio 2026):
 - **Grabación a WAV**: botón grabar que guarde lo que se está escuchando — procesado, o
   crudo+procesado en paralelo para comparar antes/después. Alto valor para documentar QSOs.

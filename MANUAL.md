@@ -492,7 +492,7 @@ Este módulo detecta en tiempo real el **tono fundamental** (f0) de la voz media
 ### Nivelador de voz
 
 **Activar:** Módulos Activos → casilla "Nivelador de voz (compensa condiciones de banda)"  
-**Ajustar:** Pestaña Avanzada Cancelador → grupo "Nivelador de voz"
+**Ajustar:** Pestaña Avanzada Audio → grupo "Nivelador de voz" (junto al AGC Personalizado)
 
 En una sesión de escucha real el nivel de la voz limpia varía constantemente: cambia la propagación, cambia la estación, y la propia cantidad de cancelación de ruido resta más o menos energía según las condiciones. El nivelador es un **AGC dedicado a la voz** que trabaja *después* del cancelador y del squelch — es decir, sobre el audio ya limpio — y lo lleva a un nivel constante.
 
@@ -500,7 +500,7 @@ La diferencia con el AGC general (Cap. 2) es el **gate por detección de voz**: 
 
 **Requiere el Cancelador de ruido estacionario activo con perfil** (aprendido o MCRA calibrado) — el detector de voz vive dentro del cancelador. Los tiempos internos son fijos (objetivo −20 dBFS, ataque 80 ms, release 1,5 s), pensados para seguir cambios de condiciones sin bombear con la dinámica natural de la voz.
 
-**Indicador en tiempo real:** en la pestaña Principal, junto al indicador del limitador de picos, la etiqueta **"Nivelador de voz"** muestra la ganancia que está aplicando (verde cuando compensa, "0 dB" en gris cuando la voz ya está a nivel, "—" cuando el módulo no corre).
+**Indicadores en tiempo real:** la ganancia que el nivelador está aplicando se muestra en dos lugares con el mismo dato — en la pestaña Principal (junto al indicador del limitador de picos) y como **"Actividad"** dentro del propio grupo en Avanzada Audio, para verla mientras se ajusta la Ganancia máxima. Verde cuando compensa, "0 dB" en gris cuando la voz ya está a nivel, "—" cuando el módulo no corre.
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|

@@ -492,7 +492,7 @@ This module detects the voice's **fundamental pitch** (f0) in real time via auto
 ### Voice leveler
 
 **Enable:** Active Modules → "Voice leveler (compensates band conditions)" checkbox  
-**Adjust:** Advanced Canceller tab → "Voice leveler" group
+**Adjust:** Advanced Audio tab → "Voice leveler" group (next to the Custom AGC)
 
 In a real listening session the level of the clean voice varies constantly: propagation changes, stations change, and the amount of noise cancellation itself removes more or less energy depending on conditions. The leveler is an **AGC dedicated to the voice** that works *after* the canceller and the squelch — that is, on the already-clean audio — and brings it to a constant level.
 
@@ -500,7 +500,7 @@ The difference from the general AGC (Ch. 2) is the **voice-detection gate**: the
 
 **Requires the Stationary noise canceller enabled with a profile** (learned or MCRA-calibrated) — the voice detector lives inside the canceller. The internal timings are fixed (target −20 dBFS, attack 80 ms, release 1.5 s), designed to follow changing conditions without pumping on the voice's natural dynamics.
 
-**Real-time indicator:** on the Main tab, next to the peak limiter indicator, the **"Voice leveler"** label shows the gain being applied (green while compensating, gray "0 dB" when the voice is already at level, "—" when the module is not running).
+**Real-time indicators:** the gain the leveler is applying is shown in two places with the same data — on the Main tab (next to the peak limiter indicator) and as **"Activity"** inside the group itself in Advanced Audio, so you can watch it while adjusting the Max gain. Green while compensating, gray "0 dB" when the voice is already at level, "—" when the module is not running.
 
 | Control | Range | Default | Description |
 |---------|-------|---------|-------------|

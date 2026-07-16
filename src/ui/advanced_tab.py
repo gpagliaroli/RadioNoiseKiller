@@ -88,11 +88,14 @@ class AdvancedAudioTab(QWidget):
         for s in (self._s_agc_target, self._s_agc_max_gain,
                   self._s_agc_attack, self._s_agc_release):
             s.set_enabled(custom)
+        # El nivelador requiere el cancelador activo (su VAD vive ahí — invariante 2)
+        self._s_leveler_max.set_enabled(dsp.noise_enabled and dsp.voice_leveler_enabled)
 
     def _build_ui(self) -> None:
         layout = _make_scroll_layout(self)
         layout.addWidget(self._build_audio_group())
         layout.addWidget(self._build_agc_group())
+        layout.addWidget(self._build_leveler_group())
         layout.addWidget(self._build_dsp_group())
         layout.addWidget(self._build_voice_group())
         layout.addWidget(self._build_exciter_group())
@@ -182,6 +185,33 @@ class AdvancedAudioTab(QWidget):
         self._s_agc_release.valueChanged.connect(self._pipeline.set_agc_release)
         layout.addWidget(self._s_agc_release)
         layout.addWidget(_note(tr("  ↳ Cuán rápido recupera ganancia al caer la señal. Lento=estable en QSB, rápido=sigue el fading.")))
+        return group
+
+    def _build_leveler_group(self) -> QGroupBox:
+        group = QGroupBox(tr("Nivelador de voz  (activar en Módulos Activos)"))
+        layout = QVBoxLayout(group)
+
+        act_row = QHBoxLayout()
+        act_row.addWidget(QLabel(tr("Actividad:")))
+        self._lbl_leveler_act = QLabel("—")
+        self._lbl_leveler_act.setStyleSheet("color: #888;")
+        act_row.addWidget(self._lbl_leveler_act)
+        act_row.addStretch()
+        layout.addLayout(act_row)
+
+        self._s_leveler_max = SliderRow(
+            tr("Ganancia máxima:"),
+            min_val=0.0, max_val=20.0,
+            default=_DSP_DEF.voice_leveler_max_db,
+            step=1.0, unit="dB", fmt="{:.0f}",
+        )
+        self._s_leveler_max._update_label = lambda v: self._s_leveler_max._val_lbl.setText(
+            f"+{v:.0f} dB  ({tr('suave') if v < 7 else tr('normal') if v < 14 else tr('fuerte')})"
+        )
+        self._s_leveler_max._val_lbl.setFixedWidth(110)
+        self._s_leveler_max.valueChanged.connect(self._pipeline.set_voice_leveler_max_db)
+        layout.addWidget(self._s_leveler_max)
+        layout.addWidget(_note(tr("  ↳ Tope de compensación para voz débil. Alto=iguala más las señales, pero levanta también el ruido que acompaña a la voz débil.")))
         return group
 
     def _build_dsp_group(self) -> QGroupBox:
@@ -391,6 +421,7 @@ class AdvancedAudioTab(QWidget):
         self._s_agc_max_gain.set_value(cfg.agc_max_gain_db)
         self._s_agc_attack.set_value(cfg.agc_attack_ms)
         self._s_agc_release.set_value(cfg.agc_release_ms)
+        self._s_leveler_max.set_value(cfg.voice_leveler_max_db)
         self._s_presence_freq.set_value(cfg.presence_freq)
         self._s_presence.set_value(cfg.presence_db)
         self._s_presence_q.set_value(cfg.presence_q)
@@ -671,7 +702,6 @@ class AdvancedCancellerTab(QWidget):
             s.set_enabled(noise and dsp.perceptual_floor_enabled)
         self._s_post_filter.set_enabled(noise and dsp.post_filter_enabled)
         self._s_pitch_strength.set_enabled(noise and dsp.pitch_enhance_enabled)
-        self._s_leveler_max.set_enabled(noise and dsp.voice_leveler_enabled)
 
     def _build_ui(self) -> None:
         layout = _make_scroll_layout(self)
@@ -680,7 +710,6 @@ class AdvancedCancellerTab(QWidget):
         layout.addWidget(self._build_perceptual_floor_group())
         layout.addWidget(self._build_post_filter_group())
         layout.addWidget(self._build_pitch_group())
-        layout.addWidget(self._build_leveler_group())
         layout.addWidget(_reset_button_widget(self._reset_defaults))
         layout.addStretch()
 
@@ -964,25 +993,6 @@ class AdvancedCancellerTab(QWidget):
         layout.addWidget(_note(tr("  ↳ Cuánto eleva la probabilidad de voz en bins de armónicos. 70%=recomendado.")))
         return group
 
-    def _build_leveler_group(self) -> QGroupBox:
-        group = QGroupBox(tr("Nivelador de voz  (activar en Módulos Activos)"))
-        layout = QVBoxLayout(group)
-
-        self._s_leveler_max = SliderRow(
-            tr("Ganancia máxima:"),
-            min_val=0.0, max_val=20.0,
-            default=_DSP_DEF.voice_leveler_max_db,
-            step=1.0, unit="dB", fmt="{:.0f}",
-        )
-        self._s_leveler_max._update_label = lambda v: self._s_leveler_max._val_lbl.setText(
-            f"+{v:.0f} dB  ({tr('suave') if v < 7 else tr('normal') if v < 14 else tr('fuerte')})"
-        )
-        self._s_leveler_max._val_lbl.setFixedWidth(110)
-        self._s_leveler_max.valueChanged.connect(self._pipeline.set_voice_leveler_max_db)
-        layout.addWidget(self._s_leveler_max)
-        layout.addWidget(_note(tr("  ↳ Tope de compensación para voz débil. Alto=iguala más las señales, pero levanta también el ruido que acompaña a la voz débil.")))
-        return group
-
     # ------------------------------------------------------------------
     # Stats en tiempo real
     # ------------------------------------------------------------------
@@ -1117,7 +1127,6 @@ class AdvancedCancellerTab(QWidget):
         self._s_pf_rolloff_depth.set_value(cfg.perceptual_floor_rolloff_depth)
         self._s_post_filter.set_value(cfg.post_filter_strength)
         self._s_pitch_strength.set_value(cfg.pitch_enhance_strength)
-        self._s_leveler_max.set_value(cfg.voice_leveler_max_db)
 
     def _reset_defaults(self) -> None:
         defaults = DSPConfig()
