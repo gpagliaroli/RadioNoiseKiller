@@ -285,7 +285,7 @@ En bundle: junto al `.exe` / `.bin`
 | `tests/test_devices.py` | Enumeración y deduplicación de dispositivos |
 | `tests/test_hostapis.py` | Listado completo por API (diagnóstico) |
 | `tests/test_dsp.py` | BandpassFilter, GainLimiter (curva soft-knee, carry entre chunks), LevelMeter |
-| `tests/test_pipeline.py` | Latencia y bypass con config default (no ejercita los módulos opcionales) |
+| `tests/test_pipeline.py` | Latencia y bypass con config default; supresor de impulsos headless (ON suprime y cuenta hits, OFF control negativo — el impulso pasa) |
 | `tests/test_presets.py` | `_capture()` cubre DSPConfig/GainConfig, roundtrips, rename/delete |
 | `tests/test_noise_vad.py` | VAD del squelch (ruido fluctuante, voz armónica, release AGC), cuarentena MCRA, clamps de fading. **Validar detectores con ruido fluctuante y voz con envolvente — el gaussiano estacionario da falsos OK** |
 | `tests/test_integration.py` | Pipeline headless (`start(headless=True)`) con TODOS los módulos activos: warmup MCRA, ciclo squelch, cambios de modo en caliente, cambio de block size con reinicio |
