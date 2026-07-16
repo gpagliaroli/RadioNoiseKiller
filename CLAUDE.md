@@ -612,6 +612,11 @@ Cambios v1.6:
   branch de error de `start()` (el disable va después del start exitoso).
 
 Cambios v1.7 (pendiente de release):
+- UX: ancho de ventana por defecto 800→960 (a 800 las filas de sliders de Avanzadas quedan
+  apretadas) y **el ancho elegido por el usuario se persiste** (`WindowConfig.w`, guardado en
+  closeEvent como x/y). Clamp en `_restore_or_center`: [mínimo 800, min(máximo 1100,
+  pantalla−40)] — en pantallas ≤840 px de ancho sigue abriendo al mínimo (verificado offscreen
+  con la pantalla falsa de 800px; el caso ancho es aritmética directa).
 - UX: títulos de los grupos de Avanzadas alineados con los nombres de los checkboxes de
   "Módulos activos" (pedido del usuario — el nombre distinto dificultaba encontrar los
   controles): "Filtros DSP"→"Filtro de paso de banda (pre y post)", "Voz"→"EQ Voz (presencia

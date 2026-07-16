@@ -1142,7 +1142,13 @@ class MainWindow(QMainWindow):
         # tabs/botón/status. Si el monitor es más bajo, se recorta y aparece
         # el scroll — la app siempre entra en pantalla.
         desired_h = self._main_tab_inner.sizeHint().height() + 130
-        self.resize(self.minimumWidth(), min(desired_h, screen.height() - 60))
+        # Ancho: el guardado por el usuario, o 960 por defecto (a 800 —el
+        # mínimo— las filas de sliders de Avanzadas quedan apretadas).
+        # Clampeado a [mínimo, máximo] y a la pantalla.
+        width = self._config.window.w if self._config.window.w else 960
+        width = max(self.minimumWidth(),
+                    min(width, self.maximumWidth(), screen.width() - 40))
+        self.resize(width, min(desired_h, screen.height() - 60))
         if self._config.window.x is not None:
             # Clamp dentro de la pantalla de referencia: la ventana COMPLETA
             # debe quedar visible (clampear solo el borde superior dejaba el
@@ -1178,6 +1184,7 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event) -> None:
         self._config.window.x = self.pos().x()
         self._config.window.y = self.pos().y()
+        self._config.window.w = self.width()
         self._pipeline.stop()
         self._save_settings()
         event.accept()
