@@ -661,6 +661,7 @@ At the bottom of the group, the **"⏺ Record"** button saves what you are heari
 - The **"include unprocessed input"** checkbox also records a second file (`..._entrada.wav`) with the signal as it arrives from the radio — ideal for before/after comparison or documenting what the application does. Applies when the next recording starts.
 - Stopping processing with a recording in progress closes the file cleanly and automatically; the status bar shows the saved duration.
 - Approximate size: ~5.6 MB per minute per file. Writing runs on a separate thread: recording does not affect audio latency or smoothness.
+- **Bypass** is recorded too: the recording always captures "what you hear", so toggling Bypass during a recording produces a **before/after in the same file** — ideal for demos of what the application does.
 
 ---
 

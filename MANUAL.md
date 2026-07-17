@@ -661,6 +661,7 @@ Al pie del grupo, el botón **"⏺ Grabar"** guarda lo que estás escuchando (la
 - La casilla **"incluir entrada sin procesar"** graba además un segundo archivo (`..._entrada.wav`) con la señal tal como llega de la radio — ideal para comparar el antes/después o documentar el efecto de la aplicación. Se aplica al iniciar la próxima grabación.
 - Al detener el procesamiento con una grabación en curso, el archivo se cierra limpio automáticamente; la barra de estado muestra la duración guardada.
 - Tamaño aproximado: ~5,6 MB por minuto por archivo. La escritura corre en un hilo separado: grabar no afecta la latencia ni la fluidez del audio.
+- El **Bypass** también se graba: la grabación captura siempre "lo que se escucha", así que alternar Bypass durante una grabación produce un **antes/después en el mismo archivo** — ideal para demos del efecto de la aplicación.
 
 ---
 

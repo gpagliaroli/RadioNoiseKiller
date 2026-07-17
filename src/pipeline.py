@@ -943,6 +943,16 @@ class ProcessingPipeline:
         if self._bypass:
             self._db_out = self._db_in
             self._latency_ms = 0.0
+            # La grabación captura "lo que se escucha": en bypass, la señal
+            # cruda va a ambos archivos (sin esto, la grabación quedaba PAUSADA
+            # durante el bypass — el feed vivía solo en el hilo procesador).
+            # feed() es no-bloqueante: seguro desde el callback de audio.
+            # Bonus: alternar Bypass durante una grabación produce un
+            # antes/después en el mismo archivo.
+            if self._recorder.recording:
+                self._recorder.feed(
+                    audio_in,
+                    audio_in if self._recorder.wants_raw else None)
             return audio_in
 
         hop = self._config.audio.block_size

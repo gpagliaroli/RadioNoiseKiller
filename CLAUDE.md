@@ -625,7 +625,12 @@ Cambios v1.7 (pendiente de release):
   procesamiento (en la UI ANTES de pipeline.stop() para conservar la duración; pipeline.stop()
   también cierra por las dudas). `record_raw_input` en AudioConfig (settings, NO presets).
   Test en test_pipeline (graba 50 frames headless → 2 WAV con 24000 muestras y formato
-  correcto). OJO hook ruff: al agregar un import en un Edit y su uso en el SIGUIENTE, el hook
+  correcto). **Bypass durante la grabación** (preguntado por el usuario): el branch de bypass
+  de `_process` también alimenta al recorder (feed no-bloqueante, seguro desde el callback) —
+  sin eso la grabación quedaba PAUSADA en bypass (el feed vivía solo en el hilo procesador).
+  Alternar Bypass grabando = antes/después en el mismo archivo (documentado como feature).
+  Nota: al des/activar bypass puede haber unos frames fuera de orden en la grabación (cola del
+  procesador drenando mientras el callback ya alimenta) — inaudible, aceptado. OJO hook ruff: al agregar un import en un Edit y su uso en el SIGUIENTE, el hook
   borra el import como no-usado entre ambos — agregar import y uso en el mismo Edit, o re-agregar.
 - Técnicas de operación del usuario documentadas en manuales: **calibrar la Intensidad con el
   Preview** (Cap. 7 — subir Intensidad mientras lo eliminado sea solo ruido; donde se filtra
