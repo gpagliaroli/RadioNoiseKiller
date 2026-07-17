@@ -629,6 +629,7 @@ Cambios v1.7 (pendiente de release):
   de `_process` también alimenta al recorder (feed no-bloqueante, seguro desde el callback) —
   sin eso la grabación quedaba PAUSADA en bypass (el feed vivía solo en el hilo procesador).
   Alternar Bypass grabando = antes/después en el mismo archivo (documentado como feature).
+  **Grabación completa validada por el usuario en el aire** (incluido el bypass grabado).
   Nota: al des/activar bypass puede haber unos frames fuera de orden en la grabación (cola del
   procesador drenando mientras el callback ya alimenta) — inaudible, aceptado. OJO hook ruff: al agregar un import en un Edit y su uso en el SIGUIENTE, el hook
   borra el import como no-usado entre ambos — agregar import y uso en el mismo Edit, o re-agregar.
