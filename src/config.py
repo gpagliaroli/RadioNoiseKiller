@@ -105,11 +105,13 @@ class AppConfig:
     gain:   GainConfig   = field(default_factory=GainConfig)
     window: WindowConfig = field(default_factory=WindowConfig)
     last_preset: str = ""   # nombre del último preset cargado/guardado (solo informativo)
+    last_noise_profile: str = ""  # último perfil de ruido cargado/guardado (auto-recarga)
     language: str = "es"    # idioma de la UI ("es"/"en"); aplicar requiere reinicio
 
     def save(self, path: str) -> None:
         data = {
             "last_preset": self.last_preset,
+            "last_noise_profile": self.last_noise_profile,
             "language": self.language,
             "audio": {
                 "block_size": self.audio.block_size,
@@ -201,6 +203,7 @@ class AppConfig:
             return
 
         self.last_preset = str(data.get("last_preset", ""))
+        self.last_noise_profile = str(data.get("last_noise_profile", ""))
         _lang = data.get("language", self.language)
         self.language = _lang if _lang in ("es", "en") else "es"
 

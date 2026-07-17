@@ -612,6 +612,20 @@ Cambios v1.6:
   branch de error de `start()` (el disable va después del start exitoso).
 
 Cambios v1.7 (pendiente de release):
+- **Perfiles de ruido nombrados** (backlog v1.7): `NoiseProfileManager` (`src/noise_profiles.py`,
+  espejo de PresetManager) guarda/carga/renombra perfiles como JSON en `PerfilesRuido/` (junto
+  al exe, gitignoreada). El perfil serializa `noise_mag` + `fft_n` + `learned_frames`.
+  `NoiseProfiler.get_profile()/set_profile()` — **set_profile interpola en frecuencia si el
+  fft_n de origen ≠ actual** (cambió el block size) y escala la magnitud por `fft_n_dst/fft_n_src`
+  (la energía por bin crece con la ventana). `pipeline.set_noise_profile_data()` fuerza modo
+  estático (un perfil con nombre solo aplica ahí). UI: botones "💾 Guardar perfil..." (QInputDialog
+  + confirmación de reemplazo) y "📁 Perfiles..." (QInputDialog.getItem para cargar), bajo
+  Aprender/Borrar, visibles solo en estático. **Auto-recarga**: `last_noise_profile` en AppConfig;
+  `_auto_load_noise_profile()` en `__init__` (tras `_apply_loaded_config`) recarga el último y
+  devuelve el nombre para el mensaje de inicio. Test permanente `test_noise_profiles.py` (aprender
+  headless → guardar → cargar en pipeline nuevo → interpolar 481↔961 bins → rename/delete).
+  OJO: los tests headless que aprenden perfil necesitan `time.sleep` tras los `_process` (el hilo
+  procesador consume la cola async — mismo detalle que el test de grabación).
 - **Grabación a WAV** (backlog v1.7 #1): botón "⏺ Grabar" al pie de Niveles y Ganancia +
   contador REC mm:ss + checkbox "incluir entrada sin procesar" (2do WAV `_entrada` para el
   antes/después; la decisión se fija al INICIAR — `wants_raw` en el recorder — para que

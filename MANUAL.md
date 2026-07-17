@@ -346,6 +346,18 @@ Durante el aprendizaje la aplicación toma dos medidas automáticas para captura
 
 Ambas medidas se liberan solas al pulsar ⏹ Detener (o al cancelar el aprendizaje).
 
+**Perfiles de ruido con nombre** (guardar y reutilizar)
+
+Aprender el perfil cada vez que se abre la aplicación es tedioso. Con los botones **"💾 Guardar perfil..."** y **"📁 Perfiles..."** (bajo Aprender/Borrar, solo en modo estático) se puede guardar el perfil actual con un nombre y volver a cargarlo cuando haga falta:
+
+1. Aprender un perfil como de costumbre (o cargar uno guardado y reajustar).
+2. **💾 Guardar perfil...** → escribir un nombre descriptivo ("40m casa", "20m campo", "ruido notebook").
+3. En otra sesión, **📁 Perfiles...** → elegir el perfil de la lista para cargarlo al instante, sin volver a aprenderlo.
+
+Los perfiles se guardan como archivos `.json` en la carpeta **`PerfilesRuido/`** junto al ejecutable (se pueden respaldar o copiar entre equipos). Al cargar un perfil, el cancelador pasa automáticamente a modo estático.
+
+**Auto-recarga:** el último perfil guardado o cargado se recuerda entre sesiones — al abrir la aplicación se aplica solo (la barra de estado lo confirma), así se empieza a operar con una referencia sin re-aprender nada. Si el perfil fue aprendido con otro tamaño de bloque, se adapta automáticamente por interpolación.
+
 **Adaptativo (MCRA)** (modo automático)
 El algoritmo estima el piso de ruido continuamente en tiempo real, sin necesidad de aprendizaje manual. Se calibra en ~200ms al activar el procesamiento y se adapta automáticamente cuando cambian las condiciones de propagación, aparece QRM o varía el ruido de banda.
 

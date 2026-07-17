@@ -346,6 +346,18 @@ During learning the application takes two automatic measures to capture a faithf
 
 Both measures are released automatically when you press ⏹ Stop (or cancel learning).
 
+**Named noise profiles** (save and reuse)
+
+Learning the profile every time you open the application is tedious. With the **"💾 Save profile..."** and **"📁 Profiles..."** buttons (under Learn/Clear, static mode only) you can save the current profile under a name and load it again when needed:
+
+1. Learn a profile as usual (or load a saved one and re-adjust).
+2. **💾 Save profile...** → type a descriptive name ("40m home", "20m field", "laptop noise").
+3. In another session, **📁 Profiles...** → pick the profile from the list to load it instantly, without learning it again.
+
+Profiles are stored as `.json` files in the **`PerfilesRuido/`** folder next to the executable (they can be backed up or copied between machines). Loading a profile automatically switches the canceller to static mode.
+
+**Auto-reload:** the last profile saved or loaded is remembered across sessions — when you open the application it is applied automatically (the status bar confirms it), so you start operating with a reference without re-learning anything. If the profile was learned with a different block size, it adapts automatically by interpolation.
+
 **Adaptive (MCRA)** (automatic mode)
 The algorithm estimates the noise floor continuously in real time, with no manual learning. It calibrates in ~200 ms when processing starts and adapts automatically when propagation conditions change, QRM appears or the band noise varies.
 

@@ -423,6 +423,17 @@ class ProcessingPipeline:
     def clear_noise_profile(self) -> None:
         self._noise_profiler.clear_profile()
 
+    def get_noise_profile_data(self) -> "dict | None":
+        """Perfil estático actual serializable (para NoiseProfileManager)."""
+        return self._noise_profiler.get_profile()
+
+    def set_noise_profile_data(self, data: dict) -> None:
+        """Aplica un perfil guardado (interpola si cambió el block size) y
+        pasa el cancelador a modo estático — un perfil con nombre solo tiene
+        sentido ahí."""
+        self.set_noise_mode("static")
+        self._noise_profiler.set_profile(data)
+
     def set_noise_alpha(self, alpha: float) -> None:
         self._config.dsp.noise_alpha = float(alpha)
         self._noise_profiler.set_alpha(alpha)

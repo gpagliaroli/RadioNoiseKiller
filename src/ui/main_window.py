@@ -2,7 +2,7 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QComboBox, QSlider, QPushButton, QStatusBar,
     QGroupBox, QCheckBox, QTabWidget, QApplication,
-    QScrollArea, QFrame,
+    QScrollArea, QFrame, QInputDialog, QMessageBox,
 )
 from PySide6.QtCore import Qt, QTimer, QPoint
 from PySide6.QtGui import QFont
@@ -17,7 +17,8 @@ from ui.presets_tab import PresetsTab
 from ui.slider_row import SliderRow
 from ui.spectrum_widget import SpectrumWidget
 from presets import PresetManager
-from utils import settings_path, presets_dir
+from noise_profiles import NoiseProfileManager
+from utils import settings_path, presets_dir, noise_profiles_dir
 
 
 class MainWindow(QMainWindow):
@@ -30,6 +31,7 @@ class MainWindow(QMainWindow):
 
         self._pipeline = ProcessingPipeline(self._config)
         self._preset_manager = PresetManager(presets_dir())
+        self._noise_profile_manager = NoiseProfileManager(noise_profiles_dir())
 
         self._level_timer = QTimer()
         self._level_timer.setInterval(33)
@@ -46,9 +48,14 @@ class MainWindow(QMainWindow):
         self._saved_output_device = self._config.audio.output_device
         self._populate_devices()
         self._apply_loaded_config()
+        loaded_profile = self._auto_load_noise_profile()
 
         self._btn_start.setEnabled(True)
-        self._status_bar.showMessage(tr("Listo. Presiona ACTIVAR para iniciar."))
+        ready = tr("Listo. Presiona ACTIVAR para iniciar.")
+        if loaded_profile:
+            ready = tr("Perfil de ruido \"{name}\" cargado. Listo para ACTIVAR.").format(
+                name=loaded_profile)
+        self._status_bar.showMessage(ready)
         self._restore_or_center()
 
     # ------------------------------------------------------------------
@@ -359,6 +366,21 @@ class MainWindow(QMainWindow):
         self._btn_clear_noise.clicked.connect(self._on_clear_noise_profile)
         btn_row.addWidget(self._btn_clear_noise)
         layout.addLayout(btn_row)
+
+        # Perfiles de ruido nombrados (guardar/cargar perfiles de referencia)
+        prof_row = QHBoxLayout()
+        self._btn_save_profile = QPushButton(tr("💾  Guardar perfil..."))
+        self._btn_save_profile.setToolTip(
+            tr("Guarda el perfil de ruido actual con un nombre, para reutilizarlo\n"
+               "sin volver a aprenderlo (p. ej. \"40m casa\", \"20m campo\").")
+        )
+        self._btn_save_profile.clicked.connect(self._on_save_noise_profile)
+        prof_row.addWidget(self._btn_save_profile)
+        self._btn_load_profile = QPushButton(tr("📁  Perfiles..."))
+        self._btn_load_profile.setToolTip(tr("Cargar, renombrar o eliminar perfiles de ruido guardados."))
+        self._btn_load_profile.clicked.connect(self._on_manage_noise_profiles)
+        prof_row.addWidget(self._btn_load_profile)
+        layout.addLayout(prof_row)
 
         self._combo_noise_mode.currentIndexChanged.connect(self._on_noise_mode_changed)
 
@@ -942,6 +964,12 @@ class MainWindow(QMainWindow):
 
         self._btn_learn.setVisible(is_static)
         self._btn_clear_noise.setVisible(is_static)
+        self._btn_save_profile.setVisible(is_static)
+        self._btn_load_profile.setVisible(is_static)
+        # Guardar: solo con perfil presente. Cargar: siempre (fuerza modo estático).
+        self._btn_save_profile.setEnabled(is_static and has_prof and not learning)
+        self._btn_load_profile.setEnabled(is_static and not learning
+                                          and bool(self._noise_profile_manager.list_names()))
 
         if not is_static:
             return
@@ -1081,6 +1109,85 @@ class MainWindow(QMainWindow):
         self._pipeline.clear_noise_profile()
         self._spectrum_widget.clear_floor()
         self._refresh_noise_profile_ui()
+
+    # ------------------------------------------------------------------
+    # Perfiles de ruido nombrados
+    # ------------------------------------------------------------------
+
+    def _auto_load_noise_profile(self) -> "str | None":
+        """Al arrancar: recargar el último perfil usado si sigue existiendo.
+        Devuelve el nombre cargado (para el mensaje de inicio), o None."""
+        name = self._config.last_noise_profile
+        if not name or not self._noise_profile_manager.exists(name):
+            return None
+        try:
+            data = self._noise_profile_manager.load(name)
+            self._pipeline.set_noise_profile_data(data)
+        except Exception:
+            return None
+        for i in range(self._combo_noise_mode.count()):
+            if self._combo_noise_mode.itemData(i) == "static":
+                self._combo_noise_mode.blockSignals(True)
+                self._combo_noise_mode.setCurrentIndex(i)
+                self._combo_noise_mode.blockSignals(False)
+                break
+        self._config.dsp.noise_mode = "static"
+        self._refresh_noise_profile_ui()
+        return name
+
+    def _on_save_noise_profile(self) -> None:
+        data = self._pipeline.get_noise_profile_data()
+        if data is None:
+            return
+        suggested = self._config.last_noise_profile or ""
+        name, ok = QInputDialog.getText(
+            self, tr("Guardar perfil de ruido"), tr("Nombre del perfil:"), text=suggested)
+        name = name.strip()
+        if not ok or not name:
+            return
+        if self._noise_profile_manager.exists(name):
+            ans = QMessageBox.question(
+                self, tr("Confirmar reemplazo"),
+                tr("Ya existe un perfil llamado '{name}'.\n\nDeseas reemplazarlo?").format(name=name))
+            if ans != QMessageBox.StandardButton.Yes:
+                return
+        self._noise_profile_manager.save(name, data)
+        self._config.last_noise_profile = name
+        self._schedule_save()
+        self._refresh_noise_profile_ui()
+        self._status_bar.showMessage(
+            tr("Perfil de ruido \"{name}\" guardado.").format(name=name))
+
+    def _on_manage_noise_profiles(self) -> None:
+        names = self._noise_profile_manager.list_names()
+        if not names:
+            return
+        current = self._config.last_noise_profile
+        idx = names.index(current) if current in names else 0
+        name, ok = QInputDialog.getItem(
+            self, tr("Perfiles de ruido"), tr("Cargar perfil:"), names, idx, False)
+        if not ok or not name:
+            return
+        try:
+            data = self._noise_profile_manager.load(name)
+            self._pipeline.set_noise_profile_data(data)
+        except Exception as e:
+            QMessageBox.warning(self, tr("Error al cargar el perfil"), str(e))
+            return
+        # Forzar modo estático en la UI (set_noise_profile_data ya lo hizo en el pipeline)
+        for i in range(self._combo_noise_mode.count()):
+            if self._combo_noise_mode.itemData(i) == "static":
+                self._combo_noise_mode.blockSignals(True)
+                self._combo_noise_mode.setCurrentIndex(i)
+                self._combo_noise_mode.blockSignals(False)
+                break
+        self._config.dsp.noise_mode = "static"
+        self._config.last_noise_profile = name
+        self._spectrum_widget.clear_floor()
+        self._refresh_noise_profile_ui()
+        self._schedule_save()
+        self._status_bar.showMessage(
+            tr("Perfil de ruido \"{name}\" cargado.").format(name=name))
 
     def _on_toggle_processing(self, checked: bool) -> None:
         if checked:

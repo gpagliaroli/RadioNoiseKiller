@@ -153,6 +153,25 @@ CATALOG = {
         "  adapts to band changes without user intervention.",
     "⏺  Aprender ruido": "⏺  Learn noise",
     "Borrar perfil": "Clear profile",
+    "💾  Guardar perfil...": "💾  Save profile...",
+    "Guarda el perfil de ruido actual con un nombre, para reutilizarlo\n"
+    "sin volver a aprenderlo (p. ej. \"40m casa\", \"20m campo\").":
+        "Saves the current noise profile under a name, to reuse it\n"
+        "without learning it again (e.g. \"40m home\", \"20m field\").",
+    "📁  Perfiles...": "📁  Profiles...",
+    "Cargar, renombrar o eliminar perfiles de ruido guardados.":
+        "Load, rename or delete saved noise profiles.",
+    "Guardar perfil de ruido": "Save noise profile",
+    "Nombre del perfil:": "Profile name:",
+    "Ya existe un perfil llamado '{name}'.\n\nDeseas reemplazarlo?":
+        "A profile named '{name}' already exists.\n\nReplace it?",
+    "Perfil de ruido \"{name}\" guardado.": "Noise profile \"{name}\" saved.",
+    "Perfiles de ruido": "Noise profiles",
+    "Cargar perfil:": "Load profile:",
+    "Error al cargar el perfil": "Error loading the profile",
+    "Perfil de ruido \"{name}\" cargado.": "Noise profile \"{name}\" loaded.",
+    "Perfil de ruido \"{name}\" cargado. Listo para ACTIVAR.":
+        "Noise profile \"{name}\" loaded. Ready to START.",
     "Intensidad:": "Intensity:",
     "Reducción activa:": "Active reduction:",
     "Preview: escuchar ruido eliminado": "Preview: listen to removed noise",

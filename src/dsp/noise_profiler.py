@@ -898,6 +898,43 @@ class NoiseProfiler:
         """f0 detectado (Hz) por el refuerzo de pitch SSB, o None si no hay detección activa."""
         return self._pitch_f0
 
+    def get_profile(self) -> "dict | None":
+        """Perfil estático actual como dict serializable (para guardarlo con
+        nombre). None si no hay perfil aprendido."""
+        if self._noise_mag is None:
+            return None
+        return {
+            "sample_rate": 48000,
+            "fft_n": self._fft_n,
+            "learned_frames": self._n_frames,
+            "noise_mag": [float(v) for v in self._noise_mag],
+        }
+
+    def set_profile(self, data: dict) -> None:
+        """Aplica un perfil guardado. Si el fft_n de origen difiere del actual
+        (cambió el tamaño de bloque), interpola la curva en frecuencia.
+        Resetea el estado DD/VAD igual que al terminar un aprendizaje."""
+        mag = np.asarray(data["noise_mag"], dtype=np.float32)
+        src_fft_n = int(data.get("fft_n", (len(mag) - 1) * 2))
+        if len(mag) != self._nb:
+            src_freqs = np.arange(len(mag), dtype=np.float64) * (48000.0 / src_fft_n)
+            dst_freqs = np.arange(self._nb, dtype=np.float64) * (48000.0 / self._fft_n)
+            mag = np.interp(dst_freqs, src_freqs, mag.astype(np.float64))
+            # La magnitud por bin escala con el tamaño de la FFT (misma señal,
+            # ventana más larga = más energía por bin): compensar el cambio
+            mag = (mag * (self._fft_n / src_fft_n)).astype(np.float32)
+        self._noise_mag = mag.astype(np.float32)
+        # Duración original expresada en frames del hop actual (para el label)
+        src_hop = src_fft_n // 2
+        self._n_frames = max(1, round(int(data.get("learned_frames", 0))
+                                      * src_hop / self._hop))
+        self._is_learning   = False
+        self._gain_prev     = None
+        self._snr_post_prev = None
+        self._voice_prob    = 0.0
+        self._voice_prob_sq = 0.0
+        self._spec_conf     = 0.0
+
     @property
     def has_profile(self) -> bool:
         if self._mode == "mcra":
