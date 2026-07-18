@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QGroupBox, QLabel,
     QScrollArea, QPushButton, QHBoxLayout, QFrame, QCheckBox,
 )
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, Signal
 from config import AppConfig, RadioMode, AudioConfig, DSPConfig
 from pipeline import ProcessingPipeline
 from ui.slider_row import SliderRow
@@ -11,6 +11,17 @@ from i18n import tr
 
 _BLOCK_SIZES    = [240, 480, 960, 1920]
 _FILTER_ORDERS  = [2, 4, 6, 8]
+
+
+def _wire_change_notifications(widget) -> None:
+    """Conecta todos los SliderRow y checkboxes del widget a widget.changed,
+    para que MainWindow marque el preset como '(modificado)' y agende el guardado
+    cuando se toca un control de una pestaña Avanzada (esos sliders conectan
+    directo al pipeline, sin pasar por _schedule_save)."""
+    for sr in widget.findChildren(SliderRow):
+        sr.valueChanged.connect(lambda *_: widget.changed.emit())
+    for cb in widget.findChildren(QCheckBox):
+        cb.toggled.connect(lambda *_: widget.changed.emit())
 
 # Valores de fábrica: el "default" de cada SliderRow (menú click derecho) debe ser
 # siempre el recomendado, NO el valor persistido de la sesión anterior.
@@ -61,6 +72,8 @@ def _note(text: str) -> QLabel:
 
 class AdvancedAudioTab(QWidget):
 
+    changed = Signal()  # un control cambió → MainWindow marca "(modificado)" y guarda
+
     def __init__(self, config: AppConfig, pipeline: ProcessingPipeline, parent=None):
         super().__init__(parent)
         self._config = config
@@ -68,6 +81,7 @@ class AdvancedAudioTab(QWidget):
         self._build_ui()
         self._load_values()
         self.refresh_enabled_states()
+        _wire_change_notifications(self)
 
     def refresh_enabled_states(self) -> None:
         """Habilita/deshabilita controles según el estado de los módulos en Módulos Activos."""
@@ -510,6 +524,8 @@ class AdvancedAudioTab(QWidget):
 
 class AdvancedImpulseTab(QWidget):
 
+    changed = Signal()  # un control cambió → MainWindow marca "(modificado)" y guarda
+
     def __init__(self, config: AppConfig, pipeline: ProcessingPipeline, parent=None):
         super().__init__(parent)
         self._config = config
@@ -517,6 +533,7 @@ class AdvancedImpulseTab(QWidget):
         self._build_ui()
         self._load_values()
         self.refresh_enabled_states()
+        _wire_change_notifications(self)
 
     def refresh_enabled_states(self) -> None:
         """Habilita/deshabilita controles según el estado de los módulos en Módulos Activos."""
@@ -678,6 +695,8 @@ class AdvancedImpulseTab(QWidget):
 
 class AdvancedCancellerTab(QWidget):
 
+    changed = Signal()  # un control cambió → MainWindow marca "(modificado)" y guarda
+
     def __init__(self, config: AppConfig, pipeline: ProcessingPipeline, parent=None):
         super().__init__(parent)
         self._config = config
@@ -685,6 +704,7 @@ class AdvancedCancellerTab(QWidget):
         self._build_ui()
         self._load_values()
         self.refresh_enabled_states()
+        _wire_change_notifications(self)
 
     def refresh_enabled_states(self) -> None:
         """Habilita/deshabilita controles según el estado de los módulos en Módulos Activos.

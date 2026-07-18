@@ -619,6 +619,16 @@ ambos manuales con los tips acumulados del usuario. El título de la ventana pas
 `_update_window_title()` (versión "v1.7" hardcodeada ahí, no en el `setWindowTitle` del build).
 
 Cambios post-v1.7 (pendiente de release):
+- **Los cambios en pestañas Avanzadas ahora marcan "(modificado)"** (reportado por el usuario:
+  "(modificado)" nunca aparecía). Los sliders/checkboxes de las 3 tabs Avanzadas conectan **directo**
+  a `pipeline.set_X`, sin pasar por `_schedule_save` de MainWindow → sus cambios no marcaban el preset
+  como modificado NI agendaban el guardado de settings.json durante la sesión (solo se guardaban en
+  `closeEvent`). Fix: cada tab Avanzada expone una señal `changed` (auto-cableada a todos sus
+  `SliderRow.valueChanged` y `QCheckBox.toggled` vía `_wire_change_notifications()` en `advanced_tab.py`),
+  que MainWindow conecta a `_schedule_save`. El `_load_values`/`reload` bloquean señales, así que
+  cargar un preset no dispara falsos "(modificado)". **Regla de UX: todo control que muta config
+  (aunque conecte directo al pipeline) debe notificar a MainWindow para el guardado + indicador.**
+  Test en test_ui.py. (Ojo hook ruff: agregar `Signal` al import y su uso en el MISMO Edit, o re-agregar.)
 - **"(modificado)" del título instantáneo** (reportado por el usuario: tardaba en desaparecer tras
   sobrescribir, con el audio procesando). Causa probable: `_update_window_title()` hacía una lectura
   de disco (`matches()` lee el JSON del preset) en cada llamada, compitiendo por el hilo de GUI bajo

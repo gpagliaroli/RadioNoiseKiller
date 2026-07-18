@@ -271,6 +271,38 @@ def test_overwrite_clears_modified_in_title():
         w._preset_manager.delete(tmp)
 
 
+def test_advanced_change_marks_modified():
+    """Mover un slider de una pestaña Avanzada debe marcar el preset como
+    '(modificado)' (esos sliders conectan directo al pipeline; sin la señal
+    'changed' → _schedule_save el título nunca se actualizaba)."""
+    w = _win()
+    pt = w._presets_tab
+    tmp = "___test_adv_mod___"
+    modificado = tr("{name}  (modificado)").format(name=tmp)
+    try:
+        w._preset_manager.save(tmp, w._config)
+        pt._refresh_list()
+        pt._select_by_name(tmp)
+        pt._on_load()
+        _app.processEvents()
+        assert modificado not in w.windowTitle(), "tras cargar no debería estar modificado"
+
+        # Cambiar un slider de Avanzada Impulsos (ANF) por su widget
+        cur = w._config.dsp.anf_depth
+        w._adv_impulse_tab._s_anf_depth.set_value(0.95 if cur < 0.9 else 0.1, emit=True)
+        _app.processEvents()
+        assert modificado in w.windowTitle(), \
+            "un cambio en Avanzadas no marcó (modificado)"
+
+        # Recargar el preset debe limpiar (sin falsos positivos por el reload)
+        pt._on_load()
+        _app.processEvents()
+        assert modificado not in w.windowTitle(), "reload no limpió (modificado)"
+        print("Cambio en Avanzadas marca (modificado)     OK")
+    finally:
+        w._preset_manager.delete(tmp)
+
+
 if __name__ == "__main__":
     test_tab_order()
     test_modules_group_moved_to_own_tab()
@@ -282,5 +314,6 @@ if __name__ == "__main__":
     test_refresh_from_config_restores_checkboxes()
     test_window_title_reflects_preset()
     test_overwrite_clears_modified_in_title()
+    test_advanced_change_marks_modified()
     print()
     print("test_ui: OK")

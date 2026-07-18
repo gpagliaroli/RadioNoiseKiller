@@ -88,6 +88,11 @@ class MainWindow(QMainWindow):
         self._adv_audio_tab     = AdvancedAudioTab(self._config, self._pipeline)
         self._adv_impulse_tab   = AdvancedImpulseTab(self._config, self._pipeline)
         self._adv_canceller_tab = AdvancedCancellerTab(self._config, self._pipeline)
+        # Los sliders de Avanzadas conectan directo al pipeline; sin esto sus
+        # cambios no marcan "(modificado)" ni agendan el guardado.
+        self._adv_audio_tab.changed.connect(self._schedule_save)
+        self._adv_impulse_tab.changed.connect(self._schedule_save)
+        self._adv_canceller_tab.changed.connect(self._schedule_save)
         self._tabs.addTab(self._adv_audio_tab,     tr("Avanzada Audio"))
         self._tabs.addTab(self._adv_impulse_tab,   tr("Avanzada Impulsos"))
         self._tabs.addTab(self._adv_canceller_tab, tr("Avanzada Cancelador"))
