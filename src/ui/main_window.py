@@ -63,8 +63,7 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _build_ui(self) -> None:
-        from buildinfo import BUILD_ID
-        self.setWindowTitle(f"RadioNoiseKiller  v1.6  ·  build {BUILD_ID}")
+        self._update_window_title()
         self.setMinimumWidth(800)
         self.setMaximumWidth(1100)
 
@@ -93,7 +92,9 @@ class MainWindow(QMainWindow):
             self._config, self._pipeline, self._preset_manager
         )
         self._presets_tab.preset_loaded.connect(self.refresh_from_config)
+        self._presets_tab.preset_loaded.connect(self._update_window_title)
         self._presets_tab.state_changed.connect(self._schedule_save)
+        self._presets_tab.state_changed.connect(self._update_window_title)
         self._tabs.addTab(self._presets_tab, tr("Presets"))
         self._tabs.currentChanged.connect(self._on_tab_changed)
 
@@ -1376,6 +1377,22 @@ class MainWindow(QMainWindow):
             self._config.save(settings_path())
         except Exception:
             pass
+        # Refrescar el "(modificado)" del título tras la ráfaga de ediciones
+        self._update_window_title()
+
+    def _update_window_title(self) -> None:
+        """Título = app + versión + preset activo (con '(modificado)' si los
+        valores actuales difieren del preset guardado) + build ID."""
+        from buildinfo import BUILD_ID
+        title = "RadioNoiseKiller  v1.6"
+        name = self._config.last_preset
+        if name:
+            if self._preset_manager.matches(name, self._config):
+                title += f"  ·  {name}"
+            else:
+                title += "  ·  " + tr("{name}  (modificado)").format(name=name)
+        title += f"  ·  build {BUILD_ID}"
+        self.setWindowTitle(title)
 
     # ------------------------------------------------------------------
     # Cierre

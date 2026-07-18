@@ -701,6 +701,12 @@ Cambios v1.7 (pendiente de release):
   campos nuevos). **Pendiente: validación en el aire.**
 - **`tests/test_ui.py` permanente** (backlog v1.7): formaliza los tests offscreen de UI que antes
   se hacían a mano cada sesión — la categoría de regresión más frecuente. Ver la tabla de tests.
+- **Preset activo en la barra de título** (pedido del usuario): el título de la ventana muestra el
+  preset activo y "(modificado)" si los valores difieren del guardado —
+  `RadioNoiseKiller  v1.6  ·  Voz natural - SSB  (modificado)  ·  build XYZ`. `_update_window_title()`
+  en `main_window.py` se llama en `_build_ui`, en `preset_loaded`/`state_changed` de PresetsTab, y en
+  `_save_settings` (refresca "(modificado)" tras la ráfaga de ediciones, con el debounce de 800ms).
+  Reusa la clave i18n `"{name}  (modificado)"` y `PresetManager.matches()`. Test en test_ui.py.
 
 Backlog v1.7 (acordado con el usuario tras la revisión de código de julio 2026):
 - ✅ **Grabación a WAV** (hecho, validado en el aire).

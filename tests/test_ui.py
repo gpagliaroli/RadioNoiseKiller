@@ -209,6 +209,35 @@ def test_refresh_from_config_restores_checkboxes():
     print("refresh_from_config restaura checkboxes    OK")
 
 
+# ---------------------------------------------------------------------- #
+# 5. Titulo de la ventana refleja el preset activo                        #
+# ---------------------------------------------------------------------- #
+
+def test_window_title_reflects_preset():
+    """El titulo muestra el preset activo y '(modificado)' si el config difiere."""
+    w = _win()
+
+    w._config.last_preset = ""
+    w._update_window_title()
+    assert "RadioNoiseKiller" in w.windowTitle()
+
+    # Preset activo sin modificar: cargar sus valores en config
+    name = "Voz natural - SSB"
+    if w._preset_manager.exists(name):
+        w._preset_manager.load_into(name, w._config)
+        w._config.last_preset = name
+        w._update_window_title()
+        assert name in w.windowTitle(), "el preset no aparece en el titulo"
+        assert tr("{name}  (modificado)").format(name=name) not in w.windowTitle()
+
+        # Modificar un valor -> '(modificado)'
+        w._config.dsp.noise_alpha = 0.99
+        w._update_window_title()
+        assert tr("{name}  (modificado)").format(name=name) in w.windowTitle(), \
+            "no aparece (modificado) tras editar"
+    print("Titulo refleja preset + (modificado)      OK")
+
+
 if __name__ == "__main__":
     test_tab_order()
     test_modules_group_moved_to_own_tab()
@@ -218,5 +247,6 @@ if __name__ == "__main__":
     test_agc_custom_sliders_gated()
     test_bandpass_out_requires_post_and_independent()
     test_refresh_from_config_restores_checkboxes()
+    test_window_title_reflects_preset()
     print()
     print("test_ui: OK")
