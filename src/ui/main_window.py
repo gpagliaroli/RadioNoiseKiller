@@ -384,6 +384,8 @@ class MainWindow(QMainWindow):
 
         self._combo_noise_mode.currentIndexChanged.connect(self._on_noise_mode_changed)
 
+        layout.addSpacing(28)  # separa los botones de perfiles del slider Intensidad
+
         intensity_row = QHBoxLayout()
         intensity_lbl = QLabel(tr("Intensidad:"))
         intensity_lbl.setMinimumWidth(80)
