@@ -114,7 +114,26 @@
       "Bash(.venv/Scripts/python.exe -c \"import json,sys,subprocess; p=json.load\\(sys.stdin\\).get\\('tool_input',{}\\).get\\('file_path',''\\); sys.exit\\(subprocess.call\\([sys.executable,'-m','ruff','check','--fix',p]\\) if p.endswith\\('.py'\\) else 0\\)\")",
       "Bash(echo \"exit: $?\")",
       "PowerShell(& .venv\\\\Scripts\\\\python.exe \"C:\\\\Users\\\\GPAGLI~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Disco-D-Proyectos-ByCoding-Reductor-Ruido-Radio\\\\96f7806c-f7a6-4320-a746-4c407e3e3204\\\\scratchpad\\\\check_spectrum_axis.py\")",
-      "PowerShell(& .venv\\\\Scripts\\\\python.exe -m PyInstaller reductor.spec --clean --noconfirm --distpath dist_v16)"
+      "PowerShell(& .venv\\\\Scripts\\\\python.exe -m PyInstaller reductor.spec --clean --noconfirm --distpath dist_v16)",
+      "PowerShell($env:PYTHONIOENCODING = \"utf-8\"; & .venv\\\\Scripts\\\\python.exe -X utf8 \"C:\\\\Users\\\\GPAGLI~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Disco-D-Proyectos-ByCoding-Reductor-Ruido-Radio\\\\96f7806c-f7a6-4320-a746-4c407e3e3204\\\\scratchpad\\\\check_i18n.py\")",
+      "PowerShell($env:PYTHONIOENCODING = \"utf-8\"; Select-String -Path MANUAL.md -Pattern 'grupo \"' -Encoding utf8 | Select-Object LineNumber, Line; Select-String -Path MANUAL_EN.md -Pattern '\" group' -Encoding utf8 | Select-Object LineNumber, Line)",
+      "PowerShell($env:PYTHONIOENCODING = \"utf-8\"; Select-String -Path MANUAL.md -Pattern \"pitch SSB|pitch\" -Encoding utf8 | Select-Object LineNumber, @{N=\"L\";E={$_.Line.Substring\\(0, [Math]::Min\\(100, $_.Line.Length\\)\\)}})",
+      "PowerShell($env:PYTHONIOENCODING = \"utf-8\"; Select-String -Path MANUAL_EN.md -Pattern \"SSB pitch|pitch enhancement\" -Encoding utf8 | Select-Object LineNumber, @{N=\"L\";E={$_.Line.Substring\\(0, [Math]::Min\\(95, $_.Line.Length\\)\\)}})",
+      "PowerShell(& .venv\\\\Scripts\\\\python.exe \"C:\\\\Users\\\\GPAGLI~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Disco-D-Proyectos-ByCoding-Reductor-Ruido-Radio\\\\96f7806c-f7a6-4320-a746-4c407e3e3204\\\\scratchpad\\\\test_blanker.py\")",
+      "PowerShell(& .venv\\\\Scripts\\\\python.exe tests\\\\test_pipeline.py)",
+      "PowerShell(Select-String -Path src\\\\config.py,src\\\\ui\\\\main_window.py,src\\\\pipeline.py,src\\\\dsp\\\\noise_profiler.py -Pattern \"noise_profile_data|save_profile|np\\\\.save|noise_mag\" | Select-Object Filename, LineNumber, @{N=\"L\";E={$_.Line.Trim\\(\\).Substring\\(0, [Math]::Min\\(75, $_.Line.Trim\\(\\).Length\\)\\)}})",
+      "PowerShell(Select-String -Path src\\\\ui\\\\main_window.py -Pattern \"QInputDialog|QMessageBox\" | Select-Object -First 3 LineNumber, Line; & .venv\\\\Scripts\\\\python.exe -c \"import py_compile; [py_compile.compile\\(f, doraise=True\\) for f in ['src/noise_profiles.py','src/dsp/noise_profiler.py','src/pipeline.py','src/config.py','src/utils.py','src/ui/main_window.py']]; print\\('compile OK'\\)\")",
+      "PowerShell(& .venv\\\\Scripts\\\\python.exe tests\\\\test_noise_profiles.py)",
+      "PowerShell($env:PYTHONIOENCODING = \"utf-8\"; & .venv\\\\Scripts\\\\python.exe -X utf8 \"C:\\\\Users\\\\GPAGLI~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Disco-D-Proyectos-ByCoding-Reductor-Ruido-Radio\\\\96f7806c-f7a6-4320-a746-4c407e3e3204\\\\scratchpad\\\\check_i18n.py\"; foreach \\($t in @\\(\"test_dsp\",\"test_pipeline\",\"test_presets\",\"test_noise_vad\",\"test_noise_profiles\",\"test_integration\"\\)\\) { & .venv\\\\Scripts\\\\python.exe \"tests\\\\$t.py\" > $null; if \\($?\\) { Write-Host \"$t OK\" } else { Write-Host \"$t FALLO\" } })",
+      "PowerShell($env:PYTHONIOENCODING = \"utf-8\"; Select-String -Path MANUAL_EN.md -Pattern \"Both measures are released\" -Encoding utf8 | Select-Object LineNumber, Line)",
+      "Bash(.venv/Scripts/python.exe tests/test_noise_profiles.py)",
+      "Bash(QT_QPA_PLATFORM=offscreen .venv/Scripts/python.exe -c ' *)",
+      "Bash(.venv/Scripts/python.exe tests/test_presets.py)",
+      "Bash(.venv/Scripts/python.exe tests/test_ui.py)",
+      "Bash(git checkout *)",
+      "Bash(.venv/Scripts/python.exe -c \"import markdown2, xhtml2pdf; print\\('markdown2 + xhtml2pdf OK'\\)\")",
+      "Bash(.venv/Scripts/python.exe \"C:/Users/GPAGLI~1/AppData/Local/Temp/claude/C--Disco-D-Proyectos-ByCoding-Reductor-Ruido-Radio/c9acd2e6-24d5-42e7-9276-29fb7184a07a/scratchpad/gen_manual_pdf.py\")",
+      "Bash(.venv/Scripts/python.exe -m PyInstaller reductor.spec --clean --noconfirm --distpath dist_v17)"
     ]
   }
 }
