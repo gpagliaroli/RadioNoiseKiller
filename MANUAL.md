@@ -1,6 +1,6 @@
 ﻿# RadioNoiseKiller — Manual de Usuario
 
-**Versión 1.6**
+**Versión 1.7**
 
 ---
 
@@ -193,7 +193,11 @@ Al seleccionar **Custom** en el combo AGC se habilitan cuatro sliders que permit
 
 ## Capítulo 3 — Módulos Activos
 
-**Ubicación:** Pestaña Principal → grupo "Módulos activos"
+**Ubicación:** Pestaña **Módulos**
+
+> **Novedad v1.7:** los "Módulos activos" pasaron de la pestaña Principal a una **pestaña propia
+> ("Módulos", segunda en la fila)**, para dejar la pestaña Principal más despejada. Los controles y
+> su comportamiento son idénticos; solo cambió de lugar.
 
 ### Descripción
 
@@ -312,7 +316,7 @@ El indicador **Actividad** muestra cuántos tonos están siendo muescados en est
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
 | **Sensibilidad** | 1,5× – 10× | 3,0× | Ratio mínimo bin/entorno para considerar un tono. **Bajar** (1,5–2,5×) para detectar tonos débiles que apenas sobresalen. **Subir** (5–10×) para ser más selectivo y solo eliminar interferencias muy fuertes. |
-| **Profundidad** | 0% – 100% | 90% | Cuánto se atenúa el tono detectado. 100% = silencia completamente el bin. 50% = reduce 6 dB. Para heterodinos molestos, 90–100% es lo habitual. |
+| **Profundidad** | 0% – 100% | 50% | Cuánto se atenúa el tono detectado. 100% = silencia completamente el bin. 50% = reduce 6 dB. **Valores altos opacan la voz** — 50% (nuevo default en v1.7) da buen balance entre cancelar el tono y no apagar la voz. Subir a 90–100% solo para heterodinos muy molestos, vigilando que no se opaque la voz. |
 
 ---
 
@@ -374,7 +378,7 @@ Este comportamiento es automático y no requiere ningún ajuste. Se activa cuand
 
 **Compensación de fading HF** (solo modo Adaptativo)
 
-**Activar:** Pestaña Principal → Módulos activos → casilla "Compensación fading HF" (sub-módulo del cancelador)
+**Activar:** Pestaña Módulos → casilla "Compensación fading HF" (sub-módulo del cancelador)
 **Calibrar:** Pestaña Avanzada Cancelador → sliders "Sensibilidad fading" y "Duración del freeze"
 
 En onda corta con desvanecimiento ionosférico (QSB), la señal sube y baja de nivel varias veces por minuto. Sin compensación, esto produce dos problemas audibles:
@@ -455,8 +459,10 @@ Este módulo reemplaza el piso fijo por una curva con tres zonas:
 |---------|-------|---------|-------------|
 | **Amplitud boost vocal** | 0% – 250% | 75% | Cuánto se eleva el piso en la zona vocal respecto al piso base. 75% = suave, 150% = normal, 250% = máximo. Subir si la voz suena "fría" o hueca con el cancelador activo. |
 | **Centro del boost** | 200 – 1200 Hz | 500 Hz | Frecuencia donde el boost es máximo. 400–600 Hz para voz masculina, 600–900 Hz para voz femenina. |
-| **Inicio del rolloff** | 1000 – 6000 Hz | 3000 Hz | Frecuencia a partir de la cual el piso empieza a bajar. |
-| **Profundidad del rolloff** | 0% – 70% | 55% | Cuánto baja el piso en el extremo agudo. Más profundidad = menos soplido residual, a costa de opacar levemente los agudos de la voz. |
+| **Inicio del rolloff** | 1000 – 6000 Hz | 3000 Hz | Frecuencia a partir de la cual el piso empieza a bajar. **En SSB (banda angosta ~2,7 kHz), bajarlo a 1500 Hz** — con el default de 3000 el rolloff arranca por encima de la banda y no llega a actuar. |
+| **Profundidad del rolloff** | 0% – 95% | 55% | Cuánto baja el piso en el extremo agudo → más supresión del siseo agudo. 55% ≈ −7 dB. Más profundidad = menos soplido residual, a costa de opacar levemente los agudos de la voz. |
+
+> **Consejo — SSB poco notorio:** el efecto de la Profundidad se concentra por encima del "Inicio del rolloff". Si estás en SSB y no lo notás, **no subas la Profundidad — bajá el "Inicio del rolloff"** a ~1500 Hz para que el rolloff entre dentro de tu banda. En AM (banda más ancha) el efecto se nota directamente. En v1.7 la rampa es más empinada (alcanza la profundidad plena cerca del borde de banda) y el máximo subió de 70% a 95%.
 
 > **Consejo:** usar el indicador **Activo** como guía. Si marca 0% de forma sostenida, el piso base (control "Piso espectral") ya está por debajo de las ganancias que calcula el Wiener y la curva perceptual no interviene — en ese caso el ajuste relevante es la Intensidad del cancelador, no esta curva.
 
@@ -531,7 +537,7 @@ La diferencia con el AGC general (Cap. 2) es el **gate por detección de voz**: 
 
 ## Capítulo 8 — Squelch de Voz
 
-**Ubicación:** Pestaña Principal → Módulos Activos → sub-módulo "↳ Squelch de voz" (bajo el Cancelador)  
+**Ubicación:** Pestaña Módulos → sub-módulo "↳ Squelch de voz" (bajo el Cancelador)  
 **Configuración avanzada:** Pestaña Avanzada Cancelador → grupo "Squelch de Voz"
 
 > ⚠️ **No usar con música.** El detector de voz está calibrado para voz humana. Con música produce subidas y bajadas repentinas del nivel de audio al ritmo de la dinámica musical.
@@ -686,7 +692,7 @@ Al pie del grupo, el botón **"⏺ Grabar"** guarda lo que estás escuchando (la
 | Supresor de impulsos | ✅ Activo | Umbral trama 15×, micro 8× |
 | Filtro paso de banda pre | ✅ Activo | SSB: 200–3000 Hz |
 | Filtro paso de banda post | ✅ Activo | Igual que pre |
-| ANF | ✅ Activo | Sensibilidad 3,0×, profundidad 90% |
+| ANF | ✅ Activo | Sensibilidad 3,0×, profundidad 50% (subir solo si un heterodino queda audible) |
 | Cancelador de ruido | ✅ Activo | Aprender perfil primero (o modo Adaptativo) |
 | ↳ Piso espectral perceptual | ⬜ Opcional | Activar si la voz suena fría o hueca |
 | ↳ Post-filtro espectral | ⬜ Opcional | Activar si se escuchan pitidos intermitentes residuales |
@@ -714,6 +720,26 @@ Al pie del grupo, el botón **"⏺ Grabar"** guarda lo que estás escuchando (la
 | Squelch | ❌ No usar | Produce bombeo con música |
 | EQ Voz | ⬜ Opcional | Presencia si la voz suena apagada; cuerpo si suena delgada |
 | Excitador armónico | ⬜ Opcional | Con moderación |
+
+### Flujo de calibración recomendado
+
+Estas técnicas, probadas en el aire, ayudan a sacar el máximo sin degradar la voz:
+
+1. **Activar los módulos de a uno.** Al armar una configuración o recibir una señal nueva, activar
+   y desactivar cada módulo por separado escuchando su efecto. Todo aplica en vivo, así que se oye
+   la diferencia al instante y es fácil decidir qué aporta y qué no.
+2. **Calibrar la Intensidad con el Preview.** Activar "Preview: escuchar ruido eliminado" y subir la
+   Intensidad del cancelador mientras lo que se elimina sea **solo ruido**. En cuanto empiece a
+   colarse voz en el preview, bajar un paso: ese es el punto de máxima cancelación sin tocar la voz.
+3. **Intensidad baja + post-filtro alto (voz natural).** Bajar la Intensidad a **50–60%** y compensar
+   con el **post-filtro en 5–8** suele dar mejor cancelación con voz más natural que subir la
+   Intensidad sola: la Intensidad baja no opaca la voz y el post-filtro limpia el ruido actuando solo
+   sobre los bins que el VAD marca como ruido. Esta receta está lista como presets de fábrica
+   **"Voz natural — AM"** y **"Voz natural — SSB"**.
+4. **Profundidad del ANF con mesura.** Valores altos opacan la voz; 50% es buen balance. Subir solo
+   si un heterodino queda audible.
+5. **Piso perceptual en SSB.** Si activás el piso espectral perceptual en SSB y no notás el rolloff,
+   bajá el "Inicio del rolloff" a ~1500 Hz (ver Cap. 7).
 
 ---
 
@@ -804,6 +830,8 @@ Los presets se guardan como archivos `.json` individuales en la carpeta `Presets
 
 La etiqueta **"Preset activo"** muestra el último preset cargado o guardado. Si después de cargarlo se modifica cualquier control, la etiqueta agrega el sufijo **"(modificado)"** — indica que lo que suena es el preset más tus retoques, no el preset puro.
 
+> **Novedad v1.7 — preset en la barra de título:** el nombre del preset activo (con "(modificado)" si corresponde) también aparece en la **barra de título de la ventana**, visible desde cualquier pestaña y en la barra de tareas de Windows. Al **Sobrescribir** el preset con la configuración actual, el "(modificado)" desaparece (la config vuelve a coincidir con lo guardado).
+
 Al cerrar y volver a abrir la aplicación:
 
 - **Los valores se restauran exactamente como quedaron** (vía `settings.json`), incluyendo cualquier retoque posterior al preset.
@@ -824,4 +852,4 @@ Los valores de los sliders **Máx Y** y **Máx X** del visualizador de espectro 
 
 ---
 
-*RadioNoiseKiller — versión 1.6*
+*RadioNoiseKiller — versión 1.7*

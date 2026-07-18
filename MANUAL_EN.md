@@ -1,6 +1,6 @@
 ﻿# RadioNoiseKiller — User Manual
 
-**Version 1.6**
+**Version 1.7**
 
 ---
 
@@ -193,7 +193,11 @@ Selecting **Custom** in the AGC combo enables four sliders for hand-tuning the A
 
 ## Chapter 3 — Active Modules
 
-**Location:** Main tab → "Active Modules" group
+**Location:** **Modules** tab
+
+> **New in v1.7:** the "Active Modules" moved from the Main tab to their **own tab ("Modules",
+> second in the row)**, to keep the Main tab less cluttered. The controls and their behavior are
+> identical; only the location changed.
 
 ### Description
 
@@ -312,7 +316,7 @@ The **Activity** indicator shows how many tones are being notched at this moment
 | Control | Range | Default | Description |
 |---------|-------|---------|-------------|
 | **Sensitivity** | 1.5× – 10× | 3.0× | Minimum bin/surroundings ratio to consider a tone. **Lower it** (1.5–2.5×) to catch weak tones that barely stand out. **Raise it** (5–10×) to be more selective and only remove very strong interference. |
-| **Depth** | 0% – 100% | 90% | How much the detected tone is attenuated. 100% = silences the bin completely. 50% = 6 dB reduction. For annoying heterodynes, 90–100% is typical. |
+| **Depth** | 0% – 100% | 50% | How much the detected tone is attenuated. 100% = silences the bin completely. 50% = 6 dB reduction. **High values muffle the voice** — 50% (new default in v1.7) is a good balance between cancelling the tone and not dulling the voice. Raise to 90–100% only for very annoying heterodynes, watching that the voice doesn't get muffled. |
 
 ---
 
@@ -374,7 +378,7 @@ This behavior is automatic and requires no adjustment. It triggers when the sign
 
 **HF fading compensation** (Adaptive mode only)
 
-**Enable:** Main tab → Active Modules → "HF fading compensation" checkbox (canceller sub-module)
+**Enable:** Modules tab → "HF fading compensation" checkbox (canceller sub-module)
 **Calibrate:** Advanced Canceller tab → "Fading sensitivity" and "Freeze duration" sliders
 
 On shortwave with ionospheric fading (QSB), the signal rises and falls several times per minute. Without compensation, this produces two audible problems:
@@ -455,8 +459,10 @@ This module replaces the fixed floor with a three-zone curve:
 |---------|-------|---------|-------------|
 | **Vocal boost amount** | 0% – 250% | 75% | How much the floor rises in the vocal zone relative to the base floor. 75% = soft, 150% = normal, 250% = maximum. Raise it if the voice sounds "cold" or hollow with the canceller active. |
 | **Boost center** | 200 – 1200 Hz | 500 Hz | Frequency of maximum boost. 400–600 Hz for male voices, 600–900 Hz for female voices. |
-| **Rolloff start** | 1000 – 6000 Hz | 3000 Hz | Frequency where the floor starts dropping. |
-| **Rolloff depth** | 0% – 70% | 55% | How much the floor drops at the treble end. More depth = less residual hiss, at the cost of slightly dulling the voice's highs. |
+| **Rolloff start** | 1000 – 6000 Hz | 3000 Hz | Frequency where the floor starts dropping. **On SSB (narrow band ~2.7 kHz), lower it to 1500 Hz** — with the 3000 default the rolloff starts above the band and never engages. |
+| **Rolloff depth** | 0% – 95% | 55% | How much the floor drops at the treble end → more high-hiss suppression. 55% ≈ −7 dB. More depth = less residual hiss, at the cost of slightly dulling the voice's highs. |
+
+> **Tip — barely noticeable on SSB:** the Depth's effect concentrates above the "Rolloff start". If you're on SSB and don't notice it, **don't raise the Depth — lower the "Rolloff start"** to ~1500 Hz so the rolloff falls inside your band. On AM (wider band) the effect shows directly. In v1.7 the ramp is steeper (reaching full depth near the band edge) and the maximum went from 70% to 95%.
 
 > **Tip:** use the **Active** indicator as a guide. If it reads 0% consistently, the base floor (the "Spectral floor" control) is already below the gains the Wiener computes and the perceptual curve never engages — in that case the relevant adjustment is the canceller's Intensity, not this curve.
 
@@ -531,7 +537,7 @@ The difference from the general AGC (Ch. 2) is the **voice-detection gate**: the
 
 ## Chapter 8 — Voice Squelch
 
-**Location:** Main tab → Active Modules → "↳ Voice squelch" sub-module (under the Canceller)  
+**Location:** Modules tab → "↳ Voice squelch" sub-module (under the Canceller)  
 **Advanced settings:** Advanced Canceller tab → "Voice Squelch" group
 
 > ⚠️ **Do not use with music.** The voice detector is calibrated for human voice. With music it produces sudden level rises and drops following the musical dynamics.
@@ -686,7 +692,7 @@ At the bottom of the group, the **"⏺ Record"** button saves what you are heari
 | Impulse suppressor | ✅ On | Frame threshold 15×, micro 8× |
 | Bandpass filter pre | ✅ On | SSB: 200–3000 Hz |
 | Bandpass filter post | ✅ On | Same as pre |
-| ANF | ✅ On | Sensitivity 3.0×, depth 90% |
+| ANF | ✅ On | Sensitivity 3.0×, depth 50% (raise only if a heterodyne stays audible) |
 | Noise canceller | ✅ On | Learn the profile first (or Adaptive mode) |
 | ↳ Perceptual spectral floor | ⬜ Optional | Enable if the voice sounds cold or hollow |
 | ↳ Spectral post-filter | ⬜ Optional | Enable if residual intermittent birdies are heard |
@@ -714,6 +720,26 @@ At the bottom of the group, the **"⏺ Record"** button saves what you are heari
 | Squelch | ❌ Do not use | Produces pumping with music |
 | Voice EQ | ⬜ Optional | Presence if the voice sounds dull; body if it sounds thin |
 | Harmonic exciter | ⬜ Optional | In moderation |
+
+### Recommended calibration flow
+
+These on-air techniques help get the most out of the app without degrading the voice:
+
+1. **Enable modules one at a time.** When building a configuration or receiving a new signal,
+   toggle each module on and off separately, listening to its effect. Everything applies live, so
+   you hear the difference instantly and it's easy to decide what helps and what doesn't.
+2. **Calibrate Intensity with the Preview.** Enable "Preview: listen to removed noise" and raise the
+   canceller's Intensity while what's removed is **only noise**. As soon as voice starts leaking into
+   the preview, step back down: that's the point of maximum cancellation without touching the voice.
+3. **Low Intensity + high post-filter (natural voice).** Lower the Intensity to **50–60%** and
+   compensate with the **post-filter at 5–8**. This usually gives better cancellation with a more
+   natural voice than raising the Intensity alone: low Intensity doesn't dull the voice, and the
+   post-filter cleans the noise acting only on the bins the VAD marks as noise. This recipe ships as
+   factory presets **"Voz natural — AM"** and **"Voz natural — SSB"**.
+4. **ANF Depth with restraint.** High values muffle the voice; 50% is a good balance. Raise it only
+   if a heterodyne stays audible.
+5. **Perceptual floor on SSB.** If you enable the perceptual spectral floor on SSB and don't notice
+   the rolloff, lower the "Rolloff start" to ~1500 Hz (see Ch. 7).
 
 ---
 
@@ -804,6 +830,8 @@ Presets are stored as individual `.json` files in the `Presets/` folder next to 
 
 The **"Active preset"** label shows the last preset loaded or saved. If any control is changed after loading it, the label adds the **"(modified)"** suffix — indicating that what you hear is the preset plus your tweaks, not the pure preset.
 
+> **New in v1.7 — preset in the title bar:** the active preset's name (with "(modified)" when it applies) also appears in the **window title bar**, visible from any tab and in the Windows taskbar. When you **Overwrite** the preset with the current configuration, the "(modified)" disappears (the config matches what's saved again).
+
 When you close and reopen the application:
 
 - **All values are restored exactly as they were** (via `settings.json`), including any tweaks made after loading the preset.
@@ -824,4 +852,4 @@ The **Max Y** and **Max X** sliders of the spectrum viewer are also saved in `se
 
 ---
 
-*RadioNoiseKiller — version 1.6*
+*RadioNoiseKiller — version 1.7*

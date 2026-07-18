@@ -612,7 +612,13 @@ Cambios v1.6:
   porque sí aplica en vivo. Los combos ya deshabilitados NO deben deshabilitarse en el
   branch de error de `start()` (el disable va después del start exitoso).
 
-Cambios v1.7 (pendiente de release):
+**v1.7 publicada (julio 2026)** — release en GitHub con distribuibles Windows y Linux.
+Versión de app 1.7.0, manuales `MANUAL_RadioNoiseKiller_v1.7.pdf` (ES, 28 págs) y
+`..._v1.7_EN.pdf` (EN, 27 págs). Nuevo capítulo/sección "Flujo de calibración recomendado" en
+ambos manuales con los tips acumulados del usuario. El título de la ventana pasó a armarse en
+`_update_window_title()` (versión "v1.7" hardcodeada ahí, no en el `setWindowTitle` del build).
+
+Cambios v1.7:
 - **Perfiles de ruido nombrados** (backlog v1.7): `NoiseProfileManager` (`src/noise_profiles.py`,
   espejo de PresetManager) guarda/carga/renombra perfiles como JSON en `PerfilesRuido/` (junto
   al exe, gitignoreada). El perfil serializa `noise_mag` + `fft_n` + `learned_frames`.

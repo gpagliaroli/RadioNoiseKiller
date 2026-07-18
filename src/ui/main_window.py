@@ -1384,7 +1384,7 @@ class MainWindow(QMainWindow):
         """Título = app + versión + preset activo (con '(modificado)' si los
         valores actuales difieren del preset guardado) + build ID."""
         from buildinfo import BUILD_ID
-        title = "RadioNoiseKiller  v1.6"
+        title = "RadioNoiseKiller  v1.7"
         name = self._config.last_preset
         if name:
             if self._preset_manager.matches(name, self._config):
