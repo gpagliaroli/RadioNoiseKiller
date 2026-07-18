@@ -708,8 +708,13 @@ Cambios v1.7 (pendiente de release):
   cerca del borde de banda → ~2.7× más efecto dentro de banda (−3.5 dB a 4.5k). OJO: en SSB angosto
   con "Inicio del rolloff"=3000 el módulo sigue sin actuar (la banda termina antes de 3000) — la
   nota del slider ahora avisa de bajar el "Inicio" en banda angosta y muestra la atenuación en dB
-  (55% ≈ −7 dB). Subir el máximo del slider NO era la solución (el cuello era la pendiente `/6000`,
-  no la profundidad). Nota UI reescrita (ES+EN).
+  (55% ≈ −7 dB). Subir el máximo del slider NO era la solución al problema original (el cuello era la
+  pendiente `/6000`, no la profundidad). **Máximo del slider ampliado 0.70 → 0.95** (pedido del
+  usuario: en SSB el efecto seguía poco notorio por el ancho de banda angosto — más profundidad da
+  margen para combinar con "Inicio" bajo; en SSB con Inicio=1500 el borde de banda pasa de −2.7 dB
+  a −5.3 dB). `set_pf_rolloff_depth` clampea a 0.95 (invariante 1: clamp == rango del slider);
+  nivel "muy fuerte" agregado a la etiqueta (i18n ES+EN). El techo audible en SSB siempre será
+  menor que en AM por el ancho de banda.
 - **Default de `anf_depth` bajado de 0.9 → 0.5** (hallazgo del usuario ajustando "SSB - Ruido Alto -
   Perfil Adaptativo"): valores altos de Profundidad del ANF **opacan mucho la voz**; 50% da buen
   balance entre cancelar el tono y no apagar la voz. Cambio en `config.py` (afecta configs nuevas y

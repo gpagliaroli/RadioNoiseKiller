@@ -924,12 +924,12 @@ class AdvancedCancellerTab(QWidget):
 
         self._s_pf_rolloff_depth = SliderRow(
             tr("Profundidad del rolloff:"),
-            min_val=0.0, max_val=0.70,
+            min_val=0.0, max_val=0.95,
             default=_DSP_DEF.perceptual_floor_rolloff_depth,
             step=0.05, unit="", fmt="{:.2f}",
         )
         self._s_pf_rolloff_depth._update_label = lambda v: self._s_pf_rolloff_depth._val_lbl.setText(
-            f"-{v*100:.0f}%  ({tr('sin rolloff') if v < 0.05 else tr('suave') if v < 0.3 else tr('normal') if v < 0.55 else tr('fuerte')})"
+            f"-{v*100:.0f}%  ({tr('sin rolloff') if v < 0.05 else tr('suave') if v < 0.3 else tr('normal') if v < 0.55 else tr('fuerte') if v < 0.78 else tr('muy fuerte')})"
         )
         self._s_pf_rolloff_depth._val_lbl.setFixedWidth(110)
         self._s_pf_rolloff_depth.valueChanged.connect(self._on_pf_rolloff_depth)

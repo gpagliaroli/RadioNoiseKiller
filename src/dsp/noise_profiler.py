@@ -141,7 +141,7 @@ class NoiseProfiler:
         self._pf_boost:         float = 0.75    # amplitud del boost vocal (0–2.5)
         self._pf_center:        float = 500.0   # Hz, centro del pico de boost
         self._pf_rolloff_hz:    float = 3000.0  # Hz, inicio del rolloff de alta frecuencia
-        self._pf_rolloff_depth: float = 0.55    # profundidad máxima del rolloff (0–0.7)
+        self._pf_rolloff_depth: float = 0.55    # profundidad máxima del rolloff (0–0.95)
         self._floor_curve: np.ndarray = self._build_floor_curve()
 
         # Compensación de fading HF
@@ -344,7 +344,7 @@ class NoiseProfiler:
         self._floor_curve = self._build_floor_curve()
 
     def set_pf_rolloff_depth(self, v: float) -> None:
-        self._pf_rolloff_depth = float(np.clip(v, 0.0, 0.7))
+        self._pf_rolloff_depth = float(np.clip(v, 0.0, 0.95))   # == max del slider (invariante 1)
         self._floor_curve = self._build_floor_curve()
 
     def set_fading_comp(self, v: bool) -> None:

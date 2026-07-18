@@ -395,6 +395,7 @@ CATALOG = {
     "Amplitud boost vocal:": "Vocal boost amount:",
     "sin boost": "no boost",
     "fuerte": "strong",
+    "muy fuerte": "very strong",
     "  ↳ Cuánto se eleva el piso en la zona vocal. 75%=suave, 150%=normal, 250%=máximo.":
         "  ↳ How much the floor rises in the vocal zone. 75%=soft, 150%=normal, 250%=maximum.",
     "Centro del boost:": "Boost center:",
