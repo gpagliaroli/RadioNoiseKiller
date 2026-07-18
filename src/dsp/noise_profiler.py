@@ -414,10 +414,13 @@ class NoiseProfiler:
             -0.5 * ((np.log2(safe_f / self._pf_center) / 0.6) ** 2)
         )
 
-        # Rolloff suave por encima de pf_rolloff_hz
+        # Rolloff suave por encima de pf_rolloff_hz. La rampa alcanza la profundidad
+        # plena 2500 Hz por encima del inicio (antes 6000 Hz → dentro de la banda de
+        # voz apenas se activaba; el slider era casi inaudible). Con /2500 la
+        # profundidad plena cae cerca del borde de banda útil y el slider recupera rango.
         min_rf = 1.0 - self._pf_rolloff_depth
         high_rolloff = np.clip(
-            1.0 - self._pf_rolloff_depth * (freqs - self._pf_rolloff_hz) / 6000.0,
+            1.0 - self._pf_rolloff_depth * (freqs - self._pf_rolloff_hz) / 2500.0,
             min_rf, 1.0
         )
 

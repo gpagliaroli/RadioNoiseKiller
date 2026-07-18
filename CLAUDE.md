@@ -701,6 +701,15 @@ Cambios v1.7 (pendiente de release):
   campos nuevos). **Pendiente: validación en el aire.**
 - **`tests/test_ui.py` permanente** (backlog v1.7): formaliza los tests offscreen de UI que antes
   se hacían a mano cada sesión — la categoría de regresión más frecuente. Ver la tabla de tests.
+- **Rolloff del piso perceptual más empinado** (`/6000` → `/2500` en `_build_floor_curve`):
+  el usuario reportó que "Profundidad del rolloff" no se notaba entre 0 y −70%. Causa: la rampa
+  lineal repartía el efecto sobre 6000 Hz, así que dentro de la banda de voz (SSB 2.7k, AM 4-4.5k)
+  la reducción del piso era mínima (−1.3 dB a 4.5k con 55%). Con `/2500` la profundidad plena cae
+  cerca del borde de banda → ~2.7× más efecto dentro de banda (−3.5 dB a 4.5k). OJO: en SSB angosto
+  con "Inicio del rolloff"=3000 el módulo sigue sin actuar (la banda termina antes de 3000) — la
+  nota del slider ahora avisa de bajar el "Inicio" en banda angosta y muestra la atenuación en dB
+  (55% ≈ −7 dB). Subir el máximo del slider NO era la solución (el cuello era la pendiente `/6000`,
+  no la profundidad). Nota UI reescrita (ES+EN).
 - **Default de `anf_depth` bajado de 0.9 → 0.5** (hallazgo del usuario ajustando "SSB - Ruido Alto -
   Perfil Adaptativo"): valores altos de Profundidad del ANF **opacan mucho la voz**; 50% da buen
   balance entre cancelar el tono y no apagar la voz. Cambio en `config.py` (afecta configs nuevas y

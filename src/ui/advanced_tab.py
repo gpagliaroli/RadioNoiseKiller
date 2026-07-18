@@ -934,7 +934,7 @@ class AdvancedCancellerTab(QWidget):
         self._s_pf_rolloff_depth._val_lbl.setFixedWidth(110)
         self._s_pf_rolloff_depth.valueChanged.connect(self._on_pf_rolloff_depth)
         layout.addWidget(self._s_pf_rolloff_depth)
-        layout.addWidget(_note(tr("  ↳ Cuánto cae el piso en altas frecuencias. 55%=default.")))
+        layout.addWidget(_note(tr("  ↳ Cuánto baja el piso arriba del 'Inicio' → más supresión del siseo agudo. 55% ≈ −7 dB. En banda angosta (SSB), bajá el 'Inicio' para oírlo.")))
         return group
 
     def _build_post_filter_group(self) -> QGroupBox:

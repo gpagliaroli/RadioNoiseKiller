@@ -409,8 +409,8 @@ CATALOG = {
         "  ↳ Frequency where the floor starts dropping. 3000 Hz=default.",
     "Profundidad del rolloff:": "Rolloff depth:",
     "sin rolloff": "no rolloff",
-    "  ↳ Cuánto cae el piso en altas frecuencias. 55%=default.":
-        "  ↳ How much the floor drops at high frequencies. 55%=default.",
+    "  ↳ Cuánto baja el piso arriba del 'Inicio' → más supresión del siseo agudo. 55% ≈ −7 dB. En banda angosta (SSB), bajá el 'Inicio' para oírlo.":
+        "  ↳ How much the floor drops above 'Start' → more high-hiss suppression. 55% ≈ −7 dB. On narrow bands (SSB), lower 'Start' to hear it.",
     "Post-filtro espectral  (activar en Módulos Activos)":
         "Spectral post-filter  (enable in Active Modules)",
     "Reducción extra:": "Extra reduction:",
