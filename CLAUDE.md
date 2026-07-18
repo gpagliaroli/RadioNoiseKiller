@@ -618,6 +618,18 @@ Versión de app 1.7.0, manuales `MANUAL_RadioNoiseKiller_v1.7.pdf` (ES, 28 págs
 ambos manuales con los tips acumulados del usuario. El título de la ventana pasó a armarse en
 `_update_window_title()` (versión "v1.7" hardcodeada ahí, no en el `setWindowTitle` del build).
 
+Cambios post-v1.7 (pendiente de release):
+- **"(modificado)" del título instantáneo** (reportado por el usuario: tardaba en desaparecer tras
+  sobrescribir, con el audio procesando). Causa probable: `_update_window_title()` hacía una lectura
+  de disco (`matches()` lee el JSON del preset) en cada llamada, compitiendo por el hilo de GUI bajo
+  carga de audio. Fix: **snapshot en memoria** del preset activo (`_preset_saved_snapshot` +
+  `_snapshot_for`, refrescado desde disco solo al cambiar de preset o al forzar tras
+  guardar/sobrescribir/renombrar vía `_refresh_title`) y comparación con `PresetManager._capture()`
+  en memoria — sin disco. Además `_schedule_save()` ahora llama a `_update_window_title()` en cada
+  cambio (antes solo el debounce de 800 ms lo hacía), así el "(modificado)" aparece/desaparece al
+  instante. `PresetManager.read()` nuevo (lectura cruda del preset). Test en test_ui.py cubre el
+  ciclo modificar→sobrescribir.
+
 Cambios v1.7:
 - **Perfiles de ruido nombrados** (backlog v1.7): `NoiseProfileManager` (`src/noise_profiles.py`,
   espejo de PresetManager) guarda/carga/renombra perfiles como JSON en `PerfilesRuido/` (junto

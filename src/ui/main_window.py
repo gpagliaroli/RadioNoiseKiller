@@ -32,6 +32,10 @@ class MainWindow(QMainWindow):
         self._pipeline = ProcessingPipeline(self._config)
         self._preset_manager = PresetManager(presets_dir())
         self._noise_profile_manager = NoiseProfileManager(noise_profiles_dir())
+        # Snapshot en memoria del preset activo (dsp, gain) para chequear "(modificado)"
+        # sin re-leer el JSON en cada actualización del título.
+        self._preset_saved_snapshot = None
+        self._snapshot_for = None
 
         self._level_timer = QTimer()
         self._level_timer.setInterval(33)
@@ -92,9 +96,9 @@ class MainWindow(QMainWindow):
             self._config, self._pipeline, self._preset_manager
         )
         self._presets_tab.preset_loaded.connect(self.refresh_from_config)
-        self._presets_tab.preset_loaded.connect(self._update_window_title)
+        self._presets_tab.preset_loaded.connect(self._refresh_title)
         self._presets_tab.state_changed.connect(self._schedule_save)
-        self._presets_tab.state_changed.connect(self._update_window_title)
+        self._presets_tab.state_changed.connect(self._refresh_title)
         self._tabs.addTab(self._presets_tab, tr("Presets"))
         self._tabs.currentChanged.connect(self._on_tab_changed)
 
@@ -1371,6 +1375,9 @@ class MainWindow(QMainWindow):
 
     def _schedule_save(self) -> None:
         self._save_timer.start()
+        # Refrescar "(modificado)" al instante en cada cambio (comparación en
+        # memoria, sin disco) — no esperar el debounce de 800 ms del guardado.
+        self._update_window_title()
 
     def _save_settings(self) -> None:
         try:
@@ -1380,17 +1387,42 @@ class MainWindow(QMainWindow):
         # Refrescar el "(modificado)" del título tras la ráfaga de ediciones
         self._update_window_title()
 
+    def _refresh_preset_snapshot(self, force: bool = False) -> None:
+        """Cachea (dsp, gain) del preset activo desde disco. Solo re-lee si cambió
+        el preset (o force=True tras guardar/sobrescribir/renombrar)."""
+        name = self._config.last_preset
+        if not force and self._snapshot_for == name:
+            return
+        self._snapshot_for = name
+        if name and self._preset_manager.exists(name):
+            try:
+                d = self._preset_manager.read(name)
+                self._preset_saved_snapshot = (d.get("dsp"), d.get("gain"))
+            except Exception:
+                self._preset_saved_snapshot = None
+        else:
+            self._preset_saved_snapshot = None
+
+    def _refresh_title(self) -> None:
+        """Fuerza el refresco del snapshot y el título — para load/overwrite/rename."""
+        self._refresh_preset_snapshot(force=True)
+        self._update_window_title()
+
     def _update_window_title(self) -> None:
         """Título = app + versión + preset activo (con '(modificado)' si los
-        valores actuales difieren del preset guardado) + build ID."""
+        valores actuales difieren del preset guardado) + build ID. Compara contra
+        el snapshot en memoria — sin disco — para poder llamarse en cada cambio."""
         from buildinfo import BUILD_ID
         title = "RadioNoiseKiller  v1.7"
         name = self._config.last_preset
         if name:
-            if self._preset_manager.matches(name, self._config):
-                title += f"  ·  {name}"
-            else:
+            self._refresh_preset_snapshot(force=False)
+            cur = PresetManager._capture(name, self._config)
+            modified = self._preset_saved_snapshot != (cur["dsp"], cur["gain"])
+            if modified:
                 title += "  ·  " + tr("{name}  (modificado)").format(name=name)
+            else:
+                title += f"  ·  {name}"
         title += f"  ·  build {BUILD_ID}"
         self.setWindowTitle(title)
 

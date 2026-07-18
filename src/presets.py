@@ -68,6 +68,10 @@ class PresetManager:
     def exists(self, name: str) -> bool:
         return os.path.exists(self._path_for(name))
 
+    def read(self, name: str) -> dict:
+        """Dict crudo del preset guardado (para comparaciones en memoria sin re-leer disco)."""
+        return self._read_file(self._path_for(name))
+
     def matches(self, name: str, config: AppConfig) -> bool:
         """True si los valores DSP+Gain actuales del config coinciden exactamente
         con los guardados en el preset (para mostrar '(modificado)' en la UI)."""
