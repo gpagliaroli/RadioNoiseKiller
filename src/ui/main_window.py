@@ -80,6 +80,7 @@ class MainWindow(QMainWindow):
 
         self._tabs = QTabWidget()
         self._tabs.addTab(self._build_main_tab(), tr("Principal"))
+        self._tabs.addTab(self._build_modules_tab(), tr("Módulos"))
 
         self._adv_audio_tab     = AdvancedAudioTab(self._config, self._pipeline)
         self._adv_impulse_tab   = AdvancedImpulseTab(self._config, self._pipeline)
@@ -123,7 +124,6 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(4, 8, 4, 4)
         layout.addWidget(self._build_device_group())
         layout.addWidget(self._build_control_group())
-        layout.addWidget(self._build_modules_group())
         layout.addWidget(self._build_noise_group())
         layout.addWidget(self._build_level_group())
         # Scroll para pantallas bajas (notebooks 1366x768): sin esto la pestaña
@@ -222,6 +222,21 @@ class MainWindow(QMainWindow):
         self._check_bypass.toggled.connect(self._pipeline.set_bypass)
         layout.addWidget(self._check_bypass)
         return group
+
+    def _build_modules_tab(self) -> QWidget:
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setSpacing(10)
+        layout.setContentsMargins(4, 8, 4, 4)
+        layout.addWidget(self._build_modules_group())
+        layout.addStretch()
+        # Scroll para pantallas bajas — misma razón que la pestaña Principal
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setWidget(tab)
+        return scroll
 
     def _build_modules_group(self) -> QGroupBox:
         group = QGroupBox(tr("Módulos activos"))
@@ -1006,6 +1021,8 @@ class MainWindow(QMainWindow):
         if mode != "static":
             self._btn_learn.setVisible(False)
             self._btn_clear_noise.setVisible(False)
+            self._btn_save_profile.setVisible(False)
+            self._btn_load_profile.setVisible(False)
             self._label_noise.setText(tr("Adaptativo (MCRA) — activar procesamiento para calibrar"))
             self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
         else:
