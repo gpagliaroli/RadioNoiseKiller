@@ -857,10 +857,20 @@ class ProcessingPipeline:
                     filtered = self._bandpass.process(chunk) if self._bandpass_pre_enabled else chunk
 
                 filtered = self._anf.process(filtered)
-                self._spec_pre_frames.append(filtered.copy())   # post-bandpass/ANF, pre noise profiler
+                # Perfil independiente del filtro: durante el aprendizaje se alimenta
+                # el profiler con el espectro COMPLETO (post-AGC, PRE-pasabanda/ANF),
+                # así el noise_mag cubre todas las frecuencias. En reproducción el
+                # cancelador suprime bien los agudos aunque el pasabanda cambie, se
+                # ensanche o se apague (antes el perfil aprendía ~0 en los agudos —el
+                # filtro los quitaba— y al ensanchar/reiniciar el siseo agudo pasaba
+                # sin suprimir). El pasabanda/ANF igual corren arriba para no congelar
+                # su estado IIR; su salida se descarta para el aprendizaje. El monitoreo
+                # del aprendizaje se atenúa -12dB, así que no importa que sea sin filtrar.
+                prof_in = chunk if learning else filtered
+                self._spec_pre_frames.append(prof_in.copy())    # lo que ve el profiler
                 # El VAD del profiler descuenta la ganancia del AGC (nivel de antena)
                 self._noise_profiler.set_agc_gain(self._agc.gain_lin)
-                filtered = self._noise_profiler.process(filtered)
+                filtered = self._noise_profiler.process(prof_in)
 
                 # Monitoreo atenuado durante el aprendizaje: sin perfil todavía
                 # no hay supresión y el ruido de banda sale a pleno — molesto y

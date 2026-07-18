@@ -619,6 +619,23 @@ ambos manuales con los tips acumulados del usuario. El título de la ventana pas
 `_update_window_title()` (versión "v1.7" hardcodeada ahí, no en el `setWindowTitle` del build).
 
 Cambios post-v1.7 (pendiente de release):
+- **Perfil de ruido independiente del filtro** (reportado por el usuario: con perfil estático
+  aparecía siseo agudo sin suprimir, sobre todo al reiniciar la app). Causa: el perfil se aprendía
+  sobre la señal POST-pasabanda, así que los bins agudos (fuera del pasabanda) quedaban en ~0. Al
+  usarlo con un pasabanda más ancho o apagado (o al auto-recargar un perfil nombrado guardado con
+  otro filtro tras reiniciar), `snr_post = señal/≈0` → ganancia ≈ 1 → esos bins no se suprimían.
+  El `noise_mag` aprendido NO se persiste (settings.json solo guarda `last_noise_profile`, el
+  nombre), por eso el síntoma aparecía al reiniciar (se auto-cargaba un perfil nombrado viejo).
+  Fix (idea del usuario): **aprender el perfil sobre el espectro COMPLETO** — durante el
+  aprendizaje el pipeline alimenta el profiler con el chunk post-AGC PRE-pasabanda/ANF (`prof_in =
+  chunk if learning else filtered` en `pipeline._process`), así el `noise_mag` cubre todas las
+  frecuencias y el cancelador suprime bien los agudos con cualquier pasabanda (angosto: el filtro
+  los quita igual; ancho/off: el perfil los suprime). El pasabanda/ANF igual corren para no congelar
+  el estado IIR; su salida se descarta para el aprendizaje. El monitoreo del aprendizaje ya se
+  atenúa −12 dB. Decisión del usuario: aprender SIN ANF (ruido de banda ancha crudo; los tonos los
+  maneja el ANF en reproducción). Perfiles nombrados viejos (aprendidos post-pasabanda) siguen
+  stale hasta re-aprenderlos. Test en test_pipeline (aprende con pasabanda angosto → `noise_mag`
+  con energía en agudos → suprime −59 dB con el pasabanda off). Validación en el aire pendiente.
 - **Los cambios en pestañas Avanzadas ahora marcan "(modificado)"** (reportado por el usuario:
   "(modificado)" nunca aparecía). Los sliders/checkboxes de las 3 tabs Avanzadas conectan **directo**
   a `pipeline.set_X`, sin pasar por `_schedule_save` de MainWindow → sus cambios no marcaban el preset

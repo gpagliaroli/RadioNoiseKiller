@@ -126,5 +126,74 @@ for path in wavs:
 assert secs > 0, "stop_recording devolvio 0 segundos"
 print(f"Grabacion WAV: OK ({secs:.2f} s grabados)")
 
+# ------------------------------------------------------------------
+# Perfil de ruido independiente del filtro: se aprende sobre el espectro
+# COMPLETO (pre-pasabanda), así suprime los agudos aunque el pasabanda cambie
+# o se apague (antes aprendía ~0 en los agudos con el filtro angosto → siseo
+# sin suprimir al ensanchar/reiniciar).
+# ------------------------------------------------------------------
+print("\nPerfil independiente del filtro...")
+from config import RadioMode
+
+cf = AppConfig()
+cf.dsp.noise_mode = "static"
+cf.dsp.noise_enabled = True
+cf.dsp.bandpass_pre_enabled = True
+cf.dsp.mode = RadioMode.SSB
+cf.dsp.bandpass_limits[RadioMode.SSB] = (300, 1500)   # pasabanda ANGOSTO
+cf.dsp.anf_enabled = False
+cf.dsp.squelch_enabled = False
+cf.dsp.perceptual_floor_enabled = False
+cf.dsp.post_filter_enabled = False
+pf = ProcessingPipeline(cf)
+pf.start(headless=True)
+hp = cf.audio.block_size
+fpb = 48000.0 / (hp * 2)
+rp = np.random.default_rng(7)
+
+pf.start_noise_learning()
+for _ in range(200):
+    pf._process((rp.standard_normal(hp) * 0.1).astype(np.float32))
+time.sleep(0.3)
+pf.stop_noise_learning()
+
+mag = pf._noise_profiler._noise_mag
+assert mag is not None, "no se aprendio perfil"
+
+
+def _band_e(lo, hi):
+    b0, b1 = int(lo / fpb), int(hi / fpb)
+    return float(np.mean(mag[b0:b1] ** 2))
+
+
+# El perfil debe tener energia en los AGUDOS (fuera del pasabanda angosto de aprendizaje)
+assert _band_e(3000, 6000) > 0.3 * _band_e(300, 1500), \
+    "el perfil no aprendio ruido en los agudos (deberia ser full-spectrum)"
+
+# Y debe SUPRIMIR los agudos con el pasabanda apagado (caso ensanche/reinicio)
+pf.set_bandpass_pre_enabled(False)
+ins, outs = [], []
+for _ in range(60):
+    x = (rp.standard_normal(hp) * 0.1).astype(np.float32)
+    y = pf._process(x)
+    ins.append(x)
+    if y is not None:
+        outs.append(y)
+time.sleep(0.2)
+xi = np.concatenate(ins[-len(outs):])
+yo = np.concatenate(outs)
+
+
+def _hi_e(x):
+    X = np.abs(np.fft.rfft(x))
+    fpb2 = 48000.0 / len(x)
+    return float(np.mean(X[int(3000 / fpb2):int(6000 / fpb2)] ** 2))
+
+
+red_db = 10 * np.log10(max(_hi_e(yo), 1e-30) / max(_hi_e(xi), 1e-30))
+assert red_db < -6.0, f"no suprime agudos con pasabanda off (reduccion {red_db:.1f} dB)"
+pf.stop()
+print(f"Perfil independiente del filtro: OK (agudos suprimidos {red_db:.1f} dB con filtro off)")
+
 print(f"\nErrores: {errors if errors else 'ninguno'}")
 print("\nPipeline: OK")
