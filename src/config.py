@@ -35,7 +35,7 @@ class DSPConfig:
     noise_enabled:    bool  = True
     presence_enabled: bool  = True
     anf_threshold:   float = 3.0   # ratio bin/baseline para detectar un tono (1.5=sensible, 6=selectivo)
-    anf_depth:       float = 0.9   # profundidad de atenuación del tono detectado (0=nada, 1=máximo)
+    anf_depth:       float = 0.5   # profundidad de atenuación del tono detectado (0=nada, 1=máximo; 50% = buen balance, valores altos opacan la voz)
     blanker_frame:   float = 15.0  # umbral frame 10ms (× piso de ruido). 5=agresivo, 50=suave, 100=muy suave
     blanker_mini:    float = 8.0   # umbral mini-frame 0.67ms (× piso de ruido). 3=agresivo, 15=suave
     noise_mode:   str   = "static"  # "static" = perfil manual | "mcra" = adaptativo continuo

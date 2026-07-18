@@ -701,6 +701,13 @@ Cambios v1.7 (pendiente de release):
   campos nuevos). **Pendiente: validación en el aire.**
 - **`tests/test_ui.py` permanente** (backlog v1.7): formaliza los tests offscreen de UI que antes
   se hacían a mano cada sesión — la categoría de regresión más frecuente. Ver la tabla de tests.
+- **Default de `anf_depth` bajado de 0.9 → 0.5** (hallazgo del usuario ajustando "SSB - Ruido Alto -
+  Perfil Adaptativo"): valores altos de Profundidad del ANF **opacan mucho la voz**; 50% da buen
+  balance entre cancelar el tono y no apagar la voz. Cambio en `config.py` (afecta configs nuevas y
+  "Restaurar por defecto" vía `_DSP_DEF`; presets y settings.json existentes conservan su valor).
+  Nota del slider Profundidad ampliada en la UI (ES+EN) con el aviso. Tip de operación acumulado —
+  ya van varios (Intensidad+post-filtro, calibrar con Preview, activar de a uno): al cerrar v1.7,
+  considerar la sección "Flujo de calibración recomendado" en el manual (nota vieja del backlog).
 - **Preset activo en la barra de título** (pedido del usuario): el título de la ventana muestra el
   preset activo y "(modificado)" si los valores difieren del guardado —
   `RadioNoiseKiller  v1.6  ·  Voz natural - SSB  (modificado)  ·  build XYZ`. `_update_window_title()`

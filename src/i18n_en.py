@@ -342,8 +342,8 @@ CATALOG = {
     "  ↳ Ratio bin/baseline para detectar un tono. Bajar si hay tonos débiles.":
         "  ↳ Bin/baseline ratio to detect a tone. Lower it for weak tones.",
     "Profundidad:": "Depth:",
-    "  ↳ Atenuación aplicada al tono detectado. 100%=silencia, 50%=reduce 6dB.":
-        "  ↳ Attenuation applied to the detected tone. 100%=silences, 50%=reduces 6 dB.",
+    "  ↳ Atenuación aplicada al tono detectado. 100%=silencia, 50%=reduce 6dB. Valores altos opacan la voz — 50% suele ser buen balance.":
+        "  ↳ Attenuation applied to the detected tone. 100%=silences, 50%=reduces 6 dB. High values muffle the voice — 50% is usually a good balance.",
     "tono": "tone",
     "tonos": "tones",
 
