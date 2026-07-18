@@ -238,6 +238,39 @@ def test_window_title_reflects_preset():
     print("Titulo refleja preset + (modificado)      OK")
 
 
+def test_overwrite_clears_modified_in_title():
+    """Tras 'Sobrescribir seleccionado', el '(modificado)' del título debe irse:
+    la config ya coincide con el preset guardado (bug: _set_active no emitía
+    state_changed si el nombre activo no cambiaba)."""
+    w = _win()
+    pt = w._presets_tab
+    tmp = "___test_overwrite_tmp___"
+    modificado = tr("{name}  (modificado)").format(name=tmp)
+    try:
+        # Crear un preset temporal a partir de la config actual y activarlo
+        w._preset_manager.save(tmp, w._config)
+        pt._refresh_list()
+        pt._select_by_name(tmp)
+        pt._on_load()
+        _app.processEvents()
+
+        # Modificar la config -> el título muestra (modificado)
+        w._config.dsp.noise_alpha = 0.123
+        w._update_window_title()
+        assert modificado in w.windowTitle(), "no aparece (modificado) tras editar"
+
+        # Sobrescribir -> debe limpiarse
+        pt._select_by_name(tmp)
+        pt._on_overwrite()
+        _app.processEvents()
+        assert modificado not in w.windowTitle(), \
+            "el título sigue '(modificado)' tras sobrescribir"
+        assert tmp in w.windowTitle()
+        print("Sobrescribir limpia (modificado) del título  OK")
+    finally:
+        w._preset_manager.delete(tmp)
+
+
 if __name__ == "__main__":
     test_tab_order()
     test_modules_group_moved_to_own_tab()
@@ -248,5 +281,6 @@ if __name__ == "__main__":
     test_bandpass_out_requires_post_and_independent()
     test_refresh_from_config_restores_checkboxes()
     test_window_title_reflects_preset()
+    test_overwrite_clears_modified_in_title()
     print()
     print("test_ui: OK")

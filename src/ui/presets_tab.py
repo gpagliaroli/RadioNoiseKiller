@@ -145,6 +145,11 @@ class PresetsTab(QWidget):
         name = item.text()
         self._manager.save(name, self._config)
         self._set_active(name)
+        # Tras sobrescribir, la config ya coincide con el preset → el estado
+        # "(modificado)" cambió aunque el nombre activo no. _set_active solo
+        # emite state_changed si el nombre cambia, así que lo forzamos para que
+        # MainWindow recalcule el título de la ventana (si no, queda "(modificado)").
+        self.state_changed.emit()
 
     def _on_load(self, *_) -> None:
         item = self._list.currentItem()
