@@ -289,6 +289,7 @@ En bundle: junto al `.exe` / `.bin`
 | `tests/test_presets.py` | `_capture()` cubre DSPConfig/GainConfig, roundtrips, rename/delete |
 | `tests/test_noise_vad.py` | VAD del squelch (ruido fluctuante, voz armónica, release AGC), cuarentena MCRA, clamps de fading. **Validar detectores con ruido fluctuante y voz con envolvente — el gaussiano estacionario da falsos OK** |
 | `tests/test_integration.py` | Pipeline headless (`start(headless=True)`) con TODOS los módulos activos: warmup MCRA, ciclo squelch, cambios de modo en caliente, cambio de block size con reinicio |
+| `tests/test_ui.py` | UI offscreen (`QT_QPA_PLATFORM=offscreen` + `MainWindow`): orden de pestañas (Módulos en pos 1), "Módulos activos" en su pestaña, visibilidad de botones de perfiles por modo estático/MCRA, gating de controles Avanzados por módulo (invariante 2), restauración de checkboxes desde config (invariante 8). **SliderRow deshabilita los hijos — testear con `row._slider.isEnabled()`, no `row.isEnabled()`** |
 
 ## Estado del proyecto
 
@@ -685,19 +686,29 @@ Cambios v1.7 (pendiente de release):
   el de la pestaña Principal, ambos actualizados desde `_tick_levels` y reseteados a "—" al
   detener). El slider sigue requiriendo cancelador + módulo activos (invariante 2); su
   enabled/load viven ahora en `AdvancedAudioTab`. Manuales ES+EN actualizados (Cap. 7).
+- UX: **"Módulos activos" movido a una pestaña propia** ("Módulos", 2da posición) para descargar
+  la pestaña Principal (quedaba muy cargada). Grupo envuelto en `QScrollArea` igual que Principal
+  (pantallas bajas); `_build_modules_tab()` en `main_window.py`; clave i18n "Módulos"→"Modules".
+  El orden de pestañas no lo referencia nadie por índice (`_on_tab_changed` usa `idx >= 1`).
+- Fix: los botones **Guardar perfil / Perfiles quedaban visibles en modo Adaptativo (MCRA)**
+  aunque solo aplican en estático. `_on_noise_mode_changed` ahora los oculta en el branch MCRA
+  (invariante 6: chequear el modo en TODOS sus efectos). También más `addSpacing(28)` entre esos
+  botones y el slider Intensidad (quedaban pegados).
+- **Presets de fábrica "Voz natural" (AM y SSB)**: la receta del usuario (Intensidad 50–60% +
+  post-filtro alto 5–8) como preset — `noise_alpha=0.55`, `post_filter_strength=6.0`. Cada
+  variante hereda del preset de fábrica de su modo (AM Local / SSB Medio Adaptativo) el resto de
+  flags y su bandpass propio. Generados vía `PresetManager.load_into`+`save` (JSON completo con
+  campos nuevos). **Pendiente: validación en el aire.**
+- **`tests/test_ui.py` permanente** (backlog v1.7): formaliza los tests offscreen de UI que antes
+  se hacían a mano cada sesión — la categoría de regresión más frecuente. Ver la tabla de tests.
 
 Backlog v1.7 (acordado con el usuario tras la revisión de código de julio 2026):
-- **Grabación a WAV**: botón grabar que guarde lo que se está escuchando — procesado, o
-  crudo+procesado en paralelo para comparar antes/después. Alto valor para documentar QSOs.
+- ✅ **Grabación a WAV** (hecho, validado en el aire).
+- ✅ **Preset de fábrica "Voz natural"** (hecho — AM+SSB; falta validación en el aire).
+- ✅ **Perfiles de ruido nombrados** (hecho, validado con hardware real).
+- ✅ **tests/test_ui.py permanente** (hecho).
 - **Waterfall en la pestaña Espectro**: cascada con historia (~30s) además del espectro
-  instantáneo — permite VER el QSB, heterodinos intermitentes y QRM.
-- **Preset de fábrica "Voz natural"**: la receta del usuario (Intensidad 50–60% + post-filtro
-  5–8), solo armar el JSON en Presets/.
-- **Perfiles de ruido nombrados**: guardar/cargar múltiples perfiles estáticos ("40m casa",
-  "20m campo") como se hace con los presets.
-- **tests/test_ui.py permanente**: formalizar los tests offscreen (estados de habilitación,
-  indicadores, orden de módulos, restauración de combos) — la categoría más frecuente de
-  regresiones es la UI (invariantes 5 y 8).
+  instantáneo — permite VER el QSB, heterodinos intermitentes y QRM. **Único ítem pendiente.**
 
 Pendiente para Fase 2:
 - Validar build en Pi real (ARM64 Raspberry Pi OS Bookworm)
