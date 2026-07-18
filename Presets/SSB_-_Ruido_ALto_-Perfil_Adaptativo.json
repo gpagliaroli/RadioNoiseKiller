@@ -3,7 +3,7 @@
   "version": 1,
   "dsp": {
     "mode": "SSB",
-    "agc_preset": "medium",
+    "agc_preset": "slow",
     "agc_target_dbfs": -20.0,
     "agc_max_gain_db": 40.0,
     "agc_attack_ms": 50.0,
@@ -23,46 +23,58 @@
         2400
       ]
     },
+    "bandpass_out_independent": true,
+    "bandpass_out_limits": {
+      "AM": [
+        50,
+        8000
+      ],
+      "SSB": [
+        100,
+        4000
+      ]
+    },
     "filter_order": 8,
     "anf_enabled": true,
     "anf_threshold": 2.5,
-    "anf_depth": 1.0,
+    "anf_depth": 0.5,
     "noise_enabled": true,
     "noise_mode": "mcra",
-    "noise_alpha": 1.0,
-    "noise_floor": 0.07,
+    "noise_alpha": 0.8,
+    "noise_floor": 0.15000000000000002,
     "noise_smooth": 0.99,
-    "noise_attack": 0.9199999999999999,
+    "noise_attack": 0.8,
     "squelch_enabled": false,
     "squelch_threshold": 0.15000000000000002,
     "squelch_hold_ms": 300.0,
     "exciter_enabled": true,
-    "exciter_drive": 2.5,
-    "exciter_mix": 0.5,
+    "exciter_drive": 2.0,
+    "exciter_mix": 0.30000000000000004,
     "presence_enabled": true,
-    "presence_freq": 1225.0,
-    "presence_db": 6.0,
-    "presence_q": 0.30000000000000004,
+    "presence_freq": 1200.0,
+    "presence_db": 4.5,
+    "presence_q": 0.7,
     "body_freq": 400.0,
-    "body_db": 6.0,
+    "body_db": 3.0,
     "pitch_shift_hz": 0.0,
     "perceptual_floor_enabled": true,
-    "perceptual_floor_boost": 1.5,
-    "perceptual_floor_center": 500.0,
+    "perceptual_floor_boost": 2.0,
+    "perceptual_floor_center": 300.0,
     "perceptual_floor_rolloff_hz": 2400.0,
-    "perceptual_floor_rolloff_depth": 0.55,
+    "perceptual_floor_rolloff_depth": 0.7000000000000001,
     "post_filter_enabled": true,
-    "post_filter_strength": 3.5,
+    "post_filter_strength": 5.0,
     "pitch_enhance_enabled": true,
-    "pitch_enhance_strength": 0.7000000000000001,
+    "pitch_enhance_strength": 1.0,
     "noise_fading_comp": true,
     "noise_fading_change_db": 5.0,
     "noise_fading_freeze_ms": 200.0,
-    "voice_leveler_enabled": true
+    "voice_leveler_enabled": true,
+    "voice_leveler_max_db": 9.0
   },
   "gain": {
     "input_gain_db": -3.0,
     "output_gain_db": 0.0,
-    "peak_limit_db": -1.0
+    "peak_limit_db": -3.0
   }
 }

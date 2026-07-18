@@ -23,28 +23,39 @@
         2400
       ]
     },
+    "bandpass_out_independent": true,
+    "bandpass_out_limits": {
+      "AM": [
+        50,
+        10000
+      ],
+      "SSB": [
+        200,
+        3000
+      ]
+    },
     "filter_order": 4,
     "anf_enabled": true,
     "anf_threshold": 2.5,
     "anf_depth": 1.0,
     "noise_enabled": true,
     "noise_mode": "static",
-    "noise_alpha": 0.5,
-    "noise_floor": 0.07,
-    "noise_smooth": 0.99,
-    "noise_attack": 0.9199999999999999,
-    "squelch_enabled": false,
+    "noise_alpha": 0.75,
+    "noise_floor": 0.15000000000000002,
+    "noise_smooth": 0.97,
+    "noise_attack": 0.8,
+    "squelch_enabled": true,
     "squelch_threshold": 0.15000000000000002,
-    "squelch_hold_ms": 250.0,
+    "squelch_hold_ms": 750.0,
     "exciter_enabled": true,
     "exciter_drive": 2.5,
     "exciter_mix": 0.5,
     "presence_enabled": true,
-    "presence_freq": 1225.0,
+    "presence_freq": 1250.0,
     "presence_db": 6.0,
     "presence_q": 0.30000000000000004,
     "body_freq": 400.0,
-    "body_db": 6.0,
+    "body_db": 3.0,
     "pitch_shift_hz": 0.0,
     "perceptual_floor_enabled": true,
     "perceptual_floor_boost": 1.5,
@@ -52,16 +63,18 @@
     "perceptual_floor_rolloff_hz": 2400.0,
     "perceptual_floor_rolloff_depth": 0.55,
     "post_filter_enabled": true,
-    "post_filter_strength": 3.5,
+    "post_filter_strength": 2.5,
     "pitch_enhance_enabled": true,
     "pitch_enhance_strength": 0.7000000000000001,
     "noise_fading_comp": true,
     "noise_fading_change_db": 5.0,
-    "noise_fading_freeze_ms": 200.0
+    "noise_fading_freeze_ms": 200.0,
+    "voice_leveler_enabled": true,
+    "voice_leveler_max_db": 6.0
   },
   "gain": {
     "input_gain_db": -3.0,
     "output_gain_db": 6.0,
-    "peak_limit_db": -3.0
+    "peak_limit_db": -1.0
   }
 }
