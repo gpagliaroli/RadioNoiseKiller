@@ -1489,7 +1489,7 @@ class MainWindow(QMainWindow):
         valores actuales difieren del preset guardado) + build ID. Compara contra
         el snapshot en memoria — sin disco — para poder llamarse en cada cambio."""
         from buildinfo import BUILD_ID
-        title = "RadioNoiseKiller  v1.7"
+        title = "RadioNoiseKiller  v1.8"
         name = self._config.last_preset
         if name:
             self._refresh_preset_snapshot(force=False)

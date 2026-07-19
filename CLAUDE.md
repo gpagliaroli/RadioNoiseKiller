@@ -618,7 +618,12 @@ Versión de app 1.7.0, manuales `MANUAL_RadioNoiseKiller_v1.7.pdf` (ES, 28 págs
 ambos manuales con los tips acumulados del usuario. El título de la ventana pasó a armarse en
 `_update_window_title()` (versión "v1.7" hardcodeada ahí, no en el `setWindowTitle` del build).
 
-Cambios post-v1.7 (pendiente de release):
+**v1.8 publicada (julio 2026)** — release en GitHub con distribuibles Windows y Linux.
+Versión de app 1.8.0, manuales `MANUAL_RadioNoiseKiller_v1.8.pdf` (ES, 29 págs) y
+`..._v1.8_EN.pdf` (EN, 28 págs). Cierra el último ítem del backlog v1.7 (waterfall) y elimina
+el AGC Custom. Título de la ventana "v1.8" en `_update_window_title()`.
+
+Cambios v1.8:
 - **Cascada / waterfall en la pestaña Espectro** (último ítem del backlog v1.7). Nuevo
   `src/ui/waterfall_widget.py` (`WaterfallWidget`): historia tiempo-frecuencia (~30 s) bajo el
   espectro instantáneo, en un `QSplitter` vertical arrastrable con ejes X (frecuencia) alineados

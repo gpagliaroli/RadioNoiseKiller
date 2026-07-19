@@ -1,6 +1,6 @@
 ﻿# RadioNoiseKiller — Manual de Usuario
 
-**Versión 1.7**
+**Versión 1.8**
 
 ---
 
@@ -862,4 +862,4 @@ Los valores de los sliders **Máx Y** y **Máx X** del visualizador de espectro 
 
 ---
 
-*RadioNoiseKiller — versión 1.7*
+*RadioNoiseKiller — versión 1.8*
