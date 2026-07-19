@@ -299,8 +299,14 @@ def test_waterfall_toggle_and_source():
     assert w._spectrum_splitter.count() == 2, "el splitter deberia tener 2 widgets"
     wf = w._waterfall_widget
 
-    # Casilla ON (default): combo habilitado y widget visible
-    assert w._chk_waterfall.isChecked()
+    # La casilla refleja la config cargada (no asumimos un default persistido:
+    # settings.json de dev puede tener la cascada apagada de una sesion anterior)
+    assert w._chk_waterfall.isChecked() == w._config.window.spectrum_show_waterfall
+    assert w._combo_waterfall_src.isEnabled() == w._chk_waterfall.isChecked()
+
+    # Encender: combo habilitado
+    w._chk_waterfall.setChecked(True)
+    _app.processEvents()
     assert w._combo_waterfall_src.isEnabled()
 
     # Apagar: oculta el widget y deshabilita el combo, persiste en config

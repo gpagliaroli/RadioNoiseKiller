@@ -504,22 +504,31 @@ class MainWindow(QMainWindow):
         layout.addWidget(self._s_gain_out)
         layout.addWidget(self._s_peak)
 
+        # Nivelador a la izquierda, Limitador a la derecha (más intuitivo). Las
+        # etiquetas de valor tienen ancho fijo: al pasar a valores mayores (p. ej.
+        # "ACTIVO  -12.3 dB") no empujan la etiqueta vecina de lugar.
         peak_row = QHBoxLayout()
         peak_row.setContentsMargins(0, 0, 0, 0)
+
+        lbl_lev_title = QLabel(tr("Nivelador de voz:"))
+        lbl_lev_title.setStyleSheet("color: #607d8b; font-size: 8pt;")
+        lbl_lev_title.setFixedWidth(120)
+        self._lbl_leveler = QLabel("—")
+        self._lbl_leveler.setFixedWidth(70)
+        self._lbl_leveler.setStyleSheet("color: #555; font-size: 8pt; font-weight: bold;")
+
         lbl_peak_title = QLabel(tr("Limitador de picos:"))
         lbl_peak_title.setStyleSheet("color: #607d8b; font-size: 8pt;")
         lbl_peak_title.setFixedWidth(120)
         self._lbl_peak_active = QLabel("—")
+        self._lbl_peak_active.setFixedWidth(120)
         self._lbl_peak_active.setStyleSheet("color: #555; font-size: 8pt; font-weight: bold;")
-        peak_row.addWidget(lbl_peak_title)
-        peak_row.addWidget(self._lbl_peak_active)
-        peak_row.addSpacing(24)
-        lbl_lev_title = QLabel(tr("Nivelador de voz:"))
-        lbl_lev_title.setStyleSheet("color: #607d8b; font-size: 8pt;")
-        self._lbl_leveler = QLabel("—")
-        self._lbl_leveler.setStyleSheet("color: #555; font-size: 8pt; font-weight: bold;")
+
         peak_row.addWidget(lbl_lev_title)
         peak_row.addWidget(self._lbl_leveler)
+        peak_row.addSpacing(48)
+        peak_row.addWidget(lbl_peak_title)
+        peak_row.addWidget(self._lbl_peak_active)
         peak_row.addStretch()
         layout.addLayout(peak_row)
 
