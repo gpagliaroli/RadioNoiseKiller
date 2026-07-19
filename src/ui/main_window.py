@@ -643,6 +643,9 @@ class MainWindow(QMainWindow):
         self._spectrum_splitter.setStretchFactor(1, 2)
         self._spectrum_splitter.setCollapsible(0, False)
         self._spectrum_splitter.setCollapsible(1, False)
+        # Reparto inicial 50/50 (setStretchFactor solo actúa al redimensionar; sin
+        # esto el splitter le da a la cascada su altura mínima en vez de su mitad).
+        self._spectrum_splitter.setSizes([500, 500])
         self._waterfall_widget.setVisible(self._config.window.spectrum_show_waterfall)
         layout.addWidget(self._spectrum_splitter, 1)
 
@@ -1184,6 +1187,11 @@ class MainWindow(QMainWindow):
         self._spectrum_widget.set_waterfall_enabled(on)
         if on:
             self._waterfall_widget.clear()
+            # Recuperar el reparto 50/50 (al re-mostrarse, el splitter le daría
+            # solo su altura mínima en vez de su mitad del alto disponible).
+            total = self._spectrum_splitter.height() or sum(self._spectrum_splitter.sizes())
+            if total > 0:
+                self._spectrum_splitter.setSizes([total // 2, total - total // 2])
         self._config.window.spectrum_show_waterfall = bool(on)
         self._schedule_save()
 
