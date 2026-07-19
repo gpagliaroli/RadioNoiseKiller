@@ -133,7 +133,20 @@
       "Bash(git checkout *)",
       "Bash(.venv/Scripts/python.exe -c \"import markdown2, xhtml2pdf; print\\('markdown2 + xhtml2pdf OK'\\)\")",
       "Bash(.venv/Scripts/python.exe \"C:/Users/GPAGLI~1/AppData/Local/Temp/claude/C--Disco-D-Proyectos-ByCoding-Reductor-Ruido-Radio/c9acd2e6-24d5-42e7-9276-29fb7184a07a/scratchpad/gen_manual_pdf.py\")",
-      "Bash(.venv/Scripts/python.exe -m PyInstaller reductor.spec --clean --noconfirm --distpath dist_v17)"
+      "Bash(.venv/Scripts/python.exe -m PyInstaller reductor.spec --clean --noconfirm --distpath dist_v17)",
+      "Bash(QT_QPA_PLATFORM=offscreen .venv/Scripts/python.exe tests/test_pipeline.py)",
+      "Bash(QT_QPA_PLATFORM=offscreen .venv/Scripts/python.exe tests/test_ui.py)",
+      "Bash(.venv/Scripts/python.exe -c \"import ast,collections; src=open\\('src/i18n_en.py',encoding='utf-8'\\).read\\(\\); m=ast.parse\\(src\\); d=[n for n in ast.walk\\(m\\) if isinstance\\(n,ast.Dict\\)][0]; keys=[k.value for k in d.keys]; dups=[k for k,c in collections.Counter\\(keys\\).items\\(\\) if c>1]; print\\('DUP KEYS:', dups if dups else 'none'\\)\")",
+      "Bash(git stash *)",
+      "Bash(.venv/Scripts/python.exe tests/run_all.py)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(git check-ignore *)",
+      "Bash(.venv/Scripts/python.exe tests/test_integration.py)",
+      "Bash(git diff *)",
+      "Bash(echo \"runner EXIT=$?\")",
+      "Read(//tmp/**)",
+      "Bash(.venv/Scripts/python.exe -c \"import markdown2, xhtml2pdf, pypdf; print\\('markdown2', markdown2.__version__\\); print\\('xhtml2pdf OK'\\); print\\('pypdf', pypdf.__version__\\)\")",
+      "Bash(.venv/Scripts/python.exe -m PyInstaller reductor.spec --clean --noconfirm --distpath dist_v18)"
     ]
   }
 }
