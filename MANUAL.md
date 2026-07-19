@@ -782,6 +782,19 @@ En modo Perfil estático, el piso amarillo se captura desde el botón **⏺ Apre
 | **Máx Y** | -60 dBFS a 0 dBFS | 0 dBFS | Ajusta el techo del eje vertical. Bajar (ej. -20 dBFS) comprime la escala y hace más visibles las diferencias entre curvas cuando la señal es débil. El valor se guarda automáticamente. |
 | **Máx X** | 1 kHz a 12 kHz | 12 kHz | Ajusta el límite derecho del eje de frecuencias. Reducir a 3–4 kHz hace zoom en la zona vocal y permite ver mejor los detalles en esa banda. El valor se guarda automáticamente. |
 
+Los dos sliders reescalan **tanto el espectro como la cascada** a la vez.
+
+### Cascada (waterfall)
+
+Debajo del espectro instantáneo aparece la **cascada**: una representación tiempo-frecuencia con historia (~30 segundos). El eje horizontal es la frecuencia (alineado con el espectro de arriba), el eje vertical es el tiempo (la fila superior es *ahora*, hacia abajo es el pasado) y el color representa la intensidad en cada frecuencia (azul = débil/piso de ruido, hasta rojo = fuerte). Permite **ver** la evolución en el tiempo que el espectro instantáneo no muestra: el QSB (fading) de la señal, los heterodinos que aparecen y desaparecen, y la interferencia (QRM) intermitente.
+
+| Control | Descripción |
+|---------|-------------|
+| **Casilla "Cascada"** | Muestra u oculta la cascada. Al ocultarla, el espectro instantáneo ocupa toda la altura. El estado se guarda automáticamente. |
+| **Selector Entrada / Salida** | Elige qué señal alimenta la cascada: **Entrada** (antes del procesamiento — para ver la interferencia tal como llega) o **Salida** (después del procesamiento — para ver el efecto de la cadena de filtros). |
+
+**Redimensionar el reparto:** el espectro y la cascada están separados por un **divisor arrastrable**. Por defecto la pestaña se divide a la mitad, pero podés arrastrar el divisor con el mouse hacia arriba o hacia abajo para darle más espacio al que estés mirando (más cascada para seguir el fading, más espectro para ver el detalle instantáneo).
+
 ### Interpretación práctica
 
 **Reducción visible pero voz limpia:**

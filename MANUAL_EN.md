@@ -782,6 +782,19 @@ In Static profile mode, the yellow floor is captured from the **⏺ Learn noise*
 | **Max Y** | -60 dBFS to 0 dBFS | 0 dBFS | Adjusts the vertical axis ceiling. Lowering it (e.g. -20 dBFS) compresses the scale and makes differences between curves more visible when the signal is weak. The value is saved automatically. |
 | **Max X** | 1 kHz to 12 kHz | 12 kHz | Adjusts the right edge of the frequency axis. Reducing it to 3–4 kHz zooms into the vocal zone for better detail. The value is saved automatically. |
 
+Both sliders rescale **the spectrum and the waterfall** at the same time.
+
+### Waterfall
+
+Below the instantaneous spectrum is the **waterfall**: a time-frequency display with history (~30 seconds). The horizontal axis is frequency (aligned with the spectrum above), the vertical axis is time (the top row is *now*, downward is the past), and color represents the intensity at each frequency (blue = weak / noise floor, up to red = strong). It lets you **see** the evolution over time that the instantaneous spectrum cannot show: signal QSB (fading), heterodynes that come and go, and intermittent interference (QRM).
+
+| Control | Description |
+|---------|-------------|
+| **"Waterfall" checkbox** | Shows or hides the waterfall. When hidden, the instantaneous spectrum takes the full height. The state is saved automatically. |
+| **Input / Output selector** | Chooses which signal feeds the waterfall: **Input** (before processing — to see the interference as it arrives) or **Output** (after processing — to see the effect of the filter chain). |
+
+**Resizing the split:** the spectrum and the waterfall are separated by a **draggable divider**. By default the tab is split in half, but you can drag the divider up or down with the mouse to give more room to whichever you are watching (more waterfall to track the fading, more spectrum for instantaneous detail).
+
 ### Practical interpretation
 
 **Visible reduction with clean voice:**
