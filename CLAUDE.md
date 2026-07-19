@@ -642,8 +642,17 @@ Cambios post-v1.7 (pendiente de release):
 - **Runner de tests + scripts de conveniencia:** `tests/run_all.py` corre las 7 suites de regresión
   headless en subprocesos aislados (offscreen para UI, exit≠0 si falla). Wrappers en la raíz:
   `run.cmd` (lanza la app, `src/main.py`) y `test.cmd` (corre el runner). Excluidos a propósito
-  `test_devices/test_hostapis` (hardware) y `test_suppression/test_model` (obsoletos — `load_model()`
-  de la arquitectura vieja con IA).
+  `test_devices/test_hostapis` (requieren hardware de audio, son diagnósticos).
+- **Tests muertos eliminados:** `test_suppression.py` y `test_model.py` (más el bytecode huérfano
+  `src/models/`) eran de la arquitectura vieja con modelo IA (DeepFilterNet3 / `ModelConfig` /
+  `load_model()`), toda removida hace tiempo — importaban módulos inexistentes y nunca corrían.
+- **`test_integration` desflakeado:** el check "monitoreo atenuado durante el aprendizaje" comparaba
+  el RMS de dos bloques de ruido con envolvente aleatoria ±4 dB (`noise_frames`); dos sorteos
+  independientes difieren varios dB y el ratio del duck (−12 dB) quedaba al borde del umbral 0.6
+  (~1 de 4 corridas fallaba). Fix: flag `flat=True` en `noise_frames` (envolvente constante) para
+  esos dos feeds → la única diferencia es el duck, ratio estable ~0.33. El drive del test es
+  sync+async (`_process` encola y devuelve lo que salió por `_out_queue`), lo que agrega unos frames
+  de borde, pero con ruido plano son despreciables. 12/12 corridas OK.
 - **Perfil de ruido independiente del filtro** (reportado por el usuario: con perfil estático
   aparecía siseo agudo sin suprimir, sobre todo al reiniciar la app). Causa: el perfil se aprendía
   sobre la señal POST-pasabanda, así que los bins agudos (fuera del pasabanda) quedaban en ~0. Al

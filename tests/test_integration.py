@@ -40,8 +40,14 @@ def voice_frames(n_frames, hop, level=1.0, f0=150.0):
     return (sig * env * level * 0.05).astype(np.float32).reshape(n_frames, hop)
 
 
-def noise_frames(n_frames, hop, base=0.01):
+def noise_frames(n_frames, hop, base=0.01, flat=False):
+    """Ruido de banda. Con flat=True omite la envolvente fluctuante: el nivel es
+    constante frame a frame. Necesario cuando se compara el RMS de dos bloques
+    (p. ej. el duck del aprendizaje): con la envolvente ±4dB, dos sorteos
+    independientes difieren varios dB y el ratio del check se vuelve flaky."""
     x = rng.standard_normal(n_frames * hop) * base
+    if flat:
+        return x.astype(np.float32).reshape(n_frames, hop)
     env = np.repeat(10 ** (rng.uniform(-4, 4, size=n_frames // 10 + 1) / 20.0),
                     10 * hop)[: n_frames * hop]
     return (x * env).astype(np.float32).reshape(n_frames, hop)
@@ -136,10 +142,12 @@ check("apply_config en caliente sin errores", len(errors) == 0)
 print("\n=== Fase 4b: aprendizaje estatico (AGC congelado + monitoreo atenuado) ===")
 pipeline.set_noise_mode("static")
 pipeline.clear_noise_profile()
-rms_pre = feed(pipeline, noise_frames(60, hop), collect=True)
+# Ruido plano (flat): pre y learn solo difieren por el duck del monitoreo, no
+# por la envolvente aleatoria — así el ratio es estable, no flaky.
+rms_pre = feed(pipeline, noise_frames(60, hop, flat=True), collect=True)
 g_before = pipeline.agc_gain_db
 pipeline.start_noise_learning()
-rms_learn = feed(pipeline, noise_frames(200, hop), collect=True)
+rms_learn = feed(pipeline, noise_frames(200, hop, flat=True), collect=True)
 g_after = pipeline.agc_gain_db
 frames_learned = pipeline.stop_noise_learning()
 check("el aprendizaje capturo frames (%d)" % frames_learned, frames_learned > 100)
