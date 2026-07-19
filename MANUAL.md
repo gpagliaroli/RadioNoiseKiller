@@ -166,7 +166,7 @@ Controles principales de operación: modo de recepción, AGC y activación del p
 | Control | Descripción |
 |---------|-------------|
 | **Modo** | Selecciona el tipo de señal recibida: **AM** (amplitud modulada, ancho de banda más amplio) o **SSB** (banda lateral única, voz comprimida en frecuencia). Afecta los límites por defecto del Filtro de Paso de Banda. |
-| **AGC** | Control Automático de Ganancia. **off** = sin AGC. **slow / medium / fast** = velocidad de respuesta. **Custom** = parámetros ajustables a mano (ver más abajo). Para SSB se recomienda *slow* o *medium*; para AM con señales estables, *off* o *slow*. |
+| **AGC** | Control Automático de Ganancia. **off** = sin AGC. **slow / medium / fast** = velocidad de respuesta (ataque/release fijos por preset). Para SSB se recomienda *slow* o *medium*; para AM con señales estables, *off* o *slow*. |
 | **▶ ACTIVAR / ■ DETENER** | Inicia o detiene el procesamiento en tiempo real. Al activar, el audio fluye por todo el pipeline. |
 | **Bypass** | Pasa el audio directo de entrada a salida sin ningún procesamiento. Útil para comparar el sonido con y sin la aplicación activa. |
 
@@ -174,20 +174,17 @@ Controles principales de operación: modo de recepción, AGC y activación del p
 
 El selector de idioma (🌐 Español / English) está en la **esquina derecha de la barra de estado** (borde inferior de la ventana), visible desde cualquier pestaña. El cambio se guarda al instante pero **requiere reiniciar la aplicación** para aplicarse.
 
-### AGC Personalizado (Custom)
+### Presets de AGC
 
-**Ubicación:** Pestaña Avanzada Audio → grupo "AGC Personalizado"
+El combo **AGC** de la pestaña Principal ofrece tres velocidades con ataque/release fijos, todos con objetivo −20 dBFS y ganancia máxima +36 dB:
 
-Al seleccionar **Custom** en el combo AGC se habilitan cuatro sliders que permiten ajustar el comportamiento del AGC a mano. Con cualquier otro preset los sliders quedan deshabilitados (los presets usan sus valores fijos). Todos los cambios se aplican en tiempo real.
+| Preset | Ataque | Release | Uso típico |
+|--------|--------|---------|------------|
+| **fast**   | 5 ms   | 500 ms  | Protege de picos bruscos; puede "bombear" con voz SSB. |
+| **medium** | 25 ms  | 2000 ms | Equilibrado — buen punto de partida general. |
+| **slow**   | 100 ms | 5000 ms | Estable con QSB profundo; el más natural para voz. |
 
-| Control | Rango | Default | Descripción |
-|---------|-------|---------|-------------|
-| **Nivel objetivo** | −30 a −6 dBFS | −20 | Nivel RMS al que el AGC lleva la señal. Más alto = salida más fuerte, pero menos margen antes del limitador de picos. |
-| **Ganancia máxima** | 0 a +60 dB | +36 | Tope de amplificación para señales débiles. Bajarlo evita que el AGC levante el ruido de fondo en pausas largas sin señal. |
-| **Ataque** | 1 a 200 ms | 25 | Cuán rápido baja la ganancia ante una señal fuerte. Rápido protege de picos pero puede "bombear" con voz SSB; lento es más natural. |
-| **Release** | 100 a 8000 ms | 2000 | Cuán rápido recupera la ganancia al caer la señal. Lento = estable con QSB profundo; rápido = sigue el fading pero respira más. |
-
-**Guía rápida:** los presets equivalen aproximadamente a — *fast*: ataque 5 ms / release 500 ms; *medium*: 25 ms / 2000 ms; *slow*: 100 ms / 5000 ms (todos con objetivo −20 dBFS y ganancia máxima +36 dB). Partir del preset más parecido a lo que se busca y ajustar desde ahí.
+Con **off** el AGC queda fuera del pipeline. Para SSB se recomienda *slow* o *medium*; para AM con señales estables, *off* o *slow*.
 
 ---
 
@@ -517,7 +514,7 @@ Este módulo detecta en tiempo real el **tono fundamental** (f0) de la voz media
 ### Nivelador de voz
 
 **Activar:** Módulos Activos → casilla "Nivelador de voz (compensa condiciones de banda)"  
-**Ajustar:** Pestaña Avanzada Audio → grupo "Nivelador de voz" (junto al AGC Personalizado)
+**Ajustar:** Pestaña Avanzada Audio → grupo "Nivelador de voz"
 
 En una sesión de escucha real el nivel de la voz limpia varía constantemente: cambia la propagación, cambia la estación, y la propia cantidad de cancelación de ruido resta más o menos energía según las condiciones. El nivelador es un **AGC dedicado a la voz** que trabaja *después* del cancelador y del squelch — es decir, sobre el audio ya limpio — y lo lleva a un nivel constante.
 

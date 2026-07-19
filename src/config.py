@@ -24,10 +24,6 @@ class AudioConfig:
 class DSPConfig:
     mode: RadioMode = RadioMode.SSB
     agc_preset: str = "off"
-    agc_target_dbfs: float = -20.0   # AGC Custom: nivel RMS objetivo (dBFS)
-    agc_max_gain_db: float = 36.0    # AGC Custom: ganancia máxima (dB)
-    agc_attack_ms:   float = 25.0    # AGC Custom: ataque (ms)
-    agc_release_ms:  float = 2000.0  # AGC Custom: release (ms)
     blanker_enabled:  bool  = True
     bandpass_pre_enabled:  bool = True
     bandpass_post_enabled: bool = True
@@ -123,10 +119,6 @@ class AppConfig:
             "dsp": {
                 "mode": self.dsp.mode.value,
                 "agc_preset": self.dsp.agc_preset,
-                "agc_target_dbfs": self.dsp.agc_target_dbfs,
-                "agc_max_gain_db": self.dsp.agc_max_gain_db,
-                "agc_attack_ms":   self.dsp.agc_attack_ms,
-                "agc_release_ms":  self.dsp.agc_release_ms,
                 "blanker_enabled":  self.dsp.blanker_enabled,
                 "bandpass_pre_enabled":  self.dsp.bandpass_pre_enabled,
                 "bandpass_post_enabled": self.dsp.bandpass_post_enabled,
@@ -225,10 +217,8 @@ class AppConfig:
         except ValueError:
             pass
         self.dsp.agc_preset       = d.get("agc_preset",       self.dsp.agc_preset)
-        self.dsp.agc_target_dbfs  = float(d.get("agc_target_dbfs", self.dsp.agc_target_dbfs))
-        self.dsp.agc_max_gain_db  = float(d.get("agc_max_gain_db", self.dsp.agc_max_gain_db))
-        self.dsp.agc_attack_ms    = float(d.get("agc_attack_ms",   self.dsp.agc_attack_ms))
-        self.dsp.agc_release_ms   = float(d.get("agc_release_ms",  self.dsp.agc_release_ms))
+        if self.dsp.agc_preset == "custom":   # AGC Custom eliminado → preset válido
+            self.dsp.agc_preset = "medium"
         self.dsp.blanker_enabled  = bool(d.get("blanker_enabled",  self.dsp.blanker_enabled))
         # migración: settings viejos con "bandpass_enabled" aplican a ambos
         _bp_legacy = d.get("bandpass_enabled", None)

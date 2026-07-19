@@ -18,7 +18,6 @@ class AGC:
         "fast":   {"attack_ms":   5, "release_ms":   500},
         "medium": {"attack_ms":  25, "release_ms":  2000},
         "slow":   {"attack_ms": 100, "release_ms":  5000},
-        # "custom" no está acá: usa self._custom (parámetros del usuario)
     }
 
     _TARGET_DBFS   = -20.0   # nivel RMS objetivo
@@ -34,6 +33,8 @@ class AGC:
         self._enabled   = False
         self._attack_k  = 0.0
         self._release_k = 0.0
+        # Parámetros del preset "custom" (lo usa el Nivelador de voz como AGC
+        # con parámetros fijos; el AGC principal solo usa los presets nombrados).
         self._custom    = {
             "target_dbfs": self._TARGET_DBFS,
             "max_gain_db": self._MAX_GAIN_DB,
@@ -49,7 +50,7 @@ class AGC:
     def set_preset(self, preset: str) -> None:
         self._preset = preset
         params = self._custom if preset == "custom" else self.PRESETS.get(preset)
-        if params is None:
+        if params is None:                         # preset desconocido → AGC off
             self._enabled = False
             self._gain    = 1.0
             return
@@ -62,8 +63,7 @@ class AGC:
         self._attack_k   = 1.0 - np.exp(-1.0 / (params["attack_ms"]  / 1000.0 * bps))
         self._release_k  = 1.0 - np.exp(-1.0 / (params["release_ms"] / 1000.0 * bps))
 
-    # Parámetros del preset "custom". Los clamps deben coincidir con los
-    # rangos de los sliders en AdvancedAudioTab (invariante del proyecto).
+    # Parámetros del preset "custom" (los usa el Nivelador de voz).
     def set_custom_target(self, dbfs: float) -> None:
         self._custom["target_dbfs"] = float(np.clip(dbfs, -30.0, -6.0))
         self._refresh_custom()

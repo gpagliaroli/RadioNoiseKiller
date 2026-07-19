@@ -10,7 +10,8 @@ pegados, "nunca termina de calibrar").
 
 Usa pipeline.start(headless=True): hilo procesador real, sin AudioStream.
 """
-import sys, time
+import sys
+import time
 sys.path.insert(0, "src")
 import numpy as np
 from config import AppConfig, RadioMode
@@ -77,11 +78,7 @@ d.pitch_enhance_enabled     = True
 d.exciter_enabled           = True
 d.presence_db               = 4.0
 d.body_db                   = 3.0
-d.agc_preset                = "custom"
-d.agc_target_dbfs           = -20.0
-d.agc_max_gain_db           = 30.0
-d.agc_attack_ms             = 15.0
-d.agc_release_ms            = 800.0
+d.agc_preset                = "medium"
 
 pipeline = ProcessingPipeline(cfg)
 errors = []
@@ -124,7 +121,7 @@ g_noise = pipeline.voice_leveler_gain_db
 check("con solo ruido la ganancia queda congelada (%.1f vs %.1f dB)" % (g_noise, g_voice),
       abs(g_noise - g_voice) < 0.5)
 pipeline.set_voice_leveler_enabled(False)
-pipeline.set_agc_preset("custom")
+pipeline.set_agc_preset("slow")
 
 print("\n=== Fase 4: cambios en caliente ===")
 pipeline.set_noise_mode("static")

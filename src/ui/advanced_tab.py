@@ -98,17 +98,12 @@ class AdvancedAudioTab(QWidget):
             s.set_enabled(dsp.presence_enabled)
         for s in (self._s_exciter_drive, self._s_exciter_mix):
             s.set_enabled(dsp.exciter_enabled)
-        custom = dsp.agc_preset == "custom"
-        for s in (self._s_agc_target, self._s_agc_max_gain,
-                  self._s_agc_attack, self._s_agc_release):
-            s.set_enabled(custom)
         # El nivelador requiere el cancelador activo (su VAD vive ahí — invariante 2)
         self._s_leveler_max.set_enabled(dsp.noise_enabled and dsp.voice_leveler_enabled)
 
     def _build_ui(self) -> None:
         layout = _make_scroll_layout(self)
         layout.addWidget(self._build_audio_group())
-        layout.addWidget(self._build_agc_group())
         layout.addWidget(self._build_leveler_group())
         layout.addWidget(self._build_dsp_group())
         layout.addWidget(self._build_voice_group())
@@ -138,67 +133,6 @@ class AdvancedAudioTab(QWidget):
         self._s_block.valueChanged.connect(self._on_block_size)
         layout.addWidget(self._s_block)
         layout.addWidget(_note(tr("  ↳ Menor = menor latencia. Requiere reiniciar el procesamiento.")))
-        return group
-
-    def _build_agc_group(self) -> QGroupBox:
-        group = QGroupBox(tr("AGC Personalizado  (activar con AGC: Custom en Principal)"))
-        layout = QVBoxLayout(group)
-
-        self._s_agc_target = SliderRow(
-            tr("Nivel objetivo:"),
-            min_val=-30.0, max_val=-6.0,
-            default=_DSP_DEF.agc_target_dbfs,
-            step=1.0, unit="dBFS", fmt="{:.0f}",
-        )
-        self._s_agc_target._update_label = lambda v: self._s_agc_target._val_lbl.setText(
-            f"{v:.0f} dBFS  ({tr('bajo') if v < -24 else tr('normal') if v < -14 else tr('alto')})"
-        )
-        self._s_agc_target._val_lbl.setFixedWidth(110)
-        self._s_agc_target.valueChanged.connect(self._pipeline.set_agc_target)
-        layout.addWidget(self._s_agc_target)
-        layout.addWidget(_note(tr("  ↳ Nivel RMS al que el AGC lleva la señal. -20 dBFS=default, más alto=más fuerte.")))
-
-        self._s_agc_max_gain = SliderRow(
-            tr("Ganancia máxima:"),
-            min_val=0.0, max_val=60.0,
-            default=_DSP_DEF.agc_max_gain_db,
-            step=1.0, unit="dB", fmt="{:.0f}",
-        )
-        self._s_agc_max_gain._update_label = lambda v: self._s_agc_max_gain._val_lbl.setText(
-            f"+{v:.0f} dB  ({tr('limitado') if v < 20 else tr('normal') if v < 45 else tr('máximo')})"
-        )
-        self._s_agc_max_gain._val_lbl.setFixedWidth(110)
-        self._s_agc_max_gain.valueChanged.connect(self._pipeline.set_agc_max_gain)
-        layout.addWidget(self._s_agc_max_gain)
-        layout.addWidget(_note(tr("  ↳ Tope de amplificación en señales débiles. Bajo=no levanta el ruido de fondo.")))
-
-        self._s_agc_attack = SliderRow(
-            tr("Ataque:"),
-            min_val=1.0, max_val=200.0,
-            default=_DSP_DEF.agc_attack_ms,
-            step=1.0, unit="ms", fmt="{:.0f}",
-        )
-        self._s_agc_attack._update_label = lambda v: self._s_agc_attack._val_lbl.setText(
-            f"{v:.0f} ms  ({tr('rápido') if v < 15 else tr('normal') if v < 60 else tr('lento')})"
-        )
-        self._s_agc_attack._val_lbl.setFixedWidth(110)
-        self._s_agc_attack.valueChanged.connect(self._pipeline.set_agc_attack)
-        layout.addWidget(self._s_agc_attack)
-        layout.addWidget(_note(tr("  ↳ Cuán rápido baja la ganancia ante señal fuerte. Rápido=protege, puede bombear.")))
-
-        self._s_agc_release = SliderRow(
-            tr("Release:"),
-            min_val=100.0, max_val=8000.0,
-            default=_DSP_DEF.agc_release_ms,
-            step=100.0, unit="ms", fmt="{:.0f}",
-        )
-        self._s_agc_release._update_label = lambda v: self._s_agc_release._val_lbl.setText(
-            f"{v:.0f} ms  ({tr('rápido') if v < 1000 else tr('normal') if v < 4000 else tr('lento')})"
-        )
-        self._s_agc_release._val_lbl.setFixedWidth(110)
-        self._s_agc_release.valueChanged.connect(self._pipeline.set_agc_release)
-        layout.addWidget(self._s_agc_release)
-        layout.addWidget(_note(tr("  ↳ Cuán rápido recupera ganancia al caer la señal. Lento=estable en QSB, rápido=sigue el fading.")))
         return group
 
     def _build_leveler_group(self) -> QGroupBox:
@@ -431,10 +365,6 @@ class AdvancedAudioTab(QWidget):
             _BLOCK_SIZES.index(self._config.audio.block_size)
             if self._config.audio.block_size in _BLOCK_SIZES else 1
         )
-        self._s_agc_target.set_value(cfg.agc_target_dbfs)
-        self._s_agc_max_gain.set_value(cfg.agc_max_gain_db)
-        self._s_agc_attack.set_value(cfg.agc_attack_ms)
-        self._s_agc_release.set_value(cfg.agc_release_ms)
         self._s_leveler_max.set_value(cfg.voice_leveler_max_db)
         self._s_presence_freq.set_value(cfg.presence_freq)
         self._s_presence.set_value(cfg.presence_db)
@@ -469,10 +399,6 @@ class AdvancedAudioTab(QWidget):
         self._config.dsp.exciter_mix   = defaults.exciter_mix
         self._pipeline.set_exciter_drive(defaults.exciter_drive)
         self._pipeline.set_exciter_mix(defaults.exciter_mix)
-        self._pipeline.set_agc_target(defaults.agc_target_dbfs)
-        self._pipeline.set_agc_max_gain(defaults.agc_max_gain_db)
-        self._pipeline.set_agc_attack(defaults.agc_attack_ms)
-        self._pipeline.set_agc_release(defaults.agc_release_ms)
         self._load_values()
 
     # ------------------------------------------------------------------

@@ -147,20 +147,6 @@ def test_voice_leveler_requires_noise():
     print("Nivelador de voz requiere cancelador       OK")
 
 
-def test_agc_custom_sliders_gated():
-    """Los sliders de AGC Custom solo se habilitan con el preset 'custom'."""
-    w = _win()
-    aud = w._adv_audio_tab
-
-    _set_combo(w._combo_agc, "custom")
-    assert aud._s_agc_target._slider.isEnabled(), "AGC target deberia habilitarse en custom"
-
-    _set_combo(w._combo_agc, "fast")
-    assert not aud._s_agc_target._slider.isEnabled(), \
-        "AGC target habilitado sin preset custom"
-    print("Sliders AGC Custom gateados                OK")
-
-
 def test_bandpass_out_requires_post_and_independent():
     """Los sliders de salida independiente requieren bandpass post + la casilla."""
     w = _win()
@@ -309,7 +295,6 @@ if __name__ == "__main__":
     test_profile_buttons_visibility_by_mode()
     test_canceller_subcontrols_require_noise()
     test_voice_leveler_requires_noise()
-    test_agc_custom_sliders_gated()
     test_bandpass_out_requires_post_and_independent()
     test_refresh_from_config_restores_checkboxes()
     test_window_title_reflects_preset()

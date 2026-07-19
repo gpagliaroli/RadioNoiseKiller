@@ -4,10 +4,6 @@
   "dsp": {
     "mode": "AM",
     "agc_preset": "slow",
-    "agc_target_dbfs": -20.0,
-    "agc_max_gain_db": 40.0,
-    "agc_attack_ms": 50.0,
-    "agc_release_ms": 8000.0,
     "blanker_enabled": true,
     "blanker_frame": 15.0,
     "blanker_mini": 15.0,

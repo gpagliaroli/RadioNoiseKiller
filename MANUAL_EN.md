@@ -166,7 +166,7 @@ The main operating controls: reception mode, AGC and processing activation.
 | Control | Description |
 |---------|-------------|
 | **Mode** | Selects the type of received signal: **AM** (amplitude modulation, wider bandwidth) or **SSB** (single sideband, voice compressed in frequency). Affects the default limits of the Bandpass Filter. |
-| **AGC** | Automatic Gain Control. **off** = no AGC. **slow / medium / fast** = response speed. **Custom** = hand-adjustable parameters (see below). For SSB, *slow* or *medium* is recommended; for AM with stable signals, *off* or *slow*. |
+| **AGC** | Automatic Gain Control. **off** = no AGC. **slow / medium / fast** = response speed (attack/release fixed per preset). For SSB, *slow* or *medium* is recommended; for AM with stable signals, *off* or *slow*. |
 | **▶ START / ■ STOP** | Starts or stops real-time processing. When started, audio flows through the whole pipeline. |
 | **Bypass** | Passes audio straight from input to output with no processing. Useful for comparing the sound with and without the application active. |
 
@@ -174,20 +174,17 @@ The main operating controls: reception mode, AGC and processing activation.
 
 The language selector (🌐 Español / English) sits in the **right corner of the status bar** (bottom edge of the window), visible from any tab. The change is saved instantly but **requires restarting the application** to take effect.
 
-### Custom AGC
+### AGC presets
 
-**Location:** Advanced Audio tab → "Custom AGC" group
+The **AGC** combo on the Main tab offers three speeds with fixed attack/release, all with target −20 dBFS and max gain +36 dB:
 
-Selecting **Custom** in the AGC combo enables four sliders for hand-tuning the AGC behavior. With any other preset the sliders are disabled (presets use their fixed values). All changes apply in real time.
+| Preset | Attack | Release | Typical use |
+|--------|--------|---------|-------------|
+| **fast**   | 5 ms   | 500 ms  | Protects against sharp peaks; may "pump" with SSB voice. |
+| **medium** | 25 ms  | 2000 ms | Balanced — a good general starting point. |
+| **slow**   | 100 ms | 5000 ms | Stable with deep QSB; the most natural for voice. |
 
-| Control | Range | Default | Description |
-|---------|-------|---------|-------------|
-| **Target level** | −30 to −6 dBFS | −20 | RMS level the AGC drives the signal to. Higher = louder output, but less headroom before the peak limiter. |
-| **Max gain** | 0 to +60 dB | +36 | Amplification cap for weak signals. Lowering it keeps the AGC from raising the background noise during long pauses without signal. |
-| **Attack** | 1 to 200 ms | 25 | How fast the gain drops on a strong signal. Fast protects against peaks but can "pump" with SSB voice; slow sounds more natural. |
-| **Release** | 100 to 8000 ms | 2000 | How fast the gain recovers when the signal drops. Slow = stable with deep QSB; fast = tracks the fading but breathes more. |
-
-**Quick guide:** the presets are roughly equivalent to — *fast*: attack 5 ms / release 500 ms; *medium*: 25 ms / 2000 ms; *slow*: 100 ms / 5000 ms (all with target −20 dBFS and max gain +36 dB). Start from the preset closest to what you want and adjust from there.
+With **off** the AGC is out of the pipeline. For SSB, *slow* or *medium* is recommended; for AM with stable signals, *off* or *slow*.
 
 ---
 
@@ -517,7 +514,7 @@ This module detects the voice's **fundamental pitch** (f0) in real time via auto
 ### Voice leveler
 
 **Enable:** Active Modules → "Voice leveler (compensates band conditions)" checkbox  
-**Adjust:** Advanced Audio tab → "Voice leveler" group (next to the Custom AGC)
+**Adjust:** Advanced Audio tab → "Voice leveler" group
 
 In a real listening session the level of the clean voice varies constantly: propagation changes, stations change, and the amount of noise cancellation itself removes more or less energy depending on conditions. The leveler is an **AGC dedicated to the voice** that works *after* the canceller and the squelch — that is, on the already-clean audio — and brings it to a constant level.
 

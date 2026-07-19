@@ -249,27 +249,11 @@ CATALOG = {
     "{n} muestras ({ms:.0f} ms)": "{n} samples ({ms:.0f} ms)",
     "  ↳ Menor = menor latencia. Requiere reiniciar el procesamiento.":
         "  ↳ Smaller = lower latency. Requires restarting processing.",
-    "AGC Personalizado  (activar con AGC: Custom en Principal)":
-        "Custom AGC  (enable with AGC: Custom in Main)",
-    "Nivel objetivo:": "Target level:",
-    "bajo": "low",
-    "normal": "normal",
-    "alto": "high",
-    "  ↳ Nivel RMS al que el AGC lleva la señal. -20 dBFS=default, más alto=más fuerte.":
-        "  ↳ RMS level the AGC drives the signal to. -20 dBFS=default, higher=louder.",
     "Ganancia máxima:": "Max gain:",
-    "limitado": "limited",
+    "normal": "normal",
     "máximo": "maximum",
-    "  ↳ Tope de amplificación en señales débiles. Bajo=no levanta el ruido de fondo.":
-        "  ↳ Amplification cap for weak signals. Low=doesn't raise the noise floor.",
-    "Ataque:": "Attack:",
     "rápido": "fast",
     "lento": "slow",
-    "  ↳ Cuán rápido baja la ganancia ante señal fuerte. Rápido=protege, puede bombear.":
-        "  ↳ How fast gain drops on strong signals. Fast=protective, may pump.",
-    "Release:": "Release:",
-    "  ↳ Cuán rápido recupera ganancia al caer la señal. Lento=estable en QSB, rápido=sigue el fading.":
-        "  ↳ How fast gain recovers when the signal drops. Slow=stable in QSB, fast=tracks the fading.",
     "Filtro de paso de banda  (pre y post — en tiempo real)":
         "Bandpass filter  (pre & post — real time)",
     "AM – Hz inferior:": "AM – low Hz:",

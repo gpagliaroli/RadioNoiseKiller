@@ -216,7 +216,6 @@ class MainWindow(QMainWindow):
             (tr("Rápido"),      "fast"),
             (tr("Medio"),       "medium"),
             (tr("Lento"),       "slow"),
-            ("Custom",          "custom"),
         ]:
             self._combo_agc.addItem(label, preset)
         self._combo_agc.setCurrentIndex(0)
@@ -939,9 +938,6 @@ class MainWindow(QMainWindow):
         self._pipeline.set_agc_preset(preset)
         if preset == "off":
             self._label_agc_gain.setText("")
-        # Los sliders de AGC Custom solo se habilitan con el preset "custom"
-        if hasattr(self, "_adv_audio_tab"):
-            self._adv_audio_tab.refresh_enabled_states()
         self._schedule_save()
 
     def _on_module_toggled(self, key: str, setter, checked: bool) -> None:
@@ -1401,8 +1397,8 @@ class MainWindow(QMainWindow):
         self._snapshot_for = name
         if name and self._preset_manager.exists(name):
             try:
-                d = self._preset_manager.read(name)
-                self._preset_saved_snapshot = (d.get("dsp"), d.get("gain"))
+                snap = self._preset_manager.snapshot(name)
+                self._preset_saved_snapshot = (snap["dsp"], snap["gain"])
             except Exception:
                 self._preset_saved_snapshot = None
         else:

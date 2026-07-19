@@ -72,16 +72,27 @@ class PresetManager:
         """Dict crudo del preset guardado (para comparaciones en memoria sin re-leer disco)."""
         return self._read_file(self._path_for(name))
 
+    def snapshot(self, name: str) -> dict:
+        """(dsp, gain) NORMALIZADOS del preset: cargados en un AppConfig limpio y
+        re-capturados. Compararlos contra _capture() del config actual evita falsos
+        '(modificado)' cuando el JSON en disco trae claves obsoletas (campos
+        eliminados del esquema, p. ej. el viejo AGC Custom) o le faltan campos
+        nuevos — ambos lados pasan por el mismo _capture(). Lanza si no existe."""
+        fresh = AppConfig()
+        self.load_into(name, fresh)
+        cap = self._capture(name, fresh)
+        return {"dsp": cap["dsp"], "gain": cap["gain"]}
+
     def matches(self, name: str, config: AppConfig) -> bool:
         """True si los valores DSP+Gain actuales del config coinciden exactamente
         con los guardados en el preset (para mostrar '(modificado)' en la UI)."""
         try:
-            saved = self._read_file(self._path_for(name))
+            saved = self.snapshot(name)
         except Exception:
             return False
         current = self._capture(name, config)
-        return (saved.get("dsp") == current["dsp"]
-                and saved.get("gain") == current["gain"])
+        return (saved["dsp"] == current["dsp"]
+                and saved["gain"] == current["gain"])
 
     # ------------------------------------------------------------------ #
     # Internos                                                             #
@@ -112,10 +123,6 @@ class PresetManager:
             "dsp": {
                 "mode":                      dsp.mode.value,
                 "agc_preset":                dsp.agc_preset,
-                "agc_target_dbfs":           dsp.agc_target_dbfs,
-                "agc_max_gain_db":           dsp.agc_max_gain_db,
-                "agc_attack_ms":             dsp.agc_attack_ms,
-                "agc_release_ms":            dsp.agc_release_ms,
                 "blanker_enabled":           dsp.blanker_enabled,
                 "blanker_frame":             dsp.blanker_frame,
                 "blanker_mini":              dsp.blanker_mini,
@@ -182,10 +189,8 @@ class PresetManager:
         except ValueError:
             pass
         dsp.agc_preset           = d.get("agc_preset",           dsp.agc_preset)
-        dsp.agc_target_dbfs      = float(d.get("agc_target_dbfs", dsp.agc_target_dbfs))
-        dsp.agc_max_gain_db      = float(d.get("agc_max_gain_db", dsp.agc_max_gain_db))
-        dsp.agc_attack_ms        = float(d.get("agc_attack_ms",   dsp.agc_attack_ms))
-        dsp.agc_release_ms       = float(d.get("agc_release_ms",  dsp.agc_release_ms))
+        if dsp.agc_preset == "custom":   # AGC Custom eliminado → preset válido
+            dsp.agc_preset = "medium"
         dsp.blanker_enabled      = bool(d.get("blanker_enabled",  dsp.blanker_enabled))
         dsp.blanker_frame        = float(d.get("blanker_frame",   dsp.blanker_frame))
         dsp.blanker_mini         = float(d.get("blanker_mini",    dsp.blanker_mini))

@@ -619,6 +619,31 @@ ambos manuales con los tips acumulados del usuario. El título de la ventana pas
 `_update_window_title()` (versión "v1.7" hardcodeada ahí, no en el `setWindowTitle` del build).
 
 Cambios post-v1.7 (pendiente de release):
+- **AGC Custom eliminado** (decisión del usuario: sumaba 4 sliders y complejidad sin uso real —
+  los 3 presets fijos fast/medium/slow cubren los casos). Se quitó el ítem "Custom" del combo AGC,
+  el grupo "AGC Personalizado" de Avanzada Audio, los 4 campos `agc_target_dbfs/max_gain_db/
+  attack_ms/release_ms` de DSPConfig, sus setters del pipeline (`set_agc_target/...`) y su
+  serialización en settings.json y presets. El AGC conserva los `set_custom_*` internos porque el
+  **Nivelador de voz** los usa como AGC de parámetros fijos (target −20 / max según slider / 80 /
+  1500 ms). Migración: settings.json y presets con `agc_preset="custom"` → `"medium"` al cargar
+  (config.py y presets.py). Manuales ES+EN: sección "AGC Personalizado" reemplazada por tabla de
+  presets; ref. cruzada del Nivelador de voz depurada.
+  - **Bug destapado — comparación de "(modificado)" frágil ante campos eliminados del esquema:**
+    tanto `PresetManager.matches()` como el snapshot del título comparaban el **JSON crudo en disco**
+    (que retenía las claves `agc_*` viejas) contra `_capture()` nuevo (sin ellas) → nunca coincidían
+    → "(modificado)" permanente en todos los presets. Fix durable: **`PresetManager.snapshot(name)`**
+    normaliza el preset cargándolo en un `AppConfig` limpio y re-capturándolo, así ambos lados pasan
+    por el mismo `_capture()`; claves obsoletas o campos nuevos ausentes ya no generan falsos
+    "(modificado)". Lo usan `matches()` y `_refresh_preset_snapshot` en main_window. **Regla nueva:
+    comparaciones config↔preset guardado deben normalizar ambos lados por `_capture()`, nunca comparar
+    contra el dict crudo de disco.** Los 8 presets de fábrica se regeneraron (drop de claves muertas +
+    completados con campos v1.4/v1.6 que predataban). Test `test_ui.py::test_agc_custom_sliders_gated`
+    eliminado; `test_integration`/`test_ui` actualizados (usan preset "medium"/"slow").
+- **Runner de tests + scripts de conveniencia:** `tests/run_all.py` corre las 7 suites de regresión
+  headless en subprocesos aislados (offscreen para UI, exit≠0 si falla). Wrappers en la raíz:
+  `run.cmd` (lanza la app, `src/main.py`) y `test.cmd` (corre el runner). Excluidos a propósito
+  `test_devices/test_hostapis` (hardware) y `test_suppression/test_model` (obsoletos — `load_model()`
+  de la arquitectura vieja con IA).
 - **Perfil de ruido independiente del filtro** (reportado por el usuario: con perfil estático
   aparecía siseo agudo sin suprimir, sobre todo al reiniciar la app). Causa: el perfil se aprendía
   sobre la señal POST-pasabanda, así que los bins agudos (fuera del pasabanda) quedaban en ~0. Al

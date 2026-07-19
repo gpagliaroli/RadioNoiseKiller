@@ -50,10 +50,6 @@ class ProcessingPipeline:
         self._presence_enabled:      bool = config.dsp.presence_enabled
 
         self._agc = AGC(config.audio.sample_rate, config.audio.block_size)
-        self._agc.set_custom_target(config.dsp.agc_target_dbfs)
-        self._agc.set_custom_max_gain(config.dsp.agc_max_gain_db)
-        self._agc.set_custom_attack(config.dsp.agc_attack_ms)
-        self._agc.set_custom_release(config.dsp.agc_release_ms)
         self._agc.set_preset(config.dsp.agc_preset)
         # Nivelador de voz: AGC post-cancelador gateado por el VAD. Compensa la
         # atenuación de voz del Wiener a SNR bajo sin re-amplificar el ruido
@@ -161,22 +157,6 @@ class ProcessingPipeline:
     def set_agc_preset(self, preset: str) -> None:
         self._config.dsp.agc_preset = preset
         self._agc.set_preset(preset)
-
-    def set_agc_target(self, dbfs: float) -> None:
-        self._config.dsp.agc_target_dbfs = float(dbfs)
-        self._agc.set_custom_target(dbfs)
-
-    def set_agc_max_gain(self, db: float) -> None:
-        self._config.dsp.agc_max_gain_db = float(db)
-        self._agc.set_custom_max_gain(db)
-
-    def set_agc_attack(self, ms: float) -> None:
-        self._config.dsp.agc_attack_ms = float(ms)
-        self._agc.set_custom_attack(ms)
-
-    def set_agc_release(self, ms: float) -> None:
-        self._config.dsp.agc_release_ms = float(ms)
-        self._agc.set_custom_release(ms)
 
     def set_voice_leveler_enabled(self, enabled: bool) -> None:
         self._config.dsp.voice_leveler_enabled = bool(enabled)
@@ -301,10 +281,6 @@ class ProcessingPipeline:
         gain = config.gain
 
         self.set_mode(dsp.mode)
-        self.set_agc_target(dsp.agc_target_dbfs)
-        self.set_agc_max_gain(dsp.agc_max_gain_db)
-        self.set_agc_attack(dsp.agc_attack_ms)
-        self.set_agc_release(dsp.agc_release_ms)
         self.set_agc_preset(dsp.agc_preset)
 
         self.set_blanker_enabled(dsp.blanker_enabled)
