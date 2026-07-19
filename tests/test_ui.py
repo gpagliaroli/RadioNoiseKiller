@@ -289,6 +289,43 @@ def test_advanced_change_marks_modified():
         w._preset_manager.delete(tmp)
 
 
+def test_waterfall_toggle_and_source():
+    """La cascada: casilla la muestra/oculta y habilita el selector; el cambio de
+    fuente persiste; empujar filas headless no crashea."""
+    import numpy as np
+    w = _win()
+
+    # El splitter de la pestaña Espectro tiene espectro + cascada
+    assert w._spectrum_splitter.count() == 2, "el splitter deberia tener 2 widgets"
+    wf = w._waterfall_widget
+
+    # Casilla ON (default): combo habilitado y widget visible
+    assert w._chk_waterfall.isChecked()
+    assert w._combo_waterfall_src.isEnabled()
+
+    # Apagar: oculta el widget y deshabilita el combo, persiste en config
+    w._chk_waterfall.setChecked(False)
+    _app.processEvents()
+    assert not w._combo_waterfall_src.isEnabled(), "combo habilitado con cascada off"
+    assert w._config.window.spectrum_show_waterfall is False
+
+    # Encender de nuevo y cambiar la fuente -> persiste
+    w._chk_waterfall.setChecked(True)
+    _app.processEvents()
+    _set_combo(w._combo_waterfall_src, "output")
+    assert w._config.window.waterfall_source == "output"
+
+    # Empujar filas dB no debe crashear (ni activo ni activo)
+    wf.start()
+    wf.set_max_freq_hz(6000)
+    db = np.linspace(-80, -10, wf._n_bins).astype(np.float32)
+    for _ in range(30):
+        wf.push_row(db)
+    wf.resize(600, 200)
+    wf.repaint()
+    print("Cascada: toggle + fuente + push headless    OK")
+
+
 if __name__ == "__main__":
     test_tab_order()
     test_modules_group_moved_to_own_tab()
@@ -300,5 +337,6 @@ if __name__ == "__main__":
     test_window_title_reflects_preset()
     test_overwrite_clears_modified_in_title()
     test_advanced_change_marks_modified()
+    test_waterfall_toggle_and_source()
     print()
     print("test_ui: OK")

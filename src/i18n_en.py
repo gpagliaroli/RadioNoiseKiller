@@ -231,6 +231,7 @@ CATALOG = {
     "Salida": "Output",
     "Lo cancelado": "Cancelled",
     "Piso de ruido": "Noise floor",
+    "Cascada": "Waterfall",
     "Relación señal/ruido de banda completa (suavizada ~1s):\n"
     "señal actual vs piso de ruido estimado por el cancelador.\n"
     "Con solo ruido marca ~0 dB.":

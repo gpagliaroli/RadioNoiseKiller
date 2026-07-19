@@ -2,7 +2,7 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QComboBox, QSlider, QPushButton, QStatusBar,
     QGroupBox, QCheckBox, QTabWidget, QApplication,
-    QScrollArea, QFrame, QInputDialog, QMessageBox,
+    QScrollArea, QFrame, QInputDialog, QMessageBox, QSplitter,
 )
 from PySide6.QtCore import Qt, QTimer, QPoint
 from PySide6.QtGui import QFont
@@ -16,6 +16,7 @@ from ui.advanced_tab import AdvancedAudioTab, AdvancedImpulseTab, AdvancedCancel
 from ui.presets_tab import PresetsTab
 from ui.slider_row import SliderRow
 from ui.spectrum_widget import SpectrumWidget
+from ui.waterfall_widget import WaterfallWidget
 from presets import PresetManager
 from noise_profiles import NoiseProfileManager
 from utils import settings_path, presets_dir, noise_profiles_dir
@@ -74,6 +75,11 @@ class MainWindow(QMainWindow):
         self._spectrum_widget = SpectrumWidget()
         self._spectrum_widget.pre_frames  = self._pipeline.spectrum_pre_frames
         self._spectrum_widget.post_frames = self._pipeline.spectrum_post_frames
+
+        self._waterfall_widget = WaterfallWidget()
+        self._spectrum_widget.waterfall = self._waterfall_widget
+        self._spectrum_widget.set_waterfall_source(self._config.window.waterfall_source)
+        self._spectrum_widget.set_waterfall_enabled(self._config.window.spectrum_show_waterfall)
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -576,6 +582,21 @@ class MainWindow(QMainWindow):
         self._chk_spec_floor.setStyleSheet("color: #ffd54f; font-weight: bold;")
         self._chk_spec_floor.toggled.connect(self._spectrum_widget.set_show_floor)
 
+        # Cascada (waterfall) + selector de fuente Entrada/Salida
+        self._chk_waterfall = QCheckBox(tr("Cascada"))
+        self._chk_waterfall.setChecked(self._config.window.spectrum_show_waterfall)
+        self._chk_waterfall.setStyleSheet("color: #b0bec5; font-weight: bold;")
+        self._chk_waterfall.toggled.connect(self._on_waterfall_toggled)
+
+        self._combo_waterfall_src = QComboBox()
+        for label, data in ((tr("Entrada"), "input"), (tr("Salida"), "output")):
+            self._combo_waterfall_src.addItem(label, data)
+        _wf_idx = self._combo_waterfall_src.findData(self._config.window.waterfall_source)
+        self._combo_waterfall_src.setCurrentIndex(max(0, _wf_idx))
+        self._combo_waterfall_src.setEnabled(self._config.window.spectrum_show_waterfall)
+        self._waterfall_widget.set_source_label(self._combo_waterfall_src.currentText())
+        self._combo_waterfall_src.currentIndexChanged.connect(self._on_waterfall_source_changed)
+
         ctrl.addWidget(self._chk_spec_pre)
         ctrl.addSpacing(12)
         ctrl.addWidget(self._chk_spec_post)
@@ -583,6 +604,9 @@ class MainWindow(QMainWindow):
         ctrl.addWidget(self._chk_spec_cancelled)
         ctrl.addSpacing(12)
         ctrl.addWidget(self._chk_spec_floor)
+        ctrl.addSpacing(18)
+        ctrl.addWidget(self._chk_waterfall)
+        ctrl.addWidget(self._combo_waterfall_src)
         ctrl.addStretch()
 
         self._lbl_snr = QLabel(tr("S/N: —"))
@@ -600,7 +624,18 @@ class MainWindow(QMainWindow):
         ctrl.addWidget(lbl_hint)
 
         layout.addLayout(ctrl)
-        layout.addWidget(self._spectrum_widget, 1)   # stretch: el gráfico toma todo el espacio libre
+
+        # Espectro arriba, cascada abajo, con divisor arrastrable y ejes X
+        # alineados (mismos márgenes/max_bin). La casilla "Cascada" la muestra/oculta.
+        self._spectrum_splitter = QSplitter(Qt.Vertical)
+        self._spectrum_splitter.addWidget(self._spectrum_widget)
+        self._spectrum_splitter.addWidget(self._waterfall_widget)
+        self._spectrum_splitter.setStretchFactor(0, 3)
+        self._spectrum_splitter.setStretchFactor(1, 2)
+        self._spectrum_splitter.setCollapsible(0, False)
+        self._spectrum_splitter.setCollapsible(1, False)
+        self._waterfall_widget.setVisible(self._config.window.spectrum_show_waterfall)
+        layout.addWidget(self._spectrum_splitter, 1)
 
         # Controles de zoom — widget compacto sin espacio extra
         zoom_widget = QWidget()
@@ -649,6 +684,8 @@ class MainWindow(QMainWindow):
         # y el gráfico quedaba con los defaults hasta tocar los sliders.
         self._spectrum_widget.set_db_max(self._config.window.spectrum_db_max)
         self._spectrum_widget.set_max_freq_hz(self._config.window.spectrum_max_freq_hz)
+        self._waterfall_widget.set_db_max(self._config.window.spectrum_db_max)
+        self._waterfall_widget.set_max_freq_hz(self._config.window.spectrum_max_freq_hz)
 
         layout.addWidget(zoom_widget)
         return tab
@@ -1121,13 +1158,32 @@ class MainWindow(QMainWindow):
         snapped = round(value / 5) * 5
         self._lbl_db_range.setText(f"{snapped} dBFS")
         self._spectrum_widget.set_db_max(snapped)
+        self._waterfall_widget.set_db_max(snapped)
         self._config.window.spectrum_db_max = snapped
         self._schedule_save()
 
     def _on_freq_range_changed(self, value: int) -> None:
         self._lbl_freq_range.setText(f"{value} kHz")
         self._spectrum_widget.set_max_freq_hz(value * 1000)
+        self._waterfall_widget.set_max_freq_hz(value * 1000)
         self._config.window.spectrum_max_freq_hz = value * 1000
+        self._schedule_save()
+
+    def _on_waterfall_toggled(self, on: bool) -> None:
+        self._waterfall_widget.setVisible(on)
+        self._combo_waterfall_src.setEnabled(on)
+        self._spectrum_widget.set_waterfall_enabled(on)
+        if on:
+            self._waterfall_widget.clear()
+        self._config.window.spectrum_show_waterfall = bool(on)
+        self._schedule_save()
+
+    def _on_waterfall_source_changed(self, _idx: int) -> None:
+        source = self._combo_waterfall_src.currentData()
+        self._spectrum_widget.set_waterfall_source(source)
+        self._waterfall_widget.set_source_label(self._combo_waterfall_src.currentText())
+        self._waterfall_widget.clear()   # la fuente cambió: no mezclar historia
+        self._config.window.waterfall_source = source
         self._schedule_save()
 
     def _on_clear_noise_profile(self) -> None:
@@ -1221,6 +1277,7 @@ class MainWindow(QMainWindow):
                 self._btn_start.setText(tr("⏹  DETENER"))
                 self._level_timer.start()
                 self._spectrum_widget.start()
+                self._waterfall_widget.start()
                 self._status_bar.showMessage(tr("Procesando..."))
                 self._btn_record.setEnabled(True)
                 self._btn_refresh_devices.setEnabled(False)
@@ -1245,6 +1302,7 @@ class MainWindow(QMainWindow):
             self._refresh_noise_profile_ui()
             self._level_timer.stop()
             self._spectrum_widget.stop()
+            self._waterfall_widget.stop()
             self._btn_start.setText(tr("▶  ACTIVAR"))
             self._vu_in.set_level(-60)
             self._vu_out.set_level(-60)

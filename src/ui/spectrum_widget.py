@@ -3,7 +3,7 @@ import numpy as np
 from collections import deque
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt, QTimer, QRectF, QPointF
-from PySide6.QtGui import QPainter, QPainterPath, QColor, QPen, QFont, QPolygonF, QBrush
+from PySide6.QtGui import QPainter, QColor, QPen, QFont, QPolygonF, QBrush
 from i18n import tr
 
 
@@ -62,6 +62,12 @@ class SpectrumWidget(QWidget):
         self._show_floor     = True
 
         self._floor_learning = False
+
+        # Cascada (waterfall): widget hermano al que empujamos la fila dB cruda
+        # (instantánea, sin EMA) de la fuente elegida. None = sin cascada.
+        self.waterfall            = None
+        self._waterfall_on        = False
+        self._waterfall_source    = "input"   # "input" | "output"
 
         self._timer = QTimer(self)
         self._timer.setInterval(67)   # ~15 fps — reduce GIL contention con el thread de audio
@@ -140,6 +146,14 @@ class SpectrumWidget(QWidget):
         self._update_max_bin()
         self.update()
 
+    def set_waterfall_enabled(self, on: bool) -> None:
+        """Activa/desactiva el empuje de filas a la cascada (cuando está oculta
+        no computamos la FFT de su fuente para no gastar CPU)."""
+        self._waterfall_on = bool(on)
+
+    def set_waterfall_source(self, source: str) -> None:
+        self._waterfall_source = source if source in ("input", "output") else "input"
+
     def _update_max_bin(self) -> None:
         self._max_bin = min(self._n_bins,
                             int(self._max_freq_hz / self._freq_per_bin) + 1)
@@ -152,26 +166,37 @@ class SpectrumWidget(QWidget):
         if not self.isVisible():
             return
         changed = False
+        wf_pre  = self._waterfall_on and self._waterfall_source == "input"
+        wf_post = self._waterfall_on and self._waterfall_source == "output"
+        raw_pre = raw_post = None
 
-        if self._show_pre or self._show_cancelled or self._floor_learning:
+        if self._show_pre or self._show_cancelled or self._floor_learning or wf_pre:
             frames = list(self.pre_frames)
             if frames:
                 db = self._compute_db(np.concatenate(frames))
+                raw_pre = db
                 self._ema_pre = db if self._ema_pre is None else (
                     self.ALPHA * db + (1.0 - self.ALPHA) * self._ema_pre
                 )
                 self._db_pre = self._ema_pre
                 changed = True
 
-        if self._show_post or self._show_cancelled:
+        if self._show_post or self._show_cancelled or wf_post:
             frames = list(self.post_frames)
             if frames:
                 db = self._compute_db(np.concatenate(frames))
+                raw_post = db
                 self._ema_post = db if self._ema_post is None else (
                     self.ALPHA * db + (1.0 - self.ALPHA) * self._ema_post
                 )
                 self._db_post = self._ema_post
                 changed = True
+
+        # Empujar la fila CRUDA (instantánea, sin EMA) a la cascada.
+        if self.waterfall is not None and self._waterfall_on:
+            row = raw_pre if self._waterfall_source == "input" else raw_post
+            if row is not None:
+                self.waterfall.push_row(row)
 
         if changed:
             self.update()

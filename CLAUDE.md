@@ -619,6 +619,30 @@ ambos manuales con los tips acumulados del usuario. El título de la ventana pas
 `_update_window_title()` (versión "v1.7" hardcodeada ahí, no en el `setWindowTitle` del build).
 
 Cambios post-v1.7 (pendiente de release):
+- **Cascada / waterfall en la pestaña Espectro** (último ítem del backlog v1.7). Nuevo
+  `src/ui/waterfall_widget.py` (`WaterfallWidget`): historia tiempo-frecuencia (~30 s) bajo el
+  espectro instantáneo, en un `QSplitter` vertical arrastrable con ejes X (frecuencia) alineados
+  (mismos `_ML/_MR/_max_bin/_freq_per_bin` que el espectro). Buffer circular numpy (447 filas @
+  ~15 fps), colormap SDR clásico (LUT 256×3, azul→cian→verde→amarillo→rojo) armado por
+  interpolación de puntos de control; el pintado mapea dB→color vectorizado y arma un `QImage`
+  uint8 escalado (GIL-safe, misma disciplina que el espectro). Eje de tiempo a la izquierda
+  (0 s arriba, −30 s abajo), grilla Hz propia abajo (autocontenido para sobrevivir el show/hide).
+  - **Fuente conmutable Entrada/Salida** (combo en la fila de controles): `SpectrumWidget._tick`
+    empuja la fila dB **cruda** (instantánea, sin EMA — mejor resolución temporal para QSB) de la
+    fuente elegida vía `waterfall.push_row()`. Las condiciones de cómputo de `pre`/`post` se
+    ampliaron para que la FFT de la fuente corra aunque su curva esté oculta (`set_waterfall_enabled`
+    gatea el costo: con la cascada oculta no se computa). Sin doble FFT.
+  - **Controles compartidos:** Máx X y Máx Y reescalan ambos gráficos (los handlers empujan a los
+    dos widgets). Único control nuevo: casilla "Cascada" + combo de fuente.
+  - **Persistencia:** `spectrum_show_waterfall: bool` + `waterfall_source: str` en `WindowConfig`
+    (settings.json; fuente inválida → "input"). i18n "Cascada"→"Waterfall". Test en `test_ui.py`
+    (splitter con 2 widgets, toggle muestra/oculta + gatea el combo, cambio de fuente persiste,
+    push de filas headless sin crash). Verificado visualmente con datos sintéticos (piso + voz +
+    heterodino barriendo + QSB): colormap y orientación tiempo/frecuencia correctos.
+  - **Fuera de alcance (posible futuro):** slider de profundidad de historia (fijo 30 s),
+    colorbar/leyenda, marcadores de heterodino.
+  - OJO patrón repetido: el hook ruff borró `import WaterfallWidget` y `QSplitter` por agregarse en
+    un Edit y usarse en el siguiente — re-agregados. (Ya documentado como riesgo; pasó de nuevo.)
 - **AGC Custom eliminado** (decisión del usuario: sumaba 4 sliders y complejidad sin uso real —
   los 3 presets fijos fast/medium/slow cubren los casos). Se quitó el ítem "Custom" del combo AGC,
   el grupo "AGC Personalizado" de Avanzada Audio, los 4 campos `agc_target_dbfs/max_gain_db/
@@ -813,8 +837,9 @@ Backlog v1.7 (acordado con el usuario tras la revisión de código de julio 2026
 - ✅ **Preset de fábrica "Voz natural"** (hecho — AM+SSB; falta validación en el aire).
 - ✅ **Perfiles de ruido nombrados** (hecho, validado con hardware real).
 - ✅ **tests/test_ui.py permanente** (hecho).
-- **Waterfall en la pestaña Espectro**: cascada con historia (~30s) además del espectro
-  instantáneo — permite VER el QSB, heterodinos intermitentes y QRM. **Único ítem pendiente.**
+- ✅ **Waterfall en la pestaña Espectro**: cascada con historia (~30s) además del espectro
+  instantáneo — permite VER el QSB, heterodinos intermitentes y QRM (hecho; fuente Entrada/Salida
+  conmutable, colormap SDR clásico, splitter arrastrable). **Falta validación en el aire.**
 
 Pendiente para Fase 2:
 - Validar build en Pi real (ARM64 Raspberry Pi OS Bookworm)

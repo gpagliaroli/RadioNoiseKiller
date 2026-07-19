@@ -92,6 +92,8 @@ class WindowConfig:
     w: int | None = None   # ancho elegido por el usuario (None = default 960)
     spectrum_db_max:      int = 0
     spectrum_max_freq_hz: int = 12000
+    spectrum_show_waterfall: bool = True        # cascada visible bajo el espectro
+    waterfall_source:        str  = "input"     # "input" | "output"
 
 
 @dataclass
@@ -182,6 +184,8 @@ class AppConfig:
                 "w": self.window.w,
                 "spectrum_db_max":      self.window.spectrum_db_max,
                 "spectrum_max_freq_hz": self.window.spectrum_max_freq_hz,
+                "spectrum_show_waterfall": self.window.spectrum_show_waterfall,
+                "waterfall_source":        self.window.waterfall_source,
             },
         }
         with open(path, "w", encoding="utf-8") as f:
@@ -293,3 +297,6 @@ class AppConfig:
             self.window.w = int(w["w"])
         self.window.spectrum_db_max      = int(w.get("spectrum_db_max",      self.window.spectrum_db_max))
         self.window.spectrum_max_freq_hz = int(w.get("spectrum_max_freq_hz", self.window.spectrum_max_freq_hz))
+        self.window.spectrum_show_waterfall = bool(w.get("spectrum_show_waterfall", self.window.spectrum_show_waterfall))
+        _wf_src = str(w.get("waterfall_source", self.window.waterfall_source))
+        self.window.waterfall_source = _wf_src if _wf_src in ("input", "output") else "input"
