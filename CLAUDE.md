@@ -289,7 +289,7 @@ En bundle: junto al `.exe` / `.bin`
 | `tests/test_presets.py` | `_capture()` cubre DSPConfig/GainConfig, roundtrips, rename/delete |
 | `tests/test_noise_vad.py` | VAD del squelch (ruido fluctuante, voz armónica, release AGC), cuarentena MCRA, clamps de fading. **Validar detectores con ruido fluctuante y voz con envolvente — el gaussiano estacionario da falsos OK** |
 | `tests/test_integration.py` | Pipeline headless (`start(headless=True)`) con TODOS los módulos activos: warmup MCRA, ciclo squelch, cambios de modo en caliente, cambio de block size con reinicio |
-| `tests/test_ui.py` | UI offscreen (`QT_QPA_PLATFORM=offscreen` + `MainWindow`): orden de pestañas (Módulos en pos 1), "Módulos activos" en su pestaña, visibilidad de botones de perfiles por modo estático/MCRA, gating de controles Avanzados por módulo (invariante 2), restauración de checkboxes desde config (invariante 8). **SliderRow deshabilita los hijos — testear con `row._slider.isEnabled()`, no `row.isEnabled()`** |
+| `tests/test_ui.py` | UI offscreen (`QT_QPA_PLATFORM=offscreen` + `MainWindow`): orden de pestañas (Módulos en pos 1), "Módulos activos" en su pestaña, visibilidad de botones de perfiles por modo estático/MCRA, gating de controles Avanzados por módulo (invariante 2), restauración de checkboxes desde config (invariante 8), aviso proactivo de dispositivos de APIs incompatibles (ACTIVAR deshabilitado + combos marcados). **SliderRow deshabilita los hijos — testear con `row._slider.isEnabled()`, no `row.isEnabled()`** |
 
 ## Estado del proyecto
 
@@ -655,10 +655,18 @@ Cambios post-v1.8 (pendiente de release):
     estado + `QMessageBox`, en vez del error críptico.
   - **Test `tests/test_device_combo.py`** (mockea sounddevice, sin hardware): detección del cruce,
     combinación compatible OK, y `AudioStream.start()` lanza antes de tocar PortAudio. En run_all.
-  - **Pendiente / futuro:** (1) avisar proactivamente al seleccionar dispositivos incompatibles
-    (deshabilitar Activar o marcar el combo) en vez de solo al Activar; (2) soporte real de
-    combinaciones cruzadas vía **dos streams separados** (InputStream + OutputStream con ring
-    buffer) — más complejo (latencia/sincronía), decisión del usuario si vale la pena.
+  - **Aviso proactivo al seleccionar (hecho):** `MainWindow._check_device_compatibility()` re-evalúa
+    en cada cambio de dispositivo (y al arrancar) vía `duplex_hostapi_mismatch`; si las APIs difieren
+    **deshabilita ACTIVAR** (con tooltip), marca ambos combos con borde de aviso (`_COMBO_WARN_STYLE`)
+    y muestra el motivo en la barra de estado — el usuario ya no puede intentar arrancar una
+    combinación inválida. Solo consulta PortAudio (`query_devices`), no abre stream; no corre con el
+    stream abierto (los combos están deshabilitados). El flag `_devices_incompatible` evita pisar
+    otros mensajes de estado (p. ej. "Perfil cargado") en el arranque. El chequeo del `start()`
+    (excepción `IncompatibleDevicesError`) se conserva como red de seguridad. Test en `test_ui.py`
+    (`test_incompatible_devices_disable_activate`, monkeypatchea `duplex_hostapi_mismatch`).
+  - **Pendiente / futuro:** soporte real de combinaciones cruzadas vía **dos streams separados**
+    (InputStream + OutputStream con ring buffer) — más complejo (latencia/sincronía), decisión del
+    usuario si vale la pena.
 - **Ajustes de presets de fábrica del usuario** (afinados en uso real, se publican tal cual —
   ver [[project_factory_presets]]): `AM Local - RuidoMedio` pasa a perfil estático, intensidad 0.6,
   squelch on, más presencia (1500 Hz / 6 dB) y cuerpo (350 Hz / 3 dB), límite de picos −1.5 dB;

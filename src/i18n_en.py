@@ -468,4 +468,6 @@ CATALOG = {
         "The input ({in_api}) and output ({out_api}) use different audio APIs "
         "and cannot be combined in a single stream. Pick both devices from the "
         "same API (for example, both [WASAPI]).",
+    "Dispositivos compatibles. Listo para ACTIVAR.":
+        "Compatible devices. Ready to START.",
 }

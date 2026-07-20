@@ -332,6 +332,38 @@ def test_waterfall_toggle_and_source():
     print("Cascada: toggle + fuente + push headless    OK")
 
 
+def test_incompatible_devices_disable_activate():
+    """Aviso proactivo -9993: con entrada/salida en APIs distintas, ACTIVAR
+    queda deshabilitado y los combos marcados; al volver a ser compatibles,
+    ACTIVAR se re-habilita y el borde se limpia. Se fuerza el mismatch
+    monkeypatcheando duplex_hostapi_mismatch (sin depender del hardware)."""
+    import ui.main_window as mw
+
+    w = _win()
+    # Estado base: la ventana ya construida debe permitir ACTIVAR
+    # (el hardware del runner, si hay, es compatible o no hay devices).
+    orig = mw.duplex_hostapi_mismatch
+    try:
+        # Forzar combinación incompatible
+        mw.duplex_hostapi_mismatch = lambda i, o: ("Windows WASAPI", "Windows WDM-KS")
+        w._check_device_compatibility()
+        assert not w._btn_start.isEnabled(), "ACTIVAR habilitado con APIs incompatibles"
+        assert w._combo_in.styleSheet(), "combo de entrada sin marca de aviso"
+        assert w._combo_out.styleSheet(), "combo de salida sin marca de aviso"
+        assert w._devices_incompatible is True
+
+        # Volver a compatible -> re-habilita y limpia
+        mw.duplex_hostapi_mismatch = lambda i, o: None
+        w._check_device_compatibility()
+        assert w._btn_start.isEnabled(), "ACTIVAR sigue deshabilitado tras compatibilizar"
+        assert not w._combo_in.styleSheet(), "marca de entrada no se limpio"
+        assert not w._combo_out.styleSheet(), "marca de salida no se limpio"
+        assert w._devices_incompatible is False
+    finally:
+        mw.duplex_hostapi_mismatch = orig
+    print("Aviso proactivo -9993: ACTIVAR gateado         OK")
+
+
 if __name__ == "__main__":
     test_tab_order()
     test_modules_group_moved_to_own_tab()
@@ -344,5 +376,6 @@ if __name__ == "__main__":
     test_overwrite_clears_modified_in_title()
     test_advanced_change_marks_modified()
     test_waterfall_toggle_and_source()
+    test_incompatible_devices_disable_activate()
     print()
     print("test_ui: OK")

@@ -7,7 +7,10 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer, QPoint
 from PySide6.QtGui import QFont
 
-from audio.devices import list_devices, rescan_devices, AudioDevice, IncompatibleDevicesError
+from audio.devices import (
+    list_devices, rescan_devices, AudioDevice,
+    IncompatibleDevicesError, duplex_hostapi_mismatch,
+)
 from config import AppConfig, RadioMode, GainConfig
 from i18n import tr, set_language
 from pipeline import ProcessingPipeline
@@ -20,6 +23,10 @@ from ui.waterfall_widget import WaterfallWidget
 from presets import PresetManager
 from noise_profiles import NoiseProfileManager
 from utils import settings_path, presets_dir, noise_profiles_dir
+
+# Borde de aviso para los combos de dispositivo cuando la combinación de APIs
+# es incompatible (entrada y salida en APIs de host distintas → -9993).
+_COMBO_WARN_STYLE = "QComboBox { border: 1px solid #ef5350; }"
 
 
 class MainWindow(QMainWindow):
@@ -61,6 +68,9 @@ class MainWindow(QMainWindow):
             ready = tr("Perfil de ruido \"{name}\" cargado. Listo para ACTIVAR.").format(
                 name=loaded_profile)
         self._status_bar.showMessage(ready)
+        # Si la selección inicial cruza APIs incompatibles, deshabilita ACTIVAR
+        # y avisa (reemplaza el mensaje "Listo" recién puesto).
+        self._check_device_compatibility()
         self._restore_or_center()
 
     # ------------------------------------------------------------------
@@ -957,12 +967,54 @@ class MainWindow(QMainWindow):
     def _on_input_device_changed(self, idx: int) -> None:
         dev: AudioDevice | None = self._combo_in.itemData(idx)
         self._pipeline.set_input_device(dev)
+        self._check_device_compatibility()
         self._schedule_save()
 
     def _on_output_device_changed(self, idx: int) -> None:
         dev: AudioDevice | None = self._combo_out.itemData(idx)
         self._pipeline.set_output_device(dev)
+        self._check_device_compatibility()
         self._schedule_save()
+
+    def _check_device_compatibility(self) -> None:
+        """Aviso proactivo de combinación de APIs incompatibles (-9993).
+
+        Si la entrada y la salida están en APIs de host distintas — combinación
+        que PortAudio rechaza en un stream full-duplex — deshabilita ACTIVAR,
+        marca ambos combos y muestra el motivo en la barra de estado, antes de
+        que el usuario intente arrancar. Se re-evalúa al cambiar cualquiera de
+        los dos dispositivos. Solo consulta PortAudio (query_devices), no abre
+        nada. No corre con el stream ya abierto (los combos están deshabilitados).
+        """
+        if self._pipeline.is_running():
+            return
+        in_dev: AudioDevice | None = self._combo_in.currentData()
+        out_dev: AudioDevice | None = self._combo_out.currentData()
+        mismatch = (duplex_hostapi_mismatch(in_dev.index, out_dev.index)
+                    if in_dev is not None and out_dev is not None else None)
+        if mismatch is not None:
+            in_api, out_api = mismatch
+            msg = tr(
+                "La entrada ({in_api}) y la salida ({out_api}) usan APIs de audio "
+                "distintas y no se pueden combinar en un mismo stream. Elegí ambos "
+                "dispositivos de la misma API (por ejemplo, los dos [WASAPI])."
+            ).format(in_api=in_api, out_api=out_api)
+            self._btn_start.setEnabled(False)
+            self._btn_start.setToolTip(msg)
+            self._combo_in.setStyleSheet(_COMBO_WARN_STYLE)
+            self._combo_out.setStyleSheet(_COMBO_WARN_STYLE)
+            self._status_bar.showMessage(msg)
+            self._devices_incompatible = True
+        else:
+            self._btn_start.setEnabled(True)
+            self._btn_start.setToolTip("")
+            self._combo_in.setStyleSheet("")
+            self._combo_out.setStyleSheet("")
+            # Solo limpiar el aviso si veníamos de un estado incompatible —
+            # no pisar otros mensajes (p. ej. "Perfil cargado") en el arranque.
+            if getattr(self, "_devices_incompatible", False):
+                self._status_bar.showMessage(tr("Dispositivos compatibles. Listo para ACTIVAR."))
+            self._devices_incompatible = False
 
     def _on_language_changed(self, idx: int) -> None:
         lang = self._combo_lang.itemData(idx)
