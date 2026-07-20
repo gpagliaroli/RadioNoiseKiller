@@ -35,7 +35,7 @@
     "anf_threshold": 3.0,
     "anf_depth": 0.5,
     "noise_enabled": true,
-    "noise_mode": "static",
+    "noise_mode": "mcra",
     "noise_alpha": 0.75,
     "noise_floor": 0.15000000000000002,
     "noise_smooth": 0.97,
