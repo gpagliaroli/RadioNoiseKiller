@@ -1,6 +1,6 @@
 ﻿# RadioNoiseKiller — Manual de Usuario
 
-**Versión 1.8**
+**Versión 1.8.1**
 
 ---
 
@@ -107,6 +107,7 @@ Selecciona de dónde viene el audio (entrada) y a dónde va (salida). La aplicac
 - Si la lista aparece vacía o incompleta, o se conectó hardware nuevo con el programa abierto, usar el botón **⟳** para re-enumerar los dispositivos (con el procesamiento detenido). Si aún así falta un dispositivo, reiniciar la aplicación.
 - El cambio de dispositivo requiere detener y volver a activar el procesamiento — por eso los selectores de Entrada/Salida se deshabilitan mientras el procesamiento está activo (el de Canal queda habilitado: aplica en vivo).
 - Si no se escucha nada con una interfaz USB estéreo, probar **Canal: Derecho** — es común que el audio de la radio venga cableado por ese canal.
+- La entrada y la salida deben ser de la **misma API de Windows** (ambas WASAPI, o ambas WDM-KS): un stream full-duplex no admite cruzar APIs. Si elegís una combinación incompatible (por ejemplo entrada WASAPI + una salida que solo existe en WDM-KS, como "Mezcla estéreo"), la aplicación **deshabilita el botón ACTIVAR**, marca ambos selectores con un borde de aviso y explica el motivo en la barra de estado. Elegí ambos dispositivos de la misma API para poder activar.
 - En radios con **doble receptor** (RX principal por el canal izquierdo, sub-RX por el derecho), el selector de Canal permite elegir cuál procesar. La salida procesada suena siempre en ambos oídos.
 
 ---
@@ -822,4 +823,4 @@ Los valores de los sliders **Máx Y** y **Máx X** del visualizador de espectro 
 
 ---
 
-*RadioNoiseKiller — versión 1.8*
+*RadioNoiseKiller — versión 1.8.1*

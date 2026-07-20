@@ -26,6 +26,9 @@ __pycache__/
 # Grabaciones del usuario
 Grabaciones/
 
+# Perfiles de ruido nombrados del usuario (data de runtime, junto al exe)
+PerfilesRuido/
+
 # Archivos generados (se regeneran desde MANUAL.md)
 MANUAL_*.pdf
 

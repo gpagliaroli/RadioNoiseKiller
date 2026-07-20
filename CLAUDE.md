@@ -623,7 +623,15 @@ Versión de app 1.8.0, manuales `MANUAL_RadioNoiseKiller_v1.8.pdf` (ES, 29 págs
 `..._v1.8_EN.pdf` (EN, 28 págs). Cierra el último ítem del backlog v1.7 (waterfall) y elimina
 el AGC Custom. Título de la ventana "v1.8" en `_update_window_title()`.
 
-Cambios post-v1.8 (pendiente de release):
+**v1.8.1 publicada (julio 2026)** — release de patch en GitHub con distribuibles Windows y Linux.
+Versión de app 1.8.1, manuales `MANUAL_RadioNoiseKiller_v1.8.1.pdf` (ES, 31 págs) y
+`..._v1.8.1_EN.pdf` (EN, 30 págs). Título de la ventana "v1.8.1" en `_update_window_title()`.
+Junta los cambios acumulados post-v1.8 (manual con portada/diagrama gráfico/tip de aprender ruido,
+aviso proactivo de dispositivos de APIs incompatibles −9993, ajustes de presets de fábrica). El
+aviso −9993 se publicó sin validación manual adicional (tiene tests `test_device_combo.py` +
+`test_ui.py`). Manuales ES+EN documentan el requisito de misma API en los consejos de dispositivos.
+
+Cambios v1.8.1 (los que estaban pendientes post-v1.8):
 - **Manual: portada, diagrama gráfico y tip de aprender ruido** (pedidos del usuario):
   - Aclaración en "Perfil estático": correrse un poco en frecuencia a un hueco **sin emisoras**
     (solo ruido) antes de aprender; si entra voz/portadora, queda "horneada" en el perfil y el
