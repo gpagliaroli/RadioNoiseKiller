@@ -28,10 +28,13 @@ en orden; cada uno tiene su verificación. No publicar si algo falla.
   (`**Versión X.Y**`) y pie (`*RadioNoiseKiller — versión X.Y*`).
 - `MANUAL_EN.md` (EN): **reflejar exactamente los mismos cambios** — la sincronización es
   manual; terminología alineada con `src/i18n_en.py`.
-- Generar ambos PDFs con markdown2 + xhtml2pdf (weasyprint NO funciona en Windows):
-  script en el scratchpad (recrearlo si no existe — ver CLAUDE.md "manual regenerado");
-  salidas `MANUAL_RadioNoiseKiller_vX.Y.pdf` y `MANUAL_RadioNoiseKiller_vX.Y_EN.pdf`.
-  Los PDFs están gitignoreados (no commitearlos).
+- Generar ambos PDFs con `tools/gen_manual_pdf.py` (markdown2 + xhtml2pdf; weasyprint NO
+  funciona en Windows). Correr desde la raíz:
+  `.venv\Scripts\python.exe tools\gen_manual_pdf.py MANUAL.md    MANUAL_RadioNoiseKiller_vX.Y.pdf`
+  y lo mismo con `MANUAL_EN.md` → `..._vX.Y_EN.pdf`. El script agrega portada con el logo
+  (`Images/RNK_ico.png`) y resuelve el diagrama del pipeline. Los PDFs están gitignoreados.
+- Si se cambió algún módulo del pipeline, regenerar el diagrama con
+  `tools/gen_pipeline_diagram.py` (salidas versionadas en `Images/pipeline_diagram*.png`).
 - Verificar con pypdf: cantidad de páginas y presencia de los términos nuevos en ambos.
 
 ## 3. Tests

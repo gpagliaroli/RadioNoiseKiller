@@ -624,6 +624,18 @@ Versión de app 1.8.0, manuales `MANUAL_RadioNoiseKiller_v1.8.pdf` (ES, 29 págs
 el AGC Custom. Título de la ventana "v1.8" en `_update_window_title()`.
 
 Cambios post-v1.8 (pendiente de release):
+- **Manual: portada, diagrama gráfico y tip de aprender ruido** (pedidos del usuario):
+  - Aclaración en "Perfil estático": correrse un poco en frecuencia a un hueco **sin emisoras**
+    (solo ruido) antes de aprender; si entra voz/portadora, queda "horneada" en el perfil y el
+    cancelador la resta como ruido → artefactos sobre la voz (ES+EN).
+  - **Diagrama del pipeline gráfico**: reemplazado el ASCII por una imagen (cajas coloreadas,
+    cancelador destacado, sub-módulos, flechas), embebida en manuales y PDFs. Versiones ES/EN.
+  - **Portada del PDF** con el logo `Images/RNK_ico.png` (reescalado), título, subtítulo y versión.
+  - **Toolchain del manual ahora versionada en `tools/`** (antes se reescribía en el scratchpad):
+    `tools/gen_pipeline_diagram.py` (genera `Images/pipeline_diagram*.png` con PIL) y
+    `tools/gen_manual_pdf.py` (markdown2 + xhtml2pdf, agrega portada y resuelve imágenes via
+    link_callback). Skill de release actualizado para apuntar a `tools/`. Los PNG del diagrama se
+    versionan (los referencia el manual); los PDFs siguen gitignoreados.
 - **Combinación de dispositivos incompatible (PaErrorCode -9993)** — reportado por el usuario:
   ciertas salidas (p. ej. "Altavoces WDM", o el Stereo Mix, que solo existen en WDM-KS) dan
   `Error opening stream: illegal combination of I/O devices (-9993)` al Activar. Causa: un stream
