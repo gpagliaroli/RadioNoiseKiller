@@ -155,7 +155,8 @@
       "Bash(.venv/Scripts/python.exe tools/gen_pipeline_diagram.py)",
       "Bash(.venv/Scripts/python.exe tools/gen_manual_pdf.py MANUAL.md MANUAL_RadioNoiseKiller_v1.8.pdf)",
       "Bash(.venv/Scripts/python.exe tools/gen_manual_pdf.py MANUAL_EN.md MANUAL_RadioNoiseKiller_v1.8_EN.pdf)",
-      "Bash(.venv/Scripts/python.exe -c \"from pypdf import PdfReader; r=PdfReader\\('MANUAL_RadioNoiseKiller_v1.8.pdf'\\); print\\('ES', len\\(r.pages\\),'pags; portada:', \\(r.pages[0].extract_text\\(\\) or ''\\).split\\(chr\\(10\\)\\)[0][:30], '; imgs pag0:', len\\(list\\(r.pages[0].images\\)\\)\\)\")"
+      "Bash(.venv/Scripts/python.exe -c \"from pypdf import PdfReader; r=PdfReader\\('MANUAL_RadioNoiseKiller_v1.8.pdf'\\); print\\('ES', len\\(r.pages\\),'pags; portada:', \\(r.pages[0].extract_text\\(\\) or ''\\).split\\(chr\\(10\\)\\)[0][:30], '; imgs pag0:', len\\(list\\(r.pages[0].images\\)\\)\\)\")",
+      "Bash(.venv/Scripts/python.exe -c \"import ast; ast.parse\\(open\\('src/ui/main_window.py',encoding='utf-8'\\).read\\(\\)\\); ast.parse\\(open\\('src/i18n_en.py',encoding='utf-8'\\).read\\(\\)\\); print\\('syntax OK'\\)\")"
     ]
   }
 }
