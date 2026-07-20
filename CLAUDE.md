@@ -623,6 +623,31 @@ Versión de app 1.8.0, manuales `MANUAL_RadioNoiseKiller_v1.8.pdf` (ES, 29 págs
 `..._v1.8_EN.pdf` (EN, 28 págs). Cierra el último ítem del backlog v1.7 (waterfall) y elimina
 el AGC Custom. Título de la ventana "v1.8" en `_update_window_title()`.
 
+Cambios post-v1.8 (pendiente de release):
+- **Combinación de dispositivos incompatible (PaErrorCode -9993)** — reportado por el usuario:
+  ciertas salidas (p. ej. "Altavoces WDM", o el Stereo Mix, que solo existen en WDM-KS) dan
+  `Error opening stream: illegal combination of I/O devices (-9993)` al Activar. Causa: un stream
+  full-duplex de PortAudio exige que entrada y salida sean de la **misma API de host**; combinar
+  WASAPI (entrada) + WDM-KS (salida) lo rechaza. La dedup de `list_devices` prefiere WASAPI, pero
+  las salidas sin equivalente WASAPI quedan en WDM-KS y se pueden cruzar en los combos.
+  - **`audio/devices.py`:** `hostapi_of()`, `duplex_hostapi_mismatch()` (devuelve las dos APIs si
+    difieren, o None) y excepción `IncompatibleDevicesError`.
+  - **`AudioStream.start()`:** chequeo proactivo ANTES de abrir → lanza `IncompatibleDevicesError`
+    con las dos APIs; además traduce el `-9993` residual de `sd.PortAudioError` por si el chequeo
+    no lo detectó (red de seguridad).
+  - **`pipeline.start()`:** si la apertura del stream falla, hace **rollback** del arranque
+    (teardown del hilo procesador + `running=False`) para no quedar a medio camino. El teardown se
+    extrajo a `_shutdown_processor_thread()`, compartido con `stop()`.
+  - **UI:** `_on_toggle_processing` captura `IncompatibleDevicesError` y muestra un mensaje claro y
+    accionable ("elegí ambos dispositivos de la misma API, p. ej. los dos [WASAPI]") en la barra de
+    estado + `QMessageBox`, en vez del error críptico.
+  - **Test `tests/test_device_combo.py`** (mockea sounddevice, sin hardware): detección del cruce,
+    combinación compatible OK, y `AudioStream.start()` lanza antes de tocar PortAudio. En run_all.
+  - **Pendiente / futuro:** (1) avisar proactivamente al seleccionar dispositivos incompatibles
+    (deshabilitar Activar o marcar el combo) en vez de solo al Activar; (2) soporte real de
+    combinaciones cruzadas vía **dos streams separados** (InputStream + OutputStream con ring
+    buffer) — más complejo (latencia/sincronía), decisión del usuario si vale la pena.
+
 Cambios v1.8:
 - **Cascada / waterfall en la pestaña Espectro** (último ítem del backlog v1.7). Nuevo
   `src/ui/waterfall_widget.py` (`WaterfallWidget`): historia tiempo-frecuencia (~30 s) bajo el

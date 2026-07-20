@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer, QPoint
 from PySide6.QtGui import QFont
 
-from audio.devices import list_devices, rescan_devices, AudioDevice
+from audio.devices import list_devices, rescan_devices, AudioDevice, IncompatibleDevicesError
 from config import AppConfig, RadioMode, GainConfig
 from i18n import tr, set_language
 from pipeline import ProcessingPipeline
@@ -1306,6 +1306,15 @@ class MainWindow(QMainWindow):
                 self._adv_audio_tab.set_processing_active(True)
                 self._adv_canceller_tab._update_stats()
                 self._refresh_noise_profile_ui()
+            except IncompatibleDevicesError as e:
+                self._btn_start.setChecked(False)
+                msg = tr(
+                    "La entrada ({in_api}) y la salida ({out_api}) usan APIs de audio "
+                    "distintas y no se pueden combinar en un mismo stream. Elegí ambos "
+                    "dispositivos de la misma API (por ejemplo, los dos [WASAPI])."
+                ).format(in_api=e.input_api, out_api=e.output_api)
+                self._status_bar.showMessage(msg)
+                QMessageBox.warning(self, tr("Dispositivos incompatibles"), msg)
             except Exception as e:
                 self._btn_start.setChecked(False)
                 self._status_bar.showMessage(tr("Error: {msg}").format(msg=e))

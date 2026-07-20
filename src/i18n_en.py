@@ -461,4 +461,11 @@ CATALOG = {
     # --- Varios ---
     "↺  Restaurar por defecto  ({val})": "↺  Restore default  ({val})",
     "Error: {msg}": "Error: {msg}",
+    "Dispositivos incompatibles": "Incompatible devices",
+    "La entrada ({in_api}) y la salida ({out_api}) usan APIs de audio "
+    "distintas y no se pueden combinar en un mismo stream. Elegí ambos "
+    "dispositivos de la misma API (por ejemplo, los dos [WASAPI]).":
+        "The input ({in_api}) and output ({out_api}) use different audio APIs "
+        "and cannot be combined in a single stream. Pick both devices from the "
+        "same API (for example, both [WASAPI]).",
 }

@@ -10,6 +10,7 @@ import numpy as np
 import sounddevice as sd
 from collections.abc import Callable
 from config import AudioConfig
+from audio.devices import duplex_hostapi_mismatch, IncompatibleDevicesError
 
 
 AudioCallback = Callable[[np.ndarray], np.ndarray]
@@ -47,22 +48,39 @@ class AudioStream:
         with self._lock:
             if self._running:
                 return
+            # Chequeo proactivo: un stream full-duplex exige que entrada y salida
+            # sean de la MISMA API de host. Si no, PortAudio falla con -9993
+            # (paBadIODeviceCombination). Lo detectamos antes para dar un mensaje
+            # claro en vez del error críptico.
+            mismatch = duplex_hostapi_mismatch(
+                self._config.input_device, self._config.output_device)
+            if mismatch:
+                raise IncompatibleDevicesError(*mismatch)
             # Abrir estéreo cuando el dispositivo lo permite: la entrada para
             # poder elegir canal (interfaces con la radio en el canal derecho,
             # doble receptor), la salida en dual-mono (con salida de 1 canal
             # algunos drivers reproducen en un solo auricular o fallan al abrir).
             in_ch  = min(2, max(1, self._device_max(self._config.input_device,  "input")))
             out_ch = min(2, max(1, self._device_max(self._config.output_device, "output")))
-            self._stream = sd.Stream(
-                samplerate=self._config.sample_rate,
-                blocksize=self._config.block_size,
-                device=(self._config.input_device, self._config.output_device),
-                channels=(in_ch, out_ch),
-                dtype=self._config.dtype,
-                callback=self._callback,
-                finished_callback=self._on_finished,
-            )
-            self._stream.start()
+            try:
+                self._stream = sd.Stream(
+                    samplerate=self._config.sample_rate,
+                    blocksize=self._config.block_size,
+                    device=(self._config.input_device, self._config.output_device),
+                    channels=(in_ch, out_ch),
+                    dtype=self._config.dtype,
+                    callback=self._callback,
+                    finished_callback=self._on_finished,
+                )
+                self._stream.start()
+            except sd.PortAudioError as e:
+                # Red de seguridad por si el chequeo proactivo no detectó el caso
+                # (índices raros, drivers atípicos): traducir el -9993 igual.
+                if "-9993" in str(e) or "combination" in str(e).lower():
+                    m = duplex_hostapi_mismatch(
+                        self._config.input_device, self._config.output_device)
+                    raise IncompatibleDevicesError(*(m or ("?", "?"))) from e
+                raise
             self._running = True
 
     @staticmethod

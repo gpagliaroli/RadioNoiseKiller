@@ -22,6 +22,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 # Suites deterministas, en orden de más rápida/básica a más integral.
 SUITES = [
     "test_dsp",
+    "test_device_combo",
     "test_presets",
     "test_noise_vad",
     "test_noise_profiles",

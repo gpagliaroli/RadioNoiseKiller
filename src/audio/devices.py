@@ -31,6 +31,42 @@ else:
     _DEFAULT_API_TAG = "PulseAudio"
 
 
+class IncompatibleDevicesError(Exception):
+    """Entrada y salida en APIs de host distintas: PortAudio no puede abrir un
+    stream full-duplex que las combine (paBadIODeviceCombination, -9993).
+    Caso típico en Windows: entrada WASAPI + una salida que solo existe en
+    WDM-KS (p. ej. 'Altavoces' expuestos por WDM, o el Stereo Mix)."""
+
+    def __init__(self, input_api: str, output_api: str):
+        self.input_api = input_api
+        self.output_api = output_api
+        super().__init__(
+            f"APIs de host incompatibles: entrada={input_api!r} salida={output_api!r}"
+        )
+
+
+def hostapi_of(device_index: "int | None", kind: str = "input") -> str:
+    """Nombre de la API de host de un dispositivo (Windows WASAPI, Windows WDM-KS,
+    ALSA, PulseAudio, ...). Con device_index None usa el default de `kind`."""
+    dev = sd.query_devices(device_index) if device_index is not None \
+        else sd.query_devices(kind=kind)
+    return sd.query_hostapis()[dev["hostapi"]]["name"]
+
+
+def duplex_hostapi_mismatch(input_index, output_index) -> "tuple[str, str] | None":
+    """Devuelve (api_entrada, api_salida) si están en APIs de host DISTINTAS —
+    combinación que PortAudio rechaza en un stream full-duplex con el error -9993
+    (paBadIODeviceCombination) — o None si son compatibles (misma API) o no se
+    puede determinar. Un stream duplex único exige ambos dispositivos en la misma
+    API de host."""
+    try:
+        in_api = hostapi_of(input_index, "input")
+        out_api = hostapi_of(output_index, "output")
+    except Exception:
+        return None   # ante la duda no bloquear — dejamos que PortAudio decida
+    return (in_api, out_api) if in_api != out_api else None
+
+
 @dataclass
 class AudioDevice:
     index: int

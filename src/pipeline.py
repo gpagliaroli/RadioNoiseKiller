@@ -700,9 +700,19 @@ class ProcessingPipeline:
         self._proc_thread.start()
 
         if not headless:
+            try:
+                stream = AudioStream(self._config.audio, self._process)
+                stream.start()
+            except Exception:
+                # La apertura del stream falló (p. ej. dispositivos incompatibles):
+                # revertir el arranque para no quedar a medio camino (running=True
+                # con el hilo procesador vivo y sin stream).
+                with self._lock:
+                    self._running = False
+                self._shutdown_processor_thread()
+                raise
             with self._lock:
-                self._stream = AudioStream(self._config.audio, self._process)
-                self._stream.start()
+                self._stream = stream
 
     def stop(self) -> None:
         with self._lock:
@@ -715,6 +725,16 @@ class ProcessingPipeline:
         if stream:
             stream.stop()
 
+        self._shutdown_processor_thread()
+
+        # Cerrar la grabación en curso (header del WAV finalizado limpio)
+        if self._recorder.recording:
+            self._recorder.stop()
+
+    def _shutdown_processor_thread(self) -> None:
+        """Envía el sentinel y espera a que el hilo procesador termine, con
+        drain + reintento por si la cola quedó llena. Compartido por stop() y por
+        el rollback de start() (cuando falla la apertura del stream)."""
         # Drain first so the sentinel fits even if the queue was full
         # (safe: stream is stopped, no new data arrives)
         while True:
@@ -741,10 +761,6 @@ class ProcessingPipeline:
                     pass
                 self._proc_thread.join(timeout=1.0)
             self._proc_thread = None
-
-        # Cerrar la grabación en curso (header del WAV finalizado limpio)
-        if self._recorder.recording:
-            self._recorder.stop()
 
     def is_running(self) -> bool:
         return self._running
