@@ -739,7 +739,7 @@ Cambios v1.8:
   atenúa −12 dB. Decisión del usuario: aprender SIN ANF (ruido de banda ancha crudo; los tonos los
   maneja el ANF en reproducción). Perfiles nombrados viejos (aprendidos post-pasabanda) siguen
   stale hasta re-aprenderlos. Test en test_pipeline (aprende con pasabanda angosto → `noise_mag`
-  con energía en agudos → suprime −59 dB con el pasabanda off). Validación en el aire pendiente.
+  con energía en agudos → suprime −59 dB con el pasabanda off). **Validado en el aire por el usuario.**
 - **Los cambios en pestañas Avanzadas ahora marcan "(modificado)"** (reportado por el usuario:
   "(modificado)" nunca aparecía). Los sliders/checkboxes de las 3 tabs Avanzadas conectan **directo**
   a `pipeline.set_X`, sin pasar por `_schedule_save` de MainWindow → sus cambios no marcaban el preset
@@ -847,7 +847,7 @@ Cambios v1.7:
   post-filtro alto 5–8) como preset — `noise_alpha=0.55`, `post_filter_strength=6.0`. Cada
   variante hereda del preset de fábrica de su modo (AM Local / SSB Medio Adaptativo) el resto de
   flags y su bandpass propio. Generados vía `PresetManager.load_into`+`save` (JSON completo con
-  campos nuevos). **Pendiente: validación en el aire.**
+  campos nuevos). **Validado en el aire por el usuario.**
 - **`tests/test_ui.py` permanente** (backlog v1.7): formaliza los tests offscreen de UI que antes
   se hacían a mano cada sesión — la categoría de regresión más frecuente. Ver la tabla de tests.
 - **Rolloff del piso perceptual más empinado** (`/6000` → `/2500` en `_build_floor_curve`):
@@ -880,12 +880,12 @@ Cambios v1.7:
 
 Backlog v1.7 (acordado con el usuario tras la revisión de código de julio 2026):
 - ✅ **Grabación a WAV** (hecho, validado en el aire).
-- ✅ **Preset de fábrica "Voz natural"** (hecho — AM+SSB; falta validación en el aire).
+- ✅ **Preset de fábrica "Voz natural"** (hecho — AM+SSB; validado en el aire).
 - ✅ **Perfiles de ruido nombrados** (hecho, validado con hardware real).
 - ✅ **tests/test_ui.py permanente** (hecho).
 - ✅ **Waterfall en la pestaña Espectro**: cascada con historia (~30s) además del espectro
   instantáneo — permite VER el QSB, heterodinos intermitentes y QRM (hecho; fuente Entrada/Salida
-  conmutable, colormap SDR clásico, splitter arrastrable). **Falta validación en el aire.**
+  conmutable, colormap SDR clásico, splitter arrastrable). **Validado en el aire.**
 
 Pendiente para Fase 2:
 - Validar build en Pi real (ARM64 Raspberry Pi OS Bookworm)
