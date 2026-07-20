@@ -659,6 +659,10 @@ Cambios post-v1.8 (pendiente de release):
     (deshabilitar Activar o marcar el combo) en vez de solo al Activar; (2) soporte real de
     combinaciones cruzadas vía **dos streams separados** (InputStream + OutputStream con ring
     buffer) — más complejo (latencia/sincronía), decisión del usuario si vale la pena.
+- **Ajustes de presets de fábrica del usuario** (afinados en uso real, se publican tal cual —
+  ver [[project_factory_presets]]): `AM Local - RuidoMedio` pasa a perfil estático, intensidad 0.6,
+  squelch on, más presencia (1500 Hz / 6 dB) y cuerpo (350 Hz / 3 dB), límite de picos −1.5 dB;
+  `AM SW - Ruido Alto y Fading` pasa a modo adaptativo (MCRA).
 
 Cambios v1.8:
 - **Cascada / waterfall en la pestaña Espectro** (último ítem del backlog v1.7). Nuevo
