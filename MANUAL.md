@@ -80,49 +80,7 @@ Los términos que aparecen a lo largo del manual, en orden alfabético. Los oper
 
 El audio recorre los siguientes procesos en orden. Cada etapa puede activarse o desactivarse de forma independiente:
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                       AUDIO ENTRADA                         │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-                    [ Ganancia de entrada ]
-                           │
-             [ Supresor de Impulsos (pre-AGC) ]
-               Elimina QRN y descargas breves
-                           │
-                        [ AGC ]
-               Control automático de ganancia
-                           │
-            [ Filtro de Paso de Banda  ── PRE ]
-          Limita el espectro antes del cancelador
-                           │
-          [ ANF — Filtro de Muesca Espectral ]
-            Cancela heterodinos y tonos fijos
-                           │
-         [ Cancelador de Ruido Estacionario ]
-           Filtro Wiener espectral adaptativo
-          ├─ sub: Refuerzo de pitch de voz (opcional)
-          └─ sub: Post-filtro espectral  (opcional)
-                           │
-               [ Squelch de Voz  (opcional) ]
-          Silencia la salida entre transmisiones
-                           │
-            [ Filtro de Paso de Banda  ── POST ]
-         Limpia fugas espectrales post-procesado
-                           │
-              [ EQ de Voz: presencia + cuerpo ]
-         Realce de consonantes y cuerpo de la voz
-                           │
-              [ Excitador Armónico  (opcional) ]
-           Genera armónicos para recuperar brillo
-                           │
-                  [ Ganancia de salida ]
-                  Limitador de picos
-                           │
-┌──────────────────────────▼──────────────────────────────────┐
-│                       AUDIO SALIDA                          │
-└─────────────────────────────────────────────────────────────┘
-```
+![Diagrama del pipeline de procesamiento](Images/pipeline_diagram.png)
 
 ---
 
@@ -334,11 +292,13 @@ El cancelador ofrece dos modos, seleccionables desde el selector **Modo:** en la
 **Perfil estático** (modo manual)
 El algoritmo aprende una "foto" del ruido de fondo durante unos segundos y la usa como referencia fija. Ideal cuando el ruido de banda es muy estable.
 
-1. **Buscar un momento sin señal** — cuando la estación no está transmitiendo.
+1. **Buscar un hueco de solo ruido** — un momento sin señal, cuando la estación no está transmitiendo.
 2. Pulsar **⏺ Aprender ruido** y esperar 3–5 segundos.
 3. Pulsar **⏹ Detener** — el perfil queda guardado y se aplica.
 4. Si las condiciones cambian mucho, repetir el proceso.
 5. **Borrar perfil** reinicia la referencia.
+
+> **Importante — aprender solo ruido:** conviene **correrse un poquito en frecuencia** hasta un lugar del dial **sin emisoras** (solo el ruido de fondo de la banda), aprender ahí, y recién después volver a la estación. Si durante el aprendizaje se cuela algo de **voz o una portadora**, esa energía queda "horneada" en el perfil de ruido, y el cancelador la resta después como si fuera ruido — se oyen artefactos y huecos sobre la voz real. El objetivo del perfil es una foto del **ruido puro**, no de la señal.
 
 Durante el aprendizaje la aplicación toma dos medidas automáticas para capturar un perfil fiel:
 

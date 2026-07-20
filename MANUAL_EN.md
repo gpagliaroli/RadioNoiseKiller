@@ -80,49 +80,7 @@ Terms used throughout this manual, in alphabetical order. Experienced operators 
 
 Audio flows through the following processes in order. Each stage can be enabled or disabled independently:
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        AUDIO INPUT                          │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-                     [ Input gain ]
-                           │
-             [ Impulse Suppressor (pre-AGC) ]
-               Removes QRN and short bursts
-                           │
-                        [ AGC ]
-                Automatic gain control
-                           │
-             [ Bandpass Filter  ── PRE ]
-          Limits the spectrum before the canceller
-                           │
-           [ ANF — Spectral Notch Filter ]
-            Removes heterodynes and steady tones
-                           │
-          [ Stationary Noise Canceller ]
-            Adaptive spectral Wiener filter
-          ├─ sub: Voice pitch enhancement (optional)
-          └─ sub: Spectral post-filter   (optional)
-                           │
-               [ Voice Squelch  (optional) ]
-           Mutes the output between transmissions
-                           │
-             [ Bandpass Filter  ── POST ]
-         Cleans spectral leakage after processing
-                           │
-             [ Voice EQ: presence + body ]
-         Consonant clarity and voice body boost
-                           │
-             [ Harmonic Exciter  (optional) ]
-           Generates harmonics to restore brightness
-                           │
-                   [ Output gain ]
-                   Peak limiter
-                           │
-┌──────────────────────────▼──────────────────────────────────┐
-│                        AUDIO OUTPUT                         │
-└─────────────────────────────────────────────────────────────┘
-```
+![Processing pipeline diagram](Images/pipeline_diagram_en.png)
 
 ---
 
@@ -334,11 +292,13 @@ The canceller offers two modes, selectable from the **Mode:** selector on the Ma
 **Static profile** (manual mode)
 The algorithm learns a "photo" of the background noise over a few seconds and uses it as a fixed reference. Ideal when the band noise is very stable.
 
-1. **Find a moment without signal** — when the station is not transmitting.
+1. **Find a noise-only gap** — a moment with no signal, when the station is not transmitting.
 2. Press **⏺ Learn noise** and wait 3–5 seconds.
 3. Press **⏹ Stop** — the profile is stored and applied.
 4. If conditions change a lot, repeat the process.
 5. **Clear profile** resets the reference.
+
+> **Important — learn noise only:** it's best to **tune slightly off frequency** to a spot on the dial **with no stations** (just the band's background noise), learn there, and only then return to the station. If some **voice or a carrier** slips in during learning, that energy gets "baked" into the noise profile, and the canceller then subtracts it as if it were noise — you'll hear artifacts and holes over the real voice. The profile should be a snapshot of **pure noise**, not of the signal.
 
 During learning the application takes two automatic measures to capture a faithful profile:
 
