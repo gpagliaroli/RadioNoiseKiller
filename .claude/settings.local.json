@@ -156,7 +156,24 @@
       "Bash(.venv/Scripts/python.exe tools/gen_manual_pdf.py MANUAL.md MANUAL_RadioNoiseKiller_v1.8.pdf)",
       "Bash(.venv/Scripts/python.exe tools/gen_manual_pdf.py MANUAL_EN.md MANUAL_RadioNoiseKiller_v1.8_EN.pdf)",
       "Bash(.venv/Scripts/python.exe -c \"from pypdf import PdfReader; r=PdfReader\\('MANUAL_RadioNoiseKiller_v1.8.pdf'\\); print\\('ES', len\\(r.pages\\),'pags; portada:', \\(r.pages[0].extract_text\\(\\) or ''\\).split\\(chr\\(10\\)\\)[0][:30], '; imgs pag0:', len\\(list\\(r.pages[0].images\\)\\)\\)\")",
-      "Bash(.venv/Scripts/python.exe -c \"import ast; ast.parse\\(open\\('src/ui/main_window.py',encoding='utf-8'\\).read\\(\\)\\); ast.parse\\(open\\('src/i18n_en.py',encoding='utf-8'\\).read\\(\\)\\); print\\('syntax OK'\\)\")"
+      "Bash(.venv/Scripts/python.exe -c \"import ast; ast.parse\\(open\\('src/ui/main_window.py',encoding='utf-8'\\).read\\(\\)\\); ast.parse\\(open\\('src/i18n_en.py',encoding='utf-8'\\).read\\(\\)\\); print\\('syntax OK'\\)\")",
+      "Bash(.venv/Scripts/python.exe src/main.py)",
+      "PowerShell(Set-Location \"C:\\\\Disco_D\\\\Proyectos ByCoding\\\\Reductor_Ruido_Radio\"; $out = & \".venv\\\\Scripts\\\\python.exe\" src\\\\main.py 2>&1; Write-Output \"EXIT=$LASTEXITCODE\"; $out | Select-Object -First 40)",
+      "PowerShell(Set-Location \"C:\\\\Disco_D\\\\Proyectos ByCoding\\\\Reductor_Ruido_Radio\"; Write-Output \"--- venv python exists? ---\"; Test-Path \".venv\\\\Scripts\\\\python.exe\"; Write-Output \"--- run.cmd bytes \\(first line\\) ---\"; $b = [System.IO.File]::ReadAllBytes\\(\"run.cmd\"\\); Write-Output \\(\"first bytes: \" + \\($b[0..3] -join ','\\)\\); Write-Output \"--- git bg task file tail ---\"; Get-Content \"C:\\\\Users\\\\GPAGLI~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Disco-D-Proyectos-ByCoding-Reductor-Ruido-Radio\\\\d032811c-299f-4805-82a1-661cefe84eb1\\\\tasks\\\\biq2eaxmm.output\" -ErrorAction SilentlyContinue | Select-Object -First 20)",
+      "Bash(.venv/Scripts/python.exe -c \"import json; d=json.load\\(open\\('settings.json',encoding='utf-8'\\)\\); print\\(json.dumps\\(d.get\\('window',{}\\),indent=2\\)\\)\")",
+      "Bash(QT_QPA_PLATFORM='' .venv/Scripts/python.exe -c ' *)",
+      "Bash(grep -v \"^$\")",
+      "PowerShell($py = Get-Process python -ErrorAction SilentlyContinue; Write-Output \"python procs: $\\($py.Count\\)\"; $py | Select-Object Id, @{n='CPU_s';e={[math]::Round\\($_.CPU,1\\)}}, @{n='RAM_MB';e={[math]::Round\\($_.WorkingSet64/1MB\\)}}, StartTime | Format-Table -AutoSize; Write-Output \"--- Defender real-time? ---\"; try { \\(Get-MpPreference\\).DisableRealtimeMonitoring } catch { \"n/a\" })",
+      "Bash(timeout 90 .venv/Scripts/python.exe -u -c ' *)",
+      "Bash(echo \"exit=$?\")",
+      "PowerShell(Set-Location \"C:\\\\Disco_D\\\\Proyectos ByCoding\\\\Reductor_Ruido_Radio\"; $sw=[Diagnostics.Stopwatch]::StartNew\\(\\); $out = & \".venv\\\\Scripts\\\\python.exe\" -u -c \"import time;t=time.time\\(\\);import scipy;print\\('scipy bare',round\\(time.time\\(\\)-t,1\\)\\);import scipy.signal;print\\('scipy.signal',round\\(time.time\\(\\)-t,1\\)\\)\" 2>&1; $sw.Stop\\(\\); Write-Output \"wallclock=$\\([math]::Round\\($sw.Elapsed.TotalSeconds,1\\)\\)s exit=$LASTEXITCODE\"; $out)",
+      "PowerShell($py = Get-Process python -ErrorAction SilentlyContinue; $py | Select-Object Id,@{n='CPU_s';e={[math]::Round\\($_.CPU,1\\)}},@{n='RAM_MB';e={[math]::Round\\($_.WorkingSet64/1MB\\)}} | Format-Table -AutoSize; if\\($py\\){ Write-Output \"--- wait state / threads ---\"; $py | ForEach-Object { Write-Output \"PID $\\($_.Id\\) threads=$\\($_.Threads.Count\\)\" } })",
+      "Bash(timeout 60 .venv/Scripts/python.exe -u -c ' *)",
+      "Bash(.venv/Scripts/python.exe tools/gen_manual_pdf.py MANUAL.md MANUAL_RadioNoiseKiller_v1.8.1.pdf)",
+      "Bash(.venv/Scripts/python.exe tools/gen_manual_pdf.py MANUAL_EN.md MANUAL_RadioNoiseKiller_v1.8.1_EN.pdf)",
+      "Bash(.venv/Scripts/python.exe *)",
+      "Bash(git commit *)",
+      "PowerShell($p = Start-Process -FilePath \"dist_v181\\\\RadioNoiseKiller\\\\RadioNoiseKiller.exe\" -PassThru; Start-Sleep -Seconds 10; if \\(-not $p.HasExited\\) { Write-Output \"VIVO tras 10s \\(PID $\\($p.Id\\)\\) - OK\"; Stop-Process -Id $p.Id -Force; Write-Output \"proceso terminado\" } else { Write-Output \"MURIO con exit code $\\($p.ExitCode\\)\" })"
     ]
   }
 }
