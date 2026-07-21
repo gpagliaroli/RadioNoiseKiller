@@ -364,10 +364,42 @@ def test_incompatible_devices_disable_activate():
     print("Aviso proactivo -9993: ACTIVAR gateado         OK")
 
 
+def test_loaded_profile_name_label():
+    """El nombre del perfil nombrado cargado se muestra debajo de los botones;
+    se oculta al Aprender/Borrar (perfil ad-hoc), sin perfil, o en modo MCRA.
+    Se fuerza 'hay perfil' monkeypatcheando la property del pipeline (sin hardware)."""
+    w = _win()
+    _set_combo(w._combo_noise_mode, "static")
+
+    pipe_cls = type(w._pipeline)
+    orig_has = pipe_cls.noise_has_profile
+    pipe_cls.noise_has_profile = property(lambda self: True)
+    try:
+        # Perfil nombrado cargado -> el label aparece con el nombre
+        w._active_noise_profile_name = "40m casa"
+        w._refresh_noise_profile_ui()
+        assert not w._label_profile_name.isHidden(), "label del nombre no aparece con perfil cargado"
+        assert "40m casa" in w._label_profile_name.text(), "el label no muestra el nombre"
+
+        # Perfil ad-hoc (aprendido a mano) -> nombre None -> label oculto
+        w._active_noise_profile_name = None
+        w._refresh_noise_profile_ui()
+        assert w._label_profile_name.isHidden(), "label visible con perfil aprendido a mano"
+
+        # Con nombre pero en MCRA -> oculto (no aplica el modo)
+        w._active_noise_profile_name = "40m casa"
+        _set_combo(w._combo_noise_mode, "mcra")
+        assert w._label_profile_name.isHidden(), "label del nombre visible en MCRA"
+    finally:
+        pipe_cls.noise_has_profile = orig_has
+    print("Nombre del perfil cargado en la UI         OK")
+
+
 if __name__ == "__main__":
     test_tab_order()
     test_modules_group_moved_to_own_tab()
     test_profile_buttons_visibility_by_mode()
+    test_loaded_profile_name_label()
     test_canceller_subcontrols_require_noise()
     test_voice_leveler_requires_noise()
     test_bandpass_out_requires_post_and_independent()

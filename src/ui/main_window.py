@@ -40,6 +40,11 @@ class MainWindow(QMainWindow):
         self._pipeline = ProcessingPipeline(self._config)
         self._preset_manager = PresetManager(presets_dir())
         self._noise_profile_manager = NoiseProfileManager(noise_profiles_dir())
+        # Nombre del perfil de ruido nombrado actualmente cargado (para mostrarlo en la UI).
+        # Se limpia (None) al Aprender un perfil nuevo o Borrar, porque el perfil activo ya no
+        # corresponde a ese archivo. NO es lo mismo que config.last_noise_profile (que persiste
+        # el nombre para la auto-recarga aunque después se aprenda uno nuevo).
+        self._active_noise_profile_name: "str | None" = None
         # Snapshot en memoria del preset activo (dsp, gain) para chequear "(modificado)"
         # sin re-leer el JSON en cada actualización del título.
         self._preset_saved_snapshot = None
@@ -421,6 +426,12 @@ class MainWindow(QMainWindow):
         self._btn_load_profile.clicked.connect(self._on_manage_noise_profiles)
         prof_row.addWidget(self._btn_load_profile)
         layout.addLayout(prof_row)
+
+        # Nombre del perfil nombrado cargado (oculto si el perfil es aprendido a mano o no hay)
+        self._label_profile_name = QLabel("")
+        self._label_profile_name.setStyleSheet("color: #69f0ae; font-size: 8pt;")
+        self._label_profile_name.setVisible(False)
+        layout.addWidget(self._label_profile_name)
 
         self._combo_noise_mode.currentIndexChanged.connect(self._on_noise_mode_changed)
 
@@ -1095,6 +1106,14 @@ class MainWindow(QMainWindow):
         self._btn_load_profile.setEnabled(is_static and not learning
                                           and bool(self._noise_profile_manager.list_names()))
 
+        # Nombre del perfil cargado: solo con perfil nombrado activo (no aprendido a mano)
+        show_name = (is_static and has_prof and not learning
+                     and bool(self._active_noise_profile_name))
+        self._label_profile_name.setVisible(show_name)
+        if show_name:
+            self._label_profile_name.setText(
+                tr("📁  Perfil cargado:  «{name}»").format(name=self._active_noise_profile_name))
+
         if not is_static:
             return
 
@@ -1130,6 +1149,7 @@ class MainWindow(QMainWindow):
             self._btn_clear_noise.setVisible(False)
             self._btn_save_profile.setVisible(False)
             self._btn_load_profile.setVisible(False)
+            self._label_profile_name.setVisible(False)
             self._label_noise.setText(tr("Adaptativo (MCRA) — activar procesamiento para calibrar"))
             self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
         else:
@@ -1138,6 +1158,8 @@ class MainWindow(QMainWindow):
 
     def _on_learn_toggled(self, checked: bool) -> None:
         if checked:
+            # El perfil activo pasa a ser uno aprendido a mano: ya no es el nombrado cargado
+            self._active_noise_profile_name = None
             self._learn_countdown = 5
             self._pipeline.start_noise_learning()
             self._spectrum_widget.start_floor_learning()
@@ -1257,6 +1279,7 @@ class MainWindow(QMainWindow):
 
     def _on_clear_noise_profile(self) -> None:
         self._pipeline.clear_noise_profile()
+        self._active_noise_profile_name = None
         self._spectrum_widget.clear_floor()
         self._refresh_noise_profile_ui()
 
@@ -1275,6 +1298,7 @@ class MainWindow(QMainWindow):
             self._pipeline.set_noise_profile_data(data)
         except Exception:
             return None
+        self._active_noise_profile_name = name
         for i in range(self._combo_noise_mode.count()):
             if self._combo_noise_mode.itemData(i) == "static":
                 self._combo_noise_mode.blockSignals(True)
@@ -1303,6 +1327,7 @@ class MainWindow(QMainWindow):
                 return
         self._noise_profile_manager.save(name, data)
         self._config.last_noise_profile = name
+        self._active_noise_profile_name = name
         self._schedule_save()
         self._refresh_noise_profile_ui()
         self._status_bar.showMessage(
@@ -1333,6 +1358,7 @@ class MainWindow(QMainWindow):
                 break
         self._config.dsp.noise_mode = "static"
         self._config.last_noise_profile = name
+        self._active_noise_profile_name = name
         self._spectrum_widget.clear_floor()
         self._refresh_noise_profile_ui()
         self._schedule_save()

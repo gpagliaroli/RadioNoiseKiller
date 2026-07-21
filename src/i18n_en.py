@@ -184,6 +184,7 @@ CATALOG = {
         "No profile — press Learn to calibrate",
     "Perfil activo: {dur:.1f}s aprendidos — sustracción ON":
         "Active profile: {dur:.1f}s learned — subtraction ON",
+    "📁  Perfil cargado:  «{name}»": "📁  Loaded profile:  «{name}»",
     "⏹  Aprendiendo... {s}s": "⏹  Learning... {s}s",
     "Aprendiendo ruido — mantener silencio en la banda":
         "Learning noise — keep the band silent",
