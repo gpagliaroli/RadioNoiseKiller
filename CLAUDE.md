@@ -628,8 +628,9 @@ Versión de app 1.8.1, manuales `MANUAL_RadioNoiseKiller_v1.8.1.pdf` (ES, 31 pá
 `..._v1.8.1_EN.pdf` (EN, 30 págs). Título de la ventana "v1.8.1" en `_update_window_title()`.
 Junta los cambios acumulados post-v1.8 (manual con portada/diagrama gráfico/tip de aprender ruido,
 aviso proactivo de dispositivos de APIs incompatibles −9993, ajustes de presets de fábrica). El
-aviso −9993 se publicó sin validación manual adicional (tiene tests `test_device_combo.py` +
-`test_ui.py`). Manuales ES+EN documentan el requisito de misma API en los consejos de dispositivos.
+aviso −9993 quedó **validado en hardware real por el usuario** (cruce WASAPI+WDM-KS: ACTIVAR
+deshabilitado + aviso) además de los tests `test_device_combo.py` + `test_ui.py`. Manuales ES+EN
+documentan el requisito de misma API en los consejos de dispositivos.
 
 Cambios v1.8.1 (los que estaban pendientes post-v1.8):
 - **Manual: portada, diagrama gráfico y tip de aprender ruido** (pedidos del usuario):
