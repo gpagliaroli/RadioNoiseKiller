@@ -632,6 +632,17 @@ aviso −9993 quedó **validado en hardware real por el usuario** (cruce WASAPI+
 deshabilitado + aviso) además de los tests `test_device_combo.py` + `test_ui.py`. Manuales ES+EN
 documentan el requisito de misma API en los consejos de dispositivos.
 
+Cambios post-v1.8.1 (pendiente de release):
+- **Nombre del perfil de ruido cargado visible en la UI** (pedido del usuario: al cargar un perfil
+  nombrado no había forma de saber cuál estaba activo). Label verde debajo de los botones
+  Guardar/Perfiles: "📁 Perfil cargado: «nombre»". Estado en memoria `_active_noise_profile_name`
+  en `main_window.py` — distinto de `config.last_noise_profile` (que persiste el nombre para la
+  auto-recarga aunque después se aprenda otro). Se setea al cargar/guardar/auto-cargar; se limpia
+  (None) al Aprender un perfil nuevo o Borrar (el perfil activo deja de corresponder al archivo);
+  el label se oculta también en MCRA o sin perfil (`show_name` en `_refresh_noise_profile_ui`,
+  antes de los early-returns). Clave i18n EN agregada. Test `test_ui.py::test_loaded_profile_name_label`
+  (monkeypatch de `noise_has_profile`). **Validado visualmente por el usuario.**
+
 Cambios v1.8.1 (los que estaban pendientes post-v1.8):
 - **Manual: portada, diagrama gráfico y tip de aprender ruido** (pedidos del usuario):
   - Aclaración en "Perfil estático": correrse un poco en frecuencia a un hueco **sin emisoras**
