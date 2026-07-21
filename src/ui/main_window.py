@@ -1289,7 +1289,15 @@ class MainWindow(QMainWindow):
 
     def _auto_load_noise_profile(self) -> "str | None":
         """Al arrancar: recargar el último perfil usado si sigue existiendo.
-        Devuelve el nombre cargado (para el mensaje de inicio), o None."""
+        Devuelve el nombre cargado (para el mensaje de inicio), o None.
+
+        Respeta el modo guardado: si el usuario cerró en Adaptativo (MCRA),
+        la app abre en MCRA. Cargar un perfil nombrado fuerza estático, así que
+        solo auto-cargamos cuando el modo guardado ya era estático (el perfil
+        estaba en uso). Sin esto, un `last_noise_profile` viejo pisaba el modo
+        Adaptativo elegido por el usuario en cada arranque."""
+        if self._config.dsp.noise_mode != "static":
+            return None
         name = self._config.last_noise_profile
         if not name or not self._noise_profile_manager.exists(name):
             return None

@@ -395,11 +395,26 @@ def test_loaded_profile_name_label():
     print("Nombre del perfil cargado en la UI         OK")
 
 
+def test_auto_load_respects_saved_mode():
+    """El auto-cargar un perfil nombrado fuerza estático; NO debe hacerlo si el
+    modo guardado era MCRA (regresión: un last_noise_profile viejo pisaba el
+    modo Adaptativo elegido por el usuario en cada arranque)."""
+    w = _win()
+    # Simular sesión previa en MCRA con un perfil nombrado persistido
+    w._config.dsp.noise_mode = "mcra"
+    w._config.last_noise_profile = "cualquiera"
+    ret = w._auto_load_noise_profile()
+    assert ret is None, "auto-load no debe cargar en modo MCRA"
+    assert w._config.dsp.noise_mode == "mcra", "auto-load piso el modo MCRA a estático"
+    print("Auto-load respeta el modo MCRA guardado    OK")
+
+
 if __name__ == "__main__":
     test_tab_order()
     test_modules_group_moved_to_own_tab()
     test_profile_buttons_visibility_by_mode()
     test_loaded_profile_name_label()
+    test_auto_load_respects_saved_mode()
     test_canceller_subcontrols_require_noise()
     test_voice_leveler_requires_noise()
     test_bandpass_out_requires_post_and_independent()
