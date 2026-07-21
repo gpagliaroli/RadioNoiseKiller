@@ -956,6 +956,15 @@ class ProcessingPipeline:
         if self._bypass:
             self._db_out = self._db_in
             self._latency_ms = 0.0
+            # El espectro se alimenta desde el hilo procesador, que en bypass no
+            # recibe audio → sin esto la pantalla queda congelada. En bypass
+            # "lo que se escucha" == la señal cruda (entrada == salida), así que
+            # empujamos audio_in a ambos deques. deque.append es atómico y el
+            # hilo procesador no escribe en bypass (no hay input encolado): sin
+            # carrera nueva. El SpectrumWidget concatena y toma los últimos
+            # FFT_SIZE samples, así que el tamaño del bloque no necesita ser hop.
+            self._spec_pre_frames.append(audio_in.copy())
+            self._spec_post_frames.append(audio_in.copy())
             # La grabación captura "lo que se escucha": en bypass, la señal
             # cruda va a ambos archivos (sin esto, la grabación quedaba PAUSADA
             # durante el bypass — el feed vivía solo en el hilo procesador).

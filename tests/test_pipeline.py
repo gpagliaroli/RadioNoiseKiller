@@ -35,9 +35,17 @@ print(f"Tiempo real OK:      {avg < budget}")
 
 pipeline.set_mode(RadioMode.AM)
 pipeline.set_bypass(True)
+pipeline.spectrum_pre_frames.clear()
+pipeline.spectrum_post_frames.clear()
 out_bypass = pipeline._process(np.ones(hop, dtype=np.float32) * 0.1)
 assert np.allclose(out_bypass, np.ones(hop) * 0.1, atol=1e-5), "Bypass fallo"
-print("\nBypass: OK")
+# El espectro debe seguir alimentandose en bypass (antes quedaba congelado):
+# entrada == salida == señal cruda, ambos deques reciben el frame.
+assert len(pipeline.spectrum_pre_frames) == 1, "espectro (entrada) no se alimenta en bypass"
+assert len(pipeline.spectrum_post_frames) == 1, "espectro (salida) no se alimenta en bypass"
+assert np.allclose(pipeline.spectrum_pre_frames[-1], pipeline.spectrum_post_frames[-1]), \
+    "en bypass entrada y salida del espectro deben coincidir"
+print("\nBypass: OK (espectro alimentado)")
 
 # ------------------------------------------------------------------
 # Supresor de impulsos (headless: necesita el hilo procesador corriendo)
