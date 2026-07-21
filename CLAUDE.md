@@ -642,6 +642,22 @@ Cambios post-v1.8.1 (pendiente de release):
   el label se oculta también en MCRA o sin perfil (`show_name` en `_refresh_noise_profile_ui`,
   antes de los early-returns). Clave i18n EN agregada. Test `test_ui.py::test_loaded_profile_name_label`
   (monkeypatch de `noise_has_profile`). **Validado visualmente por el usuario.**
+- **Fix: el espectro quedaba congelado en Bypass** (reportado por el usuario). Los frames de
+  espectro (`_spec_pre_frames`/`_spec_post_frames`) solo se capturaban en el hilo procesador, que
+  en bypass no recibe audio → la pantalla (y la cascada) no se actualizaban. En bypass "lo que se
+  escucha" == la señal cruda (entrada == salida), así que `_process` empuja `audio_in.copy()` a
+  AMBOS deques en la rama de bypass. `deque.append` es atómico y el hilo procesador no escribe en
+  bypass (sin input encolado) → sin carrera nueva. El `SpectrumWidget` concatena y toma los últimos
+  `FFT_SIZE` samples, así que el tamaño del bloque del callback no necesita ser `hop`. Test en
+  `test_pipeline` (ambos deques poblados y coincidentes en bypass). **Validado por el usuario.**
+- **Fix: el arranque no respetaba el modo Adaptativo (MCRA) guardado** (reportado por el usuario:
+  cerraba en Adaptativo y abría siempre en estático). Si existía un `last_noise_profile` persistido,
+  `_auto_load_noise_profile` lo cargaba y forzaba estático en cada arranque, pisando el modo que
+  `_apply_loaded_config` ya había restaurado. Ahora el auto-load chequea el modo PRIMERO: solo carga
+  el perfil (y fuerza estático) si el modo guardado ya era estático; en MCRA hace early-return y
+  respeta el modo. (El síntoma apareció tras probar la feature del nombre de perfil, que dejó un
+  `last_noise_profile` guardado.) Test `test_ui.py::test_auto_load_respects_saved_mode`.
+  **Validado por el usuario.**
 
 Cambios v1.8.1 (los que estaban pendientes post-v1.8):
 - **Manual: portada, diagrama gráfico y tip de aprender ruido** (pedidos del usuario):
