@@ -27,7 +27,7 @@ class SliderRow(QWidget):
         step: float = 1.0,
         unit: str = "",
         fmt: str = "{:.0f}",
-        label_width: int = 180,
+        label_width: int = 160,
         value_width: int = 72,
         parent=None,
     ):
@@ -54,16 +54,18 @@ class SliderRow(QWidget):
         self._slider.valueChanged.connect(self._on_slider_changed)
         self._slider.setContextMenuPolicy(Qt.CustomContextMenu)
         self._slider.customContextMenuRequested.connect(self._show_context_menu)
-        # Ancho máximo: el slider crece hasta este tope y el espacio sobrante queda
-        # libre a la derecha (antes con stretch=1 llenaba toda la fila). Achica el
-        # slider ~30% y evita filas gigantes. Sigue encogiendo en ventanas angostas.
-        self._slider.setMaximumWidth(360)
-        layout.addWidget(self._slider, stretch=1)
+        # Largo FIJO (pedido del usuario): el slider no se estira. El sobrante lo
+        # absorbe un stretch al final, así nombre + slider + valor quedan juntos a
+        # la izquierda y el espacio libre va a la derecha.
+        self._slider.setFixedWidth(360)
+        layout.addWidget(self._slider)
 
         self._val_lbl = QLabel()
         self._val_lbl.setFixedWidth(value_width)
-        self._val_lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        # Alineado a la izquierda: el valor queda pegado al final del slider
+        self._val_lbl.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         layout.addWidget(self._val_lbl)
+        layout.addStretch()
 
         self._update_label(default)
 
