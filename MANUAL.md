@@ -63,7 +63,7 @@ Los términos que aparecen a lo largo del manual, en orden alfabético. Los oper
 | **Pitch (f0)** | La frecuencia fundamental de la voz — el "tono" con que habla una persona (80–400 Hz). La aplicación lo detecta para proteger los armónicos de la voz y para el squelch. |
 | **Portadora** | Señal de radio sin modulación (un tono puro en RF). En el audio demodulado aparece como silbido continuo o como silencio con ruido de fondo, según el modo. |
 | **Preset** | Conjunto guardado de todos los ajustes DSP y de ganancia, para cargar de una vez configuraciones completas (pestaña Presets). |
-| **Q (selectividad)** | Factor de calidad de un filtro: qué tan angosto es. Q bajo = afecta una banda ancha de frecuencias; Q alto = pico estrecho y selectivo. |
+| **Q (selectividad)** | Factor de calidad de un filtro: qué tan angosto es. Q bajo = afecta una banda ancha de frecuencias; Q alto = pico angosto y selectivo. |
 | **QRN** | Código Q para el ruido atmosférico: descargas eléctricas, tormentas, crujidos impulsivos. Lo ataca el Supresor de Impulsos. |
 | **Retención (hold)** | Tiempo que el squelch mantiene el gate abierto después de que la voz desaparece, para no cortar finales de palabra ni pausas breves. |
 | **RMS** | Valor eficaz (*Root Mean Square*): medida del nivel promedio de una señal, más representativa del volumen percibido que el valor pico. |
@@ -353,7 +353,7 @@ Dos sliders en Avanzada Cancelador permiten calibrar la detección:
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
-| **Sensibilidad fading** | 1 – 10 dB | 5 dB | Cambio de energía que dispara el congelamiento. Bajo (1–4 dB): detecta QSB suave, pero puede disparar con la propia voz. Alto (7–10 dB): solo fades profundos. |
+| **Sensibilidad fading** | 1 – 10 dB | 5 dB | Cambio de energía que dispara el congelamiento. Sensible (1–4 dB): detecta QSB suave, pero puede disparar con la propia voz. Selectivo (7–10 dB): solo fades profundos. |
 | **Duración del freeze** | 100 – 500 ms | 200 ms | Cuánto tiempo queda congelado el estimador tras cada evento. Fades lentos necesitan más; un valor muy largo desactualiza el piso si el ruido de banda cambió de verdad. |
 
 El indicador en Avanzada Cancelador muestra **FADE** (naranja) cuando hay un evento de fading activo y **ok** (gris) cuando la señal está estable. Si FADE aparece constantemente sin que haya desvanecimiento real, la señal tiene variaciones rápidas de nivel (p. ej. AM con modulación profunda) — subir la Sensibilidad o desactivar la casilla.
@@ -375,7 +375,7 @@ El indicador en Avanzada Cancelador muestra **FADE** (naranja) cuando hay un eve
 | **Intensidad** | 0% – 100% | 70% | Cuánta reducción se aplica sobre los gains calculados. **0%** = sin reducción (audio pasa sin cambios). **100%** = reducción plena. La escala es no lineal: valores medios (50–70%) ya producen una reducción perceptible, mientras que los bins de voz se ven mínimamente afectados en cualquier posición. Comenzar en 70% y subir según el nivel de ruido. |
 | **Piso espectral** | 0,05 – 0,30 | 0,10 | Ganancia mínima que se aplica a cualquier bin, incluso el más ruidoso. 0,10 significa que nunca se silencia más del 90% de la energía de un bin. **Nunca bajar de 0,05** — valores muy bajos con Anti-gorgojeo alto producen gorgojeo severo. |
 | **Anti-gorgojeo (β)** | 90% – 99% (pasos de 0,1%) | 97% | Velocidad con que los gains retornan al piso después de detectar voz. Alto (97–99%) = transiciones suaves, sin gorgojeo. Bajo (90–95%) = más reactivo pero con riesgo de gorgojeo audible. La resolución fina de 0,1% permite calibrar con precisión en el extremo alto, donde cada décima cambia el release de forma audible (98,0% ≈ 0,5 s; 98,5% ≈ 0,7 s; 99,0% ≈ 1 s). El máximo elimina el gorgojeo más persistente pero puede dejar una "cola" de ruido tras cada transmisión — usarlo solo si 97–98% no alcanza. |
-| **Velocidad de ataque** | 50% – 92% | 80% | Velocidad con que el cancelador "abre" los bins de voz cuando detecta una señal. Bajo (50–70%) = ataque rápido, consonantes más nítidas. Alto (>85%) = ataque suave, menos artefactos en transiciones. |
+| **Velocidad de ataque** | 50% – 92% | 80% | Velocidad con que el cancelador "abre" los bins de voz cuando detecta una señal. Rápido (50–70%): consonantes más nítidas. Suave (>85%): menos artefactos en transiciones. |
 
 > **Consejo — calibrar la Intensidad con el Preview:** activar **"Preview: escuchar ruido eliminado"** y subir la **Intensidad** escuchando lo que se elimina: mientras en el preview se escuche solo ruido, se puede seguir subiendo; en el punto donde empieza a filtrarse voz en lo eliminado, bajar un paso y dejarlo ahí. Ese es el máximo de cancelación que no modifica la voz. Desactivar el preview al terminar.
 
@@ -415,7 +415,7 @@ Este módulo reemplaza el piso fijo por una curva con tres zonas:
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
-| **Amplitud boost vocal** | 0% – 250% | 75% | Cuánto se eleva el piso en la zona vocal respecto al piso base. 75% = suave, 150% = normal, 250% = máximo. Subir si la voz suena "fría" o hueca con el cancelador activo. |
+| **Amplitud boost vocal** | 0% – 250% | 75% | Cuánto se eleva el piso en la zona vocal respecto al piso base. 75% = suave, 150% = normal, 250% = fuerte. Subir si la voz suena "fría" o hueca con el cancelador activo. |
 | **Centro del boost** | 200 – 1200 Hz | 500 Hz | Frecuencia donde el boost es máximo. 400–600 Hz para voz masculina, 600–900 Hz para voz femenina. |
 | **Inicio del rolloff** | 1000 – 6000 Hz | 3000 Hz | Frecuencia a partir de la cual el piso empieza a bajar. **En SSB (banda angosta ~2,7 kHz), bajarlo a 1500 Hz** — con el default de 3000 el rolloff arranca por encima de la banda y no llega a actuar. |
 | **Profundidad del rolloff** | 0% – 95% | 55% | Cuánto baja el piso en el extremo agudo → más supresión del siseo agudo. 55% ≈ −7 dB. Más profundidad = menos soplido residual, a costa de opacar levemente los agudos de la voz. |
@@ -441,7 +441,7 @@ El post-filtro aplica una segunda pasada sobre esos bins usando la misma informa
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
-| **Agresividad** | 0,0 – 10,0 | 1,0 | Fuerza de la segunda pasada. **0** = desactivado (aunque el checkbox esté activo). **1** = moderado: los bins de ruido puro reciben `gain²` (duplica la reducción en dB). **2** = normal: `gain³`. **4** = muy agresivo: `gain⁵`. **10** = máximo: `gain¹¹` — en bins de ruido puro la supresión satura en el suelo interno (−46 dB); el rango alto actúa sobre todo en los bins intermedios voz/ruido. Empezar en 1,0 y subir según el indicador Reducción extra hasta que el ruido musical desaparezca. |
+| **Agresividad** | 0,0 – 10,0 | 1,0 | Fuerza de la segunda pasada. **0** = desactivado (aunque el checkbox esté activo). **1** = normal: los bins de ruido puro reciben `gain²` (duplica la reducción en dB). **2** = agresivo: `gain³`. **4** = muy agresivo: `gain⁵`. **10** = máximo: `gain¹¹` — en bins de ruido puro la supresión satura en el suelo interno (−46 dB); el rango alto actúa sobre todo en los bins intermedios voz/ruido. Empezar en 1,0 y subir según el indicador Reducción extra hasta que el ruido musical desaparezca. |
 
 > **Nota:** Valores altos (>2,5) con señales de SNR muy bajo pueden producir supresión excesiva en los bordes de las transiciones de voz — y por encima de 4 el efecto sobre los bins intermedios es fuerte: puede restar claridad a la voz (consonantes finales, respiraciones). Si la voz empieza a sonar recortada u opaca, reducir. En el ruido de fondo puro no hay diferencia audible más allá de ~5 (la supresión ya satura); el rango alto se nota en el ruido pegado a la voz.
 
@@ -560,7 +560,7 @@ Ambas bandas pueden usarse a la vez: cuerpo +4 dB y presencia +4 dB producen una
 | **Cuerpo (ganancia)** | -3 dB a +10 dB | 0 dB | Cuánto se refuerza el cuerpo de la voz. +3 a +5 dB es la zona útil; más de +6 dB puede sonar "tubular". También admite valores negativos para atenuar un exceso de graves. |
 | **Frecuencia de presencia** | 1000 – 2000 Hz | 2000 Hz | Centro del pico de realce. 2000 Hz enfatiza consonantes (s, t, f). 1000–1500 Hz refuerza la zona media. |
 | **Presencia (ganancia)** | -3 dB a +10 dB | 0 dB | Cuánto se amplifica la frecuencia central. Comenzar con +3 a +6 dB y ajustar por preferencia. |
-| **Q (selectividad)** | 0,2 – 2,0 | 0,7 | Anchura del pico de presencia. Q bajo (0,2–0,4) = pico ancho, afecta una banda amplia. Q alto (1,5–2,0) = pico estrecho, muy selectivo. Para voz de radio, Q entre 0,5 y 1,0 es lo habitual. |
+| **Q (selectividad)** | 0,2 – 2,0 | 0,7 | Anchura del pico de presencia. Q bajo (0,2–0,4) = pico ancho, afecta una banda amplia. Q alto (1,5–2,0) = pico angosto, muy selectivo. Para voz de radio, Q entre 0,5 y 1,0 es lo habitual. |
 
 > **Consejo:** si la voz pierde cuerpo al activar el cancelador de ruido, probar primero el **Piso espectral perceptual** (Cap. 7), que evita la pérdida en origen. El EQ de cuerpo compensa después del hecho — ambos enfoques se complementan.
 
@@ -584,7 +584,7 @@ El efecto es similar al de un excitador analógico: la voz suena más "aérea", 
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
-| **Drive** | 1,0× – 10,0× | 2,0× | Cuánta saturación se aplica antes de extraer los armónicos. **Bajo (1–3×):** genera principalmente 2do armónico, efecto sutil. **Alto (6–10×):** más armónicos de orden superior, efecto más pronunciado pero puede sonar artificial. Comenzar en 2,0×. |
+| **Drive** | 1,0× – 10,0× | 2,0× | Cuánta saturación se aplica antes de extraer los armónicos. **Suave (1–3×):** genera principalmente 2do armónico, efecto sutil. **Agresivo (6–10×):** más armónicos de orden superior, efecto más pronunciado pero puede sonar artificial. Comenzar en 2,0×. |
 | **Mezcla** | 0% – 100% | 30% | Cuánto de los armónicos generados se suma al audio original. **20–40%** es la zona útil — notable pero sin sonar artificial. Por encima de 60% el efecto se vuelve muy pronunciado. |
 
 ### Síntomas y ajuste

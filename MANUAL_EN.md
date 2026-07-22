@@ -353,7 +353,7 @@ Two sliders in Advanced Canceller calibrate the detection:
 
 | Control | Range | Default | Description |
 |---------|-------|---------|-------------|
-| **Fading sensitivity** | 1 – 10 dB | 5 dB | Energy change that triggers the freeze. Low (1–4 dB): detects mild QSB, but may trigger on the voice itself. High (7–10 dB): deep fades only. |
+| **Fading sensitivity** | 1 – 10 dB | 5 dB | Energy change that triggers the freeze. Sensitive (1–4 dB): detects mild QSB, but may trigger on the voice itself. Selective (7–10 dB): deep fades only. |
 | **Freeze duration** | 100 – 500 ms | 200 ms | How long the estimator stays frozen after each event. Slow fades need more; a very long value lets the floor go stale if the band noise really did change. |
 
 The indicator in Advanced Canceller shows **FADE** (orange) while a fading event is active and **ok** (gray) when the signal is stable. If FADE shows constantly without real fading, the signal has fast level variations (e.g. AM with deep modulation) — raise the Sensitivity or disable the checkbox.
@@ -375,7 +375,7 @@ The indicator in Advanced Canceller shows **FADE** (orange) while a fading event
 | **Intensity** | 0% – 100% | 70% | How much reduction is applied on top of the computed gains. **0%** = no reduction (audio passes unchanged). **100%** = full reduction. The scale is non-linear: mid values (50–70%) already produce a noticeable reduction, while voice bins are minimally affected at any position. Start at 70% and raise it according to the noise level. |
 | **Spectral floor** | 0.05 – 0.30 | 0.10 | Minimum gain applied to any bin, even the noisiest. 0.10 means no bin is ever silenced by more than 90% of its energy. **Never go below 0.05** — very low values with a high Anti-warble produce severe warbling. |
 | **Anti-warble (β)** | 90% – 99% (0.1% steps) | 97% | How fast the gains return to the floor after voice is detected. High (97–99%) = smooth transitions, no warble. Low (90–95%) = more reactive but with a risk of audible warble. The fine 0.1% resolution allows precise calibration at the high end, where each tenth audibly changes the release (98.0% ≈ 0.5 s; 98.5% ≈ 0.7 s; 99.0% ≈ 1 s). The maximum removes the most persistent warble but can leave a noise "tail" after each transmission — use it only if 97–98% is not enough. |
-| **Attack speed** | 50% – 92% | 80% | How fast the canceller "opens" voice bins when a signal is detected. Low (50–70%) = fast attack, crisper consonants. High (>85%) = soft attack, fewer transition artifacts. |
+| **Attack speed** | 50% – 92% | 80% | How fast the canceller "opens" voice bins when a signal is detected. Fast (50–70%): crisper consonants. Soft (>85%): fewer transition artifacts. |
 
 > **Tip — calibrating Intensity with the Preview:** enable **"Preview: listen to removed noise"** and raise the **Intensity** while listening to what is being removed: as long as the preview contains only noise, you can keep raising it; at the point where voice starts leaking into the removed audio, back off one step and leave it there. That is the maximum cancellation that does not touch the voice. Disable the preview when done.
 
@@ -415,7 +415,7 @@ This module replaces the fixed floor with a three-zone curve:
 
 | Control | Range | Default | Description |
 |---------|-------|---------|-------------|
-| **Vocal boost amount** | 0% – 250% | 75% | How much the floor rises in the vocal zone relative to the base floor. 75% = soft, 150% = normal, 250% = maximum. Raise it if the voice sounds "cold" or hollow with the canceller active. |
+| **Vocal boost amount** | 0% – 250% | 75% | How much the floor rises in the vocal zone relative to the base floor. 75% = soft, 150% = normal, 250% = strong. Raise it if the voice sounds "cold" or hollow with the canceller active. |
 | **Boost center** | 200 – 1200 Hz | 500 Hz | Frequency of maximum boost. 400–600 Hz for male voices, 600–900 Hz for female voices. |
 | **Rolloff start** | 1000 – 6000 Hz | 3000 Hz | Frequency where the floor starts dropping. **On SSB (narrow band ~2.7 kHz), lower it to 1500 Hz** — with the 3000 default the rolloff starts above the band and never engages. |
 | **Rolloff depth** | 0% – 95% | 55% | How much the floor drops at the treble end → more high-hiss suppression. 55% ≈ −7 dB. More depth = less residual hiss, at the cost of slightly dulling the voice's highs. |
@@ -441,7 +441,7 @@ The post-filter applies a second pass over those bins using the same voice-proba
 
 | Control | Range | Default | Description |
 |---------|-------|---------|-------------|
-| **Aggressiveness** | 0.0 – 10.0 | 1.0 | Strength of the second pass. **0** = off (even with the checkbox enabled). **1** = moderate: pure-noise bins get `gain²` (doubles the reduction in dB). **2** = normal: `gain³`. **4** = very aggressive: `gain⁵`. **10** = maximum: `gain¹¹` — on pure-noise bins suppression saturates at the internal floor (−46 dB); the high range mostly acts on intermediate voice/noise bins. Start at 1.0 and raise it, watching the Extra reduction indicator, until the musical noise disappears. |
+| **Aggressiveness** | 0.0 – 10.0 | 1.0 | Strength of the second pass. **0** = off (even with the checkbox enabled). **1** = normal: pure-noise bins get `gain²` (doubles the reduction in dB). **2** = aggressive: `gain³`. **4** = very aggressive: `gain⁵`. **10** = maximum: `gain¹¹` — on pure-noise bins suppression saturates at the internal floor (−46 dB); the high range mostly acts on intermediate voice/noise bins. Start at 1.0 and raise it, watching the Extra reduction indicator, until the musical noise disappears. |
 
 > **Note:** High values (>2.5) with very low SNR signals can over-suppress the edges of voice transitions — and above 4 the effect on intermediate bins is strong: it can reduce voice clarity (word endings, breaths). If the voice starts to sound clipped or dull, reduce. On pure background noise there is no audible difference beyond ~5 (suppression already saturates); the high range is heard on the noise riding along with the voice.
 
@@ -584,7 +584,7 @@ The effect is similar to an analog exciter: the voice sounds more "airy", with m
 
 | Control | Range | Default | Description |
 |---------|-------|---------|-------------|
-| **Drive** | 1.0× – 10.0× | 2.0× | How much saturation is applied before extracting the harmonics. **Low (1–3×):** mostly 2nd harmonic, subtle effect. **High (6–10×):** more higher-order harmonics, stronger effect but can sound artificial. Start at 2.0×. |
+| **Drive** | 1.0× – 10.0× | 2.0× | How much saturation is applied before extracting the harmonics. **Soft (1–3×):** mostly 2nd harmonic, subtle effect. **Aggressive (6–10×):** more higher-order harmonics, stronger effect but can sound artificial. Start at 2.0×. |
 | **Mix** | 0% – 100% | 30% | How much of the generated harmonics is added back to the original audio. **20–40%** is the useful zone — noticeable without sounding artificial. Above 60% the effect becomes very pronounced. |
 
 ### Symptoms and adjustment
