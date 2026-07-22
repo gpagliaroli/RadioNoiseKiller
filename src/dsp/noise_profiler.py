@@ -153,6 +153,12 @@ class NoiseProfiler:
         self._mcra_freeze_count:   int   = 0    # frames restantes de congelado MCRA
         self._fading_active:       bool  = False # True mientras hay evento de fading
 
+        # Ventana de seguimiento de mínimos MCRA (ajustable, "Reactividad del piso").
+        # Ventana total = B×M frames; M más chico = ventana más corta = el piso reacciona
+        # más rápido a subidas de ruido (menos lag → menos vaivén con ruido cíclico).
+        self._mcra_window_ms: float = 800.0     # slider 250-800 ms (default = comportamiento previo)
+        self._mcra_M:         int   = self._calc_mcra_M()
+
         # Métricas para indicadores UI
         self._pf_active_frac: float = 0.0   # fracción de bins retenidos por el piso perceptual
         self._pf_extra_db:    float = 0.0   # reducción extra del post-filtro en bins de ruido (dB)
@@ -237,8 +243,9 @@ class NoiseProfiler:
             # La curva de piso perceptual depende de nb — sin esto, shape mismatch
             # en el Wiener tras cambiar el tamaño de bloque
             self._floor_curve = self._build_floor_curve()
-            # El freeze de fading se expresa en frames — depende del hop
+            # El freeze de fading y la ventana MCRA se expresan en frames — dependen del hop
             self._fading_freeze_frames = self._calc_fading_freeze_frames()
+            self._mcra_M = self._calc_mcra_M()
         self._ola_prev        = np.zeros(self._hop, dtype=np.float32)
         self._ola_acc         = np.zeros(self._fft_n, dtype=np.float32)
         self._gain_prev       = None
@@ -358,6 +365,20 @@ class NoiseProfiler:
         """Frames de freeze según la duración en ms y el hop actual (48 kHz)."""
         hop_ms = self._hop / 48.0
         return max(1, round(self._fading_freeze_ms / hop_ms))
+
+    def _calc_mcra_M(self) -> int:
+        """Frames por subtrama según la ventana en ms y el hop (48 kHz). La ventana
+        total de seguimiento de mínimos es B×M frames; M más chico = ventana más
+        corta = el piso reacciona más rápido a las subidas de ruido."""
+        hop_ms = self._hop / 48.0
+        return max(1, round(self._mcra_window_ms / (self._MCRA_B * hop_ms)))
+
+    def set_mcra_window_ms(self, v: float) -> None:
+        """Ventana de seguimiento de mínimos MCRA (Reactividad del piso de ruido).
+        Corta (reactivo): sigue subidas rápidas de ruido. Larga (estable): mejor
+        para ruido estacionario. Clamp == rango del slider (250-800 ms)."""
+        self._mcra_window_ms = float(np.clip(v, 250.0, 800.0))
+        self._mcra_M = self._calc_mcra_M()
 
     def set_agc_gain(self, g: float) -> None:
         """Ganancia lineal actual del AGC (aguas arriba del profiler).
@@ -485,7 +506,7 @@ class NoiseProfiler:
 
     def _mcra_current(self) -> "np.ndarray | None":
         """Estimado actual sin actualizar. None si el warmup no terminó."""
-        if self._mcra_ld is not None and self._mcra_frames >= self._MCRA_M:
+        if self._mcra_ld is not None and self._mcra_frames >= self._mcra_M:
             return np.sqrt(self._mcra_ld).astype(np.float32)
         return None
 
@@ -500,7 +521,7 @@ class NoiseProfiler:
             return self._mcra_current()
         old_power, contaminated = self._mcra_quar.popleft()
         # Durante el warmup se consume igual (el freeze nunca aplicó en warmup)
-        if contaminated and self._mcra_frames >= self._MCRA_M:
+        if contaminated and self._mcra_frames >= self._mcra_M:
             return self._mcra_current()
         return self._mcra_update(old_power)
 
@@ -525,7 +546,7 @@ class NoiseProfiler:
         frame_mean = float(np.mean(power))
         noise_mean = float(np.mean(self._mcra_ld))
         if frame_mean < noise_mean * self._MCRA_SQUELCH_RATIO:
-            if self._mcra_frames >= self._MCRA_M:
+            if self._mcra_frames >= self._mcra_M:
                 return np.sqrt(self._mcra_ld).astype(np.float32)
             return None
 
@@ -540,14 +561,14 @@ class NoiseProfiler:
         self._mcra_cur_min = np.minimum(self._mcra_cur_min, self._mcra_Sf)
         self._mcra_sub_count += 1
 
-        if self._mcra_sub_count >= self._MCRA_M:
+        if self._mcra_sub_count >= self._mcra_M:
             self._mcra_subs[self._mcra_sub_idx] = self._mcra_cur_min.copy()
             self._mcra_sub_idx   = (self._mcra_sub_idx + 1) % self._MCRA_B
             self._mcra_cur_min   = self._mcra_Sf.copy()
             self._mcra_sub_count = 0
 
         # Esperamos al menos una subtrama completa antes de aplicar el Wiener
-        if self._mcra_frames < self._MCRA_M:
+        if self._mcra_frames < self._mcra_M:
             self._mcra_ld = 0.95 * self._mcra_ld + 0.05 * power
             return None
 
@@ -943,7 +964,7 @@ class NoiseProfiler:
     @property
     def has_profile(self) -> bool:
         if self._mode == "mcra":
-            return self._mcra_frames >= self._MCRA_M
+            return self._mcra_frames >= self._mcra_M
         return self._noise_mag is not None
 
     @property
@@ -964,7 +985,7 @@ class NoiseProfiler:
 
     @property
     def mcra_ready(self) -> bool:
-        return self._mode == "mcra" and self._mcra_frames >= self._MCRA_M
+        return self._mode == "mcra" and self._mcra_frames >= self._mcra_M
 
     @property
     def noise_floor_db(self) -> "np.ndarray | None":

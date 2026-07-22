@@ -370,9 +370,13 @@ CATALOG = {
         "  ↳ Minimum per-bin gain. 0.10=20 dB suppression (recommended). Minimum 0.05.",
     "Anti-gorgojeo (β):": "Anti-warble (β):",
     "reactivo": "reactive",
+    "estable": "stable",
     "  ↳ Release (retorno al ruido), pasos de 0.1% para calibrar fino. 99%≈1s de release — puede dejar cola de ruido tras la voz.":
         "  ↳ Release (return to noise), 0.1% steps for fine tuning. 99%≈1s release — may leave a noise tail after speech.",
     "Velocidad ataque:": "Attack speed:",
+    "Reactividad del piso (MCRA):": "Noise-floor reactivity (MCRA):",
+    "  ↳ Ventana de seguimiento del ruido (solo Adaptativo). Reactivo (corto) = el piso sigue subidas rápidas de ruido cíclico, menos vaivén; estable (largo) = mejor con ruido parejo. Con valores reactivos, tener activo el Refuerzo de pitch de voz.":
+        "  ↳ Noise tracking window (Adaptive only). Reactive (short) = the floor follows fast rises of cyclic noise, less swaying; stable (long) = better with steady noise. With reactive values, keep Voice pitch reinforcement enabled.",
     "  ↳ Ataque del onset de voz. Rápido = consonantes más nítidas. Suave = transiciones sin artefactos.":
         "  ↳ Voice onset attack. Fast = crisper consonants. Soft = artifact-free transitions.",
     "Compensación fading HF:": "HF fading compensation:",

@@ -671,7 +671,7 @@ class AdvancedCancellerTab(QWidget):
         Los sub-módulos requieren además el cancelador activo (no corren sin él)."""
         dsp   = self._config.dsp
         noise = dsp.noise_enabled
-        for s in (self._s_noise_floor, self._s_noise_smooth, self._s_noise_attack):
+        for s in (self._s_noise_floor, self._s_noise_smooth, self._s_noise_attack, self._s_mcra_window):
             s.set_enabled(noise)
         for s in (self._s_fading_change, self._s_fading_freeze):
             s.set_enabled(noise and dsp.noise_fading_comp)
@@ -756,6 +756,20 @@ class AdvancedCancellerTab(QWidget):
         self._s_noise_attack.valueChanged.connect(self._on_noise_attack)
         layout.addWidget(self._s_noise_attack)
         layout.addWidget(_note(tr("  ↳ Ataque del onset de voz. Rápido = consonantes más nítidas. Suave = transiciones sin artefactos.")))
+
+        self._s_mcra_window = SliderRow(
+            tr("Reactividad del piso (MCRA):"),
+            min_val=250.0, max_val=800.0,
+            default=_DSP_DEF.noise_mcra_window_ms,
+            step=50.0, unit="ms", fmt="{:.0f}",
+        )
+        self._s_mcra_window._update_label = lambda v: self._s_mcra_window._val_lbl.setText(
+            f"{v:.0f} ms  ({tr('reactivo') if v < 400 else tr('normal') if v < 650 else tr('estable')})"
+        )
+        self._s_mcra_window._val_lbl.setFixedWidth(120)
+        self._s_mcra_window.valueChanged.connect(self._pipeline.set_mcra_window_ms)
+        layout.addWidget(self._s_mcra_window)
+        layout.addWidget(_note(tr("  ↳ Ventana de seguimiento del ruido (solo Adaptativo). Reactivo (corto) = el piso sigue subidas rápidas de ruido cíclico, menos vaivén; estable (largo) = mejor con ruido parejo. Con valores reactivos, tener activo el Refuerzo de pitch de voz.")))
 
         fading_row = QHBoxLayout()
         fading_row.addWidget(QLabel(tr("Compensación fading HF:")))
@@ -1097,6 +1111,7 @@ class AdvancedCancellerTab(QWidget):
         self._s_noise_floor.set_value(cfg.noise_floor)
         self._s_noise_smooth.set_value(cfg.noise_smooth)
         self._s_noise_attack.set_value(cfg.noise_attack)
+        self._s_mcra_window.set_value(cfg.noise_mcra_window_ms)
         self._s_fading_change.set_value(cfg.noise_fading_change_db)
         self._s_fading_freeze.set_value(cfg.noise_fading_freeze_ms)
         self._s_squelch_threshold.set_value(cfg.squelch_threshold)

@@ -61,6 +61,7 @@ class DSPConfig:
     pitch_enhance_enabled:  bool  = False  # refuerzo de armónicos SSB via autocorrelación
     pitch_enhance_strength: float = 0.7    # qué tanto elevar p_speech en bins de armónicos (0-1)
     noise_fading_comp:      bool  = False  # compensación de fading HF: freeze MCRA + release rápido
+    noise_mcra_window_ms:  float = 800.0   # ventana de mínimos MCRA / reactividad del piso (250-800 ms)
     noise_fading_change_db: float = 5.0    # umbral de detección de fade (1-10 dB)
     noise_fading_freeze_ms: float = 200.0  # duración del freeze MCRA tras el evento (100-500 ms)
     voice_leveler_enabled:  bool  = False  # AGC de voz post-cancelador gateado por VAD
@@ -160,6 +161,7 @@ class AppConfig:
                 "pitch_enhance_enabled":  self.dsp.pitch_enhance_enabled,
                 "pitch_enhance_strength": self.dsp.pitch_enhance_strength,
                 "noise_fading_comp":      self.dsp.noise_fading_comp,
+                "noise_mcra_window_ms":  self.dsp.noise_mcra_window_ms,
                 "noise_fading_change_db": self.dsp.noise_fading_change_db,
                 "noise_fading_freeze_ms": self.dsp.noise_fading_freeze_ms,
                 "voice_leveler_enabled":  self.dsp.voice_leveler_enabled,
@@ -267,6 +269,7 @@ class AppConfig:
         self.dsp.pitch_enhance_enabled  = bool(d.get("pitch_enhance_enabled",  self.dsp.pitch_enhance_enabled))
         self.dsp.pitch_enhance_strength = float(d.get("pitch_enhance_strength", self.dsp.pitch_enhance_strength))
         self.dsp.noise_fading_comp      = bool(d.get("noise_fading_comp",      self.dsp.noise_fading_comp))
+        self.dsp.noise_mcra_window_ms = float(d.get("noise_mcra_window_ms", self.dsp.noise_mcra_window_ms))
         self.dsp.noise_fading_change_db = float(d.get("noise_fading_change_db", self.dsp.noise_fading_change_db))
         self.dsp.noise_fading_freeze_ms = float(d.get("noise_fading_freeze_ms", self.dsp.noise_fading_freeze_ms))
         self.dsp.voice_leveler_enabled  = bool(d.get("voice_leveler_enabled",  self.dsp.voice_leveler_enabled))

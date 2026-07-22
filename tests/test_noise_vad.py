@@ -190,6 +190,34 @@ check("reset limpia cuarentena", len(p7._mcra_quar) == 0)
 p7.reset(240)
 check("reset(240) recalcula frames (40)", p7._fading_freeze_frames == 40)
 
+# Reactividad del piso (ventana MCRA): clamp e invariante 9 (recalculo por hop).
+# p7 esta en hop 240 -> hop_ms=5, B=4 -> M = window_ms / 20
+p7.set_mcra_window_ms(100);  check("clamp ventana MCRA lo (250)", p7._mcra_window_ms == 250.0)
+p7.set_mcra_window_ms(9999); check("clamp ventana MCRA hi (800)", p7._mcra_window_ms == 800.0)
+check("ventana 800ms @ hop 240 -> M=40", p7._mcra_M == 40)
+p7.set_mcra_window_ms(300);  check("ventana 300ms @ hop 240 -> M=15", p7._mcra_M == 15)
+p7.reset(480)  # hop_ms=10 -> M = 300/(4*10)
+check("reset(480) recalcula M de la ventana", p7._mcra_M == max(1, round(300 / (4 * 10))))
+
+# Comportamiento: una ventana corta (reactiva) sigue una subida de ruido en
+# MENOS frames que una larga (estable) — el nucleo del fix del vaivén.
+def _frames_to_track(window_ms):
+    p = NoiseProfiler(HOP); p.set_mode("mcra"); p.set_mcra_window_ms(window_ms)
+    lo = (rng.standard_normal(120 * HOP).reshape(120, HOP) * 0.01).astype(np.float32)
+    hi = (rng.standard_normal(200 * HOP).reshape(200, HOP) * 0.05).astype(np.float32)  # +14 dB
+    for i in range(120):
+        p.process(lo[i])
+    base = float(np.mean(p._mcra_ld))
+    for i in range(200):
+        p.process(hi[i])
+        if float(np.mean(p._mcra_ld)) >= base * 4.0:   # el piso empezo a seguir la subida
+            return i
+    return 999
+f_react  = _frames_to_track(250)
+f_stable = _frames_to_track(800)
+check("ventana reactiva sigue la subida de ruido antes que la estable (%d < %d)"
+      % (f_react, f_stable), f_react < f_stable)
+
 # 8. Sin eventos de fading, el checkbox NO debe alterar el procesamiento.
 #    (Bug real: el release acelerado beta=0.45 aplicaba siempre con el checkbox
 #    activo -> gorgojeo extra con mucho ruido y sin fading. Reportado en 40m.)
