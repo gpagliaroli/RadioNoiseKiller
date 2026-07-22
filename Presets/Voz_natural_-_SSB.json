@@ -66,7 +66,9 @@
     "noise_fading_change_db": 5.0,
     "noise_fading_freeze_ms": 200.0,
     "voice_leveler_enabled": true,
-    "voice_leveler_max_db": 12.0
+    "voice_leveler_max_db": 12.0,
+    "voice_leveler_gate_voice": true,
+    "voice_leveler_release_ms": 1500.0
   },
   "gain": {
     "input_gain_db": -3.0,

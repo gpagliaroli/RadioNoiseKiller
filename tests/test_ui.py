@@ -159,6 +159,12 @@ def test_leveler_continuous_checkbox():
     _app.processEvents()
     assert aud._chk_leveler_continuous.isEnabled(), "casilla deberia habilitarse"
 
+    # Estado inicial conocido (settings.json de dev puede tener gate=False → casilla
+    # ya marcada); sin esto setChecked(True) seria no-op y no dispararia la señal.
+    aud._chk_leveler_continuous.blockSignals(True)
+    aud._chk_leveler_continuous.setChecked(False)
+    aud._chk_leveler_continuous.blockSignals(False)
+
     calls = []
     orig = w._pipeline.set_voice_leveler_gate_voice
     w._pipeline.set_voice_leveler_gate_voice = lambda g: calls.append(g)
