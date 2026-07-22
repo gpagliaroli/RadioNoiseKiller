@@ -159,7 +159,7 @@ class AdvancedAudioTab(QWidget):
         self._s_leveler_max._val_lbl.setFixedWidth(110)
         self._s_leveler_max.valueChanged.connect(self._pipeline.set_voice_leveler_max_db)
         layout.addWidget(self._s_leveler_max)
-        layout.addWidget(_note(tr("  ↳ Tope de compensación para voz débil. Alto=iguala más las señales, pero levanta también el ruido que acompaña a la voz débil.")))
+        layout.addWidget(_note(tr("  ↳ Tope de compensación para voz débil. Fuerte = iguala más las señales, pero levanta también el ruido que acompaña a la voz débil.")))
         return group
 
     def _build_dsp_group(self) -> QGroupBox:
@@ -281,12 +281,12 @@ class AdvancedAudioTab(QWidget):
             step=0.1, unit="", fmt="{:.1f}",
         )
         self._s_presence_q._update_label = lambda v: self._s_presence_q._val_lbl.setText(
-            f"Q {v:.1f} ({'ancho' if v < 0.6 else 'medio' if v < 1.2 else 'angosto'})"
+            f"Q {v:.1f} ({tr('ancho') if v < 0.6 else tr('medio') if v < 1.2 else tr('angosto')})"
         )
         self._s_presence_q._val_lbl.setFixedWidth(90)
         self._s_presence_q.valueChanged.connect(self._pipeline.set_presence_q)
         layout.addWidget(self._s_presence_q)
-        layout.addWidget(_note(tr("  ↳ Q bajo = boost ancho (más cálido), Q alto = pico estrecho (más nasal).")))
+        layout.addWidget(_note(tr("  ↳ Q bajo = boost ancho (más cálido), Q alto = pico angosto (más nasal).")))
 
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
@@ -324,7 +324,7 @@ class AdvancedAudioTab(QWidget):
         self._s_exciter_drive._val_lbl.setFixedWidth(110)
         self._s_exciter_drive.valueChanged.connect(self._on_exciter_drive)
         layout.addWidget(self._s_exciter_drive)
-        layout.addWidget(_note(tr("  ↳ Saturación tanh: cuántos armónicos se generan. Bajo=sutil, alto=efecto notable.")))
+        layout.addWidget(_note(tr("  ↳ Saturación tanh: cuántos armónicos se generan. Suave = sutil, agresivo = efecto notable.")))
 
         self._s_exciter_mix = SliderRow(
             tr("Mezcla:"),
@@ -509,7 +509,7 @@ class AdvancedImpulseTab(QWidget):
         self._s_blanker_frame._val_lbl.setFixedWidth(110)
         self._s_blanker_frame.valueChanged.connect(self._pipeline.set_blanker_frame)
         layout.addWidget(self._s_blanker_frame)
-        layout.addWidget(_note(tr("  ↳ Bajo=captura más impulsos (QRN fuerte). Alto=solo blancos muy grandes.")))
+        layout.addWidget(_note(tr("  ↳ Agresivo = captura más impulsos (QRN fuerte). Suave = solo blancos muy grandes.")))
 
         self._s_blanker_mini = SliderRow(
             tr("Umbral micro (0.67 ms):"),
@@ -523,7 +523,7 @@ class AdvancedImpulseTab(QWidget):
         self._s_blanker_mini._val_lbl.setFixedWidth(110)
         self._s_blanker_mini.valueChanged.connect(self._pipeline.set_blanker_mini)
         layout.addWidget(self._s_blanker_mini)
-        layout.addWidget(_note(tr("  ↳ Detecta frituras y crackles cortos. Bajo=elimina más, puede recortar consonantes.")))
+        layout.addWidget(_note(tr("  ↳ Detecta frituras y crackles cortos. Agresivo = elimina más, puede recortar consonantes.")))
         return group
 
     def _build_anf_group(self) -> QGroupBox:
@@ -744,7 +744,7 @@ class AdvancedCancellerTab(QWidget):
         self._s_fading_change._val_lbl.setFixedWidth(110)
         self._s_fading_change.valueChanged.connect(self._pipeline.set_fading_change_db)
         layout.addWidget(self._s_fading_change)
-        layout.addWidget(_note(tr("  ↳ Cambio de energía que dispara el freeze. Bajo=detecta QSB suave, puede disparar con la voz. Alto=solo fades profundos.")))
+        layout.addWidget(_note(tr("  ↳ Cambio de energía que dispara el freeze. Sensible = detecta QSB suave (puede disparar con la voz). Selectivo = solo fades profundos.")))
 
         self._s_fading_freeze = SliderRow(
             tr("Duración del freeze:"),
@@ -838,7 +838,7 @@ class AdvancedCancellerTab(QWidget):
         self._s_pf_boost._val_lbl.setFixedWidth(110)
         self._s_pf_boost.valueChanged.connect(self._on_pf_boost)
         layout.addWidget(self._s_pf_boost)
-        layout.addWidget(_note(tr("  ↳ Cuánto se eleva el piso en la zona vocal. 75%=suave, 150%=normal, 250%=máximo.")))
+        layout.addWidget(_note(tr("  ↳ Cuánto se eleva el piso en la zona vocal. 75%=suave, 150%=normal, 250%=fuerte.")))
 
         self._s_pf_center = SliderRow(
             tr("Centro del boost:"),
@@ -908,7 +908,7 @@ class AdvancedCancellerTab(QWidget):
         self._s_post_filter._val_lbl.setFixedWidth(130)
         self._s_post_filter.valueChanged.connect(self._on_post_filter_strength)
         layout.addWidget(self._s_post_filter)
-        layout.addWidget(_note(tr("  ↳ Supresión extra en bins de ruido para eliminar 'pitidos fantasma'. 1=moderado, 2=normal, 4+=muy agresivo (vigilar que la voz no se recorte).")))
+        layout.addWidget(_note(tr("  ↳ Supresión extra en bins de ruido para eliminar 'pitidos fantasma'. 1=normal, 2–3=agresivo, 4+=muy agresivo (vigilar que la voz no se recorte).")))
         return group
 
     def _build_pitch_group(self) -> QGroupBox:

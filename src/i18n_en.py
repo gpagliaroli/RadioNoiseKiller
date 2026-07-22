@@ -296,7 +296,7 @@ CATALOG = {
     "  ↳ Frecuencia + ganancia del pico vocal. 0 dB=neutro, +4–6 dB=voz de radio.":
         "  ↳ Frequency + gain of the vocal peak. 0 dB=neutral, +4–6 dB=radio voice.",
     "Ancho de presencia (Q):": "Presence width (Q):",
-    "  ↳ Q bajo = boost ancho (más cálido), Q alto = pico estrecho (más nasal).":
+    "  ↳ Q bajo = boost ancho (más cálido), Q alto = pico angosto (más nasal).":
         "  ↳ Low Q = wide boost (warmer), high Q = narrow peak (more nasal).",
     "Corrección de tono SSB:": "SSB pitch correction:",
     "neutro": "neutral",
@@ -307,8 +307,8 @@ CATALOG = {
     "Drive:": "Drive:",
     "suave": "soft",
     "agresivo": "aggressive",
-    "  ↳ Saturación tanh: cuántos armónicos se generan. Bajo=sutil, alto=efecto notable.":
-        "  ↳ Tanh saturation: how many harmonics are generated. Low=subtle, high=pronounced.",
+    "  ↳ Saturación tanh: cuántos armónicos se generan. Suave = sutil, agresivo = efecto notable.":
+        "  ↳ Tanh saturation: how many harmonics are generated. Soft = subtle, aggressive = pronounced.",
     "Mezcla:": "Mix:",
     "  ↳ Nivel de armónicos mezclados. 20–40% = zona útil sin sonar artificial.":
         "  ↳ Level of harmonics mixed in. 20–40% = useful range without sounding artificial.",
@@ -317,11 +317,11 @@ CATALOG = {
     "Supresor de impulsos  (se aplica en tiempo real)": "Impulse suppressor  (applied in real time)",
     "Actividad:": "Activity:",
     "Umbral de trama (10 ms):": "Frame threshold (10 ms):",
-    "  ↳ Bajo=captura más impulsos (QRN fuerte). Alto=solo blancos muy grandes.":
-        "  ↳ Low=catches more impulses (heavy QRN). High=only very large hits.",
+    "  ↳ Agresivo = captura más impulsos (QRN fuerte). Suave = solo blancos muy grandes.":
+        "  ↳ Aggressive = catches more impulses (heavy QRN). Soft = only very large hits.",
     "Umbral micro (0.67 ms):": "Micro threshold (0.67 ms):",
-    "  ↳ Detecta frituras y crackles cortos. Bajo=elimina más, puede recortar consonantes.":
-        "  ↳ Catches short crackle and static. Low=removes more, may clip consonants.",
+    "  ↳ Detecta frituras y crackles cortos. Agresivo = elimina más, puede recortar consonantes.":
+        "  ↳ Catches short crackle and static. Aggressive = removes more, may clip consonants.",
     "Sensibilidad:": "Sensitivity:",
     "alta": "high",
     "baja": "low",
@@ -354,8 +354,8 @@ CATALOG = {
     "Sensibilidad fading:": "Fading sensitivity:",
     "sensible": "sensitive",
     "selectivo": "selective",
-    "  ↳ Cambio de energía que dispara el freeze. Bajo=detecta QSB suave, puede disparar con la voz. Alto=solo fades profundos.":
-        "  ↳ Energy change that triggers the freeze. Low=detects mild QSB, may trigger on voice. High=deep fades only.",
+    "  ↳ Cambio de energía que dispara el freeze. Sensible = detecta QSB suave (puede disparar con la voz). Selectivo = solo fades profundos.":
+        "  ↳ Energy change that triggers the freeze. Sensitive = detects mild QSB (may trigger on voice). Selective = deep fades only.",
     "Duración del freeze:": "Freeze duration:",
     "corto": "short",
     "largo": "long",
@@ -382,8 +382,11 @@ CATALOG = {
     "sin boost": "no boost",
     "fuerte": "strong",
     "muy fuerte": "very strong",
-    "  ↳ Cuánto se eleva el piso en la zona vocal. 75%=suave, 150%=normal, 250%=máximo.":
-        "  ↳ How much the floor rises in the vocal zone. 75%=soft, 150%=normal, 250%=maximum.",
+    "ancho": "wide",
+    "medio": "medium",
+    "angosto": "narrow",
+    "  ↳ Cuánto se eleva el piso en la zona vocal. 75%=suave, 150%=normal, 250%=fuerte.":
+        "  ↳ How much the floor rises in the vocal zone. 75%=soft, 150%=normal, 250%=strong.",
     "Centro del boost:": "Boost center:",
     "vocal": "vocal",
     "medio": "mid",
@@ -406,8 +409,8 @@ CATALOG = {
     "Agresividad:": "Aggressiveness:",
     "desactivado": "off",
     "muy agresivo": "very aggressive",
-    "  ↳ Supresión extra en bins de ruido para eliminar 'pitidos fantasma'. 1=moderado, 2=normal, 4+=muy agresivo (vigilar que la voz no se recorte).":
-        "  ↳ Extra suppression on noise bins to remove 'ghost birdies'. 1=moderate, 2=normal, 4+=very aggressive (watch for voice clipping).",
+    "  ↳ Supresión extra en bins de ruido para eliminar 'pitidos fantasma'. 1=normal, 2–3=agresivo, 4+=muy agresivo (vigilar que la voz no se recorte).":
+        "  ↳ Extra suppression on noise bins to remove 'ghost birdies'. 1=normal, 2–3=aggressive, 4+=very aggressive (watch for voice clipping).",
     "Refuerzo de pitch de voz  (activar en Módulos Activos)":
         "Voice pitch enhancement  (enable in Active Modules)",
     "Pitch detectado:": "Detected pitch:",
@@ -418,8 +421,8 @@ CATALOG = {
         "  ↳ How much it raises voice probability on harmonic bins. 70%=recommended.",
     "Nivelador de voz  (activar en Módulos Activos)":
         "Voice leveler  (enable in Active Modules)",
-    "  ↳ Tope de compensación para voz débil. Alto=iguala más las señales, pero levanta también el ruido que acompaña a la voz débil.":
-        "  ↳ Compensation cap for weak voice. High=evens out signals more, but also raises the noise riding along with the weak voice.",
+    "  ↳ Tope de compensación para voz débil. Fuerte = iguala más las señales, pero levanta también el ruido que acompaña a la voz débil.":
+        "  ↳ Compensation cap for weak voice. Strong = evens out signals more, but also raises the noise riding along with the weak voice.",
 
     # --- Indicadores ---
     "ABIERTO": "OPEN",
