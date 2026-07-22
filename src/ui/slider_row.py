@@ -57,7 +57,7 @@ class SliderRow(QWidget):
         # Largo FIJO (pedido del usuario): el slider no se estira. El sobrante lo
         # absorbe un stretch al final, así nombre + slider + valor quedan juntos a
         # la izquierda y el espacio libre va a la derecha.
-        self._slider.setFixedWidth(360)
+        self._slider.setFixedWidth(432)
         layout.addWidget(self._slider)
 
         self._val_lbl = QLabel()
