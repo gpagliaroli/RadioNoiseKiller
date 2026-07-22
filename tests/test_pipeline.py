@@ -48,6 +48,21 @@ assert np.allclose(pipeline.spectrum_pre_frames[-1], pipeline.spectrum_post_fram
 print("\nBypass: OK (espectro alimentado)")
 
 # ------------------------------------------------------------------
+# Mute de salida: silencia la salida al dispositivo pero el proceso sigue
+# (el espectro se sigue alimentando). Se prueba sobre el path de bypass
+# (sincrono, sin hilo procesador).
+pipeline.spectrum_pre_frames.clear()
+pipeline.set_output_mute(True)
+out_muted = pipeline._process(np.ones(hop, dtype=np.float32) * 0.1)
+assert np.allclose(out_muted, 0.0), "Mute no silencio la salida"
+assert len(pipeline.spectrum_pre_frames) == 1, "Mute congelo el espectro (deberia seguir)"
+pipeline.set_output_mute(False)
+out_unmuted = pipeline._process(np.ones(hop, dtype=np.float32) * 0.1)
+assert np.allclose(out_unmuted, np.ones(hop) * 0.1, atol=1e-5), "Unmute no restauro la salida"
+pipeline.set_bypass(False)
+print("Mute de salida: OK (salida en silencio, espectro vivo)")
+
+# ------------------------------------------------------------------
 # Supresor de impulsos (headless: necesita el hilo procesador corriendo)
 # Ruido de base para establecer el piso de energia + un impulso fuerte:
 # con blanker ON debe suprimirlo y contar hits; OFF es el control negativo.

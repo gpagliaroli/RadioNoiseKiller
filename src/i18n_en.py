@@ -213,6 +213,16 @@ CATALOG = {
         "arrives from the radio — for before/after comparison.\n"
         "Applies when the next recording starts.",
     "Error al iniciar la grabación: {e}": "Error starting the recording: {e}",
+    "🔇  Mute": "🔇  Mute",
+    "🔇  Silenciado": "🔇  Muted",
+    "Silencia la salida a los parlantes sin detener el procesamiento.\n"
+    "Útil para una prueba corta: el proceso, la grabación y los\n"
+    "medidores siguen corriendo — solo se corta el audio que se escucha.":
+        "Mutes the speaker output without stopping processing.\n"
+        "Handy for a quick test: processing, recording and the\n"
+        "meters keep running — only the audio you hear is cut.",
+    "Salida silenciada — el procesamiento sigue activo.":
+        "Output muted — processing is still active.",
     "Grabando en Grabaciones/ ...": "Recording to Grabaciones/ ...",
     "Grabación guardada en Grabaciones/  ({s:.0f} s)":
         "Recording saved to Grabaciones/  ({s:.0f} s)",

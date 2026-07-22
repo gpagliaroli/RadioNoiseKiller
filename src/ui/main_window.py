@@ -566,10 +566,6 @@ class MainWindow(QMainWindow):
         ))
         self._btn_record.clicked.connect(self._on_record_toggled)
         rec_row.addWidget(self._btn_record)
-        self._lbl_rec_time = QLabel("")
-        self._lbl_rec_time.setStyleSheet("color: #ef5350; font-weight: bold;")
-        self._lbl_rec_time.setFixedWidth(80)
-        rec_row.addWidget(self._lbl_rec_time)
         self._chk_record_raw = QCheckBox(tr("incluir entrada sin procesar"))
         self._chk_record_raw.setToolTip(tr(
             "Graba además un segundo WAV con la señal de entrada tal como\n"
@@ -578,8 +574,25 @@ class MainWindow(QMainWindow):
         ))
         self._chk_record_raw.setChecked(self._config.audio.record_raw_input)
         self._chk_record_raw.toggled.connect(self._on_record_raw_toggled)
-        rec_row.addWidget(self._chk_record_raw)
-        rec_row.addStretch()
+        rec_row.addWidget(self._chk_record_raw)   # pegado al botón Grabar
+        self._lbl_rec_time = QLabel("")
+        self._lbl_rec_time.setStyleSheet("color: #ef5350; font-weight: bold;")
+        self._lbl_rec_time.setFixedWidth(80)
+        rec_row.addWidget(self._lbl_rec_time)
+        rec_row.addStretch()   # empuja el Mute a la derecha
+
+        # --- Mute de salida (silencia los parlantes sin detener el proceso) ---
+        self._btn_mute = QPushButton(tr("🔇  Mute"))
+        self._btn_mute.setCheckable(True)
+        self._btn_mute.setEnabled(False)   # requiere procesamiento activo
+        self._btn_mute.setFixedWidth(120)
+        self._btn_mute.setToolTip(tr(
+            "Silencia la salida a los parlantes sin detener el procesamiento.\n"
+            "Útil para una prueba corta: el proceso, la grabación y los\n"
+            "medidores siguen corriendo — solo se corta el audio que se escucha."
+        ))
+        self._btn_mute.toggled.connect(self._on_mute_toggled)
+        rec_row.addWidget(self._btn_mute)
         layout.addLayout(rec_row)
 
         return group
@@ -1373,6 +1386,18 @@ class MainWindow(QMainWindow):
         self._status_bar.showMessage(
             tr("Perfil de ruido \"{name}\" cargado.").format(name=name))
 
+    def _on_mute_toggled(self, checked: bool) -> None:
+        """Silencia la salida a los parlantes sin detener el proceso."""
+        self._pipeline.set_output_mute(checked)
+        if checked:
+            self._btn_mute.setText(tr("🔇  Silenciado"))
+            self._btn_mute.setStyleSheet("color: #ef5350; font-weight: bold;")
+            self._status_bar.showMessage(
+                tr("Salida silenciada — el procesamiento sigue activo."))
+        else:
+            self._btn_mute.setText(tr("🔇  Mute"))
+            self._btn_mute.setStyleSheet("")
+
     def _on_toggle_processing(self, checked: bool) -> None:
         if checked:
             try:
@@ -1383,6 +1408,7 @@ class MainWindow(QMainWindow):
                 self._waterfall_widget.start()
                 self._status_bar.showMessage(tr("Procesando..."))
                 self._btn_record.setEnabled(True)
+                self._btn_mute.setEnabled(True)
                 self._btn_refresh_devices.setEnabled(False)
                 # Cambiar de dispositivo requiere reiniciar el procesamiento:
                 # deshabilitados para que no parezca que aplica en vivo.
@@ -1410,6 +1436,8 @@ class MainWindow(QMainWindow):
             if self._pipeline.is_recording:
                 self._finish_recording()   # antes de stop(): conserva la duración
             self._btn_record.setEnabled(False)
+            self._btn_mute.setChecked(False)   # dispara _on_mute_toggled: quita mute + restaura texto
+            self._btn_mute.setEnabled(False)
             self._pipeline.stop()
             self._refresh_noise_profile_ui()
             self._level_timer.stop()

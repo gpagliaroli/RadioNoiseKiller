@@ -395,6 +395,27 @@ def test_loaded_profile_name_label():
     print("Nombre del perfil cargado en la UI         OK")
 
 
+def test_mute_button_gating_and_state():
+    """El boton Mute arranca deshabilitado (requiere proceso); al togglear
+    llama set_output_mute y cambia texto/estilo; destogglear lo restaura."""
+    w = _win()
+    assert not w._btn_mute.isEnabled(), "Mute deberia arrancar deshabilitado (sin proceso)"
+
+    calls = []
+    orig = w._pipeline.set_output_mute
+    w._pipeline.set_output_mute = lambda v: calls.append(v)
+    try:
+        w._btn_mute.setChecked(True)
+        assert calls and calls[-1] is True, "toggle Mute no llamo set_output_mute(True)"
+        assert w._btn_mute.styleSheet(), "Mute activo sin estilo de aviso"
+        w._btn_mute.setChecked(False)
+        assert calls[-1] is False, "destoggle Mute no llamo set_output_mute(False)"
+        assert not w._btn_mute.styleSheet(), "Mute inactivo no limpio el estilo"
+    finally:
+        w._pipeline.set_output_mute = orig
+    print("Mute: gating + estado del boton              OK")
+
+
 def test_auto_load_respects_saved_mode():
     """El auto-cargar un perfil nombrado fuerza estático; NO debe hacerlo si el
     modo guardado era MCRA (regresión: un last_noise_profile viejo pisaba el
@@ -414,6 +435,7 @@ if __name__ == "__main__":
     test_modules_group_moved_to_own_tab()
     test_profile_buttons_visibility_by_mode()
     test_loaded_profile_name_label()
+    test_mute_button_gating_and_state()
     test_auto_load_respects_saved_mode()
     test_canceller_subcontrols_require_noise()
     test_voice_leveler_requires_noise()

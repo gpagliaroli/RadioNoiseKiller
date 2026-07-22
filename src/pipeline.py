@@ -37,6 +37,7 @@ class ProcessingPipeline:
         self._lock   = threading.Lock()
         self._running = False
         self._bypass  = False
+        self._muted   = False   # silencia SOLO la salida al dispositivo (proceso sigue)
         self._input_gain: float = 10 ** (config.gain.input_gain_db / 20.0)
 
         self._blanker_frame: float = config.dsp.blanker_frame
@@ -210,6 +211,13 @@ class ProcessingPipeline:
     def set_bypass(self, bypass: bool) -> None:
         with self._lock:
             self._bypass = bypass
+
+    def set_output_mute(self, muted: bool) -> None:
+        """Silencia la salida enviada al dispositivo, pero el procesamiento
+        (y la grabación, y los medidores/espectro) siguen corriendo — es un
+        mute de monitoreo, no un stop. Escritura de bool: atómica, sin lock
+        (igual que _input_gain)."""
+        self._muted = bool(muted)
 
     def set_input_device(self, device: AudioDevice | None) -> None:
         self._config.audio.input_device = device.index if device else None
@@ -975,7 +983,8 @@ class ProcessingPipeline:
                 self._recorder.feed(
                     audio_in,
                     audio_in if self._recorder.wants_raw else None)
-            return audio_in
+            # Mute solo silencia lo que sale al dispositivo (medidores/grabación ya corrieron)
+            return np.zeros_like(audio_in) if self._muted else audio_in
 
         hop = self._config.audio.block_size
 
@@ -1021,4 +1030,6 @@ class ProcessingPipeline:
         if self._on_level_update:
             self._on_level_update(self._db_in, self._db_out, self._latency_ms)
 
-        return out
+        # Mute solo silencia la salida al dispositivo; _db_out/espectro/grabación
+        # ya reflejan la señal procesada (mute de monitoreo, no stop).
+        return np.zeros_like(out) if self._muted else out
