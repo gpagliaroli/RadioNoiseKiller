@@ -632,7 +632,25 @@ aviso −9993 quedó **validado en hardware real por el usuario** (cruce WASAPI+
 deshabilitado + aviso) además de los tests `test_device_combo.py` + `test_ui.py`. Manuales ES+EN
 documentan el requisito de misma API en los consejos de dispositivos.
 
-Cambios post-v1.8.1 (pendiente de release):
+**v1.8.2 publicada (julio 2026)** — release de patch en GitHub con distribuibles Windows y Linux.
+Versión de app 1.8.2, manuales `MANUAL_RadioNoiseKiller_v1.8.2.pdf` (ES, 32 págs) y
+`..._v1.8.2_EN.pdf` (EN, 31 págs). Título de la ventana "v1.8.2" en `_update_window_title()`.
+Junta los cambios acumulados post-v1.8.1 (todos validados por el usuario): nombre del perfil de
+ruido cargado en la UI, fix del espectro congelado en Bypass, fix del modo Adaptativo al arrancar,
+Sensibilidad fading mínimo 1 dB, coordinación de vocabulario UI/manual, botón Mute de salida, y el
+grande: **Nivelador de voz con opción de nivelar en continuo (música) + velocidad de respuesta
+ajustable** (para fading cíclico y rápido). Presets de fábrica afinados por el usuario con los
+parámetros nuevos.
+- **Bug destapado en el release (registrado): presets de fábrica sin las claves nuevas → "(modificado)"
+  espurio.** Los presets viejos no tenían `voice_leveler_gate_voice/release_ms`; al cargar uno en un
+  config con un valor no-default para esas claves (p. ej. `settings.json` de una sesión con música,
+  gate=False), la clave AUSENTE heredaba ese valor en vez del default → no coincidía con el snapshot
+  normalizado (que parte de un `AppConfig` limpio) → "(modificado)" permanente. **Regla reforzada: los
+  presets de fábrica deben tener TODOS los campos actuales** — al agregar un campo a DSPConfig/_capture,
+  regenerar los 8 presets (round-trip por un config limpio). Es la 3ra vez que un campo nuevo muerde
+  la comparación config↔preset (ver también el fix de v1.8 con `agc_*`).
+
+Cambios v1.8.2 (los que estaban pendientes post-v1.8.1):
 - **Nombre del perfil de ruido cargado visible en la UI** (pedido del usuario: al cargar un perfil
   nombrado no había forma de saber cuál estaba activo). Label verde debajo de los botones
   Guardar/Perfiles: "📁 Perfil cargado: «nombre»". Estado en memoria `_active_noise_profile_name`
