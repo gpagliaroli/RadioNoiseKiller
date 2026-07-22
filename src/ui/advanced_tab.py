@@ -63,6 +63,10 @@ def _reset_button_widget(callback) -> QWidget:
 def _note(text: str) -> QLabel:
     lbl = QLabel(text)
     lbl.setStyleSheet("color: #888; font-size: 8pt;")
+    # Envolver a segundo renglón en vez de forzar el ancho de la columna (una nota
+    # larga estiraba la fila y recortaba el final del slider). Con el scroll en
+    # setWidgetResizable(True), la nota fluye al ancho del viewport.
+    lbl.setWordWrap(True)
     return lbl
 
 
