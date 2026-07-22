@@ -101,6 +101,7 @@ class AdvancedAudioTab(QWidget):
         # El nivelador requiere el cancelador activo (su VAD vive ahí — invariante 2)
         leveler_on = dsp.noise_enabled and dsp.voice_leveler_enabled
         self._s_leveler_max.set_enabled(leveler_on)
+        self._s_leveler_release.set_enabled(leveler_on)
         self._chk_leveler_continuous.setEnabled(leveler_on)
 
     def _build_ui(self) -> None:
@@ -162,6 +163,20 @@ class AdvancedAudioTab(QWidget):
         self._s_leveler_max.valueChanged.connect(self._pipeline.set_voice_leveler_max_db)
         layout.addWidget(self._s_leveler_max)
         layout.addWidget(_note(tr("  ↳ Tope de compensación para voz débil. Fuerte = iguala más las señales, pero levanta también el ruido que acompaña a la voz débil.")))
+
+        self._s_leveler_release = SliderRow(
+            tr("Velocidad de respuesta:"),
+            min_val=200.0, max_val=3000.0,
+            default=_DSP_DEF.voice_leveler_release_ms,
+            step=100.0, unit="ms", fmt="{:.0f}",
+        )
+        self._s_leveler_release._update_label = lambda v: self._s_leveler_release._val_lbl.setText(
+            f"{v:.0f} ms  ({tr('rápido') if v < 700 else tr('normal') if v < 1800 else tr('suave')})"
+        )
+        self._s_leveler_release._val_lbl.setFixedWidth(120)
+        self._s_leveler_release.valueChanged.connect(self._pipeline.set_voice_leveler_release_ms)
+        layout.addWidget(self._s_leveler_release)
+        layout.addWidget(_note(tr("  ↳ Qué tan rápido sigue el nivelador los cambios de nivel. Rápido = sigue el fading cíclico y rápido; suave = más estable, menos bombeo.")))
 
         self._chk_leveler_continuous = QCheckBox(tr("Nivelar en continuo (música / sin detección de voz)"))
         self._chk_leveler_continuous.setToolTip(tr(
@@ -381,6 +396,7 @@ class AdvancedAudioTab(QWidget):
             if self._config.audio.block_size in _BLOCK_SIZES else 1
         )
         self._s_leveler_max.set_value(cfg.voice_leveler_max_db)
+        self._s_leveler_release.set_value(cfg.voice_leveler_release_ms)
         self._chk_leveler_continuous.blockSignals(True)
         self._chk_leveler_continuous.setChecked(not cfg.voice_leveler_gate_voice)
         self._chk_leveler_continuous.blockSignals(False)

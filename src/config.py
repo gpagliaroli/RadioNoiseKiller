@@ -66,6 +66,7 @@ class DSPConfig:
     voice_leveler_enabled:  bool  = False  # AGC de voz post-cancelador gateado por VAD
     voice_leveler_max_db:   float = 12.0   # ganancia máxima del nivelador (0-20 dB)
     voice_leveler_gate_voice: bool = True  # True: adapta solo con voz (VAD). False: continuo (música)
+    voice_leveler_release_ms: float = 1500.0  # velocidad de respuesta del nivelador (200-3000 ms)
     bandpass_limits: dict = field(default_factory=lambda: {
         RadioMode.AM:  (300, 5000),
         RadioMode.SSB: (200, 3000),
@@ -164,6 +165,7 @@ class AppConfig:
                 "voice_leveler_enabled":  self.dsp.voice_leveler_enabled,
                 "voice_leveler_max_db":   self.dsp.voice_leveler_max_db,
                 "voice_leveler_gate_voice": self.dsp.voice_leveler_gate_voice,
+                "voice_leveler_release_ms": self.dsp.voice_leveler_release_ms,
                 "filter_order": self.dsp.filter_order,
                 "bandpass_limits": {
                     m.value: list(v)
@@ -270,6 +272,7 @@ class AppConfig:
         self.dsp.voice_leveler_enabled  = bool(d.get("voice_leveler_enabled",  self.dsp.voice_leveler_enabled))
         self.dsp.voice_leveler_max_db   = float(d.get("voice_leveler_max_db",  self.dsp.voice_leveler_max_db))
         self.dsp.voice_leveler_gate_voice = bool(d.get("voice_leveler_gate_voice", self.dsp.voice_leveler_gate_voice))
+        self.dsp.voice_leveler_release_ms = float(d.get("voice_leveler_release_ms", self.dsp.voice_leveler_release_ms))
         self.dsp.filter_order = d.get("filter_order", self.dsp.filter_order)
         for mode_str, limits in d.get("bandpass_limits", {}).items():
             if mode_str in ("SSB-USB", "SSB-LSB"):

@@ -223,6 +223,9 @@ CATALOG = {
         "meters keep running — only the audio you hear is cut.",
     "Salida silenciada — el procesamiento sigue activo.":
         "Output muted — processing is still active.",
+    "Velocidad de respuesta:": "Response speed:",
+    "  ↳ Qué tan rápido sigue el nivelador los cambios de nivel. Rápido = sigue el fading cíclico y rápido; suave = más estable, menos bombeo.":
+        "  ↳ How fast the leveler follows level changes. Fast = follows fast cyclic fading; smooth = more stable, less pumping.",
     "Nivelar en continuo (música / sin detección de voz)":
         "Level continuously (music / no voice detection)",
     "Desactivado (default): el nivelador adapta solo cuando el detector\n"

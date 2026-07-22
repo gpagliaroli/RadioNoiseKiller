@@ -59,7 +59,7 @@ class ProcessingPipeline:
         self._agc_voice.set_custom_target(-20.0)
         self._agc_voice.set_custom_max_gain(config.dsp.voice_leveler_max_db)
         self._agc_voice.set_custom_attack(80.0)     # lento — nivelar, no comprimir
-        self._agc_voice.set_custom_release(1500.0)
+        self._agc_voice.set_custom_release(config.dsp.voice_leveler_release_ms)
         self._agc_voice.set_preset("custom")
         self._voice_leveler_enabled: bool = config.dsp.voice_leveler_enabled
         self._voice_leveler_gate_voice: bool = config.dsp.voice_leveler_gate_voice
@@ -163,6 +163,14 @@ class ProcessingPipeline:
     def set_voice_leveler_enabled(self, enabled: bool) -> None:
         self._config.dsp.voice_leveler_enabled = bool(enabled)
         self._voice_leveler_enabled = bool(enabled)
+
+    def set_voice_leveler_release_ms(self, ms: float) -> None:
+        """Velocidad de respuesta del nivelador (release del AGC). Más rápido
+        (menos ms) sigue mejor el fading cíclico; más lento nivela más suave.
+        Clamp == rango del slider (200-3000 ms); el AGC clampea 100-8000."""
+        ms = float(np.clip(ms, 200.0, 3000.0))
+        self._config.dsp.voice_leveler_release_ms = ms
+        self._agc_voice.set_custom_release(ms)
 
     def set_voice_leveler_gate_voice(self, gate: bool) -> None:
         """True: el nivelador adapta solo con voz (VAD) — voz en banda ruidosa.
@@ -357,6 +365,7 @@ class ProcessingPipeline:
         self.set_voice_leveler_enabled(dsp.voice_leveler_enabled)
         self.set_voice_leveler_max_db(dsp.voice_leveler_max_db)
         self.set_voice_leveler_gate_voice(dsp.voice_leveler_gate_voice)
+        self.set_voice_leveler_release_ms(dsp.voice_leveler_release_ms)
 
         self.set_input_gain_db(gain.input_gain_db)
         self.set_output_gain_db(gain.output_gain_db)
