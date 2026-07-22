@@ -479,17 +479,21 @@ Este módulo detecta en tiempo real el **tono fundamental** (f0) de la voz media
 
 En una sesión de escucha real el nivel de la voz limpia varía constantemente: cambia la propagación, cambia la estación, y la propia cantidad de cancelación de ruido resta más o menos energía según las condiciones. El nivelador es un **AGC dedicado a la voz** que trabaja *después* del cancelador y del squelch — es decir, sobre el audio ya limpio — y lo lleva a un nivel constante.
 
-La diferencia con el AGC general (Cap. 2) es el **gate por detección de voz**: el nivelador solo adapta su ganancia cuando el detector de voz del cancelador confirma que hay voz presente. Con ruido o silencio la ganancia queda **congelada** en el último valor — el ruido residual entre transmisiones no se re-amplifica, que es el defecto típico de encadenar dos AGC comunes.
+La diferencia con el AGC general (Cap. 2) es el **gate por detección de voz**: por defecto el nivelador solo adapta su ganancia cuando el detector de voz del cancelador confirma que hay voz presente. Con ruido o silencio la ganancia queda **congelada** en el último valor — el ruido residual entre transmisiones no se re-amplifica, que es el defecto típico de encadenar dos AGC comunes. Este gate se puede desactivar (casilla **"Nivelar en continuo"**, ver abajo) para **música o audio continuo**.
 
-**Requiere el Cancelador de ruido estacionario activo con perfil** (aprendido o MCRA calibrado) — el detector de voz vive dentro del cancelador. Los tiempos internos son fijos (objetivo −20 dBFS, ataque 80 ms, release 1,5 s), pensados para seguir cambios de condiciones sin bombear con la dinámica natural de la voz.
+**Requiere el Cancelador de ruido estacionario activo con perfil** (aprendido o MCRA calibrado) — el detector de voz vive dentro del cancelador. El objetivo (−20 dBFS) y el ataque (80 ms) son fijos; la **velocidad de respuesta (release) es ajustable** para poder seguir un fading más o menos rápido.
 
 **Indicadores en tiempo real:** la ganancia que el nivelador está aplicando se muestra en dos lugares con el mismo dato — en la pestaña Principal (junto al indicador del limitador de picos) y como **"Actividad"** dentro del propio grupo en Avanzada Audio, para verla mientras se ajusta la Ganancia máxima. Verde cuando compensa, "0 dB" en gris cuando la voz ya está a nivel, "—" cuando el módulo no corre.
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
 | **Ganancia máxima** | 0 – 20 dB | +12 dB | Tope de amplificación para voz débil. Subir para señales DX muy por debajo del nivel objetivo; bajar si al aparecer una estación fuerte tras una débil el arranque suena excesivo. Con 0 dB el módulo solo atenúa (nunca amplifica). |
+| **Velocidad de respuesta** | 200 – 3000 ms | 1500 ms | Qué tan rápido sigue el nivelador los cambios de nivel (el *release* del AGC). **Rápido (200–600 ms):** sigue un fading cíclico y rápido, sin dejar "pozos" de volumen al bajar la señal. **Suave (2000–3000 ms):** nivelado más estable, menos riesgo de bombear el ruido de fondo. |
+| **Nivelar en continuo (música)** | casilla | off | Desactiva el gate por detección de voz: el nivelador adapta **en todo momento**, sin esperar voz. **Activar para música o audio continuo** — donde el detector de voz no reconoce estructura de voz y, con el gate, el nivelador quedaría congelado. Para voz en banda ruidosa dejar **off** (evita re-amplificar el ruido en las pausas). |
 
 > **Cuándo activarlo:** sesiones largas con estaciones de niveles dispares o QSB pronunciado, especialmente con squelch activo (los saltos de nivel entre transmisiones se notan más al no haber ruido de fondo que los enmascare).
+
+> **Música con fading (QSB cíclico):** activá el Nivelador, marcá **"Nivelar en continuo"**, subí la Ganancia máxima a ~15 dB y bajá la **Velocidad de respuesta a 400–600 ms**. Así el nivelador empareja el sube-y-baja cíclico de la señal en vez de quedar congelado esperando una voz que no llega. Si empieza a "respirar" el ruido de fondo, subí un paso la velocidad. Dato relacionado: un **Piso espectral** (Cap. 5) alto deja pasar más señal sin aplanar, así que transmite más el swing del fading — si notás que lo empeora, bajalo un poco y dejá que el nivelador haga el trabajo.
 
 ---
 
@@ -682,7 +686,7 @@ A la derecha de la misma fila, el botón **"🔇 Mute"** silencia la salida a lo
 | ↳ Post-filtro espectral | ⬜ Opcional | Activar si quedan pitidos residuales |
 | ↳ Refuerzo de pitch de voz | ⬜ Opcional | También ayuda en AM: la demodulación preserva los armónicos de la voz |
 | Compensación fading HF | ⬜ Opcional | Solo onda corta con QSB (modo Adaptativo); en AM local con música puede disparar en falso |
-| ↳ Nivelador de voz | ❌ No usar | Con música el gate de voz congela la ganancia de forma errática |
+| ↳ Nivelador de voz | ⬜ Opcional | Para música **marcá "Nivelar en continuo"** (sin eso el gate de voz congela la ganancia); útil para emparejar el fading cíclico |
 | Squelch | ❌ No usar | Produce bombeo con música |
 | EQ Voz | ⬜ Opcional | Presencia si la voz suena apagada; cuerpo si suena delgada |
 | Excitador armónico | ⬜ Opcional | Con moderación |

@@ -686,6 +686,35 @@ Cambios post-v1.8.1 (pendiente de release):
   rojo "Silenciado" cuando activo, se resetea a off al DETENER. Claves i18n EN. Tests: `test_pipeline`
   (mute silencia salida, espectro vivo) y `test_ui::test_mute_button_gating_and_state`. Manuales ES+EN
   (sección "Mute de salida" bajo Grabación a WAV). **Validado por el usuario.**
+- **Nivelador de voz: opción de nivelar en continuo + velocidad de respuesta ajustable** (reportado
+  por el usuario: música en onda corta con QSB cíclico y rápido, el nivelador no compensaba). Dos
+  cambios sobre el mismo módulo:
+  - **Nivelar en continuo (`voice_leveler_gate_voice`, default True):** el nivelador está gateado por
+    el VAD del cancelador (`set_hold(voice_prob < THR)`), así que con **música** —sin estructura de
+    voz— queda congelado y no compensa. Nueva casilla "Nivelar en continuo (música / sin detección de
+    voz)" en Avanzada Audio: marcada → `hold = (gate_voice and vp < THR)` con gate_voice=False → hold
+    siempre False → adapta cada frame. Detección automática música/voz descartada (no fiable) → control
+    manual.
+  - **Velocidad de respuesta (`voice_leveler_release_ms`, default 1500, rango 200–3000 ms):** el release
+    del `_agc_voice` estaba fijo en 1500 ms, demasiado lento para fading cíclico rápido (al bajar la
+    señal el AGC sube ganancia con el release → pozo audible). Slider "Velocidad de respuesta" en el
+    grupo Nivelador; el AGC ya soporta `set_custom_release` (clamp interno 100–8000), el setter del
+    pipeline clampea 200–3000 == slider (invariante 1). Rápido (400–600 ms) sigue el QSB cíclico.
+  - Ambos en DSPConfig, persistidos en settings.json y presets. Requieren cancelador + nivelador
+    (invariante 2). Claves i18n EN; tests en test_ui (casilla) + roundtrip de test_presets.
+    **Receta de música + QSB validada en el aire:** continuo + máx ~15 dB + velocidad 400–600 ms.
+    Manuales ES+EN actualizados (Cap. 7: dos controles nuevos, tip de música con fading, nota del
+    Piso espectral; y la fila de config recomendada pasó de "❌ No usar con música" a "Opcional con
+    'Nivelar en continuo'"). **Validado por el usuario.**
+  - **Nota de operación (documentada en el manual):** un Piso espectral (`noise_floor`) alto deja pasar
+    más señal sin aplanar → transmite más el swing del fading; bajarlo un poco y dejar que el nivelador
+    haga el trabajo.
+- **`test_integration` desflakeado de verdad** (el check "monitoreo atenuado durante el aprendizaje"
+  falló ~50% esta sesión pese al `flat=True` previo). Causa: `rms_pre` se medía sobre 60 frames sin
+  cebar la cola async — los primeros frames salen near-zero por el priming del hilo procesador y
+  hundían el baseline variablemente (0.0149–0.0217) → ratio learn/pre > 0.6. Fix: warmup de 40 frames
+  antes de cada medición (ceba la cola + deja asentar el ramp del duck) + ventanas largas parejas
+  (150). Verificado 6/6 estable: rms_pre ~0.025, ratio ~0.29.
 
 Cambios v1.8.1 (los que estaban pendientes post-v1.8):
 - **Manual: portada, diagrama gráfico y tip de aprender ruido** (pedidos del usuario):

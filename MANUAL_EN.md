@@ -479,17 +479,21 @@ This module detects the voice's **fundamental pitch** (f0) in real time via auto
 
 In a real listening session the level of the clean voice varies constantly: propagation changes, stations change, and the amount of noise cancellation itself removes more or less energy depending on conditions. The leveler is an **AGC dedicated to the voice** that works *after* the canceller and the squelch — that is, on the already-clean audio — and brings it to a constant level.
 
-The difference from the general AGC (Ch. 2) is the **voice-detection gate**: the leveler only adapts its gain while the canceller's voice detector confirms voice is present. With noise or silence the gain stays **frozen** at its last value — residual noise between transmissions is not re-amplified, which is the typical flaw of chaining two ordinary AGCs.
+The difference from the general AGC (Ch. 2) is the **voice-detection gate**: by default the leveler only adapts its gain while the canceller's voice detector confirms voice is present. With noise or silence the gain stays **frozen** at its last value — residual noise between transmissions is not re-amplified, which is the typical flaw of chaining two ordinary AGCs. This gate can be disabled (**"Level continuously"** checkbox, see below) for **music or continuous audio**.
 
-**Requires the Stationary noise canceller enabled with a profile** (learned or MCRA-calibrated) — the voice detector lives inside the canceller. The internal timings are fixed (target −20 dBFS, attack 80 ms, release 1.5 s), designed to follow changing conditions without pumping on the voice's natural dynamics.
+**Requires the Stationary noise canceller enabled with a profile** (learned or MCRA-calibrated) — the voice detector lives inside the canceller. The target (−20 dBFS) and attack (80 ms) are fixed; the **response speed (release) is adjustable** so it can follow faster or slower fading.
 
 **Real-time indicators:** the gain the leveler is applying is shown in two places with the same data — on the Main tab (next to the peak limiter indicator) and as **"Activity"** inside the group itself in Advanced Audio, so you can watch it while adjusting the Max gain. Green while compensating, gray "0 dB" when the voice is already at level, "—" when the module is not running.
 
 | Control | Range | Default | Description |
 |---------|-------|---------|-------------|
 | **Max gain** | 0 – 20 dB | +12 dB | Amplification cap for weak voice. Raise it for DX signals far below the target level; lower it if a strong station arriving after a weak one starts off too loud. At 0 dB the module only attenuates (never amplifies). |
+| **Response speed** | 200 – 3000 ms | 1500 ms | How fast the leveler follows level changes (the AGC *release*). **Fast (200–600 ms):** follows fast cyclic fading without leaving volume "dips" when the signal drops. **Smooth (2000–3000 ms):** more stable leveling, less risk of pumping the background noise. |
+| **Level continuously (music)** | checkbox | off | Disables the voice-detection gate: the leveler adapts **at all times**, without waiting for voice. **Enable for music or continuous audio** — where the voice detector does not recognize voice structure and, with the gate, the leveler would stay frozen. For voice on noisy bands leave it **off** (avoids re-amplifying noise in the gaps). |
 
 > **When to enable it:** long sessions with stations at very different levels or pronounced QSB, especially with the squelch active (level jumps between transmissions are more noticeable when there is no background noise to mask them).
+
+> **Music with fading (cyclic QSB):** enable the Leveler, tick **"Level continuously"**, raise Max gain to ~15 dB and lower the **Response speed to 400–600 ms**. This way the leveler tracks the signal's cyclic rise and fall instead of staying frozen waiting for a voice that never comes. If it starts to "breathe" the background noise, raise the speed one step. Related note: a high **Spectral floor** (Ch. 5) lets more signal through without flattening, so it passes more of the fading swing — if you notice it makes things worse, lower it a bit and let the leveler do the work.
 
 ---
 
@@ -682,7 +686,7 @@ On the right of the same row, the **"🔇 Mute"** button silences the speaker ou
 | ↳ Spectral post-filter | ⬜ Optional | Enable if residual birdies remain |
 | ↳ Voice pitch enhancement | ⬜ Optional | Also helps on AM: demodulation preserves the voice harmonics |
 | HF fading compensation | ⬜ Optional | Shortwave with QSB only (Adaptive mode); on local AM with music it can false-trigger |
-| ↳ Voice leveler | ❌ Do not use | With music the voice gate freezes the gain erratically |
+| ↳ Voice leveler | ⬜ Optional | For music **tick "Level continuously"** (without it the voice gate freezes the gain); useful to even out cyclic fading |
 | Squelch | ❌ Do not use | Produces pumping with music |
 | Voice EQ | ⬜ Optional | Presence if the voice sounds dull; body if it sounds thin |
 | Harmonic exciter | ⬜ Optional | In moderation |
