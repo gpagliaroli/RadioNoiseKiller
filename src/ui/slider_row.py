@@ -27,7 +27,7 @@ class SliderRow(QWidget):
         step: float = 1.0,
         unit: str = "",
         fmt: str = "{:.0f}",
-        label_width: int = 140,
+        label_width: int = 180,
         value_width: int = 72,
         parent=None,
     ):
@@ -54,6 +54,10 @@ class SliderRow(QWidget):
         self._slider.valueChanged.connect(self._on_slider_changed)
         self._slider.setContextMenuPolicy(Qt.CustomContextMenu)
         self._slider.customContextMenuRequested.connect(self._show_context_menu)
+        # Ancho máximo: el slider crece hasta este tope y el espacio sobrante queda
+        # libre a la derecha (antes con stretch=1 llenaba toda la fila). Achica el
+        # slider ~30% y evita filas gigantes. Sigue encogiendo en ventanas angostas.
+        self._slider.setMaximumWidth(360)
         layout.addWidget(self._slider, stretch=1)
 
         self._val_lbl = QLabel()

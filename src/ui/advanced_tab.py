@@ -763,7 +763,7 @@ class AdvancedCancellerTab(QWidget):
         layout.addWidget(_note(tr("  ↳ Ataque del onset de voz. Rápido = consonantes más nítidas. Suave = transiciones sin artefactos.")))
 
         self._s_mcra_window = SliderRow(
-            tr("Reactividad del piso (MCRA):"),
+            tr("Reactividad del piso:"),
             min_val=250.0, max_val=800.0,
             default=_DSP_DEF.noise_mcra_window_ms,
             step=50.0, unit="ms", fmt="{:.0f}",
@@ -777,7 +777,7 @@ class AdvancedCancellerTab(QWidget):
         layout.addWidget(_note(tr("  ↳ Ventana de seguimiento del ruido (solo Adaptativo). Reactivo (corto) = el piso sigue subidas rápidas de ruido cíclico, menos vaivén; estable (largo) = mejor con ruido parejo. Con valores reactivos, tener activo el Refuerzo de pitch de voz.")))
 
         self._s_hf_boost = SliderRow(
-            tr("Refuerzo del piso en agudos:"),
+            tr("Refuerzo en agudos:"),
             min_val=0.0, max_val=150.0,
             default=_DSP_DEF.noise_hf_boost * 100.0,
             step=10.0, unit="%", fmt="{:.0f}",

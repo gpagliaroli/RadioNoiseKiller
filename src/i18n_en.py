@@ -374,8 +374,8 @@ CATALOG = {
     "  ↳ Release (retorno al ruido), pasos de 0.1% para calibrar fino. 99%≈1s de release — puede dejar cola de ruido tras la voz.":
         "  ↳ Release (return to noise), 0.1% steps for fine tuning. 99%≈1s release — may leave a noise tail after speech.",
     "Velocidad ataque:": "Attack speed:",
-    "Reactividad del piso (MCRA):": "Noise-floor reactivity (MCRA):",
-    "Refuerzo del piso en agudos:": "HF floor boost:",
+    "Reactividad del piso:": "Floor reactivity:",
+    "Refuerzo en agudos:": "HF floor boost:",
     "  ↳ Sube el piso de ruido por encima de ~2.5 kHz (donde la energía del ruido es baja y el estimador reacciona tarde). Suprime mejor el siseo de agudos que se cuela con el fading, a costa de algo de brillo de la voz — combinar con Excitador/Presencia para reponerlo.":
         "  ↳ Raises the noise floor above ~2.5 kHz (where noise energy is low and the estimator reacts late). Suppresses the HF hiss that leaks through with fading better, at the cost of some voice brightness — combine with Exciter/Presence to restore it.",
     "  ↳ Ventana de seguimiento del ruido (solo Adaptativo). Reactivo (corto) = el piso sigue subidas rápidas de ruido cíclico, menos vaivén; estable (largo) = mejor con ruido parejo. Con valores reactivos, tener activo el Refuerzo de pitch de voz.":
