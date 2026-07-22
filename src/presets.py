@@ -165,6 +165,7 @@ class PresetManager:
                 "pitch_enhance_strength":    dsp.pitch_enhance_strength,
                 "noise_fading_comp":         dsp.noise_fading_comp,
                 "noise_mcra_window_ms":      dsp.noise_mcra_window_ms,
+                "noise_hf_boost":            dsp.noise_hf_boost,
                 "noise_fading_change_db":    dsp.noise_fading_change_db,
                 "noise_fading_freeze_ms":    dsp.noise_fading_freeze_ms,
                 "voice_leveler_enabled":     dsp.voice_leveler_enabled,
@@ -246,6 +247,7 @@ class PresetManager:
         dsp.pitch_enhance_strength = float(d.get("pitch_enhance_strength",dsp.pitch_enhance_strength))
         dsp.noise_fading_comp      = bool(d.get("noise_fading_comp",     dsp.noise_fading_comp))
         dsp.noise_mcra_window_ms = float(d.get("noise_mcra_window_ms", dsp.noise_mcra_window_ms))
+        dsp.noise_hf_boost = float(d.get("noise_hf_boost", dsp.noise_hf_boost))
         dsp.noise_fading_change_db = float(d.get("noise_fading_change_db", dsp.noise_fading_change_db))
         dsp.noise_fading_freeze_ms = float(d.get("noise_fading_freeze_ms", dsp.noise_fading_freeze_ms))
         dsp.voice_leveler_enabled  = bool(d.get("voice_leveler_enabled",  dsp.voice_leveler_enabled))

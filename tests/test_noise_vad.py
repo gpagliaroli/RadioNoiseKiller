@@ -218,6 +218,18 @@ f_stable = _frames_to_track(800)
 check("ventana reactiva sigue la subida de ruido antes que la estable (%d < %d)"
       % (f_react, f_stable), f_react < f_stable)
 
+# Refuerzo del piso en agudos (over-sustracción HF): clamp, forma de la curva
+# e invariante 9 (redimensiona en reset). fft_n=960 @ hop480 -> freq_per_bin=50.
+p8 = NoiseProfiler(480)
+p8.set_hf_boost(9.0);  check("clamp hf_boost hi (1.5)", p8._hf_boost == 1.5)
+p8.set_hf_boost(-1.0); check("clamp hf_boost lo (0.0)", p8._hf_boost == 0.0)
+p8.set_hf_boost(1.0)
+c8 = p8._hf_boost_curve
+check("hf_boost: 1.0 debajo de 2.5kHz (bin 40 = 2000Hz)", abs(c8[40] - 1.0) < 1e-6)
+check("hf_boost: +100% arriba de 4.5kHz (bin 100 = 5000Hz)", abs(c8[100] - 2.0) < 1e-6)
+p8.reset(240)
+check("hf_boost: curva redimensionada en reset (inv 9)", len(p8._hf_boost_curve) == p8._nb)
+
 # 8. Sin eventos de fading, el checkbox NO debe alterar el procesamiento.
 #    (Bug real: el release acelerado beta=0.45 aplicaba siempre con el checkbox
 #    activo -> gorgojeo extra con mucho ruido y sin fading. Reportado en 40m.)

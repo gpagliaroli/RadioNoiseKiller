@@ -671,7 +671,8 @@ class AdvancedCancellerTab(QWidget):
         Los sub-módulos requieren además el cancelador activo (no corren sin él)."""
         dsp   = self._config.dsp
         noise = dsp.noise_enabled
-        for s in (self._s_noise_floor, self._s_noise_smooth, self._s_noise_attack, self._s_mcra_window):
+        for s in (self._s_noise_floor, self._s_noise_smooth, self._s_noise_attack,
+                  self._s_mcra_window, self._s_hf_boost):
             s.set_enabled(noise)
         for s in (self._s_fading_change, self._s_fading_freeze):
             s.set_enabled(noise and dsp.noise_fading_comp)
@@ -770,6 +771,20 @@ class AdvancedCancellerTab(QWidget):
         self._s_mcra_window.valueChanged.connect(self._pipeline.set_mcra_window_ms)
         layout.addWidget(self._s_mcra_window)
         layout.addWidget(_note(tr("  ↳ Ventana de seguimiento del ruido (solo Adaptativo). Reactivo (corto) = el piso sigue subidas rápidas de ruido cíclico, menos vaivén; estable (largo) = mejor con ruido parejo. Con valores reactivos, tener activo el Refuerzo de pitch de voz.")))
+
+        self._s_hf_boost = SliderRow(
+            tr("Refuerzo del piso en agudos:"),
+            min_val=0.0, max_val=150.0,
+            default=_DSP_DEF.noise_hf_boost * 100.0,
+            step=10.0, unit="%", fmt="{:.0f}",
+        )
+        self._s_hf_boost._update_label = lambda v: self._s_hf_boost._val_lbl.setText(
+            f"+{v:.0f}%  ({tr('desactivado') if v < 5 else tr('suave') if v < 60 else tr('normal') if v < 110 else tr('fuerte')})"
+        )
+        self._s_hf_boost._val_lbl.setFixedWidth(120)
+        self._s_hf_boost.valueChanged.connect(lambda v: self._pipeline.set_hf_boost(v / 100.0))
+        layout.addWidget(self._s_hf_boost)
+        layout.addWidget(_note(tr("  ↳ Sube el piso de ruido por encima de ~2.5 kHz (donde la energía del ruido es baja y el estimador reacciona tarde). Suprime mejor el siseo de agudos que se cuela con el fading, a costa de algo de brillo de la voz — combinar con Excitador/Presencia para reponerlo.")))
 
         fading_row = QHBoxLayout()
         fading_row.addWidget(QLabel(tr("Compensación fading HF:")))
@@ -1112,6 +1127,7 @@ class AdvancedCancellerTab(QWidget):
         self._s_noise_smooth.set_value(cfg.noise_smooth)
         self._s_noise_attack.set_value(cfg.noise_attack)
         self._s_mcra_window.set_value(cfg.noise_mcra_window_ms)
+        self._s_hf_boost.set_value(cfg.noise_hf_boost * 100.0)
         self._s_fading_change.set_value(cfg.noise_fading_change_db)
         self._s_fading_freeze.set_value(cfg.noise_fading_freeze_ms)
         self._s_squelch_threshold.set_value(cfg.squelch_threshold)

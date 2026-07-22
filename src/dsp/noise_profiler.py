@@ -144,6 +144,14 @@ class NoiseProfiler:
         self._pf_rolloff_depth: float = 0.55    # profundidad máxima del rolloff (0–0.95)
         self._floor_curve: np.ndarray = self._build_floor_curve()
 
+        # Refuerzo del piso en agudos (over-sustracción dependiente de frecuencia):
+        # multiplica el noise_mag efectivo por encima de ~2.5 kHz. En agudos la
+        # energía del ruido es baja y el estimador reacciona tarde a las subidas
+        # cíclicas; subir el piso ahí suprime mejor ese ruido, a costa de algo de
+        # brillo de la voz. 0 = sin efecto (curva toda en 1.0).
+        self._hf_boost:       float      = 0.0
+        self._hf_boost_curve: np.ndarray = self._build_hf_boost_curve()
+
         # Compensación de fading HF
         self._fading_comp:         bool  = False
         self._fading_change_db:    float = 5.0   # umbral de detección (slider, 1-10 dB)
@@ -240,9 +248,10 @@ class NoiseProfiler:
             self._accum   = np.zeros(self._nb, dtype=np.float64)
             self._noise_mag = None
             self._n_frames  = 0
-            # La curva de piso perceptual depende de nb — sin esto, shape mismatch
-            # en el Wiener tras cambiar el tamaño de bloque
+            # Curvas por-bin dependen de nb — sin esto, shape mismatch en el Wiener
+            # tras cambiar el tamaño de bloque (invariante 9)
             self._floor_curve = self._build_floor_curve()
+            self._hf_boost_curve = self._build_hf_boost_curve()
             # El freeze de fading y la ventana MCRA se expresan en frames — dependen del hop
             self._fading_freeze_frames = self._calc_fading_freeze_frames()
             self._mcra_M = self._calc_mcra_M()
@@ -365,6 +374,21 @@ class NoiseProfiler:
         """Frames de freeze según la duración en ms y el hop actual (48 kHz)."""
         hop_ms = self._hop / 48.0
         return max(1, round(self._fading_freeze_ms / hop_ms))
+
+    def _build_hf_boost_curve(self) -> np.ndarray:
+        """Factor de over-sustracción por bin: 1.0 debajo de 2.5 kHz, rampa lineal
+        hasta (1 + hf_boost) en 4.5 kHz y plano por encima. Multiplica noise_mag
+        en el cálculo de ganancia → más supresión en agudos."""
+        freq_per_bin = 48000.0 / self._fft_n
+        freqs = np.arange(self._nb, dtype=np.float64) * freq_per_bin
+        ramp = np.clip((freqs - 2500.0) / (4500.0 - 2500.0), 0.0, 1.0)
+        return (1.0 + self._hf_boost * ramp).astype(np.float32)
+
+    def set_hf_boost(self, v: float) -> None:
+        """Refuerzo del piso en agudos (0 = off, 1.5 = +150% en el tope de la rampa).
+        Clamp == rango del slider (0.0-1.5)."""
+        self._hf_boost = float(np.clip(v, 0.0, 1.5))
+        self._hf_boost_curve = self._build_hf_boost_curve()
 
     def _calc_mcra_M(self) -> int:
         """Frames por subtrama según la ventana en ms y el hop (48 kHz). La ventana
@@ -660,6 +684,11 @@ class NoiseProfiler:
             noise_mag = self._mcra_feed(spec)
         else:
             noise_mag = self._noise_mag
+
+        # Refuerzo del piso en agudos (over-sustracción): sube el noise_mag efectivo
+        # en HF sin tocar el estimado almacenado (crea un array nuevo).
+        if noise_mag is not None and self._hf_boost > 0.0:
+            noise_mag = noise_mag * self._hf_boost_curve
 
         if noise_mag is None or not self._enabled:
             out_frame = np.fft.irfft(spec, n=self._fft_n).astype(np.float32) * self._ola_win

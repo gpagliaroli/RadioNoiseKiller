@@ -88,6 +88,7 @@ class ProcessingPipeline:
         self._noise_profiler.set_pitch_strength(config.dsp.pitch_enhance_strength)
         self._noise_profiler.set_fading_comp(config.dsp.noise_fading_comp)
         self._noise_profiler.set_mcra_window_ms(config.dsp.noise_mcra_window_ms)
+        self._noise_profiler.set_hf_boost(config.dsp.noise_hf_boost)
         self._noise_profiler.set_fading_change_db(config.dsp.noise_fading_change_db)
         self._noise_profiler.set_fading_freeze_ms(config.dsp.noise_fading_freeze_ms)
         self._noise_profiler.set_mode(config.dsp.noise_mode)
@@ -362,6 +363,7 @@ class ProcessingPipeline:
         self.set_pitch_enhance_strength(dsp.pitch_enhance_strength)
         self.set_fading_comp(dsp.noise_fading_comp)
         self.set_mcra_window_ms(dsp.noise_mcra_window_ms)
+        self.set_hf_boost(dsp.noise_hf_boost)
         self.set_fading_change_db(dsp.noise_fading_change_db)
         self.set_fading_freeze_ms(dsp.noise_fading_freeze_ms)
         self.set_voice_leveler_enabled(dsp.voice_leveler_enabled)
@@ -507,6 +509,10 @@ class ProcessingPipeline:
     def set_mcra_window_ms(self, v: float) -> None:
         self._config.dsp.noise_mcra_window_ms = float(v)
         self._noise_profiler.set_mcra_window_ms(float(v))
+
+    def set_hf_boost(self, v: float) -> None:
+        self._config.dsp.noise_hf_boost = float(v)
+        self._noise_profiler.set_hf_boost(float(v))
 
     def set_fading_change_db(self, v: float) -> None:
         self._config.dsp.noise_fading_change_db = float(v)
