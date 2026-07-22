@@ -143,11 +143,16 @@ print("\n=== Fase 4b: aprendizaje estatico (AGC congelado + monitoreo atenuado) 
 pipeline.set_noise_mode("static")
 pipeline.clear_noise_profile()
 # Ruido plano (flat): pre y learn solo difieren por el duck del monitoreo, no
-# por la envolvente aleatoria — así el ratio es estable, no flaky.
-rms_pre = feed(pipeline, noise_frames(60, hop, flat=True), collect=True)
+# por la envolvente aleatoria. Warmup antes de cada medicion para cebar la cola
+# async (los primeros frames salen near-zero por el priming del hilo procesador)
+# y dejar asentar el ramp del duck; ventanas largas y parejas (150) para que el
+# ratio sea estable. Sin esto, el baseline de 60 frames flakeaba ~1 de cada 2.
+feed(pipeline, noise_frames(40, hop, flat=True))            # ceba la cola
+rms_pre = feed(pipeline, noise_frames(150, hop, flat=True), collect=True)
 g_before = pipeline.agc_gain_db
 pipeline.start_noise_learning()
-rms_learn = feed(pipeline, noise_frames(200, hop, flat=True), collect=True)
+feed(pipeline, noise_frames(40, hop, flat=True))            # deja asentar el ramp del duck
+rms_learn = feed(pipeline, noise_frames(150, hop, flat=True), collect=True)
 g_after = pipeline.agc_gain_db
 frames_learned = pipeline.stop_noise_learning()
 check("el aprendizaje capturo frames (%d)" % frames_learned, frames_learned > 100)
