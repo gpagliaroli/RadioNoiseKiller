@@ -99,7 +99,9 @@ class AdvancedAudioTab(QWidget):
         for s in (self._s_exciter_drive, self._s_exciter_mix):
             s.set_enabled(dsp.exciter_enabled)
         # El nivelador requiere el cancelador activo (su VAD vive ahí — invariante 2)
-        self._s_leveler_max.set_enabled(dsp.noise_enabled and dsp.voice_leveler_enabled)
+        leveler_on = dsp.noise_enabled and dsp.voice_leveler_enabled
+        self._s_leveler_max.set_enabled(leveler_on)
+        self._chk_leveler_continuous.setEnabled(leveler_on)
 
     def _build_ui(self) -> None:
         layout = _make_scroll_layout(self)
@@ -160,6 +162,19 @@ class AdvancedAudioTab(QWidget):
         self._s_leveler_max.valueChanged.connect(self._pipeline.set_voice_leveler_max_db)
         layout.addWidget(self._s_leveler_max)
         layout.addWidget(_note(tr("  ↳ Tope de compensación para voz débil. Fuerte = iguala más las señales, pero levanta también el ruido que acompaña a la voz débil.")))
+
+        self._chk_leveler_continuous = QCheckBox(tr("Nivelar en continuo (música / sin detección de voz)"))
+        self._chk_leveler_continuous.setToolTip(tr(
+            "Desactivado (default): el nivelador adapta solo cuando el detector\n"
+            "de voz confirma voz presente — evita amplificar el ruido en las\n"
+            "pausas entre palabras (ideal para voz en banda ruidosa).\n"
+            "Activado: adapta en continuo, sin esperar voz — usar para música o\n"
+            "audio continuo, donde no hay estructura de voz que detectar."))
+        # Checkbox marcado = nivelar continuo = SIN gate por voz
+        self._chk_leveler_continuous.toggled.connect(
+            lambda on: self._pipeline.set_voice_leveler_gate_voice(not on))
+        layout.addWidget(self._chk_leveler_continuous)
+        layout.addWidget(_note(tr("  ↳ Para música o audio continuo con fading: el detector de voz no lo reconoce y el nivelador quedaría congelado — esta casilla lo nivela igual.")))
         return group
 
     def _build_dsp_group(self) -> QGroupBox:
@@ -366,6 +381,9 @@ class AdvancedAudioTab(QWidget):
             if self._config.audio.block_size in _BLOCK_SIZES else 1
         )
         self._s_leveler_max.set_value(cfg.voice_leveler_max_db)
+        self._chk_leveler_continuous.blockSignals(True)
+        self._chk_leveler_continuous.setChecked(not cfg.voice_leveler_gate_voice)
+        self._chk_leveler_continuous.blockSignals(False)
         self._s_presence_freq.set_value(cfg.presence_freq)
         self._s_presence.set_value(cfg.presence_db)
         self._s_presence_q.set_value(cfg.presence_q)

@@ -223,6 +223,20 @@ CATALOG = {
         "meters keep running — only the audio you hear is cut.",
     "Salida silenciada — el procesamiento sigue activo.":
         "Output muted — processing is still active.",
+    "Nivelar en continuo (música / sin detección de voz)":
+        "Level continuously (music / no voice detection)",
+    "Desactivado (default): el nivelador adapta solo cuando el detector\n"
+    "de voz confirma voz presente — evita amplificar el ruido en las\n"
+    "pausas entre palabras (ideal para voz en banda ruidosa).\n"
+    "Activado: adapta en continuo, sin esperar voz — usar para música o\n"
+    "audio continuo, donde no hay estructura de voz que detectar.":
+        "Off (default): the leveler adapts only when the voice detector\n"
+        "confirms voice is present — avoids amplifying noise in the gaps\n"
+        "between words (ideal for voice on noisy bands).\n"
+        "On: adapts continuously, without waiting for voice — use for music\n"
+        "or continuous audio, where there is no voice structure to detect.",
+    "  ↳ Para música o audio continuo con fading: el detector de voz no lo reconoce y el nivelador quedaría congelado — esta casilla lo nivela igual.":
+        "  ↳ For music or continuous audio with fading: the voice detector does not recognize it and the leveler would stay frozen — this box levels it anyway.",
     "Grabando en Grabaciones/ ...": "Recording to Grabaciones/ ...",
     "Grabación guardada en Grabaciones/  ({s:.0f} s)":
         "Recording saved to Grabaciones/  ({s:.0f} s)",

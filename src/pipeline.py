@@ -62,6 +62,7 @@ class ProcessingPipeline:
         self._agc_voice.set_custom_release(1500.0)
         self._agc_voice.set_preset("custom")
         self._voice_leveler_enabled: bool = config.dsp.voice_leveler_enabled
+        self._voice_leveler_gate_voice: bool = config.dsp.voice_leveler_gate_voice
         self._bandpass     = BandpassFilter(config.dsp, config.audio.sample_rate)
         self._bandpass_out = BandpassFilter(config.dsp, config.audio.sample_rate)
         if config.dsp.bandpass_out_independent:
@@ -162,6 +163,12 @@ class ProcessingPipeline:
     def set_voice_leveler_enabled(self, enabled: bool) -> None:
         self._config.dsp.voice_leveler_enabled = bool(enabled)
         self._voice_leveler_enabled = bool(enabled)
+
+    def set_voice_leveler_gate_voice(self, gate: bool) -> None:
+        """True: el nivelador adapta solo con voz (VAD) — voz en banda ruidosa.
+        False: adapta en continuo, sin esperar voz — música / audio continuo."""
+        self._voice_leveler_gate_voice = bool(gate)
+        self._config.dsp.voice_leveler_gate_voice = bool(gate)
 
     def set_voice_leveler_max_db(self, db: float) -> None:
         # clamp == rango del slider (el clamp interno del AGC es 0-60, más ancho)
@@ -349,6 +356,7 @@ class ProcessingPipeline:
         self.set_fading_freeze_ms(dsp.noise_fading_freeze_ms)
         self.set_voice_leveler_enabled(dsp.voice_leveler_enabled)
         self.set_voice_leveler_max_db(dsp.voice_leveler_max_db)
+        self.set_voice_leveler_gate_voice(dsp.voice_leveler_gate_voice)
 
         self.set_input_gain_db(gain.input_gain_db)
         self.set_output_gain_db(gain.output_gain_db)
@@ -910,13 +918,15 @@ class ProcessingPipeline:
                 else:
                     self._sq_gain_prev = 1.0
 
-                # Nivelador de voz: solo adapta con voz presente (el vp requiere
-                # cancelador activo — invariante 2); con ruido o gate cerrado la
-                # ganancia queda congelada y no persigue al ruido residual.
+                # Nivelador de voz (el vp requiere cancelador activo — invariante 2).
+                # Con gate por VAD: solo adapta con voz presente (evita perseguir el
+                # ruido residual entre palabras). Sin gate: adapta en continuo, para
+                # música / audio continuo donde no hay estructura de voz que detectar.
                 if (self._voice_leveler_enabled and self._noise_enabled
                         and self._noise_profiler.has_profile):
-                    self._agc_voice.set_hold(
-                        self._noise_profiler.voice_prob < self._LEVELER_VP_THR)
+                    hold = (self._voice_leveler_gate_voice
+                            and self._noise_profiler.voice_prob < self._LEVELER_VP_THR)
+                    self._agc_voice.set_hold(hold)
                     filtered = self._agc_voice.process(filtered)
 
                 with self._lock:

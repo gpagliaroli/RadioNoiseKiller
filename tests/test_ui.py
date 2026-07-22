@@ -147,6 +147,36 @@ def test_voice_leveler_requires_noise():
     print("Nivelador de voz requiere cancelador       OK")
 
 
+def test_leveler_continuous_checkbox():
+    """La casilla 'Nivelar en continuo' invierte el gate por voz del nivelador
+    (marcada = sin gate = música) y se gatea con el cancelador + nivelador."""
+    w = _win()
+    aud = w._adv_audio_tab
+
+    # Gateada por el cancelador + nivelador (invariante 2)
+    w._chk_noise.setChecked(True)
+    w._chk_voice_leveler.setChecked(True)
+    _app.processEvents()
+    assert aud._chk_leveler_continuous.isEnabled(), "casilla deberia habilitarse"
+
+    calls = []
+    orig = w._pipeline.set_voice_leveler_gate_voice
+    w._pipeline.set_voice_leveler_gate_voice = lambda g: calls.append(g)
+    try:
+        aud._chk_leveler_continuous.setChecked(True)   # continuo → SIN gate de voz
+        assert calls[-1] is False, "continuo marcado deberia desactivar el gate (gate=False)"
+        aud._chk_leveler_continuous.setChecked(False)  # gateado por voz
+        assert calls[-1] is True, "continuo desmarcado deberia activar el gate (gate=True)"
+    finally:
+        w._pipeline.set_voice_leveler_gate_voice = orig
+
+    w._chk_noise.setChecked(False)
+    _app.processEvents()
+    assert not aud._chk_leveler_continuous.isEnabled(), \
+        "casilla habilitada sin cancelador (invariante 2)"
+    print("Nivelador: casilla continuo + gating         OK")
+
+
 def test_bandpass_out_requires_post_and_independent():
     """Los sliders de salida independiente requieren bandpass post + la casilla."""
     w = _win()
@@ -439,6 +469,7 @@ if __name__ == "__main__":
     test_auto_load_respects_saved_mode()
     test_canceller_subcontrols_require_noise()
     test_voice_leveler_requires_noise()
+    test_leveler_continuous_checkbox()
     test_bandpass_out_requires_post_and_independent()
     test_refresh_from_config_restores_checkboxes()
     test_window_title_reflects_preset()
