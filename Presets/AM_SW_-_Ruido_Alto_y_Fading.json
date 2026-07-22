@@ -36,7 +36,7 @@
     "anf_depth": 0.5,
     "noise_enabled": true,
     "noise_mode": "mcra",
-    "noise_alpha": 0.75,
+    "noise_alpha": 0.85,
     "noise_floor": 0.15000000000000002,
     "noise_smooth": 0.97,
     "noise_attack": 0.6,
@@ -63,14 +63,16 @@
     "pitch_enhance_enabled": true,
     "pitch_enhance_strength": 0.7000000000000001,
     "noise_fading_comp": true,
-    "noise_fading_change_db": 3.0,
+    "noise_fading_change_db": 1.0,
     "noise_fading_freeze_ms": 300.0,
     "voice_leveler_enabled": true,
-    "voice_leveler_max_db": 12.0
+    "voice_leveler_max_db": 12.0,
+    "voice_leveler_gate_voice": false,
+    "voice_leveler_release_ms": 500.0
   },
   "gain": {
     "input_gain_db": -2.5,
     "output_gain_db": 0.0,
-    "peak_limit_db": -3.0
+    "peak_limit_db": -1.5
   }
 }

@@ -63,10 +63,12 @@
     "pitch_enhance_enabled": true,
     "pitch_enhance_strength": 0.7000000000000001,
     "noise_fading_comp": true,
-    "noise_fading_change_db": 3.0,
+    "noise_fading_change_db": 2.5,
     "noise_fading_freeze_ms": 250.0,
     "voice_leveler_enabled": true,
-    "voice_leveler_max_db": 6.0
+    "voice_leveler_max_db": 6.0,
+    "voice_leveler_gate_voice": false,
+    "voice_leveler_release_ms": 500.0
   },
   "gain": {
     "input_gain_db": -3.0,
