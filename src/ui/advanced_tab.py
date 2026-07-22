@@ -721,7 +721,7 @@ class AdvancedCancellerTab(QWidget):
         self._s_noise_attack._val_lbl.setFixedWidth(110)
         self._s_noise_attack.valueChanged.connect(self._on_noise_attack)
         layout.addWidget(self._s_noise_attack)
-        layout.addWidget(_note(tr("  ↳ Attack (onset de voz): bajo=consonantes nítidas. Alto=transiciones suaves.")))
+        layout.addWidget(_note(tr("  ↳ Ataque del onset de voz. Rápido = consonantes más nítidas. Suave = transiciones sin artefactos.")))
 
         fading_row = QHBoxLayout()
         fading_row.addWidget(QLabel(tr("Compensación fading HF:")))

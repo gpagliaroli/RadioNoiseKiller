@@ -346,8 +346,8 @@ CATALOG = {
     "  ↳ Release (retorno al ruido), pasos de 0.1% para calibrar fino. 99%≈1s de release — puede dejar cola de ruido tras la voz.":
         "  ↳ Release (return to noise), 0.1% steps for fine tuning. 99%≈1s release — may leave a noise tail after speech.",
     "Velocidad ataque:": "Attack speed:",
-    "  ↳ Attack (onset de voz): bajo=consonantes nítidas. Alto=transiciones suaves.":
-        "  ↳ Attack (voice onset): low=crisp consonants. High=smooth transitions.",
+    "  ↳ Ataque del onset de voz. Rápido = consonantes más nítidas. Suave = transiciones sin artefactos.":
+        "  ↳ Voice onset attack. Fast = crisper consonants. Soft = artifact-free transitions.",
     "Compensación fading HF:": "HF fading compensation:",
     "  ↳ Activar en Módulos Activos (sub-módulo del cancelador). Solo modo Adaptativo.":
         "  ↳ Enable in Active Modules (canceller sub-module). Adaptive mode only.",
