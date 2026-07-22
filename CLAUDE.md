@@ -658,6 +658,13 @@ Cambios post-v1.8.1 (pendiente de release):
   respeta el modo. (El síntoma apareció tras probar la feature del nombre de perfil, que dejó un
   `last_noise_profile` guardado.) Test `test_ui.py::test_auto_load_respects_saved_mode`.
   **Validado por el usuario.**
+- **Sensibilidad fading: mínimo bajado de 2 → 1 dB** (reportado por el usuario: 2 dB quedaba corto,
+  el QSB suave no disparaba el freeze). Slider 2–10 → 1–10 dB y clamp del setter en sync (invariante
+  1: `np.clip(v, 1.0, 10.0)` en `noise_profiler.set_fading_change_db`). **No se baja a 0**: el
+  detector usa `change_db >= umbral` con `change_db = |Δ| ≥ 0`, así que 0 dispararía el freeze en
+  todos los frames → MCRA nunca actualizaría `λ_d`. Comentarios de rango en `config.py`/`noise_profiler.py`,
+  manuales ES+EN (tabla + nota "Bajo (1–4 dB)") y test de clamp en `test_noise_vad` (0.5 → 1.0)
+  actualizados. **Validado en el aire por el usuario** (dispara para QSB más suave).
 
 Cambios v1.8.1 (los que estaban pendientes post-v1.8):
 - **Manual: portada, diagrama gráfico y tip de aprender ruido** (pedidos del usuario):
