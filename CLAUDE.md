@@ -665,6 +665,27 @@ Cambios post-v1.8.1 (pendiente de release):
   todos los frames → MCRA nunca actualizaría `λ_d`. Comentarios de rango en `config.py`/`noise_profiler.py`,
   manuales ES+EN (tabla + nota "Bajo (1–4 dB)") y test de clamp en `test_noise_vad` (0.5 → 1.0)
   actualizados. **Validado en el aire por el usuario** (dispara para QSB más suave).
+- **Vocabulario de las notas de Avanzadas coordinado con las etiquetas en vivo** (reportado por el
+  usuario: la nota de un control decía "bajo/alto" mientras la etiqueta del slider mostraba palabras
+  cualitativas). Pasada completa en `advanced_tab.py`: cada nota que usaba "bajo/alto" ahora usa la
+  misma palabra que muestra la etiqueta (Velocidad ataque→rápido/suave, Nivelador→fuerte, Excitador
+  drive→suave/agresivo, Blanker frame/mini→agresivo/suave, Sensibilidad fading→sensible/selectivo,
+  piso boost→fuerte, post-filtro→realineado 1=normal/2=agresivo, EQ Q "estrecho"→"angosto"). Las
+  palabras de la etiqueta de Q (`ancho/medio/angosto`) no estaban en `tr()` — envueltas + 3 claves EN
+  nuevas (wide/medium/narrow). Espejado en los manuales ES+EN (mismas filas de tabla). Claves i18n ES
+  (keys) + traducciones EN en sync. **Regla de UX: la nota de un control usa la misma palabra
+  cualitativa que muestra su etiqueta en vivo, no "bajo/alto".**
+- **Botón "🔇 Mute" de salida en la pestaña Principal** (pedido del usuario: silenciar la salida sin
+  detener el proceso para una prueba corta). Va en la fila de Grabar (grupo Niveles y Ganancia),
+  justificado a la derecha; el checkbox "incluir entrada sin procesar" quedó pegado a Grabar y el
+  contador REC se movió después del checkbox. **Mute de monitoreo**: `pipeline.set_output_mute()` +
+  flag `_muted` (bool atómico, sin lock, igual que `_input_gain`) que zerea SOLO el valor devuelto al
+  dispositivo, DESPUÉS de medidores/espectro/grabación — el proceso, la grabación y los VU/espectro
+  siguen mostrando la señal (grabar en mute NO graba silencio). Aplicado en ambos returns de
+  `_process` (bypass y normal). Botón checkable, habilitado solo con proceso activo (como Grabar),
+  rojo "Silenciado" cuando activo, se resetea a off al DETENER. Claves i18n EN. Tests: `test_pipeline`
+  (mute silencia salida, espectro vivo) y `test_ui::test_mute_button_gating_and_state`. Manuales ES+EN
+  (sección "Mute de salida" bajo Grabación a WAV). **Validado por el usuario.**
 
 Cambios v1.8.1 (los que estaban pendientes post-v1.8):
 - **Manual: portada, diagrama gráfico y tip de aprender ruido** (pedidos del usuario):

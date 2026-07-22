@@ -639,6 +639,14 @@ Al pie del grupo, el botón **"⏺ Grabar"** guarda lo que estás escuchando (la
 - Tamaño aproximado: ~5,6 MB por minuto por archivo. La escritura corre en un hilo separado: grabar no afecta la latencia ni la fluidez del audio.
 - El **Bypass** también se graba: la grabación captura siempre "lo que se escucha", así que alternar Bypass durante una grabación produce un **antes/después en el mismo archivo** — ideal para demos del efecto de la aplicación.
 
+### Mute de salida
+
+A la derecha de la misma fila, el botón **"🔇 Mute"** silencia la salida a los parlantes **sin detener el procesamiento**. Útil para una prueba corta, atender otra cosa un momento o hacer silencio sin perder el estado del proceso (perfil de ruido aprendido, AGC, calibración).
+
+- Disponible solo **con el procesamiento activo**. Al activarlo se pone en rojo (**"🔇 Silenciado"**) y la barra de estado lo indica.
+- Es un **mute de monitoreo**: el proceso, la grabación y los medidores (VU y espectro) **siguen corriendo** y mostrando la señal — solo se corta el audio que se escucha. Por eso, si estás grabando, la grabación **no** queda en silencio: sigue capturando la salida procesada.
+- Se libera solo al pulsarlo de nuevo, y se desactiva automáticamente al **DETENER** el procesamiento.
+
 ---
 
 ## Configuración recomendada para empezar

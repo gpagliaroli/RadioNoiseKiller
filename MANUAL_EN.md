@@ -639,6 +639,14 @@ At the bottom of the group, the **"⏺ Record"** button saves what you are heari
 - Approximate size: ~5.6 MB per minute per file. Writing runs on a separate thread: recording does not affect audio latency or smoothness.
 - **Bypass** is recorded too: the recording always captures "what you hear", so toggling Bypass during a recording produces a **before/after in the same file** — ideal for demos of what the application does.
 
+### Output mute
+
+On the right of the same row, the **"🔇 Mute"** button silences the speaker output **without stopping processing**. Handy for a quick test, to step away for a moment, or to go silent without losing the process state (learned noise profile, AGC, calibration).
+
+- Available only **while processing is active**. When enabled it turns red (**"🔇 Muted"**) and the status bar shows it.
+- It is a **monitoring mute**: processing, recording and the meters (VU and spectrum) **keep running** and showing the signal — only the audio you hear is cut. So if you are recording, the recording is **not** silenced: it keeps capturing the processed output.
+- It releases only when pressed again, and turns off automatically when you **STOP** processing.
+
 ---
 
 ## Recommended starting configuration
