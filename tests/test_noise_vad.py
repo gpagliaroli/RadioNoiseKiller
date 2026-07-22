@@ -178,7 +178,7 @@ check("subida lenta +6dB: lambda_d la sigue (+4 a +8 dB, %.1f)" % rise, 4.0 < ri
 print("\n=== Fading comp: clamps y hop (invariantes 1 y 9) ===")
 
 p7 = NoiseProfiler(480)
-p7.set_fading_change_db(0.5);  check("clamp sensibilidad lo (2.0)",  p7._fading_change_db == 2.0)
+p7.set_fading_change_db(0.5);  check("clamp sensibilidad lo (1.0)",  p7._fading_change_db == 1.0)
 p7.set_fading_change_db(99.0); check("clamp sensibilidad hi (10.0)", p7._fading_change_db == 10.0)
 p7.set_fading_freeze_ms(50);   check("clamp freeze lo (100)",  p7._fading_freeze_ms == 100.0)
 p7.set_fading_freeze_ms(9999); check("clamp freeze hi (500)",  p7._fading_freeze_ms == 500.0)

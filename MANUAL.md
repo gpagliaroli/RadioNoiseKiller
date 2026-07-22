@@ -353,7 +353,7 @@ Dos sliders en Avanzada Cancelador permiten calibrar la detección:
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
-| **Sensibilidad fading** | 2 – 10 dB | 5 dB | Cambio de energía que dispara el congelamiento. Bajo (2–4 dB): detecta QSB suave, pero puede disparar con la propia voz. Alto (7–10 dB): solo fades profundos. |
+| **Sensibilidad fading** | 1 – 10 dB | 5 dB | Cambio de energía que dispara el congelamiento. Bajo (1–4 dB): detecta QSB suave, pero puede disparar con la propia voz. Alto (7–10 dB): solo fades profundos. |
 | **Duración del freeze** | 100 – 500 ms | 200 ms | Cuánto tiempo queda congelado el estimador tras cada evento. Fades lentos necesitan más; un valor muy largo desactualiza el piso si el ruido de banda cambió de verdad. |
 
 El indicador en Avanzada Cancelador muestra **FADE** (naranja) cuando hay un evento de fading activo y **ok** (gris) cuando la señal está estable. Si FADE aparece constantemente sin que haya desvanecimiento real, la señal tiene variaciones rápidas de nivel (p. ej. AM con modulación profunda) — subir la Sensibilidad o desactivar la casilla.

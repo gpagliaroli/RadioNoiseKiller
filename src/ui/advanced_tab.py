@@ -734,7 +734,7 @@ class AdvancedCancellerTab(QWidget):
 
         self._s_fading_change = SliderRow(
             tr("Sensibilidad fading:"),
-            min_val=2.0, max_val=10.0,
+            min_val=1.0, max_val=10.0,
             default=_DSP_DEF.noise_fading_change_db,
             step=0.5, unit="dB", fmt="{:.1f}",
         )

@@ -353,7 +353,7 @@ Two sliders in Advanced Canceller calibrate the detection:
 
 | Control | Range | Default | Description |
 |---------|-------|---------|-------------|
-| **Fading sensitivity** | 2 – 10 dB | 5 dB | Energy change that triggers the freeze. Low (2–4 dB): detects mild QSB, but may trigger on the voice itself. High (7–10 dB): deep fades only. |
+| **Fading sensitivity** | 1 – 10 dB | 5 dB | Energy change that triggers the freeze. Low (1–4 dB): detects mild QSB, but may trigger on the voice itself. High (7–10 dB): deep fades only. |
 | **Freeze duration** | 100 – 500 ms | 200 ms | How long the estimator stays frozen after each event. Slow fades need more; a very long value lets the floor go stale if the band noise really did change. |
 
 The indicator in Advanced Canceller shows **FADE** (orange) while a fading event is active and **ok** (gray) when the signal is stable. If FADE shows constantly without real fading, the signal has fast level variations (e.g. AM with deep modulation) — raise the Sensitivity or disable the checkbox.

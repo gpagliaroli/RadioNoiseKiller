@@ -146,7 +146,7 @@ class NoiseProfiler:
 
         # Compensación de fading HF
         self._fading_comp:         bool  = False
-        self._fading_change_db:    float = 5.0   # umbral de detección (slider, 2-10 dB)
+        self._fading_change_db:    float = 5.0   # umbral de detección (slider, 1-10 dB)
         self._fading_freeze_ms:    float = 200.0 # duración del freeze (slider, 100-500 ms)
         self._fading_freeze_frames: int  = self._calc_fading_freeze_frames()
         self._fading_energy_ema:   float | None = None  # EMA de energía de frame
@@ -367,7 +367,9 @@ class NoiseProfiler:
         self._agc_gain = max(float(g), 1e-6)
 
     def set_fading_change_db(self, v: float) -> None:
-        self._fading_change_db = float(np.clip(v, 2.0, 10.0))
+        # Mínimo 1 dB: con 0 el detector (change_db >= umbral, change_db es |Δ| ≥ 0)
+        # dispararía en todos los frames → freeze permanente → MCRA nunca actualiza.
+        self._fading_change_db = float(np.clip(v, 1.0, 10.0))
 
     def set_fading_freeze_ms(self, v: float) -> None:
         self._fading_freeze_ms = float(np.clip(v, 100.0, 500.0))
