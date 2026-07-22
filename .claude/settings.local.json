@@ -173,7 +173,12 @@
       "Bash(.venv/Scripts/python.exe tools/gen_manual_pdf.py MANUAL_EN.md MANUAL_RadioNoiseKiller_v1.8.1_EN.pdf)",
       "Bash(.venv/Scripts/python.exe *)",
       "Bash(git commit *)",
-      "PowerShell($p = Start-Process -FilePath \"dist_v181\\\\RadioNoiseKiller\\\\RadioNoiseKiller.exe\" -PassThru; Start-Sleep -Seconds 10; if \\(-not $p.HasExited\\) { Write-Output \"VIVO tras 10s \\(PID $\\($p.Id\\)\\) - OK\"; Stop-Process -Id $p.Id -Force; Write-Output \"proceso terminado\" } else { Write-Output \"MURIO con exit code $\\($p.ExitCode\\)\" })"
+      "PowerShell($p = Start-Process -FilePath \"dist_v181\\\\RadioNoiseKiller\\\\RadioNoiseKiller.exe\" -PassThru; Start-Sleep -Seconds 10; if \\(-not $p.HasExited\\) { Write-Output \"VIVO tras 10s \\(PID $\\($p.Id\\)\\) - OK\"; Stop-Process -Id $p.Id -Force; Write-Output \"proceso terminado\" } else { Write-Output \"MURIO con exit code $\\($p.ExitCode\\)\" })",
+      "Bash(PYTHONIOENCODING=utf-8 QT_QPA_PLATFORM=offscreen .venv/Scripts/python.exe -c ' *)",
+      "Bash(PYTHONIOENCODING=utf-8 grep -n \"iguala más\\\\|Saturación tanh\\\\|captura más impulsos\\\\|frituras y crackles\\\\|dispara el freeze\\\\|se eleva el piso en la zona\\\\|pitidos fantasma\\\\|boost ancho\" src/i18n_en.py)",
+      "Bash(export PYTHONIOENCODING=utf-8)",
+      "Bash(QT_QPA_PLATFORM=offscreen .venv/Scripts/python.exe tests/test_integration.py)",
+      "PowerShell($p = Start-Process -FilePath \"dist_v182\\\\RadioNoiseKiller\\\\RadioNoiseKiller.exe\" -PassThru; Start-Sleep -Seconds 10; if \\(-not $p.HasExited\\) { Write-Output \"VIVO tras 10s \\(PID $\\($p.Id\\)\\) - OK\"; Stop-Process -Id $p.Id -Force } else { Write-Output \"MURIO exit $\\($p.ExitCode\\)\" })"
     ]
   }
 }
