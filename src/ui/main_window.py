@@ -136,6 +136,7 @@ class MainWindow(QMainWindow):
         self._tabs.currentChanged.connect(self._on_tab_changed)
 
         root.addWidget(self._tabs)
+        root.addSpacing(10)   # separa Grabar/Mute del botón ACTIVAR
         root.addWidget(self._build_start_button())
 
         self._status_bar = QStatusBar()
@@ -535,7 +536,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self._vu_in,  alignment=Qt.AlignLeft)
         layout.addWidget(self._vu_out, alignment=Qt.AlignLeft)
         self._label_latency = QLabel(tr("Latencia: --"))
-        self._label_latency.setAlignment(Qt.AlignRight)
+        self._label_latency.setAlignment(Qt.AlignLeft)
         layout.addWidget(self._label_latency)
 
         # default = valor de fábrica (menú click derecho); la posición inicial
