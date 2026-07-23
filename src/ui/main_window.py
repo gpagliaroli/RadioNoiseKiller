@@ -1055,6 +1055,9 @@ class MainWindow(QMainWindow):
     def _on_mode_changed(self, idx: int) -> None:
         mode: RadioMode = self._combo_mode.itemData(idx)
         self._pipeline.set_mode(mode)
+        # Habilita/deshabilita los sliders de bandpass AM vs SSB según el modo
+        if hasattr(self, "_adv_audio_tab"):
+            self._adv_audio_tab.refresh_enabled_states()
         self._schedule_save()
 
     def _on_agc_changed(self, idx: int) -> None:

@@ -183,6 +183,27 @@ def test_leveler_continuous_checkbox():
     print("Nivelador: casilla continuo + gating         OK")
 
 
+def test_bandpass_sliders_gated_by_mode():
+    """Los sliders de bandpass AM se habilitan solo en modo AM y los SSB solo en SSB
+    (UX). El slider de orden es común a ambos. Cambiar el modo refresca el estado."""
+    from config import RadioMode
+    w = _win()
+    aud = w._adv_audio_tab
+    w._config.dsp.bandpass_pre_enabled = True   # asegurar bandpass activo
+
+    _set_combo(w._combo_mode, RadioMode.AM)
+    assert aud._s_am_lo._slider.isEnabled(),      "AM lo deshabilitado en modo AM"
+    assert aud._s_am_hi._slider.isEnabled(),      "AM hi deshabilitado en modo AM"
+    assert not aud._s_ssb_lo._slider.isEnabled(), "SSB lo habilitado en modo AM"
+    assert aud._s_order._slider.isEnabled(),      "orden (común) deshabilitado"
+
+    _set_combo(w._combo_mode, RadioMode.SSB)
+    assert not aud._s_am_lo._slider.isEnabled(),  "AM lo habilitado en modo SSB"
+    assert aud._s_ssb_lo._slider.isEnabled(),     "SSB lo deshabilitado en modo SSB"
+    assert aud._s_ssb_hi._slider.isEnabled(),     "SSB hi deshabilitado en modo SSB"
+    print("Bandpass AM/SSB gateado por modo           OK")
+
+
 def test_bandpass_out_requires_post_and_independent():
     """Los sliders de salida independiente requieren bandpass post + la casilla."""
     w = _win()
@@ -476,6 +497,7 @@ if __name__ == "__main__":
     test_canceller_subcontrols_require_noise()
     test_voice_leveler_requires_noise()
     test_leveler_continuous_checkbox()
+    test_bandpass_sliders_gated_by_mode()
     test_bandpass_out_requires_post_and_independent()
     test_refresh_from_config_restores_checkboxes()
     test_window_title_reflects_preset()

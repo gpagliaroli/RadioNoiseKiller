@@ -91,12 +91,21 @@ class AdvancedAudioTab(QWidget):
         """Habilita/deshabilita controles según el estado de los módulos en Módulos Activos."""
         dsp = self._config.dsp
         bp = dsp.bandpass_pre_enabled or dsp.bandpass_post_enabled
-        for s in (self._s_am_lo, self._s_am_hi, self._s_ssb_lo, self._s_ssb_hi, self._s_order):
-            s.set_enabled(bp)
+        # Los límites AM/SSB se habilitan solo para el modo activo (ayuda de UX:
+        # se ve de un vistazo cuáles aplican). El orden del filtro es común a ambos.
+        is_am  = dsp.mode == RadioMode.AM
+        is_ssb = dsp.mode == RadioMode.SSB
+        self._s_order.set_enabled(bp)
+        for s in (self._s_am_lo, self._s_am_hi):
+            s.set_enabled(bp and is_am)
+        for s in (self._s_ssb_lo, self._s_ssb_hi):
+            s.set_enabled(bp and is_ssb)
         self._chk_bp_out.setEnabled(dsp.bandpass_post_enabled)
-        for s in (self._s_out_am_lo, self._s_out_am_hi,
-                  self._s_out_ssb_lo, self._s_out_ssb_hi):
-            s.set_enabled(dsp.bandpass_post_enabled and dsp.bandpass_out_independent)
+        out_on = dsp.bandpass_post_enabled and dsp.bandpass_out_independent
+        for s in (self._s_out_am_lo, self._s_out_am_hi):
+            s.set_enabled(out_on and is_am)
+        for s in (self._s_out_ssb_lo, self._s_out_ssb_hi):
+            s.set_enabled(out_on and is_ssb)
         for s in (self._s_presence_freq, self._s_presence, self._s_presence_q,
                   self._s_body_freq, self._s_body):
             s.set_enabled(dsp.presence_enabled)
