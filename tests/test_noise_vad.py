@@ -136,19 +136,37 @@ def ld_mean(p):
 
 steady = (rng.standard_normal(600 * HOP).reshape(600, HOP) * 0.01).astype(np.float32)
 
-# 5. Fade brusco no contamina lambda_d con fading comp ON
+# 5. Fading VAD-smart: el freeze dispara solo con VOZ (desvanecimiento de señal),
+#    NO ante un cambio de ruido de banda ancha (fix del vaivén con ruido ciclico).
+# 5a. Cambio de RUIDO sin voz: comp ON no congela -> sigue el ruido como comp OFF.
 p_on, p_off = make_profiler(True), make_profiler(False)
 for i in range(300):
     p_on.process(steady[i]); p_off.process(steady[i])
 ld_pre_on, ld_pre_off = ld_mean(p_on), ld_mean(p_off)
-faded = (steady[300:315] * 0.2).astype(np.float32)       # caida de -14 dB
+faded = (steady[300:315] * 0.2).astype(np.float32)       # -14 dB de ruido puro (sin voz)
+froze = False
 for i in range(15):
     p_on.process(faded[i]); p_off.process(faded[i])
+    froze = froze or p_on.fading_active
+check("cambio de ruido sin voz: comp ON NO congela (vp bajo)", not froze)
 drift_on  = abs(10 * np.log10(ld_mean(p_on)  / ld_pre_on))
 drift_off = abs(10 * np.log10(ld_mean(p_off) / ld_pre_off))
-check("fade -14dB, comp ON: drift lambda_d < 0.2 dB (%.3f)" % drift_on, drift_on < 0.2)
-check("fade -14dB: comp ON protege mas que OFF (%.2f vs %.2f dB)" % (drift_on, drift_off),
-      drift_on < drift_off)
+check("cambio de ruido sin voz: comp ON sigue el ruido como OFF (%.2f ~ %.2f dB)"
+      % (drift_on, drift_off), abs(drift_on - drift_off) < 0.5)
+
+# 5b. Desvanecimiento con VOZ presente: comp ON SI congela (protege el estimador).
+p_v = make_profiler(True)
+for i in range(250):
+    p_v.set_agc_gain(1.0); p_v.process(nz[i])
+for i in range(40):                                      # voz clara -> vp alto
+    p_v.set_agc_gain(1.0); p_v.process(vx[i] + nz[300 + i])
+vp_before = p_v.voice_prob_sq
+froze_v = False
+for i in range(15):                                      # fade -14 dB de voz+ruido
+    fs = ((vx[40 + i] + nz[340 + i]) * 0.2).astype(np.float32)
+    p_v.set_agc_gain(1.0); p_v.process(fs)
+    froze_v = froze_v or p_v.fading_active
+check("voz presente (vp=%.2f) + fade: comp ON SI congela" % vp_before, froze_v)
 
 # 6. Impulso aislado (+20 dB, 1 frame) no contamina
 p5 = make_profiler(True)

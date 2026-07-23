@@ -73,6 +73,9 @@ class NoiseProfiler:
     # estos dos quedan fijos:
     _FADING_EMA_ALPHA:    float = 0.80  # suavizado de energía para detección (TC≈4 frames)
     _FADING_BETA_RELEASE: float = 0.45  # beta DD en modo fading (release más rápido que 0.80)
+    _FADING_VP_THR:       float = 0.40  # vp mínimo para congelar: distingue desvanecimiento de
+                                        # señal (voz presente → congela) de subida de ruido de
+                                        # banda ancha (vp bajo → NO congela, deja seguir el ruido)
 
     # VAD frame-level (energy minimum tracker)
     # Dos trackers paralelos: uno lento (OMLSA) y uno rápido (squelch).
@@ -669,7 +672,14 @@ class NoiseProfiler:
                 ema = self._fading_energy_ema
                 if ema > 1e-15:
                     change_db = abs(10.0 * np.log10(max(frame_e, 1e-15) / ema))
-                    if change_db >= self._fading_change_db:
+                    # VAD-smart: solo congelar si hay VOZ presente (desvanecimiento de
+                    # señal). Una subida/bajada del ruido de banda ancha da vp bajo →
+                    # NO congelar, para que el estimador SIGA el ruido en vez de quedar
+                    # desfasado (antes congelaba en cada subida de ruido → vaivén).
+                    # Usa el vp del frame anterior (la presencia de voz no cambia frame
+                    # a frame; el freeze ya trabaja con lag y la cuarentena cubre el onset).
+                    if (change_db >= self._fading_change_db
+                            and self._voice_prob >= self._FADING_VP_THR):
                         self._mcra_freeze_count = self._fading_freeze_frames
                         # Marcado retroactivo: el onset del fade ya está en la
                         # cuarentena (la detección lo ve 1-2 frames tarde por el
