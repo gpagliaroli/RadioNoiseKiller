@@ -37,7 +37,7 @@ class DSPConfig:
     noise_mode:   str   = "static"  # "static" = perfil manual | "mcra" = adaptativo continuo
     noise_alpha:  float = 0.7   # reducción Wiener en bins de ruido puro (0=off, 0.7=70%, 1.0=máximo)
     noise_floor:  float = 0.1   # ganancia mínima por bin (≥0.05 para evitar gorgojeo con floor bajo)
-    noise_smooth:    float = 0.97   # beta_release DD asimétrico (0.94-0.98=sin gorgojeo, bajo=reactivo)
+    noise_smooth:    float = 0.96   # Anti-gorgojeo: β DD + suavizado p_speech (útil 96-98%; ver noise_profiler)
     noise_attack:    float = 0.80   # beta_fast DD asimétrico: bajo=ataque rápido en bins de voz (0.50-0.92)
     squelch_enabled:   bool  = False
     squelch_threshold: float = 0.15  # voice_prob mínimo para gain=1.0 (0.10=sensible, 0.40=selectivo)

@@ -121,7 +121,7 @@ class NoiseProfiler:
         # Parámetros controlados por sliders
         self._alpha:     float = 0.7
         self._floor:     float = 0.1
-        self._beta:      float = 0.97
+        self._beta:      float = 0.96
         self._beta_fast: float = 0.80
         # Suavizado de p_speech acoplado al slider Anti-gorgojeo (ver set_smooth):
         # el β temporal (rango 90-99%) tiene poco efecto audible; el suavizado de la
