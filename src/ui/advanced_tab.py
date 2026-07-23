@@ -1061,9 +1061,10 @@ class AdvancedCancellerTab(QWidget):
             color_vp = "#4fc3f7" if vp > 0.5 else "#fff176" if vp > 0.15 else "#888"
             self._lbl_noise_vp.setStyleSheet(f"color: {color_vp}; font-weight: bold;")
 
-        # Fading compensation indicator
+        # Fading compensation indicator — pop con latch: enciende FADE si hubo freeze
+        # desde el último poll (el freeze de ~200ms se perdía entre polls de 500ms).
         if self._config.dsp.noise_fading_comp and self._pipeline.is_running():
-            if self._pipeline.fading_active:
+            if self._pipeline.pop_fading_active():
                 self._lbl_fading.setText(tr("FADE"))
                 self._lbl_fading.setStyleSheet("color: #ffb74d; font-weight: bold;")
             else:

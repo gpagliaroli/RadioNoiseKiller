@@ -530,6 +530,10 @@ class ProcessingPipeline:
     def fading_active(self) -> bool:
         return self._noise_profiler.fading_active
 
+    def pop_fading_active(self) -> bool:
+        """Indicador FADE con latch: True si hubo freeze desde la última lectura."""
+        return self._noise_profiler.pop_fading_active()
+
     @property
     def pitch_f0(self) -> "float | None":
         return self._noise_profiler.pitch_f0

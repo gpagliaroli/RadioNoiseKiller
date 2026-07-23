@@ -168,6 +168,14 @@ for i in range(15):                                      # fade -14 dB de voz+ru
     froze_v = froze_v or p_v.fading_active
 check("voz presente (vp=%.2f) + fade: comp ON SI congela" % vp_before, froze_v)
 
+# Latch del indicador FADE: si el freeze termina entre dos polls de la UI (freeze
+# ~200ms vs poll 500ms), pop_fading_active igual lo reporta una vez (y se resetea).
+p_l = make_profiler(True)
+p_l._fading_active = True; p_l._fading_latch = True    # hubo freeze...
+p_l._fading_active = False                             # ...que ya termino
+check("latch FADE: pop=True tras freeze aunque fading_active=False", p_l.pop_fading_active() is True)
+check("latch FADE: segunda lectura se resetea a False", p_l.pop_fading_active() is False)
+
 # 6. Impulso aislado (+20 dB, 1 frame) no contamina
 p5 = make_profiler(True)
 for i in range(300):

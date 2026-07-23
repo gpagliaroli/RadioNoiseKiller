@@ -163,6 +163,9 @@ class NoiseProfiler:
         self._fading_energy_ema:   float | None = None  # EMA de energía de frame
         self._mcra_freeze_count:   int   = 0    # frames restantes de congelado MCRA
         self._fading_active:       bool  = False # True mientras hay evento de fading
+        self._fading_latch:        bool  = False # latch para la UI: True si hubo freeze
+                                                 # desde la última lectura (el freeze de
+                                                 # ~200ms se pierde entre polls de 500ms)
 
         # Ventana de seguimiento de mínimos MCRA (ajustable, "Reactividad del piso").
         # Ventana total = B×M frames; M más chico = ventana más corta = el piso reacciona
@@ -277,6 +280,7 @@ class NoiseProfiler:
         self._fading_energy_ema  = None
         self._mcra_freeze_count  = 0
         self._fading_active      = False
+        self._fading_latch       = False
         if self._mode == "mcra":
             self._reset_mcra()
 
@@ -689,6 +693,7 @@ class NoiseProfiler:
                 if self._mcra_freeze_count > 0:
                     self._mcra_freeze_count -= 1
                     self._fading_active = True
+                    self._fading_latch  = True   # visible para la UI aunque el poll llegue tarde
                 else:
                     self._fading_active = False
                 self._fading_energy_ema = (self._FADING_EMA_ALPHA * ema
@@ -961,6 +966,16 @@ class NoiseProfiler:
     def fading_active(self) -> bool:
         """True si hay un evento de fading activo (MCRA congelado por cambio brusco de energía)."""
         return self._fading_active
+
+    def pop_fading_active(self) -> bool:
+        """Para el indicador FADE de la UI: True si hubo freeze desde la última
+        lectura (lee+resetea el latch). Sin esto, un freeze de ~200ms se pierde
+        entre polls de 500ms y el indicador parpadea o no aparece. Read+reset sin
+        lock a propósito (invariante 7: no vale contención en el hilo de audio por
+        un indicador de diagnóstico)."""
+        v = self._fading_latch or self._fading_active
+        self._fading_latch = False
+        return v
 
     @property
     def pitch_f0(self) -> "float | None":
