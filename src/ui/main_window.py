@@ -405,22 +405,29 @@ class MainWindow(QMainWindow):
         mode_row.addStretch()
         layout.addLayout(mode_row)
 
+        # Botones compactos (ancho fijo + stretch): no se estiran a toda la fila.
+        # 1ra columna (Aprender/Guardar) y 2da (Borrar/Perfiles) alineadas entre filas.
+        _BTN_W1, _BTN_W2 = 170, 120
         btn_row = QHBoxLayout()
         self._btn_learn = QPushButton(tr("⏺  Aprender ruido"))
         self._btn_learn.setCheckable(True)
         self._btn_learn.setEnabled(False)
+        self._btn_learn.setFixedWidth(_BTN_W1)
         self._btn_learn.toggled.connect(self._on_learn_toggled)
         btn_row.addWidget(self._btn_learn)
 
         self._btn_clear_noise = QPushButton(tr("Borrar perfil"))
         self._btn_clear_noise.setEnabled(False)
+        self._btn_clear_noise.setFixedWidth(_BTN_W2)
         self._btn_clear_noise.clicked.connect(self._on_clear_noise_profile)
         btn_row.addWidget(self._btn_clear_noise)
+        btn_row.addStretch()
         layout.addLayout(btn_row)
 
         # Perfiles de ruido nombrados (guardar/cargar perfiles de referencia)
         prof_row = QHBoxLayout()
         self._btn_save_profile = QPushButton(tr("💾  Guardar perfil..."))
+        self._btn_save_profile.setFixedWidth(_BTN_W1)
         self._btn_save_profile.setToolTip(
             tr("Guarda el perfil de ruido actual con un nombre, para reutilizarlo\n"
                "sin volver a aprenderlo (p. ej. \"40m casa\", \"20m campo\").")
@@ -428,9 +435,11 @@ class MainWindow(QMainWindow):
         self._btn_save_profile.clicked.connect(self._on_save_noise_profile)
         prof_row.addWidget(self._btn_save_profile)
         self._btn_load_profile = QPushButton(tr("📁  Perfiles..."))
+        self._btn_load_profile.setFixedWidth(_BTN_W2)
         self._btn_load_profile.setToolTip(tr("Cargar, renombrar o eliminar perfiles de ruido guardados."))
         self._btn_load_profile.clicked.connect(self._on_manage_noise_profiles)
         prof_row.addWidget(self._btn_load_profile)
+        prof_row.addStretch()
         layout.addLayout(prof_row)
 
         # Nombre del perfil nombrado cargado (oculto si el perfil es aprendido a mano o no hay)
