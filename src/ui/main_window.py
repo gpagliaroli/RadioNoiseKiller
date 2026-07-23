@@ -1716,6 +1716,9 @@ class MainWindow(QMainWindow):
             QSlider::handle:horizontal:disabled {
                 background: #555;
             }
+            QSlider::sub-page:horizontal:disabled {
+                background: #4a4a4a;
+            }
             QPushButton {
                 background-color: #0f3460;
                 color: #e0e0e0;
