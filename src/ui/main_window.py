@@ -405,42 +405,37 @@ class MainWindow(QMainWindow):
         mode_row.addStretch()
         layout.addLayout(mode_row)
 
-        # Botones compactos (ancho fijo + stretch): no se estiran a toda la fila.
-        # 1ra columna (Aprender/Guardar) y 2da (Borrar/Perfiles) alineadas entre filas.
-        _BTN_W1, _BTN_W2 = 170, 120
+        # Todos los botones del perfil en UNA fila compacta (ancho fijo + stretch).
         btn_row = QHBoxLayout()
         self._btn_learn = QPushButton(tr("⏺  Aprender ruido"))
         self._btn_learn.setCheckable(True)
         self._btn_learn.setEnabled(False)
-        self._btn_learn.setFixedWidth(_BTN_W1)
+        self._btn_learn.setFixedWidth(150)
         self._btn_learn.toggled.connect(self._on_learn_toggled)
         btn_row.addWidget(self._btn_learn)
 
         self._btn_clear_noise = QPushButton(tr("Borrar perfil"))
         self._btn_clear_noise.setEnabled(False)
-        self._btn_clear_noise.setFixedWidth(_BTN_W2)
+        self._btn_clear_noise.setFixedWidth(110)
         self._btn_clear_noise.clicked.connect(self._on_clear_noise_profile)
         btn_row.addWidget(self._btn_clear_noise)
-        btn_row.addStretch()
-        layout.addLayout(btn_row)
 
-        # Perfiles de ruido nombrados (guardar/cargar perfiles de referencia)
-        prof_row = QHBoxLayout()
         self._btn_save_profile = QPushButton(tr("💾  Guardar perfil..."))
-        self._btn_save_profile.setFixedWidth(_BTN_W1)
+        self._btn_save_profile.setFixedWidth(150)
         self._btn_save_profile.setToolTip(
             tr("Guarda el perfil de ruido actual con un nombre, para reutilizarlo\n"
                "sin volver a aprenderlo (p. ej. \"40m casa\", \"20m campo\").")
         )
         self._btn_save_profile.clicked.connect(self._on_save_noise_profile)
-        prof_row.addWidget(self._btn_save_profile)
+        btn_row.addWidget(self._btn_save_profile)
+
         self._btn_load_profile = QPushButton(tr("📁  Perfiles..."))
-        self._btn_load_profile.setFixedWidth(_BTN_W2)
+        self._btn_load_profile.setFixedWidth(120)
         self._btn_load_profile.setToolTip(tr("Cargar, renombrar o eliminar perfiles de ruido guardados."))
         self._btn_load_profile.clicked.connect(self._on_manage_noise_profiles)
-        prof_row.addWidget(self._btn_load_profile)
-        prof_row.addStretch()
-        layout.addLayout(prof_row)
+        btn_row.addWidget(self._btn_load_profile)
+        btn_row.addStretch()
+        layout.addLayout(btn_row)
 
         # Nombre del perfil nombrado cargado (oculto si el perfil es aprendido a mano o no hay)
         self._label_profile_name = QLabel("")
@@ -473,16 +468,21 @@ class MainWindow(QMainWindow):
         self._lbl_noise_db = QLabel("—")
         self._lbl_noise_db.setStyleSheet("color: #888; font-weight: bold;")
         db_row.addWidget(self._lbl_noise_db)
-        db_row.addSpacing(30)
+        db_row.addStretch()
+        layout.addLayout(db_row)
+
+        # Preview centrado (checkbox + texto), en la misma columna que los sliders
         self._chk_noise_preview = QCheckBox(tr("Preview: escuchar ruido eliminado"))
         self._chk_noise_preview.setToolTip(
             tr("Emite el ruido que está siendo restado.\n"
             "Si suena como voz, bajar la Intensidad.")
         )
         self._chk_noise_preview.toggled.connect(self._pipeline.set_noise_preview)
-        db_row.addWidget(self._chk_noise_preview)
-        db_row.addStretch()
-        layout.addLayout(db_row)
+        prev_row = QHBoxLayout()
+        prev_row.addStretch()
+        prev_row.addWidget(self._chk_noise_preview)
+        prev_row.addStretch()
+        layout.addLayout(prev_row)
 
         # Post-filtro espectral: 2do control más impactante tras Intensidad. Movido
         # de Avanzada a Principal para el usuario casual. El slider AUTO-ACTIVA el
