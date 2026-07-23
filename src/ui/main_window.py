@@ -29,10 +29,11 @@ from utils import settings_path, presets_dir, noise_profiles_dir
 _COMBO_WARN_STYLE = "QComboBox { border: 1px solid #ef5350; }"
 
 # Ancho común de los combos de la pestaña Principal (Entrada/Salida/Canal/Modo/AGC/
-# Modo ruido) y de los VU meters, para que queden alineados y del mismo largo.
-_COMBO_W = 360          # ancho fijo del combo
+# Modo ruido) y de los VU meters, para que terminen donde termina la barra del slider.
+# La barra del SliderRow termina en label(160) + spacing(8) + slider(432) = 600.
 _ROW_LABEL_W = 70       # ancho de la etiqueta de la fila (columna izquierda)
-_FIELD_W = _ROW_LABEL_W + _COMBO_W   # extensión total etiqueta+combo (para los VU)
+_FIELD_W = 600          # fin de la barra del slider (ancho de los VU, que arrancan en x=0)
+_COMBO_W = _FIELD_W - _ROW_LABEL_W - 8   # ancho del combo para que termine en _FIELD_W
 
 
 class MainWindow(QMainWindow):
