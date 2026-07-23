@@ -226,7 +226,12 @@ p8.set_hf_boost(-1.0); check("clamp hf_boost lo (0.0)", p8._hf_boost == 0.0)
 p8.set_hf_boost(1.0)
 c8 = p8._hf_boost_curve
 check("hf_boost: 1.0 debajo de 2.5kHz (bin 40 = 2000Hz)", abs(c8[40] - 1.0) < 1e-6)
-check("hf_boost: +100% arriba de 4.5kHz (bin 100 = 5000Hz)", abs(c8[100] - 2.0) < 1e-6)
+# Rampa logaritmica: 1 octava (5kHz) = 1+boost; sigue creciendo por encima (no topa)
+check("hf_boost: 1 octava @ 5kHz = 2.0 (bin 100)", abs(c8[100] - 2.0) < 1e-6)
+check("hf_boost log: monotona creciente sobre el corte (3<4<5<6 kHz)",
+      c8[60] < c8[80] < c8[100] < c8[120])
+check("hf_boost log: sigue creciendo por encima de 5kHz (no topa como la lineal)",
+      c8[120] > c8[100] + 0.1)
 p8.reset(240)
 check("hf_boost: curva redimensionada en reset (inv 9)", len(p8._hf_boost_curve) == p8._nb)
 

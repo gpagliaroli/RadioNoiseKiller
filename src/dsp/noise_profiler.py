@@ -376,13 +376,17 @@ class NoiseProfiler:
         return max(1, round(self._fading_freeze_ms / hop_ms))
 
     def _build_hf_boost_curve(self) -> np.ndarray:
-        """Factor de over-sustracción por bin: 1.0 debajo de 2.5 kHz, rampa lineal
-        hasta (1 + hf_boost) en 4.5 kHz y plano por encima. Multiplica noise_mag
-        en el cálculo de ganancia → más supresión en agudos."""
+        """Factor de over-sustracción por bin: 1.0 debajo de 2.5 kHz y rampa
+        LOGARÍTMICA por encima — cada octava sobre 2.5 kHz suma hf_boost al factor
+        (1 octava = 5 kHz → 1+hf_boost; 2 octavas = 10 kHz → 1+2·hf_boost). Así el
+        refuerzo crece progresivamente cuanto más alta la frecuencia (donde la
+        energía del ruido es menor), sin tope duro dentro de la banda. Cap a 2.5
+        octavas (~14 kHz) para acotar cerca de Nyquist. Multiplica noise_mag en el
+        cálculo de ganancia → más supresión en agudos."""
         freq_per_bin = 48000.0 / self._fft_n
         freqs = np.arange(self._nb, dtype=np.float64) * freq_per_bin
-        ramp = np.clip((freqs - 2500.0) / (4500.0 - 2500.0), 0.0, 1.0)
-        return (1.0 + self._hf_boost * ramp).astype(np.float32)
+        octaves = np.clip(np.log2(np.maximum(freqs, 1.0) / 2500.0), 0.0, 2.5)
+        return (1.0 + self._hf_boost * octaves).astype(np.float32)
 
     def set_hf_boost(self, v: float) -> None:
         """Refuerzo del piso en agudos (0 = off, 1.5 = +150% en el tope de la rampa).
