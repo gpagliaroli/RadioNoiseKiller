@@ -371,8 +371,8 @@ CATALOG = {
     "Anti-gorgojeo (β):": "Anti-warble (β):",
     "reactivo": "reactive",
     "estable": "stable",
-    "  ↳ Release (retorno al ruido), pasos de 0.1% para calibrar fino. 99%≈1s de release — puede dejar cola de ruido tras la voz.":
-        "  ↳ Release (return to noise), 0.1% steps for fine tuning. 99%≈1s release — may leave a noise tail after speech.",
+    "  ↳ Estabiliza la clasificación voz/ruido por bin (menos ruido musical de fondo) y el release del cancelador. Subir si se escucha 'gorgojeo'/pitidos de fondo; 99% deja una cola de ruido tras la voz.":
+        "  ↳ Stabilizes the per-bin voice/noise classification (less background musical noise) and the canceller release. Raise it if you hear 'warble'/background birdies; 99% leaves a noise tail after speech.",
     "Velocidad ataque:": "Attack speed:",
     "Reactividad del piso:": "Floor reactivity:",
     "Refuerzo en agudos:": "HF floor boost:",

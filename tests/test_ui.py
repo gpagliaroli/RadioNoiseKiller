@@ -206,8 +206,10 @@ def test_bandpass_sliders_gated_by_mode():
 
 def test_bandpass_out_requires_post_and_independent():
     """Los sliders de salida independiente requieren bandpass post + la casilla."""
+    from config import RadioMode
     w = _win()
     aud = w._adv_audio_tab
+    _set_combo(w._combo_mode, RadioMode.AM)   # chequeamos los sliders de salida AM
 
     w._chk_bandpass_post.setChecked(True)
     aud._chk_bp_out.setChecked(True)

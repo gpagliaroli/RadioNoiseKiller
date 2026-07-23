@@ -123,6 +123,10 @@ class NoiseProfiler:
         self._floor:     float = 0.1
         self._beta:      float = 0.97
         self._beta_fast: float = 0.80
+        # Suavizado de p_speech acoplado al slider Anti-gorgojeo (ver set_smooth):
+        # el β temporal (rango 90-99%) tiene poco efecto audible; el suavizado de la
+        # clasificación voz/ruido por bin es el que realmente baja el ruido musical.
+        self._ps_smooth: float = self._PS_SMOOTH
 
         # Estado DD inter-frame
         self._gain_prev:     np.ndarray | None = None
@@ -346,6 +350,11 @@ class NoiseProfiler:
 
     def set_smooth(self, smooth: float) -> None:
         self._beta = float(np.clip(smooth, 0.0, 0.99))
+        # El slider Anti-gorgojeo (90-99%) también dosifica el suavizado de p_speech:
+        # 0.90 → 0 (sin suavizado, más gorgojeo), 0.99 → 0.85 (máximo). Default
+        # 0.97 → ~0.66. Es el mecanismo con efecto audible fuerte.
+        pct = float(np.clip((self._beta - 0.90) / 0.09, 0.0, 1.0))
+        self._ps_smooth = pct * 0.85
 
     def set_attack(self, attack: float) -> None:
         self._beta_fast = float(np.clip(attack, 0.0, 0.99))
@@ -886,8 +895,8 @@ class NoiseProfiler:
                     or self._p_speech_prev.shape != p_speech.shape):
                 self._p_speech_prev = p_speech
             else:
-                p_speech = (self._PS_SMOOTH * self._p_speech_prev
-                            + (1.0 - self._PS_SMOOTH) * p_speech).astype(np.float32)
+                p_speech = (self._ps_smooth * self._p_speech_prev
+                            + (1.0 - self._ps_smooth) * p_speech).astype(np.float32)
                 self._p_speech_prev = p_speech
 
             gain_out = (gain_dd ** p_speech) * (_eff_floor ** (1.0 - p_speech))

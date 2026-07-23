@@ -264,7 +264,7 @@ check("hf_boost: curva redimensionada en reset (inv 9)", len(p8._hf_boost_curve)
 # Anti-gorgojeo: el suavizado temporal de p_speech reduce el salto de ganancia
 # frame a frame (ruido musical). Comparar var del salto con smooth 0.6 vs 0.0.
 def _red_jump_var(smooth):
-    p = NoiseProfiler(HOP); p.set_mode("mcra"); p._PS_SMOOTH = smooth
+    p = NoiseProfiler(HOP); p.set_mode("mcra"); p._ps_smooth = smooth
     nzp = (rng.standard_normal(400 * HOP).reshape(400, HOP) * 0.02).astype(np.float32)
     for i in range(200):
         p.process(nzp[i])
@@ -276,6 +276,11 @@ v_sm = _red_jump_var(0.6)
 v_no = _red_jump_var(0.0)
 check("suavizado p_speech reduce el salto de ganancia frame a frame (%.4f < %.4f)"
       % (v_sm, v_no), v_sm < v_no)
+# El slider Anti-gorgojeo (set_smooth) dosifica _ps_smooth: 0.90->0, 0.99->0.85
+pc = NoiseProfiler(HOP)
+pc.set_smooth(0.90); check("beta 0.90 -> ps_smooth 0", abs(pc._ps_smooth - 0.0) < 1e-6)
+pc.set_smooth(0.99); check("beta 0.99 -> ps_smooth 0.85", abs(pc._ps_smooth - 0.85) < 1e-6)
+pc.set_smooth(0.97); check("beta 0.97 -> ps_smooth ~0.66", abs(pc._ps_smooth - 0.66) < 0.02)
 # reset limpia el estado por-bin (invariante 9: sin shape mismatch tras cambiar hop)
 p9 = NoiseProfiler(480); p9.set_mode("mcra")
 for i in range(30):

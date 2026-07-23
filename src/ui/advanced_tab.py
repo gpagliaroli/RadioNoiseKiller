@@ -755,7 +755,7 @@ class AdvancedCancellerTab(QWidget):
         self._s_noise_smooth._val_lbl.setFixedWidth(110)
         self._s_noise_smooth.valueChanged.connect(self._pipeline.set_noise_smooth)
         layout.addWidget(self._s_noise_smooth)
-        layout.addWidget(_note(tr("  ↳ Release (retorno al ruido), pasos de 0.1% para calibrar fino. 99%≈1s de release — puede dejar cola de ruido tras la voz.")))
+        layout.addWidget(_note(tr("  ↳ Estabiliza la clasificación voz/ruido por bin (menos ruido musical de fondo) y el release del cancelador. Subir si se escucha 'gorgojeo'/pitidos de fondo; 99% deja una cola de ruido tras la voz.")))
 
         self._s_noise_attack = SliderRow(
             tr("Velocidad ataque:"),
