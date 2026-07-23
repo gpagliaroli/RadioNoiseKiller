@@ -632,6 +632,50 @@ aviso −9993 quedó **validado en hardware real por el usuario** (cruce WASAPI+
 deshabilitado + aviso) además de los tests `test_device_combo.py` + `test_ui.py`. Manuales ES+EN
 documentan el requisito de misma API en los consejos de dispositivos.
 
+Cambios post-v1.8.2 (pendiente de release — apuntan a v1.9 por el volumen; TODOS validados en el
+aire por el usuario, en secuencia atacando el fading de ruido cíclico en onda corta):
+- **Reactividad del piso de ruido (ventana MCRA ajustable):** el MCRA seguía el mínimo del ruido en
+  una ventana fija de ~800 ms y con ruido cíclico rápido llegaba tarde a las subidas → en la subida
+  suprimía de menos (ruido se cuela), al bajar/llegar la voz suprimía de más (se come la voz) →
+  vaivén. La ventana `B×M` pasó de constante a ajustable: `M` se recalcula desde `noise_mcra_window_ms`
+  (slider 250–800 ms, default 800 = comportamiento previo) y el hop. Ventana corta = el piso reacciona
+  rápido. Slider "Reactividad del piso" en Avanzada Cancelador (solo Adaptativo). Recalculo por hop en
+  reset (inv 9), clamp == slider (inv 1). Test en test_noise_vad (ventana 250 sigue una subida de
+  +14 dB en 38 frames vs 103 con 800).
+- **Refuerzo del piso en agudos (over-sustracción HF, rampa logarítmica):** en >3 kHz la energía del
+  ruido es baja y el min-tracking queda anclado en mínimos espurios → el piso HF no sube y el siseo se
+  cuela. `noise_hf_boost` (slider 0–150%) multiplica el `noise_mag` **efectivo** (no el estimado
+  almacenado) por una curva que crece por octava sobre 2.5 kHz: `1 + hf_boost·log2(f/2500)` (cap 2.5
+  oct) → más supresión progresiva cuanto más alta la frecuencia, sin tope duro (a diferencia de la
+  rampa lineal inicial). Se aplica en `process()` tras obtener `noise_mag`. Combinar con Excitador/
+  Presencia para reponer brillo. Slider "Refuerzo en agudos" en Avanzada Cancelador. Curva rebuild
+  en reset (inv 9). **Efecto notorio validado.**
+- **Detector de fading VAD-smart:** el freeze no distinguía "se desvaneció la señal" de "subió el
+  ruido" (ambos son cambios de energía) y congelaba en los dos → ante ruido que sube, congelar es lo
+  contrario de lo que hace falta. Ahora el freeze se **gatea por el VAD** (`voice_prob` del frame
+  anterior ≥ `_FADING_VP_THR=0.40`): desvanecimiento de señal (voz presente) congela como antes;
+  subida/bajada de ruido de banda ancha (vp bajo) NO congela → el estimador SIGUE el ruido. Coincide
+  con la intención original del feature. Automático, sin control nuevo. **Destapó** que la deriva ~1 dB
+  del nivelador con ruido de banda ya existía con fading OFF (default): el freeze viejo la enmascaraba
+  (congelaba λ_d → snr_post plano → peakiness baja → vp bajo); el check de test_integration se aflojó
+  0.5 → 1.5 dB con esa explicación. Tests 5a (ruido sin voz → no congela) y 5b (voz + fade → sí congela).
+  **Regla: la lógica del fading debe distinguir señal de ruido por el VAD, no solo por energía.**
+- **Latch del indicador FADE:** el freeze dura ~200 ms pero el timer de stats de la UI refresca cada
+  500 ms → el poll se perdía la ventana y FADE parpadeaba/no aparecía. `pop_fading_active()` (read+reset
+  del latch `_fading_latch`, sin lock — inv 7) reporta a la UI si hubo freeze desde el último poll,
+  aunque ya haya terminado. **Validado (a 500 ms de freeze se ve la duración; enciende más seguido).**
+- **Fixes de UI de sliders (SliderRow):** (1) `_note` con `setWordWrap(True)` — una nota larga
+  estiraba la fila y recortaba el slider; ahora fluye a segundo renglón. (2) Slider de **largo fijo**
+  (`setFixedWidth(432)`, sin stretch) + valor alineado a la izquierda pegado al slider + stretch al
+  final → nombre/slider/valor juntos a la izquierda, espacio libre a la derecha. (3) `label_width`
+  140→160 y nombres nuevos acortados ("Reactividad del piso:", "Refuerzo en agudos:") para que no se
+  corten. **Regla UX: los sliders son de largo fijo; las notas hacen word-wrap; los nombres largos se
+  acortan (el detalle va en la nota).**
+- **Presets de fábrica regenerados** para incluir los campos nuevos (`noise_mcra_window_ms`,
+  `noise_hf_boost`) — 4ta vez que un campo nuevo dispara "(modificado)" espurio por claves ausentes;
+  **pendiente el fix durable en `from_dict` de presets** (que las claves ausentes usen el default, no
+  el valor vivo del config) para que deje de repetirse.
+
 **v1.8.2 publicada (julio 2026)** — release de patch en GitHub con distribuibles Windows y Linux.
 Versión de app 1.8.2, manuales `MANUAL_RadioNoiseKiller_v1.8.2.pdf` (ES, 32 págs) y
 `..._v1.8.2_EN.pdf` (EN, 31 págs). Título de la ventana "v1.8.2" en `_update_window_title()`.
