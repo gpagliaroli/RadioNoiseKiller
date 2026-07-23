@@ -11,7 +11,7 @@ from audio.devices import (
     list_devices, rescan_devices, AudioDevice,
     IncompatibleDevicesError, duplex_hostapi_mismatch,
 )
-from config import AppConfig, RadioMode, GainConfig
+from config import AppConfig, RadioMode, GainConfig, DSPConfig
 from i18n import tr, set_language
 from pipeline import ProcessingPipeline
 from ui.vu_meter import VuMeter
@@ -471,6 +471,35 @@ class MainWindow(QMainWindow):
         self._chk_noise_preview.toggled.connect(self._pipeline.set_noise_preview)
         db_row.addWidget(self._chk_noise_preview)
         layout.addLayout(db_row)
+
+        # Post-filtro espectral: 2do control más impactante tras Intensidad. Movido
+        # de Avanzada a Principal para el usuario casual. El slider AUTO-ACTIVA el
+        # post-filtro al pasar de 0 (y lo apaga en 0) — ver _on_post_filter_strength.
+        self._slider_post = SliderRow(
+            tr("Post-Filtro:"),
+            min_val=0.0, max_val=10.0,
+            default=DSPConfig().post_filter_strength,
+            step=0.1, unit="", fmt="{:.1f}",
+        )
+        self._slider_post._update_label = lambda v: self._slider_post._val_lbl.setText(
+            f"{v:.1f}  ({tr('desactivado') if v == 0 else tr('suave') if v < 0.8 else tr('normal') if v < 2.0 else tr('agresivo') if v < 3.5 else tr('muy agresivo') if v < 6.5 else tr('máximo')})"
+        )
+        self._slider_post._val_lbl.setFixedWidth(130)
+        self._slider_post.setToolTip(tr(
+            "Supresión extra del 'gorgojeo' / ruido musical residual de fondo.\n"
+            "0 = apagado. Subir hasta que desaparezcan los pitidos de fondo\n"
+            "(vigilar que la voz no se recorte). Se enciende solo al pasar de 0."))
+        self._slider_post.valueChanged.connect(self._on_post_filter_strength)
+        layout.addWidget(self._slider_post)
+        self._slider_post.set_value(self._config.dsp.post_filter_strength)
+
+        extra_row = QHBoxLayout()
+        extra_row.addWidget(QLabel(tr("Reducción extra:")))
+        self._lbl_pf_extra = QLabel("—")
+        self._lbl_pf_extra.setStyleSheet("color: #888; font-weight: bold;")
+        extra_row.addWidget(self._lbl_pf_extra)
+        extra_row.addStretch()
+        layout.addLayout(extra_row)
 
         self._label_noise = QLabel(tr("Sin perfil — activar procesamiento y presionar Aprender"))
         self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
@@ -936,6 +965,9 @@ class MainWindow(QMainWindow):
         self._slider_noise.blockSignals(False)
         self._label_noise_pct.setText(f"{pct}%")
 
+        # --- Slider Post-Filtro (sin emitir: no re-disparar el auto-activar) ---
+        self._slider_post.set_value(cfg.post_filter_strength)
+
         # --- Sliders de ganancia ---
         self._s_gain_in.set_value(self._config.gain.input_gain_db)
         self._s_gain_out.set_value(self._config.gain.output_gain_db)
@@ -1058,6 +1090,16 @@ class MainWindow(QMainWindow):
         # Habilita/deshabilita los sliders de bandpass AM vs SSB según el modo
         if hasattr(self, "_adv_audio_tab"):
             self._adv_audio_tab.refresh_enabled_states()
+        self._schedule_save()
+
+    def _on_post_filter_strength(self, val: float) -> None:
+        self._config.dsp.post_filter_strength = val
+        self._pipeline.set_post_filter_strength(val)
+        # Auto-activar: subir de 0 enciende el post-filtro; en 0 lo apaga. Sincroniza
+        # el checkbox de Módulos (sigue siendo el enable "oficial" del sub-módulo).
+        want = val > 0.0
+        if want != self._config.dsp.post_filter_enabled:
+            self._chk_post_filter.setChecked(want)   # dispara _on_module_toggled
         self._schedule_save()
 
     def _on_agc_changed(self, idx: int) -> None:
@@ -1198,7 +1240,23 @@ class MainWindow(QMainWindow):
         else:
             self._btn_learn.setChecked(False)
 
+    def _update_pf_extra(self) -> None:
+        """Indicador Reducción extra del post-filtro (movido de Avanzada a Principal)."""
+        if self._config.dsp.post_filter_enabled and self._pipeline.is_running():
+            extra_db = self._pipeline.post_filter_extra_db
+            if extra_db < -0.5:
+                self._lbl_pf_extra.setText(f"{extra_db:.1f} dB")
+                color_ex = "#69f0ae" if extra_db < -5 else "#fff176"
+                self._lbl_pf_extra.setStyleSheet(f"color: {color_ex}; font-weight: bold;")
+            else:
+                self._lbl_pf_extra.setText(tr("0 dB  (sin ruido activo)"))
+                self._lbl_pf_extra.setStyleSheet("color: #888;")
+        else:
+            self._lbl_pf_extra.setText(tr("—  (desactivado)"))
+            self._lbl_pf_extra.setStyleSheet("color: #888;")
+
     def _update_noise_db(self) -> None:
+        self._update_pf_extra()
         mode = self._pipeline.noise_mode
 
         if not self._pipeline.is_running():

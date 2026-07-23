@@ -110,6 +110,22 @@ def test_profile_buttons_visibility_by_mode():
 # 3. Gating de controles Avanzados por el estado de los modulos           #
 # ---------------------------------------------------------------------- #
 
+def test_post_filter_on_principal_autoenable():
+    """El slider Post-Filtro (movido a Principal) auto-activa el post-filtro al
+    pasar de 0 y lo apaga en 0, sincronizando el checkbox de Módulos."""
+    w = _win()
+    w._chk_post_filter.setChecked(False)
+    _app.processEvents()
+    w._slider_post.set_value(4.0, emit=True)     # subir -> auto-activa
+    _app.processEvents()
+    assert w._config.dsp.post_filter_enabled, "post-filtro no se auto-activo al subir el slider"
+    assert w._chk_post_filter.isChecked(), "checkbox de Modulos no se sincronizo"
+    w._slider_post.set_value(0.0, emit=True)     # a 0 -> apaga
+    _app.processEvents()
+    assert not w._config.dsp.post_filter_enabled, "post-filtro no se apago en 0"
+    print("Post-Filtro en Principal: auto-activar        OK")
+
+
 def test_canceller_subcontrols_require_noise():
     """Invariante 2: los sub-modulos del cancelador no corren sin el cancelador.
     Con el cancelador OFF, sus sliders quedan deshabilitados aunque el
@@ -118,14 +134,14 @@ def test_canceller_subcontrols_require_noise():
     can = w._adv_canceller_tab
 
     w._chk_noise.setChecked(True)
-    w._chk_post_filter.setChecked(True)
+    w._chk_pitch_enhance.setChecked(True)
     _app.processEvents()
-    assert can._s_post_filter._slider.isEnabled(), "post-filtro deberia estar habilitado"
+    assert can._s_pitch_strength._slider.isEnabled(), "pitch deberia estar habilitado"
 
     w._chk_noise.setChecked(False)   # apagar SOLO el cancelador
     _app.processEvents()
-    assert not can._s_post_filter._slider.isEnabled(), \
-        "post-filtro habilitado con cancelador OFF (invariante 2)"
+    assert not can._s_pitch_strength._slider.isEnabled(), \
+        "pitch habilitado con cancelador OFF (invariante 2)"
     print("Sub-controles del cancelador gateados      OK")
 
 
@@ -492,6 +508,7 @@ def test_auto_load_respects_saved_mode():
 if __name__ == "__main__":
     test_tab_order()
     test_modules_group_moved_to_own_tab()
+    test_post_filter_on_principal_autoenable()
     test_profile_buttons_visibility_by_mode()
     test_loaded_profile_name_label()
     test_mute_button_gating_and_state()

@@ -694,7 +694,6 @@ class AdvancedCancellerTab(QWidget):
         for s in (self._s_pf_boost, self._s_pf_center,
                   self._s_pf_rolloff_hz, self._s_pf_rolloff_depth):
             s.set_enabled(noise and dsp.perceptual_floor_enabled)
-        self._s_post_filter.set_enabled(noise and dsp.post_filter_enabled)
         self._s_pitch_strength.set_enabled(noise and dsp.pitch_enhance_enabled)
 
     def _build_ui(self) -> None:
@@ -702,7 +701,6 @@ class AdvancedCancellerTab(QWidget):
         layout.addWidget(self._build_canceller_group())
         layout.addWidget(self._build_squelch_group())
         layout.addWidget(self._build_perceptual_floor_group())
-        layout.addWidget(self._build_post_filter_group())
         layout.addWidget(self._build_pitch_group())
         layout.addWidget(_reset_button_widget(self._reset_defaults))
         layout.addStretch()
@@ -959,33 +957,6 @@ class AdvancedCancellerTab(QWidget):
         layout.addWidget(_note(tr("  ↳ Cuánto baja el piso arriba del 'Inicio' → más supresión del siseo agudo. 55% ≈ −7 dB. En banda angosta (SSB), bajá el 'Inicio' para oírlo.")))
         return group
 
-    def _build_post_filter_group(self) -> QGroupBox:
-        group = QGroupBox(tr("Post-filtro espectral  (activar en Módulos Activos)"))
-        layout = QVBoxLayout(group)
-
-        pf_row = QHBoxLayout()
-        pf_row.addWidget(QLabel(tr("Reducción extra:")))
-        self._lbl_pf_extra = QLabel("—")
-        self._lbl_pf_extra.setStyleSheet("color: #888;")
-        pf_row.addWidget(self._lbl_pf_extra)
-        pf_row.addStretch()
-        layout.addLayout(pf_row)
-        layout.addWidget(_note(tr("  ↳ dB extra eliminados en bins de ruido vs cancelador base. 0 dB = sin efecto.")))
-
-        self._s_post_filter = SliderRow(
-            tr("Agresividad:"),
-            min_val=0.0, max_val=10.0,
-            default=_DSP_DEF.post_filter_strength,
-            step=0.1, unit="", fmt="{:.1f}",
-        )
-        self._s_post_filter._update_label = lambda v: self._s_post_filter._val_lbl.setText(
-            f"{v:.1f}  ({tr('desactivado') if v == 0 else tr('suave') if v < 0.8 else tr('normal') if v < 2.0 else tr('agresivo') if v < 3.5 else tr('muy agresivo') if v < 6.5 else tr('máximo')})"
-        )
-        self._s_post_filter._val_lbl.setFixedWidth(130)
-        self._s_post_filter.valueChanged.connect(self._on_post_filter_strength)
-        layout.addWidget(self._s_post_filter)
-        layout.addWidget(_note(tr("  ↳ Supresión extra en bins de ruido para eliminar 'pitidos fantasma'. 1=normal, 2–3=agresivo, 4+=muy agresivo (vigilar que la voz no se recorte).")))
-        return group
 
     def _build_pitch_group(self) -> QGroupBox:
         group = QGroupBox(tr("Refuerzo de pitch de voz  (activar en Módulos Activos)"))
@@ -1083,21 +1054,6 @@ class AdvancedCancellerTab(QWidget):
             self._lbl_fading.setText("—")
             self._lbl_fading.setStyleSheet("color: #888;")
 
-        # Post-filtro espectral
-        post_enabled = self._config.dsp.post_filter_enabled
-        if post_enabled:
-            extra_db = self._pipeline.post_filter_extra_db
-            if extra_db < -0.5:
-                self._lbl_pf_extra.setText(f"{extra_db:.1f} dB")
-                color_ex = "#69f0ae" if extra_db < -5 else "#fff176"
-                self._lbl_pf_extra.setStyleSheet(f"color: {color_ex}; font-weight: bold;")
-            else:
-                self._lbl_pf_extra.setText(tr("0 dB  (sin ruido activo)"))
-                self._lbl_pf_extra.setStyleSheet("color: #888;")
-        else:
-            self._lbl_pf_extra.setText(tr("—  (desactivado)"))
-            self._lbl_pf_extra.setStyleSheet("color: #888;")
-
         # Piso espectral perceptual
         pf_enabled = self._config.dsp.perceptual_floor_enabled
         if pf_enabled:
@@ -1150,7 +1106,6 @@ class AdvancedCancellerTab(QWidget):
         self._s_pf_center.set_value(cfg.perceptual_floor_center)
         self._s_pf_rolloff_hz.set_value(cfg.perceptual_floor_rolloff_hz)
         self._s_pf_rolloff_depth.set_value(cfg.perceptual_floor_rolloff_depth)
-        self._s_post_filter.set_value(cfg.post_filter_strength)
         self._s_pitch_strength.set_value(cfg.pitch_enhance_strength)
 
     def _reset_defaults(self) -> None:
@@ -1164,7 +1119,6 @@ class AdvancedCancellerTab(QWidget):
         self._config.dsp.perceptual_floor_center       = defaults.perceptual_floor_center
         self._config.dsp.perceptual_floor_rolloff_hz   = defaults.perceptual_floor_rolloff_hz
         self._config.dsp.perceptual_floor_rolloff_depth = defaults.perceptual_floor_rolloff_depth
-        self._config.dsp.post_filter_strength   = defaults.post_filter_strength
         self._config.dsp.pitch_enhance_strength = defaults.pitch_enhance_strength
         self._pipeline.set_noise_floor(defaults.noise_floor)
         self._pipeline.set_noise_smooth(defaults.noise_smooth)
@@ -1177,7 +1131,6 @@ class AdvancedCancellerTab(QWidget):
         self._pipeline.set_pf_center(defaults.perceptual_floor_center)
         self._pipeline.set_pf_rolloff_hz(defaults.perceptual_floor_rolloff_hz)
         self._pipeline.set_pf_rolloff_depth(defaults.perceptual_floor_rolloff_depth)
-        self._pipeline.set_post_filter_strength(defaults.post_filter_strength)
         self._pipeline.set_pitch_enhance_strength(defaults.pitch_enhance_strength)
         self._pipeline.set_voice_leveler_max_db(defaults.voice_leveler_max_db)
         self._load_values()
@@ -1221,10 +1174,6 @@ class AdvancedCancellerTab(QWidget):
     def _on_pf_rolloff_depth(self, val: float) -> None:
         self._config.dsp.perceptual_floor_rolloff_depth = val
         self._pipeline.set_pf_rolloff_depth(val)
-
-    def _on_post_filter_strength(self, val: float) -> None:
-        self._config.dsp.post_filter_strength = val
-        self._pipeline.set_post_filter_strength(val)
 
     def _on_pitch_strength(self, val: float) -> None:
         self._config.dsp.pitch_enhance_strength = val

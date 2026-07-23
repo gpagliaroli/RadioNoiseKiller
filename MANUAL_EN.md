@@ -437,8 +437,7 @@ This module replaces the fixed floor with a three-zone curve:
 
 ### Spectral post-filter
 
-**Enable:** Active Modules → "Spectral post-filter (residual musical noise)" checkbox  
-**Adjust:** Advanced Canceller tab → "Spectral post-filter" group
+**Location:** Main tab → **"Post-filter"** slider, right below Intensity (it is the second most impactful control after it). Raising the slider above 0 **turns the post-filter on by itself**; at 0 it is off — nothing else to touch. (The equivalent checkbox is still in Active Modules for advanced users, synced with the slider.)
 
 Even a well-configured Wiener filter can leave a very particular artifact called **musical noise**: instead of the original uniform background noise, short intermittent birdies appear, varying randomly from bin to bin. It is the residue of bins the VAD marked as noise but that were not fully suppressed by the spectral floor.
 
@@ -448,15 +447,15 @@ The post-filter applies a second pass over those bins using the same voice-proba
 
 | Indicator | Description |
 |-----------|-------------|
-| **Extra reduction** | How many additional dB the post-filter is removing on noise bins, beyond what the base canceller already does. Green above −5 dB, yellow between −0.5 and −5 dB, gray when there is no active noise or the module is disabled. Lets you verify at a glance that the aggressiveness slider is having real effect. |
+| **Extra reduction** (below the slider) | How many additional dB the post-filter is removing on noise bins, beyond what the base canceller already does. Green above −5 dB, yellow between −0.5 and −5 dB, gray when there is no active noise or the module is disabled. Lets you verify at a glance that the Post-filter slider is having real effect. |
 
 | Control | Range | Default | Description |
 |---------|-------|---------|-------------|
-| **Aggressiveness** | 0.0 – 10.0 | 1.0 | Strength of the second pass. **0** = off (even with the checkbox enabled). **1** = normal: pure-noise bins get `gain²` (doubles the reduction in dB). **2** = aggressive: `gain³`. **4** = very aggressive: `gain⁵`. **10** = maximum: `gain¹¹` — on pure-noise bins suppression saturates at the internal floor (−46 dB); the high range mostly acts on intermediate voice/noise bins. Start at 1.0 and raise it, watching the Extra reduction indicator, until the musical noise disappears. |
+| **Post-filter** | 0.0 – 10.0 | 1.0 | Strength of the second pass. **0** = off. **1** = normal: pure-noise bins get `gain²` (doubles the reduction in dB). **2** = aggressive: `gain³`. **4** = very aggressive: `gain⁵`. **10** = maximum: `gain¹¹` — on pure-noise bins suppression saturates at the internal floor (−46 dB); the high range mostly acts on intermediate voice/noise bins. Start at 1.0 and raise it, watching the Extra reduction indicator, until the musical noise disappears. |
 
 > **Note:** High values (>2.5) with very low SNR signals can over-suppress the edges of voice transitions — and above 4 the effect on intermediate bins is strong: it can reduce voice clarity (word endings, breaths). If the voice starts to sound clipped or dull, reduce. On pure background noise there is no audible difference beyond ~5 (suppression already saturates); the high range is heard on the noise riding along with the voice.
 
-> **Tip — low Intensity + high post-filter:** a very effective combination is to **lower the canceller's Intensity** (50–60%) and compensate with **high post-filter Aggressiveness** (5–8). The low Intensity lets the voice through almost untouched — without the dullness that appears when raising it — while the post-filter handles the remaining noise, acting only on the bins the detector marks as noise. On many signals this yields better cancellation **with a more natural voice** than raising the Intensity alone. It is worth trying both approaches on each signal and keeping whichever sounds best.
+> **Tip — low Intensity + high Post-filter:** a very effective combination is to **lower the canceller's Intensity** (50–60%) and compensate with a **high Post-filter** (5–8). With both sliders together on the Main tab (Intensity + Post-filter), this is the most direct recipe for the user who doesn't want to go into the Advanced tabs. The low Intensity lets the voice through almost untouched — without the dullness that appears when raising it — while the post-filter handles the remaining noise, acting only on the bins the detector marks as noise. On many signals this yields better cancellation **with a more natural voice** than raising the Intensity alone. It is worth trying both approaches on each signal and keeping whichever sounds best.
 
 ### Voice pitch enhancement
 

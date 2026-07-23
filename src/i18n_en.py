@@ -174,6 +174,13 @@ CATALOG = {
     "Perfil de ruido \"{name}\" cargado. Listo para ACTIVAR.":
         "Noise profile \"{name}\" loaded. Ready to START.",
     "Intensidad:": "Intensity:",
+    "Post-Filtro:": "Post-filter:",
+    "Supresión extra del 'gorgojeo' / ruido musical residual de fondo.\n"
+    "0 = apagado. Subir hasta que desaparezcan los pitidos de fondo\n"
+    "(vigilar que la voz no se recorte). Se enciende solo al pasar de 0.":
+        "Extra suppression of background 'warble' / residual musical noise.\n"
+        "0 = off. Raise it until the background birdies disappear\n"
+        "(watch that the voice isn't clipped). It turns on by itself above 0.",
     "Reducción activa:": "Active reduction:",
     "Preview: escuchar ruido eliminado": "Preview: listen to removed noise",
     "Emite el ruido que está siendo restado.\nSi suena como voz, bajar la Intensidad.":

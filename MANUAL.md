@@ -437,8 +437,7 @@ Este módulo reemplaza el piso fijo por una curva con tres zonas:
 
 ### Post-filtro espectral
 
-**Activar:** Módulos Activos → casilla "Post-filtro espectral (ruido musical residual)"  
-**Ajustar:** Pestaña Avanzada Cancelador → grupo "Post-filtro espectral"
+**Ubicación:** Pestaña Principal → slider **"Post-Filtro"**, justo debajo de Intensidad (es el segundo control más impactante después de ella). Subir el slider de 0 **enciende el post-filtro solo**; en 0 queda apagado — no hace falta tocar nada más. (El checkbox equivalente sigue en Módulos Activos para el usuario avanzado, sincronizado con el slider.)
 
 El filtro de Wiener, incluso bien configurado, puede dejar un tipo de artefacto muy particular llamado **ruido musical**: en lugar del ruido de fondo uniforme original, aparecen pitidos cortos intermitentes que varían aleatoriamente de bin en bin. Es el residuo de los bins que el VAD marcó como ruido pero que no fueron suprimidos del todo por el piso espectral.
 
@@ -448,15 +447,15 @@ El post-filtro aplica una segunda pasada sobre esos bins usando la misma informa
 
 | Indicador | Descripción |
 |-----------|-------------|
-| **Reducción extra** | Cuántos dB adicionales está eliminando el post-filtro en los bins de ruido, por encima de lo que ya hace el cancelador base. Verde cuando supera −5 dB, amarillo en la zona −0,5 a −5 dB, gris cuando no hay ruido activo o el módulo está desactivado. Permite verificar de un vistazo que el slider de agresividad está teniendo efecto real. |
+| **Reducción extra** (debajo del slider) | Cuántos dB adicionales está eliminando el post-filtro en los bins de ruido, por encima de lo que ya hace el cancelador base. Verde cuando supera −5 dB, amarillo en la zona −0,5 a −5 dB, gris cuando no hay ruido activo o el módulo está desactivado. Permite verificar de un vistazo que el slider Post-Filtro está teniendo efecto real. |
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
-| **Agresividad** | 0,0 – 10,0 | 1,0 | Fuerza de la segunda pasada. **0** = desactivado (aunque el checkbox esté activo). **1** = normal: los bins de ruido puro reciben `gain²` (duplica la reducción en dB). **2** = agresivo: `gain³`. **4** = muy agresivo: `gain⁵`. **10** = máximo: `gain¹¹` — en bins de ruido puro la supresión satura en el suelo interno (−46 dB); el rango alto actúa sobre todo en los bins intermedios voz/ruido. Empezar en 1,0 y subir según el indicador Reducción extra hasta que el ruido musical desaparezca. |
+| **Post-Filtro** | 0,0 – 10,0 | 1,0 | Fuerza de la segunda pasada. **0** = apagado. **1** = normal: los bins de ruido puro reciben `gain²` (duplica la reducción en dB). **2** = agresivo: `gain³`. **4** = muy agresivo: `gain⁵`. **10** = máximo: `gain¹¹` — en bins de ruido puro la supresión satura en el suelo interno (−46 dB); el rango alto actúa sobre todo en los bins intermedios voz/ruido. Empezar en 1,0 y subir según el indicador Reducción extra hasta que el ruido musical desaparezca. |
 
 > **Nota:** Valores altos (>2,5) con señales de SNR muy bajo pueden producir supresión excesiva en los bordes de las transiciones de voz — y por encima de 4 el efecto sobre los bins intermedios es fuerte: puede restar claridad a la voz (consonantes finales, respiraciones). Si la voz empieza a sonar recortada u opaca, reducir. En el ruido de fondo puro no hay diferencia audible más allá de ~5 (la supresión ya satura); el rango alto se nota en el ruido pegado a la voz.
 
-> **Consejo — Intensidad baja + post-filtro alto:** una combinación muy efectiva es **bajar la Intensidad del cancelador** (50–60%) y compensar con **Agresividad alta del post-filtro** (5–8). La Intensidad baja deja pasar la voz casi intacta — sin la opacidad que aparece al subirla — y el post-filtro se encarga del ruido restante actuando solo sobre los bins que el detector marca como ruido. En muchas señales el resultado es mejor cancelación **con voz más natural** que subir la Intensidad sola. Vale la pena probar ambos enfoques en cada señal y quedarse con el que suene mejor.
+> **Consejo — Intensidad baja + Post-Filtro alto:** una combinación muy efectiva es **bajar la Intensidad del cancelador** (50–60%) y compensar con el **Post-Filtro alto** (5–8). Con los dos sliders juntos en Principal (Intensidad + Post-Filtro), es la receta más directa para el usuario que no quiere entrar a Avanzadas. La Intensidad baja deja pasar la voz casi intacta — sin la opacidad que aparece al subirla — y el post-filtro se encarga del ruido restante actuando solo sobre los bins que el detector marca como ruido. En muchas señales el resultado es mejor cancelación **con voz más natural** que subir la Intensidad sola. Vale la pena probar ambos enfoques en cada señal y quedarse con el que suene mejor.
 
 ### Refuerzo de pitch de voz
 
