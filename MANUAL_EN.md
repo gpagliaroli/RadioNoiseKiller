@@ -1,6 +1,6 @@
 ﻿# RadioNoiseKiller — User Manual
 
-**Version 1.8.2**
+**Version 1.9**
 
 ---
 
@@ -346,19 +346,19 @@ On shortwave with ionospheric fading (QSB), the signal rises and falls several t
 
 The compensation attacks both problems:
 
-- **Estimator freeze:** when it detects an abrupt energy change (typical of a fade transition), it freezes the noise floor estimate. The pre-fade floor is preserved and applied immediately when the signal returns.
-- **Accelerated release:** while the checkbox is active, the Wiener gain responds to signal rises in ~20–30 ms instead of 100–150 ms. Voice emerging from a fade opens up without perceptible delay.
+- **Estimator freeze (voice-smart):** when it detects an abrupt energy change, it freezes the noise floor estimate **only if voice is present** — that is, on a *signal* fade. The pre-fade floor is preserved and applied immediately when the signal returns. **Important:** if the energy change is a **rise of the band noise** (no voice structure), the estimator does **NOT** freeze and keeps following the noise in real time. This prevents the floor from lagging when the noise rises and falls cyclically (see "Floor reactivity" below).
+- **Accelerated release:** during a fading event, the Wiener gain responds to signal rises in ~20–30 ms instead of 100–150 ms. Voice emerging from a fade opens up without perceptible delay.
 
 Two sliders in Advanced Canceller calibrate the detection:
 
 | Control | Range | Default | Description |
 |---------|-------|---------|-------------|
-| **Fading sensitivity** | 1 – 10 dB | 5 dB | Energy change that triggers the freeze. Sensitive (1–4 dB): detects mild QSB, but may trigger on the voice itself. Selective (7–10 dB): deep fades only. |
+| **Fading sensitivity** | 1 – 10 dB | 5 dB | Energy change that triggers the freeze (with voice present). Sensitive (1–4 dB): detects mild QSB. Selective (7–10 dB): deep fades only. |
 | **Freeze duration** | 100 – 500 ms | 200 ms | How long the estimator stays frozen after each event. Slow fades need more; a very long value lets the floor go stale if the band noise really did change. |
 
-The indicator in Advanced Canceller shows **FADE** (orange) while a fading event is active and **ok** (gray) when the signal is stable. If FADE shows constantly without real fading, the signal has fast level variations (e.g. AM with deep modulation) — raise the Sensitivity or disable the checkbox.
+The indicator in Advanced Canceller shows **FADE** (orange) while the estimator is frozen by a signal fade, and **ok** (gray) otherwise. Since the freeze now only engages with **voice present**, it is normal for FADE to stay almost always at **ok** with music or pure noise — that confirms the estimator is free to follow the noise (exactly what you want). With a voice signal under QSB, FADE lights on each fade.
 
-> **When to enable it:** shortwave listening (SSB or AM DX) with noticeable fading, always in Adaptive mode. On stable local signals or in Static profile mode it has no useful effect.
+> **When to enable it:** shortwave listening (SSB or AM DX) with noticeable fading, always in Adaptive mode. It no longer interferes with cyclic noise (it does not freeze on noise rises), so it can be left on alongside Floor reactivity. In Static profile mode it has no effect.
 
 ### Real-time indicators (Advanced Canceller)
 
@@ -376,8 +376,19 @@ The indicator in Advanced Canceller shows **FADE** (orange) while a fading event
 | **Spectral floor** | 0.05 – 0.30 | 0.10 | Minimum gain applied to any bin, even the noisiest. 0.10 means no bin is ever silenced by more than 90% of its energy. **Never go below 0.05** — very low values with a high Anti-warble produce severe warbling. |
 | **Anti-warble (β)** | 90% – 99% (0.1% steps) | 97% | How fast the gains return to the floor after voice is detected. High (97–99%) = smooth transitions, no warble. Low (90–95%) = more reactive but with a risk of audible warble. The fine 0.1% resolution allows precise calibration at the high end, where each tenth audibly changes the release (98.0% ≈ 0.5 s; 98.5% ≈ 0.7 s; 99.0% ≈ 1 s). The maximum removes the most persistent warble but can leave a noise "tail" after each transmission — use it only if 97–98% is not enough. |
 | **Attack speed** | 50% – 92% | 80% | How fast the canceller "opens" voice bins when a signal is detected. Fast (50–70%): crisper consonants. Soft (>85%): fewer transition artifacts. |
+| **Floor reactivity** *(Adaptive only)* | 250 – 800 ms | 800 ms | Window over which the MCRA estimator tracks the noise minimum. **Reactive (250–350 ms):** the floor follows fast cyclic rises and falls of the noise without lagging (less "swaying" of the sound). **Stable (800 ms):** better for steady noise. Lower it when the band noise rises and falls suddenly in short cycles. With very reactive values, keep **Voice pitch enhancement** on (protects the harmonics from a short window mistaking them for noise). |
+| **HF floor boost** *(Adaptive only)* | 0% – 150% | 0% | Raises the estimated noise floor above ~2.5 kHz, where noise energy is low and the estimator reacts late. Suppresses the HF hiss that leaks through with fading better. The curve is **logarithmic**: each octave above 2.5 kHz adds more boost, so it acts progressively harder the higher the frequency. **Cost:** it can dull the voice's brightness a bit — compensate with the **Harmonic exciter** or the **Presence EQ** (they regenerate brightness after the canceller, without bringing the noise back). |
 
 > **Tip — calibrating Intensity with the Preview:** enable **"Preview: listen to removed noise"** and raise the **Intensity** while listening to what is being removed: as long as the preview contains only noise, you can keep raising it; at the point where voice starts leaking into the removed audio, back off one step and leave it there. That is the maximum cancellation that does not touch the voice. Disable the preview when done.
+
+> **Recipe — shortwave noise that rises and falls in short cycles:** a typical problem is band noise fluctuating several dB cyclically and fast, while the signal stays at a steady level. Without tuning, the estimator lags: on the rise it lets noise through, on the fall it eats the voice — a "swaying" of the sound. The combination that fixes it, all in **Adaptive mode**:
+> 1. **Floor reactivity** at **250–350 ms** — so the floor follows the noise's rise and fall.
+> 2. **HF floor boost** at **50–100%** — for the treble hiss the estimator can't follow on its own.
+> 3. **Voice pitch enhancement** on — protects the voice harmonics from the reactive window.
+> 4. **HF fading compensation** can be left **on**: it is now smart and does not freeze on noise rises (only on voice fades).
+> 5. If the voice brightness got dull from the HF floor boost, compensate with the **Harmonic exciter** (drive 2–3×) or **Presence EQ** (+4–6 dB at 2 kHz).
+>
+> Watching the **Spectrum** tab, the goal is for the floor line (yellow) to follow the noise's rise and fall instead of lagging behind.
 
 ### Floor vs. Anti-warble
 
@@ -685,7 +696,7 @@ On the right of the same row, the **"🔇 Mute"** button silences the speaker ou
 | ↳ Perceptual spectral floor | ⬜ Optional | Enable if the voice sounds cold or hollow |
 | ↳ Spectral post-filter | ⬜ Optional | Enable if residual birdies remain |
 | ↳ Voice pitch enhancement | ⬜ Optional | Also helps on AM: demodulation preserves the voice harmonics |
-| HF fading compensation | ⬜ Optional | Shortwave with QSB only (Adaptive mode); on local AM with music it can false-trigger |
+| HF fading compensation | ⬜ Optional | Shortwave with QSB (Adaptive mode). No longer false-triggers on music/noise: it only freezes on voice fades |
 | ↳ Voice leveler | ⬜ Optional | For music **tick "Level continuously"** (without it the voice gate freezes the gain); useful to even out cyclic fading |
 | Squelch | ❌ Do not use | Produces pumping with music |
 | Voice EQ | ⬜ Optional | Presence if the voice sounds dull; body if it sounds thin |
@@ -835,4 +846,4 @@ The **Max Y** and **Max X** sliders of the spectrum viewer are also saved in `se
 
 ---
 
-*RadioNoiseKiller — version 1.8.2*
+*RadioNoiseKiller — version 1.9*

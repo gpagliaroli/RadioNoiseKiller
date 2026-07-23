@@ -1,6 +1,6 @@
 ﻿# RadioNoiseKiller — Manual de Usuario
 
-**Versión 1.8.2**
+**Versión 1.9**
 
 ---
 
@@ -346,19 +346,19 @@ En onda corta con desvanecimiento ionosférico (QSB), la señal sube y baja de n
 
 La compensación ataca ambos problemas:
 
-- **Congelamiento del estimador:** cuando detecta un cambio brusco de energía (típico de una transición de fade), congela el estimado de piso de ruido. El piso pre-fade se preserva y al volver la señal se aplica de inmediato.
-- **Release acelerado:** mientras la casilla está activa, la ganancia del Wiener responde a subidas de señal en ~20–30 ms en lugar de 100–150 ms. La voz que emerge del fade se abre sin retraso perceptible.
+- **Congelamiento del estimador (inteligente por voz):** cuando detecta un cambio brusco de energía, congela el estimado de piso de ruido **solo si hay voz presente** — es decir, ante un desvanecimiento de la *señal*. El piso pre-fade se preserva y al volver la señal se aplica de inmediato. **Importante:** si el cambio de energía es una **subida del ruido de banda** (sin estructura de voz), el estimador **NO** congela y sigue el ruido en tiempo real. Esto evita que, ante ruido que sube y baja cíclicamente, el piso quede desfasado (ver más abajo "Reactividad del piso").
+- **Release acelerado:** durante un evento de fading, la ganancia del Wiener responde a subidas de señal en ~20–30 ms en lugar de 100–150 ms. La voz que emerge del fade se abre sin retraso perceptible.
 
 Dos sliders en Avanzada Cancelador permiten calibrar la detección:
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
-| **Sensibilidad fading** | 1 – 10 dB | 5 dB | Cambio de energía que dispara el congelamiento. Sensible (1–4 dB): detecta QSB suave, pero puede disparar con la propia voz. Selectivo (7–10 dB): solo fades profundos. |
+| **Sensibilidad fading** | 1 – 10 dB | 5 dB | Cambio de energía que dispara el congelamiento (con voz presente). Sensible (1–4 dB): detecta QSB suave. Selectivo (7–10 dB): solo fades profundos. |
 | **Duración del freeze** | 100 – 500 ms | 200 ms | Cuánto tiempo queda congelado el estimador tras cada evento. Fades lentos necesitan más; un valor muy largo desactualiza el piso si el ruido de banda cambió de verdad. |
 
-El indicador en Avanzada Cancelador muestra **FADE** (naranja) cuando hay un evento de fading activo y **ok** (gris) cuando la señal está estable. Si FADE aparece constantemente sin que haya desvanecimiento real, la señal tiene variaciones rápidas de nivel (p. ej. AM con modulación profunda) — subir la Sensibilidad o desactivar la casilla.
+El indicador en Avanzada Cancelador muestra **FADE** (naranja) mientras el estimador está congelado por un desvanecimiento de señal, y **ok** (gris) cuando no. Como ahora el freeze solo engancha con **voz presente**, es normal que con música o ruido puro el FADE quede casi siempre en **ok** — eso confirma que el estimador está libre para seguir el ruido (que es justo lo que se busca). Con una señal de voz con QSB, en cambio, el FADE enciende en cada desvanecimiento.
 
-> **Cuándo activarla:** escucha de onda corta (SSB o AM DX) con fading perceptible, siempre en modo Adaptativo. En señales locales estables o en modo Perfil estático no tiene efecto útil.
+> **Cuándo activarla:** escucha de onda corta (SSB o AM DX) con fading perceptible, siempre en modo Adaptativo. Ya no molesta con ruido cíclico (no congela ante subidas de ruido), así que se puede dejar activa junto con la Reactividad del piso. En modo Perfil estático no tiene efecto.
 
 ### Indicadores en tiempo real (Avanzada Cancelador)
 
@@ -376,8 +376,19 @@ El indicador en Avanzada Cancelador muestra **FADE** (naranja) cuando hay un eve
 | **Piso espectral** | 0,05 – 0,30 | 0,10 | Ganancia mínima que se aplica a cualquier bin, incluso el más ruidoso. 0,10 significa que nunca se silencia más del 90% de la energía de un bin. **Nunca bajar de 0,05** — valores muy bajos con Anti-gorgojeo alto producen gorgojeo severo. |
 | **Anti-gorgojeo (β)** | 90% – 99% (pasos de 0,1%) | 97% | Velocidad con que los gains retornan al piso después de detectar voz. Alto (97–99%) = transiciones suaves, sin gorgojeo. Bajo (90–95%) = más reactivo pero con riesgo de gorgojeo audible. La resolución fina de 0,1% permite calibrar con precisión en el extremo alto, donde cada décima cambia el release de forma audible (98,0% ≈ 0,5 s; 98,5% ≈ 0,7 s; 99,0% ≈ 1 s). El máximo elimina el gorgojeo más persistente pero puede dejar una "cola" de ruido tras cada transmisión — usarlo solo si 97–98% no alcanza. |
 | **Velocidad de ataque** | 50% – 92% | 80% | Velocidad con que el cancelador "abre" los bins de voz cuando detecta una señal. Rápido (50–70%): consonantes más nítidas. Suave (>85%): menos artefactos en transiciones. |
+| **Reactividad del piso** *(solo Adaptativo)* | 250 – 800 ms | 800 ms | Ventana con que el estimador MCRA sigue el mínimo del ruido. **Reactivo (250–350 ms):** el piso sigue rápido las subidas y bajadas cíclicas del ruido, sin quedar desfasado (menos "vaivén" del sonido). **Estable (800 ms):** mejor para ruido parejo. Bajarlo cuando el ruido de banda sube y baja de golpe y en ciclos cortos. Con valores muy reactivos conviene tener activo el **Refuerzo de pitch de voz** (protege los armónicos de que una ventana corta los tome por ruido). |
+| **Refuerzo en agudos** *(solo Adaptativo)* | 0% – 150% | 0% | Sube el piso de ruido estimado por encima de ~2,5 kHz, donde la energía del ruido es baja y el estimador reacciona tarde. Suprime mejor el siseo de agudos que se cuela con el fading. La curva es **logarítmica**: cada octava por encima de 2,5 kHz suma más refuerzo, así que actúa progresivamente más fuerte cuanto más alta la frecuencia. **Costo:** puede opacar un poco el brillo de la voz — compensar con el **Excitador armónico** o la **EQ de presencia** (regeneran brillo después del cancelador, sin traer de vuelta el ruido). |
 
 > **Consejo — calibrar la Intensidad con el Preview:** activar **"Preview: escuchar ruido eliminado"** y subir la **Intensidad** escuchando lo que se elimina: mientras en el preview se escuche solo ruido, se puede seguir subiendo; en el punto donde empieza a filtrarse voz en lo eliminado, bajar un paso y dejarlo ahí. Ese es el máximo de cancelación que no modifica la voz. Desactivar el preview al terminar.
+
+> **Receta — ruido de onda corta que sube y baja en ciclos cortos:** un problema típico es el ruido de banda que fluctúa varios dB de forma cíclica y rápida, mientras la señal queda a nivel parejo. Sin ajuste, el estimador llega tarde: en la subida deja pasar ruido y en la bajada se come la voz — un "vaivén" del sonido. La combinación que lo resuelve, todo en **modo Adaptativo**:
+> 1. **Reactividad del piso** en **250–350 ms** — para que el piso siga el sube-y-baja del ruido.
+> 2. **Refuerzo en agudos** en **50–100%** — para el siseo de los agudos, que el estimador no alcanza a seguir por sí solo.
+> 3. **Refuerzo de pitch de voz** activado — protege los armónicos de la voz de la ventana reactiva.
+> 4. **Compensación fading HF** se puede dejar **activa**: ahora es inteligente y no congela ante las subidas de ruido (solo ante desvanecimientos de la voz).
+> 5. Si el brillo de la voz quedó opaco por el Refuerzo en agudos, compensar con **Excitador armónico** (drive 2–3×) o **EQ de presencia** (+4–6 dB en 2 kHz).
+>
+> Mirando la pestaña **Espectro**, el objetivo es que la línea del piso (amarilla) siga el sube-y-baja del ruido en vez de quedar atrás.
 
 ### Relación entre Piso y Anti-gorgojeo
 
@@ -685,7 +696,7 @@ A la derecha de la misma fila, el botón **"🔇 Mute"** silencia la salida a lo
 | ↳ Piso espectral perceptual | ⬜ Opcional | Activar si la voz suena fría o hueca |
 | ↳ Post-filtro espectral | ⬜ Opcional | Activar si quedan pitidos residuales |
 | ↳ Refuerzo de pitch de voz | ⬜ Opcional | También ayuda en AM: la demodulación preserva los armónicos de la voz |
-| Compensación fading HF | ⬜ Opcional | Solo onda corta con QSB (modo Adaptativo); en AM local con música puede disparar en falso |
+| Compensación fading HF | ⬜ Opcional | Onda corta con QSB (modo Adaptativo). Ya no dispara en falso con música/ruido: solo congela ante desvanecimientos de voz |
 | ↳ Nivelador de voz | ⬜ Opcional | Para música **marcá "Nivelar en continuo"** (sin eso el gate de voz congela la ganancia); útil para emparejar el fading cíclico |
 | Squelch | ❌ No usar | Produce bombeo con música |
 | EQ Voz | ⬜ Opcional | Presencia si la voz suena apagada; cuerpo si suena delgada |
@@ -835,4 +846,4 @@ Los valores de los sliders **Máx Y** y **Máx X** del visualizador de espectro 
 
 ---
 
-*RadioNoiseKiller — versión 1.8.2*
+*RadioNoiseKiller — versión 1.9*

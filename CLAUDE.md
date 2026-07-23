@@ -632,8 +632,15 @@ aviso −9993 quedó **validado en hardware real por el usuario** (cruce WASAPI+
 deshabilitado + aviso) además de los tests `test_device_combo.py` + `test_ui.py`. Manuales ES+EN
 documentan el requisito de misma API en los consejos de dispositivos.
 
-Cambios post-v1.8.2 (pendiente de release — apuntan a v1.9 por el volumen; TODOS validados en el
-aire por el usuario, en secuencia atacando el fading de ruido cíclico en onda corta):
+**v1.9 publicada (julio 2026)** — release en GitHub con distribuibles Windows y Linux. Versión de
+app 1.9.0, manuales `MANUAL_RadioNoiseKiller_v1.9.pdf` (ES, 33 págs) y `..._v1.9_EN.pdf` (EN, 32 págs).
+Título de la ventana "v1.9" en `_update_window_title()`. Salto de menor (no patch) por el volumen:
+mejora grande del modo Adaptativo para ruido cíclico de onda corta (Reactividad del piso, Refuerzo
+en agudos, fading VAD-smart) + latch del indicador FADE + fixes de UI de sliders. Manuales ES+EN
+documentan los controles nuevos (Cap. 7: Reactividad del piso, Refuerzo en agudos) y la receta de
+ruido cíclico. Presets de fábrica afinados con los parámetros nuevos. **TODO validado en el aire.**
+
+Cambios v1.9 (todos validados por el usuario, en secuencia atacando el fading de ruido cíclico):
 - **Reactividad del piso de ruido (ventana MCRA ajustable):** el MCRA seguía el mínimo del ruido en
   una ventana fija de ~800 ms y con ruido cíclico rápido llegaba tarde a las subidas → en la subida
   suprimía de menos (ruido se cuela), al bajar/llegar la voz suprimía de más (se come la voz) →
