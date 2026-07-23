@@ -437,20 +437,16 @@ class MainWindow(QMainWindow):
 
         layout.addSpacing(28)  # separa los botones de perfiles del slider Intensidad
 
-        intensity_row = QHBoxLayout()
-        intensity_lbl = QLabel(tr("Intensidad:"))
-        intensity_lbl.setMinimumWidth(80)
-        intensity_row.addWidget(intensity_lbl)
-        self._slider_noise = QSlider(Qt.Horizontal)
-        self._slider_noise.setRange(0, 100)
-        init_pct = round(self._config.dsp.noise_alpha * 100)
-        self._slider_noise.setValue(init_pct)
+        # SliderRow (largo fijo) para que alinee con Post-Filtro y el resto
+        self._slider_noise = SliderRow(
+            tr("Intensidad:"),
+            min_val=0.0, max_val=100.0,
+            default=DSPConfig().noise_alpha * 100.0,
+            step=1.0, unit="%", fmt="{:.0f}",
+        )
         self._slider_noise.valueChanged.connect(self._on_noise_intensity_changed)
-        intensity_row.addWidget(self._slider_noise)
-        self._label_noise_pct = QLabel(f"{init_pct}%")
-        self._label_noise_pct.setMinimumWidth(36)
-        intensity_row.addWidget(self._label_noise_pct)
-        layout.addLayout(intensity_row)
+        layout.addWidget(self._slider_noise)
+        self._slider_noise.set_value(self._config.dsp.noise_alpha * 100.0)
 
         self._learn_countdown: int = 0
         self._learn_timer = QTimer()
@@ -958,14 +954,8 @@ class MainWindow(QMainWindow):
         if cfg.noise_mode != "static":
             self._label_noise.setText(tr("Adaptativo (MCRA) — estimando en tiempo real"))
 
-        # --- Slider de intensidad de ruido ---
-        pct = round(cfg.noise_alpha * 100)
-        self._slider_noise.blockSignals(True)
-        self._slider_noise.setValue(pct)
-        self._slider_noise.blockSignals(False)
-        self._label_noise_pct.setText(f"{pct}%")
-
-        # --- Slider Post-Filtro (sin emitir: no re-disparar el auto-activar) ---
+        # --- Sliders Intensidad + Post-Filtro (sin emitir: no re-disparar handlers) ---
+        self._slider_noise.set_value(cfg.noise_alpha * 100.0)
         self._slider_post.set_value(cfg.post_filter_strength)
 
         # --- Sliders de ganancia ---
@@ -1136,9 +1126,8 @@ class MainWindow(QMainWindow):
         self._pipeline.set_peak_limit_db(val)
         self._schedule_save()
 
-    def _on_noise_intensity_changed(self, value: int) -> None:
+    def _on_noise_intensity_changed(self, value: float) -> None:
         alpha = value / 100.0
-        self._label_noise_pct.setText(f"{value}%")
         self._config.dsp.noise_alpha = alpha
         self._pipeline.set_noise_alpha(alpha)
         self._schedule_save()
