@@ -28,6 +28,12 @@ from utils import settings_path, presets_dir, noise_profiles_dir
 # es incompatible (entrada y salida en APIs de host distintas → -9993).
 _COMBO_WARN_STYLE = "QComboBox { border: 1px solid #ef5350; }"
 
+# Ancho común de los combos de la pestaña Principal (Entrada/Salida/Canal/Modo/AGC/
+# Modo ruido) y de los VU meters, para que queden alineados y del mismo largo.
+_COMBO_W = 360          # ancho fijo del combo
+_ROW_LABEL_W = 70       # ancho de la etiqueta de la fila (columna izquierda)
+_FIELD_W = _ROW_LABEL_W + _COMBO_W   # extensión total etiqueta+combo (para los VU)
+
 
 class MainWindow(QMainWindow):
 
@@ -173,9 +179,7 @@ class MainWindow(QMainWindow):
         self._combo_in  = QComboBox()
         self._combo_out = QComboBox()
         in_row = self._labeled_row(tr("Entrada:"), self._combo_in)
-        in_spacer = QLabel("")
-        in_spacer.setFixedWidth(34)
-        in_row.addWidget(in_spacer)
+        in_row.addStretch()
         layout.addLayout(in_row)
 
         out_row = self._labeled_row(tr("Salida:"), self._combo_out)
@@ -187,13 +191,15 @@ class MainWindow(QMainWindow):
         )
         self._btn_refresh_devices.clicked.connect(self._on_refresh_devices)
         out_row.addWidget(self._btn_refresh_devices)
+        out_row.addStretch()
         layout.addLayout(out_row)
 
         chan_row = QHBoxLayout()
         chan_lbl = QLabel(tr("Canal:"))
-        chan_lbl.setFixedWidth(70)
+        chan_lbl.setFixedWidth(_ROW_LABEL_W)
         chan_row.addWidget(chan_lbl)
         self._combo_channel = QComboBox()
+        self._combo_channel.setFixedWidth(_COMBO_W)
         for label, mode in [
             (tr("Izquierdo"),   "left"),
             (tr("Derecho"),     "right"),
@@ -207,9 +213,7 @@ class MainWindow(QMainWindow):
         ))
         self._combo_channel.currentIndexChanged.connect(self._on_input_channel_changed)
         chan_row.addWidget(self._combo_channel)
-        chan_spacer = QLabel("")
-        chan_spacer.setFixedWidth(34)
-        chan_row.addWidget(chan_spacer)
+        chan_row.addStretch()
         layout.addLayout(chan_row)
         return group
 
@@ -222,16 +226,15 @@ class MainWindow(QMainWindow):
             self._combo_mode.addItem(mode.value, mode)
         self._combo_mode.currentIndexChanged.connect(self._on_mode_changed)
         mode_row = self._labeled_row(tr("Modo:"), self._combo_mode)
-        mode_spacer = QLabel("")
-        mode_spacer.setFixedWidth(60)
-        mode_row.addWidget(mode_spacer)
+        mode_row.addStretch()
         layout.addLayout(mode_row)
 
         agc_row = QHBoxLayout()
         agc_lbl = QLabel(tr("AGC:"))
-        agc_lbl.setFixedWidth(70)
+        agc_lbl.setFixedWidth(_ROW_LABEL_W)
         agc_row.addWidget(agc_lbl)
         self._combo_agc = QComboBox()
+        self._combo_agc.setFixedWidth(_COMBO_W)
         for label, preset in [
             (tr("Desactivado"), "off"),
             (tr("Rápido"),      "fast"),
@@ -246,6 +249,7 @@ class MainWindow(QMainWindow):
         self._label_agc_gain.setFixedWidth(60)
         self._label_agc_gain.setStyleSheet("color: #90caf9; font-size: 8pt;")
         agc_row.addWidget(self._label_agc_gain)
+        agc_row.addStretch()
         layout.addLayout(agc_row)
 
         self._check_bypass = QCheckBox(tr("Bypass (sin procesamiento)"))
@@ -386,8 +390,9 @@ class MainWindow(QMainWindow):
         # Selector de modo de estimación de ruido
         mode_row = QHBoxLayout()
         mode_lbl = QLabel(tr("Modo:"))
-        mode_lbl.setFixedWidth(70)
+        mode_lbl.setFixedWidth(_ROW_LABEL_W)
         self._combo_noise_mode = QComboBox()
+        self._combo_noise_mode.setFixedWidth(_COMBO_W)
         self._combo_noise_mode.addItem(tr("Perfil estático"),   "static")
         self._combo_noise_mode.addItem(tr("Adaptativo (MCRA)"), "mcra")
         self._combo_noise_mode.setToolTip(
@@ -397,6 +402,7 @@ class MainWindow(QMainWindow):
         )
         mode_row.addWidget(mode_lbl)
         mode_row.addWidget(self._combo_noise_mode)
+        mode_row.addStretch()
         layout.addLayout(mode_row)
 
         btn_row = QHBoxLayout()
@@ -458,7 +464,7 @@ class MainWindow(QMainWindow):
         self._lbl_noise_db = QLabel("—")
         self._lbl_noise_db.setStyleSheet("color: #888; font-weight: bold;")
         db_row.addWidget(self._lbl_noise_db)
-        db_row.addStretch()
+        db_row.addSpacing(30)
         self._chk_noise_preview = QCheckBox(tr("Preview: escuchar ruido eliminado"))
         self._chk_noise_preview.setToolTip(
             tr("Emite el ruido que está siendo restado.\n"
@@ -466,6 +472,7 @@ class MainWindow(QMainWindow):
         )
         self._chk_noise_preview.toggled.connect(self._pipeline.set_noise_preview)
         db_row.addWidget(self._chk_noise_preview)
+        db_row.addStretch()
         layout.addLayout(db_row)
 
         # Post-filtro espectral: 2do control más impactante tras Intensidad. Movido
@@ -513,8 +520,10 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(group)
         self._vu_in  = VuMeter(tr("IN "))
         self._vu_out = VuMeter(tr("OUT"))
-        layout.addWidget(self._vu_in)
-        layout.addWidget(self._vu_out)
+        self._vu_in.setFixedWidth(_FIELD_W)
+        self._vu_out.setFixedWidth(_FIELD_W)
+        layout.addWidget(self._vu_in,  alignment=Qt.AlignLeft)
+        layout.addWidget(self._vu_out, alignment=Qt.AlignLeft)
         self._label_latency = QLabel(tr("Latencia: --"))
         self._label_latency.setAlignment(Qt.AlignRight)
         layout.addWidget(self._label_latency)
@@ -1695,8 +1704,10 @@ class MainWindow(QMainWindow):
     def _labeled_row(label: str, widget: QWidget) -> QHBoxLayout:
         row = QHBoxLayout()
         lbl = QLabel(label)
-        lbl.setFixedWidth(70)
+        lbl.setFixedWidth(_ROW_LABEL_W)
         row.addWidget(lbl)
+        if isinstance(widget, QComboBox):
+            widget.setFixedWidth(_COMBO_W)
         row.addWidget(widget)
         return row
 
