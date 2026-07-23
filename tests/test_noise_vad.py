@@ -261,6 +261,29 @@ check("hf_boost log: sigue creciendo por encima de 5kHz (no topa como la lineal)
 p8.reset(240)
 check("hf_boost: curva redimensionada en reset (inv 9)", len(p8._hf_boost_curve) == p8._nb)
 
+# Anti-gorgojeo: el suavizado temporal de p_speech reduce el salto de ganancia
+# frame a frame (ruido musical). Comparar var del salto con smooth 0.6 vs 0.0.
+def _red_jump_var(smooth):
+    p = NoiseProfiler(HOP); p.set_mode("mcra"); p._PS_SMOOTH = smooth
+    nzp = (rng.standard_normal(400 * HOP).reshape(400, HOP) * 0.02).astype(np.float32)
+    for i in range(200):
+        p.process(nzp[i])
+    reds = []
+    for i in range(200, 400):
+        p.process(nzp[i]); reds.append(p.last_reduction_db)
+    return float(np.var(np.diff(reds)))
+v_sm = _red_jump_var(0.6)
+v_no = _red_jump_var(0.0)
+check("suavizado p_speech reduce el salto de ganancia frame a frame (%.4f < %.4f)"
+      % (v_sm, v_no), v_sm < v_no)
+# reset limpia el estado por-bin (invariante 9: sin shape mismatch tras cambiar hop)
+p9 = NoiseProfiler(480); p9.set_mode("mcra")
+for i in range(30):
+    p9.process((rng.standard_normal(480) * 0.02).astype(np.float32))
+p9.reset(240)
+check("reset limpia _p_speech_prev (sin shape mismatch)", p9._p_speech_prev is None)
+p9.process((rng.standard_normal(240) * 0.02).astype(np.float32))  # no debe crashear
+
 # 8. Sin eventos de fading, el checkbox NO debe alterar el procesamiento.
 #    (Bug real: el release acelerado beta=0.45 aplicaba siempre con el checkbox
 #    activo -> gorgojeo extra con mucho ruido y sin fading. Reportado en 40m.)

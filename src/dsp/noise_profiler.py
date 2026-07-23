@@ -76,6 +76,9 @@ class NoiseProfiler:
     _FADING_VP_THR:       float = 0.40  # vp mínimo para congelar: distingue desvanecimiento de
                                         # señal (voz presente → congela) de subida de ruido de
                                         # banda ancha (vp bajo → NO congela, deja seguir el ruido)
+    _PS_SMOOTH:           float = 0.6   # suavizado temporal de p_speech por bin (anti-gorgojeo):
+                                        # estabiliza la clasificación voz/ruido, fuente del ruido
+                                        # musical residual. EMA ~2-3 frames, sin retraso audible.
 
     # VAD frame-level (energy minimum tracker)
     # Dos trackers paralelos: uno lento (OMLSA) y uno rápido (squelch).
@@ -124,6 +127,7 @@ class NoiseProfiler:
         # Estado DD inter-frame
         self._gain_prev:     np.ndarray | None = None
         self._snr_post_prev: np.ndarray | None = None
+        self._p_speech_prev: np.ndarray | None = None
 
         # VAD frame-level
         self._voice_prob:    float = 0.0   # suavizado lento (OMLSA)
@@ -265,6 +269,7 @@ class NoiseProfiler:
         self._ola_acc         = np.zeros(self._fft_n, dtype=np.float32)
         self._gain_prev       = None
         self._snr_post_prev   = None
+        self._p_speech_prev   = None
         self._voice_prob         = 0.0
         self._voice_prob_sq      = 0.0
         self._spec_conf          = 0.0
@@ -871,6 +876,19 @@ class NoiseProfiler:
             if self._pitch_enabled and self._pitch_f0 is not None:
                 hmask    = self._harmonic_mask(self._pitch_f0)
                 p_speech = np.maximum(p_speech, hmask * np.float32(self._pitch_strength))
+
+            # --- Anti-gorgojeo: suavizado temporal de p_speech por bin ---
+            # Un bin que parpadea alrededor del umbral voz/ruido hace saltar su
+            # ganancia frame a frame (ruido musical de fondo). El EMA lo estabiliza:
+            # los bins de ruido que flickean quedan anclados bajos (→ suprimidos) y
+            # la voz sostenida (p_speech≈1) no se toca. Onset de voz: ~2-3 frames.
+            if (self._p_speech_prev is None
+                    or self._p_speech_prev.shape != p_speech.shape):
+                self._p_speech_prev = p_speech
+            else:
+                p_speech = (self._PS_SMOOTH * self._p_speech_prev
+                            + (1.0 - self._PS_SMOOTH) * p_speech).astype(np.float32)
+                self._p_speech_prev = p_speech
 
             gain_out = (gain_dd ** p_speech) * (_eff_floor ** (1.0 - p_speech))
 
