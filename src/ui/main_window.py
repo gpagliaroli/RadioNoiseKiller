@@ -262,7 +262,7 @@ class MainWindow(QMainWindow):
         agc_row.addWidget(self._combo_agc)
         self._label_agc_gain = QLabel("")
         self._label_agc_gain.setFixedWidth(60)
-        self._label_agc_gain.setStyleSheet("color: #90caf9; font-size: 8pt;")
+        self._label_agc_gain.setStyleSheet("color: #888; font-size: 8pt; font-weight: bold;")
         agc_row.addWidget(self._label_agc_gain)
         agc_row.addStretch()
         layout.addLayout(agc_row)
