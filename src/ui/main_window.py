@@ -2,7 +2,7 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QComboBox, QSlider, QPushButton, QStatusBar,
     QGroupBox, QCheckBox, QTabWidget, QApplication,
-    QScrollArea, QFrame, QInputDialog, QMessageBox, QSplitter,
+    QScrollArea, QFrame, QInputDialog, QMessageBox, QSplitter, QGridLayout,
 )
 from PySide6.QtCore import Qt, QTimer, QPoint
 from PySide6.QtGui import QFont
@@ -465,26 +465,28 @@ class MainWindow(QMainWindow):
         self._learn_timer.setInterval(1000)
         self._learn_timer.timeout.connect(self._on_learn_tick)
 
-        db_row = QHBoxLayout()
-        db_row.addWidget(QLabel(tr("Reducción activa:")))
+        # "Reducción activa" a la izquierda y "Preview" centrado en la MISMA línea:
+        # ambos en la misma celda del grid con alineaciones distintas (izq / centro),
+        # así el Preview queda centrado en el ancho sin que el indicador lo corra.
+        db_grid = QGridLayout()
+        db_grid.setContentsMargins(0, 0, 0, 0)
+        red_row = QHBoxLayout()
+        red_row.setContentsMargins(0, 0, 0, 0)
+        red_row.addWidget(QLabel(tr("Reducción activa:")))
         self._lbl_noise_db = QLabel("—")
         self._lbl_noise_db.setStyleSheet("color: #888; font-weight: bold;")
-        db_row.addWidget(self._lbl_noise_db)
-        db_row.addStretch()
-        layout.addLayout(db_row)
+        red_row.addWidget(self._lbl_noise_db)
+        red_row.addStretch()
+        db_grid.addLayout(red_row, 0, 0)
 
-        # Preview centrado (checkbox + texto), en la misma columna que los sliders
         self._chk_noise_preview = QCheckBox(tr("Preview: escuchar ruido eliminado"))
         self._chk_noise_preview.setToolTip(
             tr("Emite el ruido que está siendo restado.\n"
             "Si suena como voz, bajar la Intensidad.")
         )
         self._chk_noise_preview.toggled.connect(self._pipeline.set_noise_preview)
-        prev_row = QHBoxLayout()
-        prev_row.addStretch()
-        prev_row.addWidget(self._chk_noise_preview)
-        prev_row.addStretch()
-        layout.addLayout(prev_row)
+        db_grid.addWidget(self._chk_noise_preview, 0, 0, alignment=Qt.AlignHCenter)
+        layout.addLayout(db_grid)
 
         # Post-filtro espectral: 2do control más impactante tras Intensidad. Movido
         # de Avanzada a Principal para el usuario casual. El slider AUTO-ACTIVA el
