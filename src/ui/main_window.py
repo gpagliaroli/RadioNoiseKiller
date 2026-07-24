@@ -30,10 +30,11 @@ _COMBO_WARN_STYLE = "QComboBox { border: 1px solid #ef5350; }"
 
 # Ancho común de los combos de la pestaña Principal (Entrada/Salida/Canal/Modo/AGC/
 # Modo ruido) y de los VU meters, para que terminen donde termina la barra del slider.
-# La barra del SliderRow termina en label(160) + spacing(8) + slider(432) = 600.
+# La barra del SliderRow termina en label(150) + spacing(8) + slider(400) = 558.
 _ROW_LABEL_W = 70       # ancho de la etiqueta de la fila (columna izquierda)
-_FIELD_W = 600          # fin de la barra del slider (ancho de los VU, que arrancan en x=0)
+_FIELD_W = 558          # fin de la barra del slider (ancho de los VU, que arrancan en x=0)
 _COMBO_W = _FIELD_W - _ROW_LABEL_W - 8   # ancho del combo para que termine en _FIELD_W
+_WINDOW_W = 770         # ancho FIJO de la ventana (alto flexible)
 
 
 class MainWindow(QMainWindow):
@@ -91,8 +92,7 @@ class MainWindow(QMainWindow):
 
     def _build_ui(self) -> None:
         self._update_window_title()
-        self.setMinimumWidth(800)
-        self.setMaximumWidth(1100)
+        self.setFixedWidth(_WINDOW_W)   # ancho fijo (alto flexible)
 
         self._spectrum_widget = SpectrumWidget()
         self._spectrum_widget.pre_frames  = self._pipeline.spectrum_pre_frames
@@ -1619,13 +1619,8 @@ class MainWindow(QMainWindow):
         # el scroll — la app siempre entra en pantalla.
         # +145: tabs + botón ACTIVAR + separación (addSpacing 10) + status bar + margen
         desired_h = self._main_tab_inner.sizeHint().height() + 145
-        # Ancho: el guardado por el usuario, o 960 por defecto (a 800 —el
-        # mínimo— las filas de sliders de Avanzadas quedan apretadas).
-        # Clampeado a [mínimo, máximo] y a la pantalla.
-        width = self._config.window.w if self._config.window.w else 960
-        width = max(self.minimumWidth(),
-                    min(width, self.maximumWidth(), screen.width() - 40))
-        self.resize(width, min(desired_h, screen.height() - 60))
+        # Ancho FIJO (_WINDOW_W); solo se ajusta el alto al contenido.
+        self.resize(_WINDOW_W, min(desired_h, screen.height() - 60))
         if self._config.window.x is not None:
             # Clamp dentro de la pantalla de referencia: la ventana COMPLETA
             # debe quedar visible (clampear solo el borde superior dejaba el
