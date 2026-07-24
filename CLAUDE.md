@@ -632,6 +632,34 @@ aviso −9993 quedó **validado en hardware real por el usuario** (cruce WASAPI+
 deshabilitado + aviso) además de los tests `test_device_combo.py` + `test_ui.py`. Manuales ES+EN
 documentan el requisito de misma API en los consejos de dispositivos.
 
+**v1.9.1 publicada (julio 2026)** — release de patch en GitHub con distribuibles Windows y Linux.
+Versión de app 1.9.1, manuales `MANUAL_RadioNoiseKiller_v1.9.1.pdf` (ES, 34 págs) y `..._v1.9.1_EN.pdf`
+(EN, 32 págs). Título "v1.9.1 by LU6APA". Tanda de refinamientos de UI + mejora del anti-gorgojeo +
+"Acerca de", todo validado por el usuario:
+- **Anti-gorgojeo mejorado (suavizado temporal de p_speech):** el ruido musical de fondo venía de bins
+  cuya clasificación voz/ruido parpadeaba frame a frame; `p_speech` se recalculaba sin suavizado. Nuevo
+  EMA por-bin (`_ps_smooth`, ~60% menos varianza del salto de ganancia), **acoplado al slider
+  Anti-gorgojeo (β)** — set_smooth deriva `_ps_smooth` de β (0.90→0, 0.99→0.85), así el slider (que
+  tenía poco efecto) recupera efecto fuerte sin control nuevo ni cambio de presets. Default de
+  `noise_smooth` 0.97 → **0.96** (zona útil 96-98%). `_p_speech_prev` por-bin, reseteado en reset (inv 9).
+- **Post-Filtro movido a la pestaña Principal** (bajo Intensidad, los 2 controles más impactantes juntos
+  para el usuario casual): slider renombrado "Agresividad"→"Post-Filtro", con **auto-activar** (>0 enciende
+  el post-filtro y sincroniza el checkbox de Módulos; 0 lo apaga). Indicador Reducción extra abajo del
+  slider. Quitado de Avanzada Cancelador. Intensidad convertido a SliderRow (mismo largo que el resto).
+- **Preview reubicado** junto a Reducción extra (refleja la reducción total Intensidad+Post-Filtro);
+  manual aclara qué incluye y cómo calibrar solo Intensidad (Post-Filtro en 0 primero).
+- **"Acerca de"** (botón ℹ en la barra de estado): diálogo con versión/build, autor **Germán Pagliaroli —
+  LU6APA**, link a GitHub; título con "by LU6APA".
+- **Alineación de la pestaña Principal:** gating de sliders bandpass por modo AM/SSB (solo el modo activo
+  habilitado; `_on_mode_changed` refresca), barra gris en sliders deshabilitados (`sub-page:disabled`),
+  combos + VU + botones + Preview alineados al ancho del slider, Latencia a la izquierda, espacio antes de
+  ACTIVAR. **Ancho de ventana FIJO (770, alto flexible)**; SliderRow label 160→150 y slider 432→400 para
+  cerrar el hueco nombre-slider y permitir el ancho fijo más angosto. Constantes de layout en `main_window`
+  (`_COMBO_W`, `_FIELD_W`, `_WINDOW_W`). **Regla UX: campos de ancho fijo con stretch al final; el ancho
+  de ventana es fijo.**
+- **OJO patrón repetido:** el hook ruff borra un import agregado en un Edit y usado en el siguiente
+  (pasó con `DSPConfig` y `QGridLayout` en main_window) — re-agregar en el mismo Edit o después.
+
 **v1.9 publicada (julio 2026)** — release en GitHub con distribuibles Windows y Linux. Versión de
 app 1.9.0, manuales `MANUAL_RadioNoiseKiller_v1.9.pdf` (ES, 33 págs) y `..._v1.9_EN.pdf` (EN, 32 págs).
 Título de la ventana "v1.9" en `_update_window_title()`. Salto de menor (no patch) por el volumen:
