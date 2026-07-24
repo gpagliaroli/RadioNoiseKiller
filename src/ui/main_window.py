@@ -1111,7 +1111,7 @@ class MainWindow(QMainWindow):
             + "<br><br>"
             + tr("Reductor de ruido para radio AM/SSB (ham radio).") + "<br>"
             + tr("DSP puro numpy/scipy — sin IA ni modelos externos.") + "<br><br>"
-            + tr("Autor: Germán Pagliaroli") + "<br>"
+            + tr("Autor: Germán Pagliaroli") + " — LU6APA<br>"
             + "<a href='https://github.com/gpagliaroli/RadioNoiseKiller'>"
               "github.com/gpagliaroli/RadioNoiseKiller</a>"
         )
@@ -1710,7 +1710,7 @@ class MainWindow(QMainWindow):
         valores actuales difieren del preset guardado) + build ID. Compara contra
         el snapshot en memoria — sin disco — para poder llamarse en cada cambio."""
         from buildinfo import BUILD_ID
-        title = "RadioNoiseKiller  v1.9"
+        title = "RadioNoiseKiller  v1.9  by LU6APA"
         name = self._config.last_preset
         if name:
             self._refresh_preset_snapshot(force=False)
