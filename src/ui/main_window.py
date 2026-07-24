@@ -53,6 +53,13 @@ class MainWindow(QMainWindow):
         # corresponde a ese archivo. NO es lo mismo que config.last_noise_profile (que persiste
         # el nombre para la auto-recarga aunque después se aprenda uno nuevo).
         self._active_noise_profile_name: "str | None" = None
+        # Ganancia de salida recordada por modo bypass (memoria de sesión, NO se
+        # persiste): {False: procesando, True: bypass}. Al alternar Bypass el slider
+        # de Salida salta al valor guardado del modo destino → A/B a nivel parejo sin
+        # reajustar. Arranca con ambos slots en el valor de config (sin salto hasta
+        # que el usuario ajuste en un modo). Ver _on_bypass_toggled / _on_gain_out_changed.
+        _og = self._config.gain.output_gain_db
+        self._out_gain_by_bypass = {False: _og, True: _og}
         # Snapshot en memoria del preset activo (dsp, gain) para chequear "(modificado)"
         # sin re-leer el JSON en cada actualización del título.
         self._preset_saved_snapshot = None
@@ -261,7 +268,7 @@ class MainWindow(QMainWindow):
         layout.addLayout(agc_row)
 
         self._check_bypass = QCheckBox(tr("Bypass (sin procesamiento)"))
-        self._check_bypass.toggled.connect(self._pipeline.set_bypass)
+        self._check_bypass.toggled.connect(self._on_bypass_toggled)
         layout.addWidget(self._check_bypass)
         return group
 
@@ -991,6 +998,9 @@ class MainWindow(QMainWindow):
         self._s_gain_in.set_value(self._config.gain.input_gain_db)
         self._s_gain_out.set_value(self._config.gain.output_gain_db)
         self._s_peak.set_value(self._config.gain.peak_limit_db)
+        # Cargar config/preset resetea la memoria A/B de la ganancia de salida.
+        _og = self._config.gain.output_gain_db
+        self._out_gain_by_bypass = {False: _og, True: _og}
 
         # --- Pestanas avanzadas ---
         self._adv_audio_tab.reload()
@@ -1172,7 +1182,23 @@ class MainWindow(QMainWindow):
     def _on_gain_out_changed(self, val: float) -> None:
         self._config.gain.output_gain_db = val
         self._pipeline.set_output_gain_db(val)
+        # Recordar el valor para el modo bypass actual (A/B a nivel parejo).
+        self._out_gain_by_bypass[self._check_bypass.isChecked()] = val
         self._schedule_save()
+
+    def _on_bypass_toggled(self, checked: bool) -> None:
+        # Guardar la ganancia de salida del modo que dejamos y restaurar la del
+        # modo destino, para comparar bypass ON/OFF a nivel parejo sin reajustar.
+        # set_value(emit=False) mueve el slider sin disparar _on_gain_out_changed;
+        # empujamos config/pipeline a mano.
+        self._out_gain_by_bypass[not checked] = self._s_gain_out.value()
+        self._pipeline.set_bypass(checked)
+        target = self._out_gain_by_bypass[checked]
+        if target != self._s_gain_out.value():
+            self._s_gain_out.set_value(target)
+            self._config.gain.output_gain_db = target
+            self._pipeline.set_output_gain_db(target)
+            self._schedule_save()
 
     def _on_peak_changed(self, val: float) -> None:
         self._config.gain.peak_limit_db = val

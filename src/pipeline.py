@@ -39,6 +39,10 @@ class ProcessingPipeline:
         self._bypass  = False
         self._muted   = False   # silencia SOLO la salida al dispositivo (proceso sigue)
         self._input_gain: float = 10 ** (config.gain.input_gain_db / 20.0)
+        # Ganancia de salida cacheada como lineal (escritura atómica, sin lock,
+        # igual que _input_gain). En la ruta normal la aplica _limiter en el hilo
+        # procesador; se usa aquí para aplicarla también en bypass (ver _process).
+        self._output_gain: float = 10 ** (config.gain.output_gain_db / 20.0)
 
         self._blanker_frame: float = config.dsp.blanker_frame
         self._blanker_mini:  float = config.dsp.blanker_mini
@@ -258,6 +262,7 @@ class ProcessingPipeline:
 
     def set_output_gain_db(self, db: float) -> None:
         self._config.gain.output_gain_db = db
+        self._output_gain = 10 ** (db / 20.0)  # atómico, para el bypass
         with self._lock:
             self._limiter.set_gain_db(db)
 
@@ -997,29 +1002,36 @@ class ProcessingPipeline:
         self._db_in = self._level_in.process(audio_in)
 
         if self._bypass:
-            self._db_out = self._db_in
+            # En bypass la salida es la señal cruda, pero la ganancia de salida SÍ
+            # se aplica (el limitador que normalmente la aplica corre en el hilo
+            # procesador, que en bypass no procesa — sin esto el volumen de bypass
+            # queda al nivel del input_gain solo, más bajo que procesando y el
+            # slider de salida no accionaba). Multiply lineal, sin el peak-limiter
+            # (stateful, del hilo procesador — no se toca desde el callback).
+            out_bp = audio_in * self._output_gain
+            self._db_out = self._level_out.process(out_bp)
             self._latency_ms = 0.0
             # El espectro se alimenta desde el hilo procesador, que en bypass no
-            # recibe audio → sin esto la pantalla queda congelada. En bypass
-            # "lo que se escucha" == la señal cruda (entrada == salida), así que
-            # empujamos audio_in a ambos deques. deque.append es atómico y el
-            # hilo procesador no escribe en bypass (no hay input encolado): sin
-            # carrera nueva. El SpectrumWidget concatena y toma los últimos
-            # FFT_SIZE samples, así que el tamaño del bloque no necesita ser hop.
+            # recibe audio → sin esto la pantalla queda congelada. "Entrada" = la
+            # señal cruda; "Salida" = lo que se escucha (con ganancia de salida).
+            # deque.append es atómico y el hilo procesador no escribe en bypass
+            # (no hay input encolado): sin carrera nueva. El SpectrumWidget
+            # concatena y toma los últimos FFT_SIZE samples, así que el tamaño
+            # del bloque no necesita ser hop.
             self._spec_pre_frames.append(audio_in.copy())
-            self._spec_post_frames.append(audio_in.copy())
-            # La grabación captura "lo que se escucha": en bypass, la señal
-            # cruda va a ambos archivos (sin esto, la grabación quedaba PAUSADA
-            # durante el bypass — el feed vivía solo en el hilo procesador).
-            # feed() es no-bloqueante: seguro desde el callback de audio.
-            # Bonus: alternar Bypass durante una grabación produce un
-            # antes/después en el mismo archivo.
+            self._spec_post_frames.append(out_bp.copy())
+            # La grabación captura "lo que se escucha": la salida con ganancia va
+            # al archivo procesado; el canal crudo opcional conserva la entrada.
+            # (Sin esto, la grabación quedaba PAUSADA durante el bypass — el feed
+            # vivía solo en el hilo procesador.) feed() es no-bloqueante: seguro
+            # desde el callback. Bonus: alternar Bypass durante una grabación
+            # produce un antes/después en el mismo archivo.
             if self._recorder.recording:
                 self._recorder.feed(
-                    audio_in,
+                    out_bp,
                     audio_in if self._recorder.wants_raw else None)
             # Mute solo silencia lo que sale al dispositivo (medidores/grabación ya corrieron)
-            return np.zeros_like(audio_in) if self._muted else audio_in
+            return np.zeros_like(out_bp) if self._muted else out_bp
 
         hop = self._config.audio.block_size
 

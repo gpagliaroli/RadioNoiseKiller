@@ -127,7 +127,7 @@ The main operating controls: reception mode, AGC and processing activation.
 | **Mode** | Selects the type of received signal: **AM** (amplitude modulation, wider bandwidth) or **SSB** (single sideband, voice compressed in frequency). Affects the default limits of the Bandpass Filter. |
 | **AGC** | Automatic Gain Control. **off** = no AGC. **slow / medium / fast** = response speed (attack/release fixed per preset). For SSB, *slow* or *medium* is recommended; for AM with stable signals, *off* or *slow*. |
 | **▶ START / ■ STOP** | Starts or stops real-time processing. When started, audio flows through the whole pipeline. |
-| **Bypass** | Passes audio straight from input to output with no processing. Useful for comparing the sound with and without the application active. |
+| **Bypass** | Passes audio straight from input to output with no processing. Useful for comparing the sound with and without the application active. The **Output gain** (*Advanced Audio* tab) also acts in bypass, and its value is remembered separately for bypass ON and OFF (see the note under *Gain and levels*). |
 
 ### Interface language
 
@@ -628,6 +628,16 @@ Controls the input and output levels and protects against audio peaks. The VU me
 | **Input** | -20 dB to +20 dB | 0 dB | Amplifies or attenuates the audio before the pipeline. Raise it if the radio's signal arrives weak (input VU in the -20 to -10 dB range). Lower it if it arrives saturated (VU in red). |
 | **Output** | -20 dB to +20 dB | 0 dB | Amplifies or attenuates the pipeline output. Useful for compensating the level drop the noise canceller produces — with the noise suppressed, perceived loudness drops because the noise no longer adds to the total level. Raise 3–6 dB to compensate. |
 | **Peak limit** | -12 dB to 0 dB | -1 dB | Maximum level allowed at the output. Prevents distortion from clipping. -1 dB is enough to avoid clipping without compressing the audio. |
+
+> **Output gain and Bypass (level-matched A/B comparison).** The **Output gain** now also acts
+> when **Bypass** is active (previously it was only applied while processing was running, and
+> bypass came out quieter). In addition, the app **remembers the Output value separately for
+> bypass ON and OFF**: set a comfortable volume for the raw signal (bypass ON) and another for the
+> processed signal (bypass OFF), and from then on every time you toggle Bypass the control jumps to
+> the value you left for that mode. This lets you compare before/after at a matched level without
+> readjusting each time. The memory is per-session (not saved) and resets when you load a preset.
+> In bypass the gain is applied without the **Peak limit**, so raising Output too much can clip the
+> raw signal.
 
 ### Peak limiter indicator
 

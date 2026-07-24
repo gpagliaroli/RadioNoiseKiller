@@ -519,6 +519,36 @@ def test_auto_load_respects_saved_mode():
     print("Auto-load respeta el modo MCRA guardado    OK")
 
 
+def test_bypass_remembers_output_gain():
+    """La ganancia de Salida se recuerda por modo bypass (A/B a nivel parejo):
+    al alternar Bypass el slider salta al valor guardado del modo destino, sin
+    reajustar cada vez."""
+    w = _win()
+    assert not w._check_bypass.isChecked(), "arranca sin bypass"
+    init_bypass = w._out_gain_by_bypass[True]     # valor inicial (== config)
+
+    # Ajuste en modo procesando → se recuerda en el slot False
+    w._s_gain_out.set_value(-5.0, emit=True)
+    assert w._out_gain_by_bypass[False] == -5.0, "no recordo la ganancia de procesando"
+
+    # Pasar a bypass: el slider salta al valor guardado de bypass
+    w._check_bypass.setChecked(True)
+    assert abs(w._s_gain_out.value() - init_bypass) < 1e-6, "no restauro el valor de bypass"
+    assert abs(w._pipeline._output_gain - 10 ** (init_bypass / 20.0)) < 1e-4, \
+        "el pipeline no recibio la ganancia de bypass"
+
+    # Ajuste distinto en bypass → se recuerda en el slot True
+    w._s_gain_out.set_value(3.0, emit=True)
+    assert w._out_gain_by_bypass[True] == 3.0, "no recordo la ganancia de bypass"
+
+    # Volver a procesando: recupera -5.0; y de nuevo a bypass: recupera 3.0
+    w._check_bypass.setChecked(False)
+    assert abs(w._s_gain_out.value() - (-5.0)) < 1e-6, "no restauro el valor de procesando"
+    w._check_bypass.setChecked(True)
+    assert abs(w._s_gain_out.value() - 3.0) < 1e-6, "no recordo el valor de bypass en el 2do toggle"
+    print("Bypass recuerda ganancia de salida (A/B)   OK")
+
+
 if __name__ == "__main__":
     test_tab_order()
     test_modules_group_moved_to_own_tab()
@@ -526,6 +556,7 @@ if __name__ == "__main__":
     test_profile_buttons_visibility_by_mode()
     test_loaded_profile_name_label()
     test_mute_button_gating_and_state()
+    test_bypass_remembers_output_gain()
     test_about_dialog()
     test_auto_load_respects_saved_mode()
     test_canceller_subcontrols_require_noise()

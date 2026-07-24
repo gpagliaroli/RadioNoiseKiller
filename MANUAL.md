@@ -127,7 +127,7 @@ Controles principales de operación: modo de recepción, AGC y activación del p
 | **Modo** | Selecciona el tipo de señal recibida: **AM** (amplitud modulada, ancho de banda más amplio) o **SSB** (banda lateral única, voz comprimida en frecuencia). Afecta los límites por defecto del Filtro de Paso de Banda. |
 | **AGC** | Control Automático de Ganancia. **off** = sin AGC. **slow / medium / fast** = velocidad de respuesta (ataque/release fijos por preset). Para SSB se recomienda *slow* o *medium*; para AM con señales estables, *off* o *slow*. |
 | **▶ ACTIVAR / ■ DETENER** | Inicia o detiene el procesamiento en tiempo real. Al activar, el audio fluye por todo el pipeline. |
-| **Bypass** | Pasa el audio directo de entrada a salida sin ningún procesamiento. Útil para comparar el sonido con y sin la aplicación activa. |
+| **Bypass** | Pasa el audio directo de entrada a salida sin ningún procesamiento. Útil para comparar el sonido con y sin la aplicación activa. La **Ganancia de salida** (pestaña *Avanzada Audio*) también actúa en bypass, y su valor se recuerda por separado para bypass ON y OFF (ver la nota en *Ganancia y niveles*). |
 
 ### Idioma de la interfaz
 
@@ -628,6 +628,16 @@ Controla los niveles de entrada y salida, y protege contra picos de audio. Los m
 | **Entrada** | -20 dB a +20 dB | 0 dB | Amplifica o atenúa el audio antes del pipeline. Subir si la señal de la radio llega débil (el VU de entrada está en el rango -20 a -10 dB). Bajar si llega saturada (VU en rojo). |
 | **Salida** | -20 dB a +20 dB | 0 dB | Amplifica o atenúa la salida del pipeline. Útil para compensar la reducción de nivel que produce el cancelador de ruido — al suprimir el ruido, el audio percibido baja porque el ruido ya no suma al nivel total. Subir 3–6 dB para compensar. |
 | **Límite de picos** | -12 dB a 0 dB | -1 dB | Nivel máximo permitido a la salida. Evita distorsión por saturación. -1 dB es suficiente para evitar clipping sin comprimir el audio. |
+
+> **Ganancia de salida y Bypass (comparación A/B a nivel parejo).** La **Ganancia de salida**
+> ahora también actúa cuando el **Bypass** está activo (antes solo se aplicaba con el
+> procesamiento en marcha, y el bypass salía más bajo). Además, la aplicación **recuerda el valor
+> de Salida por separado para bypass ON y OFF**: ajustá un volumen cómodo para la señal cruda
+> (bypass ON) y otro para la señal procesada (bypass OFF), y a partir de ahí cada vez que alternás
+> el Bypass el control salta al valor que dejaste en ese modo. Así comparás el antes/después a un
+> nivel parejo sin reajustar cada vez. La memoria es de sesión (no se guarda) y se reinicia al
+> cargar un preset. En bypass la ganancia se aplica sin el **Límite de picos**, así que si subís
+> mucho la Salida podés saturar la señal cruda.
 
 ### Indicador del limitador de picos
 

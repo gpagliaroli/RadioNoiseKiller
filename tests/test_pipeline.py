@@ -44,8 +44,24 @@ assert np.allclose(out_bypass, np.ones(hop) * 0.1, atol=1e-5), "Bypass fallo"
 assert len(pipeline.spectrum_pre_frames) == 1, "espectro (entrada) no se alimenta en bypass"
 assert len(pipeline.spectrum_post_frames) == 1, "espectro (salida) no se alimenta en bypass"
 assert np.allclose(pipeline.spectrum_pre_frames[-1], pipeline.spectrum_post_frames[-1]), \
-    "en bypass entrada y salida del espectro deben coincidir"
+    "en bypass entrada y salida (0 dB) del espectro deben coincidir"
 print("\nBypass: OK (espectro alimentado)")
+
+# La ganancia de salida DEBE actuar en bypass (antes solo la aplicaba el
+# limitador del hilo procesador, que en bypass no corre → el slider no accionaba).
+pipeline.spectrum_pre_frames.clear()
+pipeline.spectrum_post_frames.clear()
+pipeline.set_output_gain_db(6.0)  # x2 lineal aprox (10**(6/20)=1.995)
+out_gain = pipeline._process(np.ones(hop, dtype=np.float32) * 0.1)
+assert np.allclose(out_gain, 0.1 * (10 ** (6.0 / 20.0)), atol=1e-5), \
+    "ganancia de salida no se aplico en bypass"
+# La "Salida" del espectro/grabacion refleja la ganancia; la "Entrada" no.
+assert np.allclose(pipeline.spectrum_pre_frames[-1], np.ones(hop) * 0.1, atol=1e-5), \
+    "en bypass la Entrada del espectro no debe llevar la ganancia de salida"
+assert np.allclose(pipeline.spectrum_post_frames[-1], out_gain, atol=1e-5), \
+    "en bypass la Salida del espectro debe llevar la ganancia de salida"
+pipeline.set_output_gain_db(0.0)  # restaurar unity para el test de mute
+print("Bypass: OK (ganancia de salida aplicada)")
 
 # ------------------------------------------------------------------
 # Mute de salida: silencia la salida al dispositivo pero el proceso sigue
