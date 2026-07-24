@@ -366,7 +366,7 @@ The indicator in Advanced Canceller shows **FADE** (orange) while the estimator 
 |-----------|-------------|
 | **Reduction (dB)** | How much noise is being reduced right now. Green = strong reduction (>10 dB). Yellow = moderate reduction. |
 | **Voice (%)** | Probability that the current frame contains voice (the smoothed signal used internally by the Wiener filter). To calibrate the Squelch, use the **Voice level** indicator in the Squelch group (more reactive). |
-| **Preview: listen to removed noise** | Inverts the output so you hear only what is being removed. Useful for checking that no voice is being removed. |
+| **Preview: listen to removed noise** (Main tab, next to *Extra reduction*) | Inverts the output so you hear **everything the canceller is subtracting** — it reflects the **full reduction: Intensity + Post-filter** (plus the perceptual floor). It does not include the bandpass, the ANF or the exciter (later stages). Useful for checking that no voice is being removed: if you hear voice in the preview, something is too aggressive. |
 
 ### Advanced controls (Advanced Canceller tab)
 
@@ -380,6 +380,8 @@ The indicator in Advanced Canceller shows **FADE** (orange) while the estimator 
 | **HF floor boost** *(Adaptive only)* | 0% – 150% | 0% | Raises the estimated noise floor above ~2.5 kHz, where noise energy is low and the estimator reacts late. Suppresses the HF hiss that leaks through with fading better. The curve is **logarithmic**: each octave above 2.5 kHz adds more boost, so it acts progressively harder the higher the frequency. **Cost:** it can dull the voice's brightness a bit — compensate with the **Harmonic exciter** or the **Presence EQ** (they regenerate brightness after the canceller, without bringing the noise back). |
 
 > **Tip — calibrating Intensity with the Preview:** enable **"Preview: listen to removed noise"** and raise the **Intensity** while listening to what is being removed: as long as the preview contains only noise, you can keep raising it; at the point where voice starts leaking into the removed audio, back off one step and leave it there. That is the maximum cancellation that does not touch the voice. Disable the preview when done.
+>
+> **Important:** the preview reflects the **total reduction (Intensity + Post-filter)**. To calibrate **Intensity alone**, first set the **Post-filter to 0** — that way what you hear in the preview is only what the Intensity removes. Once the Intensity is set, raise the Post-filter (and, if you like, re-check with the preview that the post-filter isn't taking voice either).
 
 > **Recipe — shortwave noise that rises and falls in short cycles:** a typical problem is band noise fluctuating several dB cyclically and fast, while the signal stays at a steady level. Without tuning, the estimator lags: on the rise it lets noise through, on the fall it eats the voice — a "swaying" of the sound. The combination that fixes it, all in **Adaptive mode**:
 > 1. **Floor reactivity** at **250–350 ms** — so the floor follows the noise's rise and fall.

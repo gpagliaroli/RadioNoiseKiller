@@ -471,28 +471,13 @@ class MainWindow(QMainWindow):
         self._learn_timer.setInterval(1000)
         self._learn_timer.timeout.connect(self._on_learn_tick)
 
-        # "Reducción activa" a la izquierda y "Preview" centrado en la MISMA línea:
-        # ambos en la misma celda del grid con alineaciones distintas (izq / centro),
-        # así el Preview queda centrado en el ancho sin que el indicador lo corra.
-        db_grid = QGridLayout()
-        db_grid.setContentsMargins(0, 0, 0, 0)
-        red_row = QHBoxLayout()
-        red_row.setContentsMargins(0, 0, 0, 0)
-        red_row.addWidget(QLabel(tr("Reducción activa:")))
+        db_row = QHBoxLayout()
+        db_row.addWidget(QLabel(tr("Reducción activa:")))
         self._lbl_noise_db = QLabel("—")
         self._lbl_noise_db.setStyleSheet("color: #888; font-weight: bold;")
-        red_row.addWidget(self._lbl_noise_db)
-        red_row.addStretch()
-        db_grid.addLayout(red_row, 0, 0)
-
-        self._chk_noise_preview = QCheckBox(tr("Preview: escuchar ruido eliminado"))
-        self._chk_noise_preview.setToolTip(
-            tr("Emite el ruido que está siendo restado.\n"
-            "Si suena como voz, bajar la Intensidad.")
-        )
-        self._chk_noise_preview.toggled.connect(self._pipeline.set_noise_preview)
-        db_grid.addWidget(self._chk_noise_preview, 0, 0, alignment=Qt.AlignHCenter)
-        layout.addLayout(db_grid)
+        db_row.addWidget(self._lbl_noise_db)
+        db_row.addStretch()
+        layout.addLayout(db_row)
 
         # Post-filtro espectral: 2do control más impactante tras Intensidad. Movido
         # de Avanzada a Principal para el usuario casual. El slider AUTO-ACTIVA el
@@ -515,13 +500,29 @@ class MainWindow(QMainWindow):
         layout.addWidget(self._slider_post)
         self._slider_post.set_value(self._config.dsp.post_filter_strength)
 
+        # "Reducción extra" a la izquierda y "Preview" centrado en la MISMA línea
+        # (el preview refleja la reducción total = Intensidad + Post-Filtro, así que
+        # va junto al indicador del post-filtro). Ambos en la misma celda del grid
+        # con alineaciones distintas (izq / centro).
+        extra_grid = QGridLayout()
+        extra_grid.setContentsMargins(0, 0, 0, 0)
         extra_row = QHBoxLayout()
+        extra_row.setContentsMargins(0, 0, 0, 0)
         extra_row.addWidget(QLabel(tr("Reducción extra:")))
         self._lbl_pf_extra = QLabel("—")
         self._lbl_pf_extra.setStyleSheet("color: #888; font-weight: bold;")
         extra_row.addWidget(self._lbl_pf_extra)
         extra_row.addStretch()
-        layout.addLayout(extra_row)
+        extra_grid.addLayout(extra_row, 0, 0)
+
+        self._chk_noise_preview = QCheckBox(tr("Preview: escuchar ruido eliminado"))
+        self._chk_noise_preview.setToolTip(
+            tr("Emite el ruido que está siendo restado (Intensidad + Post-Filtro).\n"
+            "Si suena como voz, algo está de más: bajar la Intensidad (o el Post-Filtro).")
+        )
+        self._chk_noise_preview.toggled.connect(self._pipeline.set_noise_preview)
+        extra_grid.addWidget(self._chk_noise_preview, 0, 0, alignment=Qt.AlignHCenter)
+        layout.addLayout(extra_grid)
 
         self._label_noise = QLabel(tr("Sin perfil — activar procesamiento y presionar Aprender"))
         self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")

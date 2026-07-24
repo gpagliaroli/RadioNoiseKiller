@@ -366,7 +366,7 @@ El indicador en Avanzada Cancelador muestra **FADE** (naranja) mientras el estim
 |-----------|-------------|
 | **Reducción (dB)** | Cuánto está reduciendo el ruido en este momento. Verde = reducción fuerte (>10 dB). Amarillo = reducción moderada. |
 | **Voz (%)** | Probabilidad de que el frame actual contenga voz (señal suavizada usada internamente por el Wiener). Para calibrar el Squelch, usar el indicador **Nivel de voz** del grupo Squelch (más reactivo). |
-| **Preview: escuchar ruido eliminado** | Invierte la salida para escuchar solo lo que se está eliminando. Útil para verificar que no se esté eliminando voz. |
+| **Preview: escuchar ruido eliminado** (pestaña Principal, junto a *Reducción extra*) | Invierte la salida para escuchar **todo lo que el cancelador está restando** — refleja la reducción **completa: Intensidad + Post-Filtro** (más el piso perceptual). No incluye el bandpass, la ANF ni el excitador (son etapas posteriores). Útil para verificar que no se esté eliminando voz: si en el preview se escucha voz, algo está de más. |
 
 ### Controles avanzados (Pestaña Avanzada Cancelador)
 
@@ -380,6 +380,8 @@ El indicador en Avanzada Cancelador muestra **FADE** (naranja) mientras el estim
 | **Refuerzo en agudos** *(solo Adaptativo)* | 0% – 150% | 0% | Sube el piso de ruido estimado por encima de ~2,5 kHz, donde la energía del ruido es baja y el estimador reacciona tarde. Suprime mejor el siseo de agudos que se cuela con el fading. La curva es **logarítmica**: cada octava por encima de 2,5 kHz suma más refuerzo, así que actúa progresivamente más fuerte cuanto más alta la frecuencia. **Costo:** puede opacar un poco el brillo de la voz — compensar con el **Excitador armónico** o la **EQ de presencia** (regeneran brillo después del cancelador, sin traer de vuelta el ruido). |
 
 > **Consejo — calibrar la Intensidad con el Preview:** activar **"Preview: escuchar ruido eliminado"** y subir la **Intensidad** escuchando lo que se elimina: mientras en el preview se escuche solo ruido, se puede seguir subiendo; en el punto donde empieza a filtrarse voz en lo eliminado, bajar un paso y dejarlo ahí. Ese es el máximo de cancelación que no modifica la voz. Desactivar el preview al terminar.
+>
+> **Importante:** el preview refleja la reducción **total (Intensidad + Post-Filtro)**. Para calibrar **solo la Intensidad**, poné antes el **Post-Filtro en 0** — así lo que escuchás en el preview es únicamente lo que quita la Intensidad. Una vez fijada la Intensidad, subí el Post-Filtro (y si querés, revisá de nuevo con el preview que el post-filtro tampoco se lleve voz).
 
 > **Receta — ruido de onda corta que sube y baja en ciclos cortos:** un problema típico es el ruido de banda que fluctúa varios dB de forma cíclica y rápida, mientras la señal queda a nivel parejo. Sin ajuste, el estimador llega tarde: en la subida deja pasar ruido y en la bajada se come la voz — un "vaivén" del sonido. La combinación que lo resuelve, todo en **modo Adaptativo**:
 > 1. **Reactividad del piso** en **250–350 ms** — para que el piso siga el sube-y-baja del ruido.
