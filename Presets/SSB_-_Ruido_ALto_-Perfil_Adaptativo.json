@@ -3,7 +3,7 @@
   "version": 1,
   "dsp": {
     "mode": "SSB",
-    "agc_preset": "fast",
+    "agc_preset": "medium",
     "blanker_enabled": true,
     "blanker_frame": 30.0,
     "blanker_mini": 10.0,
@@ -36,9 +36,9 @@
     "anf_depth": 0.5,
     "noise_enabled": true,
     "noise_mode": "mcra",
-    "noise_alpha": 0.7,
+    "noise_alpha": 0.5,
     "noise_floor": 0.15000000000000002,
-    "noise_smooth": 0.96,
+    "noise_smooth": 0.9550000000000001,
     "noise_attack": 0.7,
     "squelch_enabled": false,
     "squelch_threshold": 0.35000000000000003,
@@ -59,11 +59,11 @@
     "perceptual_floor_rolloff_hz": 1500.0,
     "perceptual_floor_rolloff_depth": 0.6000000000000001,
     "post_filter_enabled": true,
-    "post_filter_strength": 2.5,
+    "post_filter_strength": 3.0,
     "pitch_enhance_enabled": true,
     "pitch_enhance_strength": 0.7000000000000001,
-    "noise_fading_comp": true,
-    "noise_mcra_window_ms": 300.0,
+    "noise_fading_comp": false,
+    "noise_mcra_window_ms": 500.0,
     "noise_hf_boost": 1.0,
     "noise_fading_change_db": 5.0,
     "noise_fading_freeze_ms": 200.0,
@@ -75,6 +75,6 @@
   "gain": {
     "input_gain_db": -3.0,
     "output_gain_db": 0.0,
-    "peak_limit_db": -3.0
+    "peak_limit_db": -1.5
   }
 }
