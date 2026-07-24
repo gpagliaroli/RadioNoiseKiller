@@ -1615,7 +1615,8 @@ class MainWindow(QMainWindow):
         # ahora vive en un scroll y ya no fuerza la altura de la ventana) más
         # tabs/botón/status. Si el monitor es más bajo, se recorta y aparece
         # el scroll — la app siempre entra en pantalla.
-        desired_h = self._main_tab_inner.sizeHint().height() + 130
+        # +145: tabs + botón ACTIVAR + separación (addSpacing 10) + status bar + margen
+        desired_h = self._main_tab_inner.sizeHint().height() + 145
         # Ancho: el guardado por el usuario, o 960 por defecto (a 800 —el
         # mínimo— las filas de sliders de Avanzadas quedan apretadas).
         # Clampeado a [mínimo, máximo] y a la pantalla.
