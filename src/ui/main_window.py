@@ -154,6 +154,12 @@ class MainWindow(QMainWindow):
         self._combo_lang.currentIndexChanged.connect(self._on_language_changed)
         self._status_bar.addPermanentWidget(self._combo_lang)
 
+        self._btn_about = QPushButton("ℹ")
+        self._btn_about.setFixedWidth(28)
+        self._btn_about.setToolTip(tr("Acerca de RadioNoiseKiller"))
+        self._btn_about.clicked.connect(self._show_about)
+        self._status_bar.addPermanentWidget(self._btn_about)
+
         self._apply_dark_style()
 
     def _build_main_tab(self) -> QWidget:
@@ -1095,6 +1101,30 @@ class MainWindow(QMainWindow):
             if lang == "es" else
             "Language saved — restart the application to apply it."
         )
+
+    def _show_about(self) -> None:
+        from buildinfo import BUILD_ID
+        ver = QApplication.instance().applicationVersion()
+        html = (
+            "<b>RadioNoiseKiller</b><br>"
+            + tr("Versión {ver} · build {build}").format(ver=ver, build=BUILD_ID)
+            + "<br><br>"
+            + tr("Reductor de ruido para radio AM/SSB (ham radio).") + "<br>"
+            + tr("DSP puro numpy/scipy — sin IA ni modelos externos.") + "<br><br>"
+            + tr("Autor: Germán Pagliaroli") + "<br>"
+            + "<a href='https://github.com/gpagliaroli/RadioNoiseKiller'>"
+              "github.com/gpagliaroli/RadioNoiseKiller</a>"
+        )
+        box = QMessageBox(self)
+        box.setWindowTitle(tr("Acerca de"))
+        box.setTextFormat(Qt.RichText)
+        box.setText(html)
+        pix = self.windowIcon().pixmap(64, 64)
+        if not pix.isNull():
+            box.setIconPixmap(pix)
+        else:
+            box.setIcon(QMessageBox.Icon.Information)
+        box.exec()
 
     def _on_mode_changed(self, idx: int) -> None:
         mode: RadioMode = self._combo_mode.itemData(idx)

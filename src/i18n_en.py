@@ -173,6 +173,14 @@ CATALOG = {
     "Perfil de ruido \"{name}\" cargado.": "Noise profile \"{name}\" loaded.",
     "Perfil de ruido \"{name}\" cargado. Listo para ACTIVAR.":
         "Noise profile \"{name}\" loaded. Ready to START.",
+    "Acerca de RadioNoiseKiller": "About RadioNoiseKiller",
+    "Acerca de": "About",
+    "Versión {ver} · build {build}": "Version {ver} · build {build}",
+    "Reductor de ruido para radio AM/SSB (ham radio).":
+        "Noise reducer for AM/SSB radio (ham radio).",
+    "DSP puro numpy/scipy — sin IA ni modelos externos.":
+        "Pure numpy/scipy DSP — no AI or external models.",
+    "Autor: Germán Pagliaroli": "Author: Germán Pagliaroli",
     "Intensidad:": "Intensity:",
     "Post-Filtro:": "Post-filter:",
     "Supresión extra del 'gorgojeo' / ruido musical residual de fondo.\n"

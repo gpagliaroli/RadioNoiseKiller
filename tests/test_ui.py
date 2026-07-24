@@ -491,6 +491,20 @@ def test_mute_button_gating_and_state():
     print("Mute: gating + estado del boton              OK")
 
 
+def test_about_dialog():
+    """El botón ℹ de la barra de estado abre el 'Acerca de' sin crashear."""
+    from PySide6.QtWidgets import QMessageBox
+    w = _win()
+    assert w._btn_about.text() == "ℹ", "falta el boton Acerca de"
+    orig = QMessageBox.exec
+    QMessageBox.exec = lambda self: 0          # no bloquear el test
+    try:
+        w._show_about()                        # construye el dialogo (HTML, icono)
+    finally:
+        QMessageBox.exec = orig
+    print("Acerca de: boton + dialogo                  OK")
+
+
 def test_auto_load_respects_saved_mode():
     """El auto-cargar un perfil nombrado fuerza estático; NO debe hacerlo si el
     modo guardado era MCRA (regresión: un last_noise_profile viejo pisaba el
@@ -512,6 +526,7 @@ if __name__ == "__main__":
     test_profile_buttons_visibility_by_mode()
     test_loaded_profile_name_label()
     test_mute_button_gating_and_state()
+    test_about_dialog()
     test_auto_load_respects_saved_mode()
     test_canceller_subcontrols_require_noise()
     test_voice_leveler_requires_noise()
