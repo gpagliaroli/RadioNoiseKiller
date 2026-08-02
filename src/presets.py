@@ -11,7 +11,7 @@ del preset.
 import json
 import os
 import re
-from config import AppConfig, RadioMode
+from config import AppConfig, DSPConfig, GainConfig, RadioMode
 
 
 class PresetManager:
@@ -182,79 +182,96 @@ class PresetManager:
 
     @staticmethod
     def _apply_to_config(data: dict, config: AppConfig) -> None:
-        """Deserializa los valores del preset en config (in-place)."""
+        """Deserializa los valores del preset en config (in-place).
+
+        IMPORTANTE: el fallback de cada clave ausente es el valor de FABRICA
+        (`DSPConfig()`/`GainConfig()` frescos), NUNCA el valor vivo del config.
+        Un preset viejo al que le falta un campo agregado despues debe cargar
+        ese campo en su default; si heredara el valor vivo, el resultado
+        dependeria de lo que hubiera en la sesion y no coincidiria con el
+        snapshot normalizado de `snapshot()` (que parte de un AppConfig limpio)
+        -> '(modificado)' espurio permanente. Ver CLAUDE.md, invariantes.
+        """
         d    = data.get("dsp",  {})
         g    = data.get("gain", {})
         dsp  = config.dsp
         gain = config.gain
+        ddef = DSPConfig()    # defaults de fabrica (instancia propia: dicts mutables)
+        gdef = GainConfig()
 
         try:
-            dsp.mode = RadioMode(d.get("mode", dsp.mode.value))
+            dsp.mode = RadioMode(d.get("mode", ddef.mode.value))
         except ValueError:
-            pass
-        dsp.agc_preset           = d.get("agc_preset",           dsp.agc_preset)
+            dsp.mode = ddef.mode
+        dsp.agc_preset           = d.get("agc_preset",           ddef.agc_preset)
         if dsp.agc_preset == "custom":   # AGC Custom eliminado → preset válido
             dsp.agc_preset = "medium"
-        dsp.blanker_enabled      = bool(d.get("blanker_enabled",  dsp.blanker_enabled))
-        dsp.blanker_frame        = float(d.get("blanker_frame",   dsp.blanker_frame))
-        dsp.blanker_mini         = float(d.get("blanker_mini",    dsp.blanker_mini))
-        dsp.bandpass_pre_enabled  = bool(d.get("bandpass_pre_enabled",  dsp.bandpass_pre_enabled))
-        dsp.bandpass_post_enabled = bool(d.get("bandpass_post_enabled", dsp.bandpass_post_enabled))
-        for mode_str, limits in d.get("bandpass_limits", {}).items():
+        dsp.blanker_enabled      = bool(d.get("blanker_enabled",  ddef.blanker_enabled))
+        dsp.blanker_frame        = float(d.get("blanker_frame",   ddef.blanker_frame))
+        dsp.blanker_mini         = float(d.get("blanker_mini",    ddef.blanker_mini))
+        dsp.bandpass_pre_enabled  = bool(d.get("bandpass_pre_enabled",  ddef.bandpass_pre_enabled))
+        dsp.bandpass_post_enabled = bool(d.get("bandpass_post_enabled", ddef.bandpass_post_enabled))
+        # Los limites parten SIEMPRE de los defaults y el preset los pisa (un modo
+        # ausente en el JSON vuelve a fabrica, no conserva el valor vivo).
+        limits = dict(ddef.bandpass_limits)
+        for mode_str, v in d.get("bandpass_limits", {}).items():
             try:
-                dsp.bandpass_limits[RadioMode(mode_str)] = tuple(limits)
+                limits[RadioMode(mode_str)] = tuple(v)
             except ValueError:
                 pass
+        dsp.bandpass_limits = limits
         dsp.bandpass_out_independent = bool(d.get("bandpass_out_independent",
-                                                  dsp.bandpass_out_independent))
-        for mode_str, limits in d.get("bandpass_out_limits", {}).items():
+                                                  ddef.bandpass_out_independent))
+        out_limits = dict(ddef.bandpass_out_limits)
+        for mode_str, v in d.get("bandpass_out_limits", {}).items():
             try:
-                dsp.bandpass_out_limits[RadioMode(mode_str)] = tuple(limits)
+                out_limits[RadioMode(mode_str)] = tuple(v)
             except ValueError:
                 pass
-        dsp.filter_order    = int(d.get("filter_order",   dsp.filter_order))
-        dsp.anf_enabled     = bool(d.get("anf_enabled",   dsp.anf_enabled))
-        dsp.anf_threshold   = float(d.get("anf_threshold",dsp.anf_threshold))
-        dsp.anf_depth       = float(d.get("anf_depth",    dsp.anf_depth))
-        dsp.noise_enabled   = bool(d.get("noise_enabled", dsp.noise_enabled))
-        nm = d.get("noise_mode", dsp.noise_mode)
+        dsp.bandpass_out_limits = out_limits
+        dsp.filter_order    = int(d.get("filter_order",   ddef.filter_order))
+        dsp.anf_enabled     = bool(d.get("anf_enabled",   ddef.anf_enabled))
+        dsp.anf_threshold   = float(d.get("anf_threshold",ddef.anf_threshold))
+        dsp.anf_depth       = float(d.get("anf_depth",    ddef.anf_depth))
+        dsp.noise_enabled   = bool(d.get("noise_enabled", ddef.noise_enabled))
+        nm = d.get("noise_mode", ddef.noise_mode)
         dsp.noise_mode      = nm if nm in ("static", "mcra") else "static"
-        dsp.noise_alpha     = float(d.get("noise_alpha",  dsp.noise_alpha))
-        dsp.noise_floor     = max(0.05, float(d.get("noise_floor", dsp.noise_floor)))
-        dsp.noise_smooth    = float(d.get("noise_smooth", dsp.noise_smooth))
-        dsp.noise_attack    = float(d.get("noise_attack", dsp.noise_attack))
-        dsp.squelch_enabled    = bool(d.get("squelch_enabled",    dsp.squelch_enabled))
-        dsp.squelch_threshold  = float(d.get("squelch_threshold", dsp.squelch_threshold))
-        dsp.squelch_hold_ms    = float(d.get("squelch_hold_ms",   dsp.squelch_hold_ms))
-        dsp.exciter_enabled    = bool(d.get("exciter_enabled",    dsp.exciter_enabled))
-        dsp.exciter_drive      = float(d.get("exciter_drive",     dsp.exciter_drive))
-        dsp.exciter_mix        = float(d.get("exciter_mix",       dsp.exciter_mix))
-        dsp.presence_enabled   = bool(d.get("presence_enabled",   dsp.presence_enabled))
-        dsp.presence_freq      = float(d.get("presence_freq",     dsp.presence_freq))
-        dsp.presence_db        = float(d.get("presence_db",       dsp.presence_db))
-        dsp.presence_q         = float(d.get("presence_q",        dsp.presence_q))
-        dsp.body_freq          = float(d.get("body_freq",         dsp.body_freq))
-        dsp.body_db            = float(d.get("body_db",           dsp.body_db))
-        dsp.pitch_shift_hz     = float(d.get("pitch_shift_hz",    dsp.pitch_shift_hz))
-        dsp.perceptual_floor_enabled       = bool(d.get("perceptual_floor_enabled",       dsp.perceptual_floor_enabled))
-        dsp.perceptual_floor_boost         = float(d.get("perceptual_floor_boost",        dsp.perceptual_floor_boost))
-        dsp.perceptual_floor_center        = float(d.get("perceptual_floor_center",       dsp.perceptual_floor_center))
-        dsp.perceptual_floor_rolloff_hz    = float(d.get("perceptual_floor_rolloff_hz",   dsp.perceptual_floor_rolloff_hz))
-        dsp.perceptual_floor_rolloff_depth = float(d.get("perceptual_floor_rolloff_depth",dsp.perceptual_floor_rolloff_depth))
-        dsp.post_filter_enabled    = bool(d.get("post_filter_enabled",    dsp.post_filter_enabled))
-        dsp.post_filter_strength   = float(d.get("post_filter_strength",  dsp.post_filter_strength))
-        dsp.pitch_enhance_enabled  = bool(d.get("pitch_enhance_enabled",  dsp.pitch_enhance_enabled))
-        dsp.pitch_enhance_strength = float(d.get("pitch_enhance_strength",dsp.pitch_enhance_strength))
-        dsp.noise_fading_comp      = bool(d.get("noise_fading_comp",     dsp.noise_fading_comp))
-        dsp.noise_mcra_window_ms = float(d.get("noise_mcra_window_ms", dsp.noise_mcra_window_ms))
-        dsp.noise_hf_boost = float(d.get("noise_hf_boost", dsp.noise_hf_boost))
-        dsp.noise_fading_change_db = float(d.get("noise_fading_change_db", dsp.noise_fading_change_db))
-        dsp.noise_fading_freeze_ms = float(d.get("noise_fading_freeze_ms", dsp.noise_fading_freeze_ms))
-        dsp.voice_leveler_enabled  = bool(d.get("voice_leveler_enabled",  dsp.voice_leveler_enabled))
-        dsp.voice_leveler_max_db   = float(d.get("voice_leveler_max_db",  dsp.voice_leveler_max_db))
-        dsp.voice_leveler_gate_voice = bool(d.get("voice_leveler_gate_voice", dsp.voice_leveler_gate_voice))
-        dsp.voice_leveler_release_ms = float(d.get("voice_leveler_release_ms", dsp.voice_leveler_release_ms))
+        dsp.noise_alpha     = float(d.get("noise_alpha",  ddef.noise_alpha))
+        dsp.noise_floor     = max(0.05, float(d.get("noise_floor", ddef.noise_floor)))
+        dsp.noise_smooth    = float(d.get("noise_smooth", ddef.noise_smooth))
+        dsp.noise_attack    = float(d.get("noise_attack", ddef.noise_attack))
+        dsp.squelch_enabled    = bool(d.get("squelch_enabled",    ddef.squelch_enabled))
+        dsp.squelch_threshold  = float(d.get("squelch_threshold", ddef.squelch_threshold))
+        dsp.squelch_hold_ms    = float(d.get("squelch_hold_ms",   ddef.squelch_hold_ms))
+        dsp.exciter_enabled    = bool(d.get("exciter_enabled",    ddef.exciter_enabled))
+        dsp.exciter_drive      = float(d.get("exciter_drive",     ddef.exciter_drive))
+        dsp.exciter_mix        = float(d.get("exciter_mix",       ddef.exciter_mix))
+        dsp.presence_enabled   = bool(d.get("presence_enabled",   ddef.presence_enabled))
+        dsp.presence_freq      = float(d.get("presence_freq",     ddef.presence_freq))
+        dsp.presence_db        = float(d.get("presence_db",       ddef.presence_db))
+        dsp.presence_q         = float(d.get("presence_q",        ddef.presence_q))
+        dsp.body_freq          = float(d.get("body_freq",         ddef.body_freq))
+        dsp.body_db            = float(d.get("body_db",           ddef.body_db))
+        dsp.pitch_shift_hz     = float(d.get("pitch_shift_hz",    ddef.pitch_shift_hz))
+        dsp.perceptual_floor_enabled       = bool(d.get("perceptual_floor_enabled",       ddef.perceptual_floor_enabled))
+        dsp.perceptual_floor_boost         = float(d.get("perceptual_floor_boost",        ddef.perceptual_floor_boost))
+        dsp.perceptual_floor_center        = float(d.get("perceptual_floor_center",       ddef.perceptual_floor_center))
+        dsp.perceptual_floor_rolloff_hz    = float(d.get("perceptual_floor_rolloff_hz",   ddef.perceptual_floor_rolloff_hz))
+        dsp.perceptual_floor_rolloff_depth = float(d.get("perceptual_floor_rolloff_depth",ddef.perceptual_floor_rolloff_depth))
+        dsp.post_filter_enabled    = bool(d.get("post_filter_enabled",    ddef.post_filter_enabled))
+        dsp.post_filter_strength   = float(d.get("post_filter_strength",  ddef.post_filter_strength))
+        dsp.pitch_enhance_enabled  = bool(d.get("pitch_enhance_enabled",  ddef.pitch_enhance_enabled))
+        dsp.pitch_enhance_strength = float(d.get("pitch_enhance_strength",ddef.pitch_enhance_strength))
+        dsp.noise_fading_comp      = bool(d.get("noise_fading_comp",     ddef.noise_fading_comp))
+        dsp.noise_mcra_window_ms = float(d.get("noise_mcra_window_ms", ddef.noise_mcra_window_ms))
+        dsp.noise_hf_boost = float(d.get("noise_hf_boost", ddef.noise_hf_boost))
+        dsp.noise_fading_change_db = float(d.get("noise_fading_change_db", ddef.noise_fading_change_db))
+        dsp.noise_fading_freeze_ms = float(d.get("noise_fading_freeze_ms", ddef.noise_fading_freeze_ms))
+        dsp.voice_leveler_enabled  = bool(d.get("voice_leveler_enabled",  ddef.voice_leveler_enabled))
+        dsp.voice_leveler_max_db   = float(d.get("voice_leveler_max_db",  ddef.voice_leveler_max_db))
+        dsp.voice_leveler_gate_voice = bool(d.get("voice_leveler_gate_voice", ddef.voice_leveler_gate_voice))
+        dsp.voice_leveler_release_ms = float(d.get("voice_leveler_release_ms", ddef.voice_leveler_release_ms))
 
-        gain.input_gain_db  = float(g.get("input_gain_db",  gain.input_gain_db))
-        gain.output_gain_db = float(g.get("output_gain_db", gain.output_gain_db))
-        gain.peak_limit_db  = float(g.get("peak_limit_db",  gain.peak_limit_db))
+        gain.input_gain_db  = float(g.get("input_gain_db",  gdef.input_gain_db))
+        gain.output_gain_db = float(g.get("output_gain_db", gdef.output_gain_db))
+        gain.peak_limit_db  = float(g.get("peak_limit_db",  gdef.peak_limit_db))

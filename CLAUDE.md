@@ -244,7 +244,17 @@ Bugs reales encontrados en revisión — cada uno es un patrón que puede reapar
    handler de `_run_processor` resetea el profiler en loop — MCRA nunca completa el warmup y el
    síntoma es "nunca termina de calibrar" (sin mensaje de error visible). Módulos con estado
    dependiente del hop (AGC) también deben actualizarse en `pipeline.start()`.
-
+10. **Las claves ausentes de un preset usan el DEFAULT de fábrica, no el valor vivo del config.**
+   `PresetManager._apply_to_config` hace `d.get(clave, ddef.X)` con `ddef = DSPConfig()` fresco
+   (ídem `GainConfig()`); los dicts de `bandpass_limits`/`bandpass_out_limits` parten de una copia
+   de los defaults y el preset los pisa, así un modo ausente también vuelve a fábrica. Con el
+   fallback al valor vivo, un preset viejo al que le falta un campo agregado después heredaba lo
+   que hubiera en la sesión → no coincidía con `snapshot()` (que normaliza desde un `AppConfig`
+   limpio) → **"(modificado)" espurio permanente**. Mordió 4 veces (`agc_*` en v1.8,
+   `voice_leveler_*` en v1.8.2, `noise_mcra_window_ms`/`noise_hf_boost` en v1.9). Regenerar los
+   presets de fábrica al agregar un campo sigue siendo lo prolijo, pero ya no es obligatorio para
+   que la comparación funcione. Tests: `test_presets::test_missing_keys_use_factory_defaults` y
+   `::test_missing_bandpass_mode_uses_default`.
 ## Empaquetado multiplataforma — invariantes (lecciones v1.4/v1.5)
 
 La app es Python + PySide6 empaquetada con PyInstaller para Windows y Linux. Los bugs de
@@ -286,7 +296,7 @@ En bundle: junto al `.exe` / `.bin`
 | `tests/test_hostapis.py` | Listado completo por API (diagnóstico) |
 | `tests/test_dsp.py` | BandpassFilter, GainLimiter (curva soft-knee, carry entre chunks), LevelMeter |
 | `tests/test_pipeline.py` | Latencia y bypass con config default; supresor de impulsos headless (ON suprime y cuenta hits, OFF control negativo — el impulso pasa) |
-| `tests/test_presets.py` | `_capture()` cubre DSPConfig/GainConfig, roundtrips, rename/delete |
+| `tests/test_presets.py` | `_capture()` cubre DSPConfig/GainConfig, roundtrips, rename/delete, claves ausentes → default de fábrica (invariante 10) |
 | `tests/test_noise_vad.py` | VAD del squelch (ruido fluctuante, voz armónica, release AGC), cuarentena MCRA, clamps de fading. **Validar detectores con ruido fluctuante y voz con envolvente — el gaussiano estacionario da falsos OK** |
 | `tests/test_integration.py` | Pipeline headless (`start(headless=True)`) con TODOS los módulos activos: warmup MCRA, ciclo squelch, cambios de modo en caliente, cambio de block size con reinicio |
 | `tests/test_ui.py` | UI offscreen (`QT_QPA_PLATFORM=offscreen` + `MainWindow`): orden de pestañas (Módulos en pos 1), "Módulos activos" en su pestaña, visibilidad de botones de perfiles por modo estático/MCRA, gating de controles Avanzados por módulo (invariante 2), restauración de checkboxes desde config (invariante 8), aviso proactivo de dispositivos de APIs incompatibles (ACTIVAR deshabilitado + combos marcados). **SliderRow deshabilita los hijos — testear con `row._slider.isEnabled()`, no `row.isEnabled()`** |

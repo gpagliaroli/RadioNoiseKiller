@@ -3,6 +3,7 @@ Tests de presets: cobertura de campos, save/load, rename, delete,
 y verificacion de que apply_config() transfiere todos los campos DSP+Gain.
 """
 import dataclasses
+import json
 import os
 import sys
 import tempfile
@@ -198,6 +199,89 @@ def test_load_applies_mode():
         print("load_into aplica RadioMode       OK")
 
 
+# ---------------------------------------------------------------------- #
+# 4. Claves ausentes -> defaults de fabrica (no el valor vivo del config)  #
+# ---------------------------------------------------------------------- #
+
+def test_missing_keys_use_factory_defaults():
+    """Un preset viejo sin las claves nuevas debe cargarlas en su DEFAULT.
+
+    Regresion del bug recurrente: el fallback de `d.get()` era el valor VIVO del
+    config, asi que un campo agregado despues del preset heredaba lo que hubiera
+    en la sesion -> nunca coincidia con el snapshot normalizado -> '(modificado)'
+    espurio permanente. Ver CLAUDE.md (v1.8.2 / v1.9).
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        mgr = PresetManager(tmpdir)
+        # Preset "viejo": solo un puñado de claves, sin los campos recientes
+        old = {
+            "name": "Viejo",
+            "version": 1,
+            "dsp": {"mode": "AM", "noise_alpha": 0.5},
+            "gain": {"input_gain_db": 3.0},
+        }
+        with open(os.path.join(tmpdir, "Viejo.json"), "w", encoding="utf-8") as f:
+            json.dump(old, f)
+
+        dflt = DSPConfig()
+        # Config "sucio": valores no-default en los campos ausentes del preset
+        app = AppConfig()
+        app.dsp.voice_leveler_gate_voice = not dflt.voice_leveler_gate_voice
+        app.dsp.voice_leveler_release_ms = 400.0
+        app.dsp.noise_hf_boost           = 1.2
+        app.dsp.noise_mcra_window_ms     = 250.0
+        app.dsp.post_filter_strength     = 6.0
+        app.gain.output_gain_db          = -4.0
+
+        mgr.load_into("Viejo", app)
+
+        # Lo que el preset SI trae
+        assert app.dsp.mode == RadioMode.AM
+        assert app.dsp.noise_alpha == 0.5
+        assert app.gain.input_gain_db == 3.0
+        # Lo ausente vuelve a fabrica, no conserva el valor vivo
+        failed = []
+        for fname in ("voice_leveler_gate_voice", "voice_leveler_release_ms",
+                      "noise_hf_boost", "noise_mcra_window_ms", "post_filter_strength"):
+            expected = getattr(dflt, fname)
+            got      = getattr(app.dsp, fname)
+            if expected != got:
+                failed.append(f"  DSPConfig.{fname}: esperado={expected!r}, obtenido={got!r}")
+        if app.gain.output_gain_db != GainConfig().output_gain_db:
+            failed.append(f"  GainConfig.output_gain_db: obtenido={app.gain.output_gain_db!r}")
+        assert not failed, "Claves ausentes no usan el default:\n" + "\n".join(failed)
+
+        # Y por lo tanto NO debe marcar '(modificado)' recien cargado
+        assert mgr.matches("Viejo", app), "'(modificado)' espurio tras cargar preset incompleto"
+        print("Claves ausentes -> default       OK")
+
+
+def test_missing_bandpass_mode_uses_default():
+    """Un modo ausente en bandpass_limits vuelve al default, no queda el vivo."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        mgr = PresetManager(tmpdir)
+        old = {
+            "name": "SoloAM",
+            "version": 1,
+            "dsp": {"bandpass_limits": {"AM": [400, 4000]}},
+            "gain": {},
+        }
+        with open(os.path.join(tmpdir, "SoloAM.json"), "w", encoding="utf-8") as f:
+            json.dump(old, f)
+
+        app = AppConfig()
+        app.dsp.bandpass_limits[RadioMode.SSB]     = (100, 2000)
+        app.dsp.bandpass_out_limits[RadioMode.AM]  = (500, 4500)
+
+        mgr.load_into("SoloAM", app)
+
+        dflt = DSPConfig()
+        assert app.dsp.bandpass_limits[RadioMode.AM] == (400, 4000)
+        assert app.dsp.bandpass_limits[RadioMode.SSB] == dflt.bandpass_limits[RadioMode.SSB]
+        assert app.dsp.bandpass_out_limits == dflt.bandpass_out_limits
+        print("Bandpass: modo ausente -> default OK")
+
+
 if __name__ == "__main__":
     test_capture_covers_all_dsp_fields()
     test_capture_covers_all_gain_fields()
@@ -207,5 +291,7 @@ if __name__ == "__main__":
     test_delete()
     test_multiple_presets_list_order()
     test_load_applies_mode()
+    test_missing_keys_use_factory_defaults()
+    test_missing_bandpass_mode_uses_default()
     print()
     print("Todos los tests pasaron.")
