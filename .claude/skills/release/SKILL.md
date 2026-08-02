@@ -35,13 +35,19 @@ en orden; cada uno tiene su verificación. No publicar si algo falla.
   (`Images/RNK_ico.png`) y resuelve el diagrama del pipeline. Los PDFs están gitignoreados.
 - Si se cambió algún módulo del pipeline, regenerar el diagrama con
   `tools/gen_pipeline_diagram.py` (salidas versionadas en `Images/pipeline_diagram*.png`).
+- Si se agregó, quitó o ajustó algún preset de fábrica, regenerar el paquete con
+  `tools/gen_presets_zip.py` (`Presets/Presets.zip`, versionado — es lo que se le pasa al
+  usuario final; el bundle no trae presets). El zip es determinista: si no cambió nada, no
+  genera diff.
 - Verificar con pypdf: cantidad de páginas y presencia de los términos nuevos en ambos.
 
 ## 3. Tests
 
-Las 6 suites con `.venv\Scripts\python.exe`:
-`test_dsp, test_pipeline, test_presets, test_noise_vad, test_integration, test_devices`.
-Todas en verde o no hay release.
+`.venv\Scripts\python.exe tests\run_all.py` (o `test.cmd`) — corre las 8 suites de regresión
+headless en subprocesos aislados, con `RNK_DATA_DIR` a un temp dir por suite (no tocan el
+`settings.json` ni los `Presets/` reales). Todas en verde o no hay release.
+`test_devices` / `test_hostapis` quedan fuera del runner: requieren hardware de audio y son
+diagnósticos — correrlos a mano si el release tocó enumeración de dispositivos.
 
 ## 4. Commit de release + tag
 

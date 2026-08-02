@@ -8,6 +8,10 @@ dist/
 dist_*/
 build/
 *.zip
+# ...menos el paquete de presets de fábrica, que sí se versiona
+# (regenerarlo con tools/gen_presets_zip.py — es determinista, no genera diff
+# si no cambió ningún preset)
+!Presets/Presets.zip
 *.egg-info/
 
 # PyInstaller
