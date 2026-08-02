@@ -11,13 +11,23 @@ Uso:
 
 Se excluyen a propósito test_devices / test_hostapis (requieren hardware de
 audio real y son diagnósticos, no de regresión).
+
+Todas las suites corren con RNK_DATA_DIR apuntando a una carpeta temporal: los
+datos escribibles de la app (settings.json, Presets/, PerfilesRuido/,
+Grabaciones/) quedan aislados y ninguna suite puede pisar los presets de fábrica
+del usuario ni envenenar la siguiente corrida con estado persistido.
 """
+import atexit
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = tempfile.mkdtemp(prefix="rnk_tests_")
+atexit.register(shutil.rmtree, DATA_DIR, True)
 
 # Suites deterministas, en orden de más rápida/básica a más integral.
 SUITES = [
@@ -34,6 +44,7 @@ SUITES = [
 
 def run_one(name: str) -> tuple[bool, float, str]:
     env = dict(os.environ)
+    env["RNK_DATA_DIR"] = os.path.join(DATA_DIR, name)   # una carpeta por suite
     if name == "test_ui":
         env["QT_QPA_PLATFORM"] = "offscreen"
     t0 = time.perf_counter()

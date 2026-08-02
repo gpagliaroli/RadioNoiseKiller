@@ -255,6 +255,19 @@ Bugs reales encontrados en revisión — cada uno es un patrón que puede reapar
    presets de fábrica al agregar un campo sigue siendo lo prolijo, pero ya no es obligatorio para
    que la comparación funcione. Tests: `test_presets::test_missing_keys_use_factory_defaults` y
    `::test_missing_bandpass_mode_uses_default`.
+11. **Los tests nunca escriben en los datos reales del usuario.** Todo dato escribible de la app
+   (`settings.json`, `Presets/`, `PerfilesRuido/`, `Grabaciones/`) sale de `utils.data_dir()`, que
+   respeta la env var **`RNK_DATA_DIR`**. `run_all.py` la fija a un temp dir por suite y `test_ui`
+   crea el suyo si corre solo (con un `assert` de red de seguridad: si las rutas caen dentro del
+   proyecto, el módulo rompe antes de tocar nada). Sin la variable el comportamiento es idéntico
+   al de siempre. Motivo: `MainWindow` usa las carpetas reales, así que un test de UI podía
+   sobrescribir/borrar presets de fábrica (afinados en el aire, no regenerables). Efecto secundario
+   del mismo aislamiento: **`QSlider.setValue()` no emite `valueChanged` si el valor no cambia** —
+   con el `settings.json` real, un test que seteaba el valor ya persistido no disparaba el handler
+   y fallaba sin bug (pasó con `post_filter_strength=4.0` en
+   `test_post_filter_on_principal_autoenable`, falla intermitente según el estado del disco). Al
+   testear un handler de slider, partir de un valor distinto conocido.
+
 ## Empaquetado multiplataforma — invariantes (lecciones v1.4/v1.5)
 
 La app es Python + PySide6 empaquetada con PyInstaller para Windows y Linux. Los bugs de

@@ -8,9 +8,17 @@ y a la raíz del proyecto en desarrollo.
 settings.json se escribe en un directorio con permisos de escritura (junto al .exe
 en bundle, raíz del proyecto en desarrollo) — nunca dentro de _MEIPASS que es de
 solo lectura.
+
+La variable de entorno RNK_DATA_DIR redirige TODOS los datos escribibles
+(settings.json, Presets/, PerfilesRuido/, Grabaciones/) a otra carpeta. La usan
+los tests headless para no tocar los datos reales del usuario: los presets de
+fábrica están afinados en el aire y no son regenerables. Sin la variable el
+comportamiento es idéntico al de siempre.
 """
 import sys
 import os
+
+DATA_DIR_ENV = "RNK_DATA_DIR"
 
 
 def resource_path(relative: str) -> str:
@@ -21,47 +29,44 @@ def resource_path(relative: str) -> str:
     return os.path.join(project_root, relative)
 
 
+def data_dir() -> str:
+    """Directorio base de los datos escribibles (junto al .exe en bundle, raíz del
+    proyecto en desarrollo). RNK_DATA_DIR lo redirige — ver el docstring del módulo."""
+    override = os.environ.get(DATA_DIR_ENV)
+    if override:
+        os.makedirs(override, exist_ok=True)
+        return override
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _data_subdir(name: str) -> str:
+    path = os.path.join(data_dir(), name)
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
 def settings_path() -> str:
     """Ruta al archivo settings.json (junto al .exe en bundle, en raíz en desarrollo)."""
-    if hasattr(sys, "_MEIPASS"):
-        return os.path.join(os.path.dirname(sys.executable), "settings.json")
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    return os.path.join(project_root, "settings.json")
+    return os.path.join(data_dir(), "settings.json")
 
 
 def noise_profiles_dir() -> str:
     """Ruta a la carpeta PerfilesRuido/ (junto al .exe en bundle, en raíz en
     desarrollo). La crea si no existe."""
-    if hasattr(sys, "_MEIPASS"):
-        base = os.path.dirname(sys.executable)
-    else:
-        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    path = os.path.join(base, "PerfilesRuido")
-    os.makedirs(path, exist_ok=True)
-    return path
+    return _data_subdir("PerfilesRuido")
 
 
 def recordings_dir() -> str:
     """Ruta a la carpeta Grabaciones/ (junto al .exe en bundle, en raíz en
     desarrollo). La crea si no existe."""
-    if hasattr(sys, "_MEIPASS"):
-        base = os.path.dirname(sys.executable)
-    else:
-        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    path = os.path.join(base, "Grabaciones")
-    os.makedirs(path, exist_ok=True)
-    return path
+    return _data_subdir("Grabaciones")
 
 
 def presets_dir() -> str:
     """Ruta a la carpeta Presets/ (junto al .exe en bundle, en raíz en desarrollo).
     La crea si no existe."""
-    if hasattr(sys, "_MEIPASS"):
-        base = os.path.dirname(sys.executable)
-    else:
-        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    path = os.path.join(base, "Presets")
-    os.makedirs(path, exist_ok=True)
-    return path
+    return _data_subdir("Presets")
 
 

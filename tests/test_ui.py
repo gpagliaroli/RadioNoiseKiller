@@ -14,10 +14,24 @@ Cubre:
 NOTA: corre con QT_QPA_PLATFORM=offscreen (se fija abajo antes de importar Qt).
 Los SliderRow deshabilitan sus HIJOS, no el contenedor: se testea con
 `row._slider.isEnabled()`, no con `row.isEnabled()` (nota del CLAUDE.md, v1.6).
+
+AISLAMIENTO: MainWindow lee/escribe settings.json, Presets/ y PerfilesRuido/
+reales. Se redirigen a una carpeta temporal via RNK_DATA_DIR ANTES de construir
+cualquier ventana — sin eso los tests pisan los presets de fábrica del usuario
+(no regenerables) y se auto-envenenan entre corridas: un valor persistido igual
+al que el test va a setear hace que QSlider.setValue() no emita valueChanged y
+el test falla sin que haya bug (paso con post_filter_strength).
 """
+import atexit
 import os
+import shutil
+import tempfile
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+if not os.environ.get("RNK_DATA_DIR"):
+    _tmp_data = tempfile.mkdtemp(prefix="rnk_test_ui_")
+    os.environ["RNK_DATA_DIR"] = _tmp_data
+    atexit.register(shutil.rmtree, _tmp_data, True)
 
 import sys
 
@@ -27,8 +41,22 @@ from PySide6.QtWidgets import QApplication, QCheckBox  # noqa: E402
 
 _app = QApplication.instance() or QApplication([])
 
-from i18n import tr          # noqa: E402
+from config import AppConfig     # noqa: E402
+from i18n import tr              # noqa: E402
+from presets import PresetManager  # noqa: E402
+from utils import presets_dir, settings_path  # noqa: E402
 from ui.main_window import MainWindow  # noqa: E402
+
+# Red de seguridad: si el redirect fallara, los tests escribirían sobre los datos
+# reales del usuario. Mejor romper acá que borrar un preset de fábrica.
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+assert not os.path.abspath(presets_dir()).startswith(_PROJECT_ROOT + os.sep), \
+    f"Los tests apuntan a los Presets/ reales: {presets_dir()}"
+assert not os.path.abspath(settings_path()).startswith(_PROJECT_ROOT + os.sep), \
+    f"Los tests apuntan al settings.json real: {settings_path()}"
+
+# Preset semilla en la carpeta temporal (test_window_title_reflects_preset lo usa).
+PresetManager(presets_dir()).save("Voz natural - SSB", AppConfig())
 
 
 # ---------------------------------------------------------------------- #
@@ -115,7 +143,8 @@ def test_post_filter_on_principal_autoenable():
     pasar de 0 y lo apaga en 0, sincronizando el checkbox de Módulos."""
     w = _win()
     w._chk_post_filter.setChecked(False)
-    _app.processEvents()
+    w._slider_post.set_value(0.0)                # punto de partida conocido: setValue()
+    _app.processEvents()                         # no emite si el valor ya coincide
     w._slider_post.set_value(4.0, emit=True)     # subir -> auto-activa
     _app.processEvents()
     assert w._config.dsp.post_filter_enabled, "post-filtro no se auto-activo al subir el slider"
