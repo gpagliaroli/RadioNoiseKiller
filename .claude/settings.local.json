@@ -193,7 +193,26 @@
       "Bash(rmdir scratch_linux)",
       "Bash(python -c \"import zipfile; z=zipfile.ZipFile\\('RadioNoiseKiller_v1.9.1-linux-x86_64.zip'\\); n=z.namelist\\(\\); print\\('entries:',len\\(n\\)\\); print\\('bin:',[x for x in n if x.endswith\\('/RadioNoiseKiller'\\) or x=='RadioNoiseKiller'][:2]\\); print\\('wayland-deco:',[x for x in n if 'wayland-decoration-client' in x][:2]\\)\")",
       "Bash(python -c \"import zipfile; z=zipfile.ZipFile\\('RadioNoiseKiller_v1.9.1-linux-x86_64.zip'\\); n=z.namelist\\(\\); print\\([x.split\\('/'\\)[-1] for x in n if 'wayland-decoration-client/lib' in x]\\)\")",
-      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('URL:',d['html_url']\\); print\\('assets:',len\\(d['assets']\\)\\); [print\\(' ',a['name'],a['state']\\) for a in d['assets']]\")"
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('URL:',d['html_url']\\); print\\('assets:',len\\(d['assets']\\)\\); [print\\(' ',a['name'],a['state']\\) for a in d['assets']]\")",
+      "PowerShell(.venv\\\\Scripts\\\\python.exe tests\\\\test_presets.py)",
+      "PowerShell(.venv\\\\Scripts\\\\python.exe tests\\\\run_all.py)",
+      "PowerShell(git stash *)",
+      "PowerShell($env:QT_QPA_PLATFORM='offscreen'; .venv\\\\Scripts\\\\python.exe C:\\\\Users\\\\GPAGLIAROLI\\\\AppData\\\\Local\\\\Temp\\\\probe_ui.py 2>&1 | Select-String -Pattern \"TOCO|FAIL\")",
+      "PowerShell(.venv\\\\Scripts\\\\python.exe tests\\\\run_all.py 2>&1 | Select-Object -Last 4; Write-Output \"--- git status ---\"; git status --short)",
+      "PowerShell($env:QT_QPA_PLATFORM='offscreen'; .venv\\\\Scripts\\\\python.exe tests\\\\test_ui.py 2>&1 | Select-Object -Last 3; Write-Output \"--- git status ---\"; git status --short -- Presets)",
+      "PowerShell(.venv\\\\Scripts\\\\python.exe tests\\\\run_all.py 2>&1 | Select-Object -Last 14; Write-Output \"=== git status ===\"; git status --short)",
+      "PowerShell($env:RNK_DATA_DIR=$null; $env:QT_QPA_PLATFORM='offscreen'; .venv\\\\Scripts\\\\python.exe tests\\\\test_ui.py 2>&1 | Select-Object -Last 2; Write-Output \"=== git status ===\"; git status --short -- Presets settings.json PerfilesRuido)",
+      "PowerShell(.venv\\\\Scripts\\\\python.exe -c \"import sys; sys.path.insert\\(0,'src'\\); import utils; print\\('settings:', utils.settings_path\\(\\)\\); print\\('presets :', utils.presets_dir\\(\\)\\); print\\('perfiles:', utils.noise_profiles_dir\\(\\)\\); print\\('grabac. :', utils.recordings_dir\\(\\)\\)\")",
+      "PowerShell(.venv\\\\Scripts\\\\python.exe tests\\\\run_all.py 2>&1 | Select-Object -Last 4; Write-Output \"=== git status ===\"; git status --short)",
+      "Bash(python -c \"import zipfile;print\\('\\\\n'.join\\(zipfile.ZipFile\\('Presets/Presets.zip'\\).namelist\\(\\)\\)\\)\")",
+      "PowerShell(git add *)",
+      "PowerShell(.venv\\\\Scripts\\\\python.exe tests\\\\run_all.py 2>&1 | Select-Object -Last 3)",
+      "PowerShell(.venv\\\\Scripts\\\\python.exe tools\\\\gen_presets_zip.py)",
+      "PowerShell(Out-Null *)",
+      "Bash(git show *)",
+      "Bash(rm -f /tmp/committed.zip)",
+      "Bash(git hash-object *)",
+      "Bash(echo \"archivo en disco: $\\(git hash-object Presets/Presets.zip\\)\")"
     ]
   }
 }
