@@ -111,6 +111,14 @@ class NoiseProfiler:
     # Sin voz (vp→0) estabilizan el residuo, que es donde se escucha el gorgojeo.
     _PS_SMOOTH_QUIET:  float = 0.95   # tope del suavizado de p_speech sin voz
     _GAIN_EMA_QUIET:   float = 0.75   # EMA de la ganancia final sin voz (~3 frames)
+    # Ataque: con voz confirmada por el VAD rápido, p_speech sube SIN suavizar. Sin
+    # esto el arranque de cada sílaba salía ~5.8 dB más atenuado que su meseta (a
+    # Intensidad 0.9) — la envolvente se aplasta y la voz suena "limitada". El gate
+    # por vp_sq es imprescindible: dejar subir p_speech sin gatear arregla el ataque
+    # igual, pero el residuo de ruido empeora 10 dB (los bins de ruido que parpadean
+    # hacia arriba dejan de estabilizarse). Con el gate: ataque −5.76 → −0.21 dB y
+    # ruido idéntico (mismo nivel, misma std, misma kurtosis).
+    _PS_ATTACK_VP_SQ:  float = 0.30   # vp rápido desde el cual p_speech ataca libre
 
     # --- Post-filtro espectral (supresión extra en bins de ruido) -------------
     # dB de profundidad extra por unidad del slider (0-10 → 0-45 dB bajo el piso).
@@ -985,12 +993,24 @@ class NoiseProfiler:
                     or self._p_speech_prev.shape != p_speech.shape):
                 self._p_speech_prev = p_speech
             else:
+                # El VAD rápido (TC 20 ms, ataque instantáneo) es el que manda para
+                # abrir: el lento tarda y entre sílabas cae, que es cuando el
+                # suavizado se comía los ataques.
+                vp_open = max(self._voice_prob, self._voice_prob_sq)
                 ps_a = np.float32(
                     self._ps_smooth
-                    + (self._PS_SMOOTH_QUIET - self._ps_smooth) * (1.0 - self._voice_prob)
+                    + (self._PS_SMOOTH_QUIET - self._ps_smooth) * (1.0 - vp_open)
                 )
-                p_speech = (ps_a * self._p_speech_prev
-                            + (1.0 - ps_a) * p_speech).astype(np.float32)
+                # Con voz confirmada, los bins que SUBEN no se suavizan (ver
+                # _PS_ATTACK_VP_SQ): el arranque de sílaba pasa entero. Los que bajan
+                # y todo lo que ocurre sin voz siguen suavizados → anti-gorgojeo intacto.
+                if self._voice_prob_sq >= self._PS_ATTACK_VP_SQ:
+                    ps_eff = np.where(p_speech > self._p_speech_prev,
+                                      np.float32(0.0), ps_a).astype(np.float32)
+                else:
+                    ps_eff = ps_a
+                p_speech = (ps_eff * self._p_speech_prev
+                            + (1.0 - ps_eff) * p_speech).astype(np.float32)
                 self._p_speech_prev = p_speech
 
             gain_out = (gain_dd ** p_speech) * (_eff_floor ** (1.0 - p_speech))
@@ -1038,7 +1058,8 @@ class NoiseProfiler:
             # --- Anti-gorgojeo: EMA de la ganancia final, gateado por el VAD ---
             # Sin voz, la ganancia por bin todavía salta frame a frame (el residuo
             # "burbujea"); con vp→1 el coeficiente cae a 0 y la ganancia pasa sin tocar.
-            ga = np.float32(self._GAIN_EMA_QUIET * (1.0 - self._voice_prob))
+            ga = np.float32(self._GAIN_EMA_QUIET
+                            * (1.0 - max(self._voice_prob, self._voice_prob_sq)))
             if (self._gain_out_prev is not None
                     and self._gain_out_prev.shape == gain_out.shape):
                 gain_out = (ga * self._gain_out_prev

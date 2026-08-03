@@ -277,23 +277,22 @@ def _red_jump_var(smooth, frames):
 
 mixed_vn = (voice_sig(400) + fluct_noise(400) * 0.7).astype(np.float32)
 v_sm, vp_sm = _red_jump_var(0.6, mixed_vn)
-v_no, _ = _red_jump_var(0.0, mixed_vn)
-check("con voz, el suavizado de p_speech reduce el salto de ganancia (%.4f < %.4f)"
-      % (v_sm, v_no), v_sm < v_no)
 check("con voz el VAD no fuerza el suavizado automatico (vp=%.2f)" % vp_sm, vp_sm > 0.4)
 
-# Y sin voz el anti-gorgojeo automatico actua solo, con el slider donde este: el
-# slider deberia pesar MUCHO menos sin voz que con voz. Se compara el efecto
-# RELATIVO del slider en cada caso (no los valores absolutos entre dos señales
-# distintas, que no son comparables — un check asi se rompio al mejorar el
-# estimador, sin que hubiera nada mal).
+# NOTA: aca habia dos checks que comparaban el efecto del slider CON voz contra
+# SIN voz. Quedaron sin sentido a proposito: con voz confirmada por el VAD rapido
+# los bins que suben ya no se suavizan (para no ablandar el ataque de silaba), asi
+# que el slider pesa poco durante la voz. Su trabajo ahora es el release y el ruido
+# de fondo, donde ademas el automatico (_PS_SMOOTH_QUIET) domina. Lo que si tiene
+# que seguir siendo cierto es que el parpadeo de ganancia sin voz sea bajo en
+# terminos absolutos, con el slider donde este.
 nz_only = fluct_noise(400)
 q_sm, vp_q = _red_jump_var(0.6, nz_only)
 q_no, _ = _red_jump_var(0.0, nz_only)
-efecto_voz   = v_no / max(v_sm, 1e-12)
-efecto_quiet = q_no / max(q_sm, 1e-12)
-check("el slider pesa menos sin voz que con voz (x%.2f vs x%.2f)"
-      % (efecto_quiet, efecto_voz), efecto_quiet < efecto_voz)
+check("sin voz el parpadeo de ganancia es bajo con el slider al maximo (%.4f)" % q_sm,
+      q_sm < 0.15)
+check("sin voz el parpadeo de ganancia es bajo con el slider al minimo (%.4f)" % q_no,
+      q_no < 0.15)
 check("sin voz el VAD queda bajo (vp=%.2f)" % vp_q, vp_q < 0.4)
 # El slider Anti-gorgojeo (set_smooth) dosifica _ps_smooth: 0.90->0, 0.99->0.85
 pc = NoiseProfiler(HOP)
@@ -467,6 +466,61 @@ ph.reset(240)
 check("el hold del freeze se recalcula con el hop (%d -> %d)"
       % (f480, ph._mcra_voice_hold_frames),
       ph._mcra_voice_hold_frames == 2 * f480)
+
+# ---------------------------------------------------------------------------
+print()
+print("=== Ataque de silaba (la voz no debe sonar 'limitada') ===")
+
+# El suavizado de p_speech ablandaba el arranque de cada silaba: salia ~5.8 dB mas
+# atenuado que su meseta (a Intensidad 0.9), lo que se percibe como voz comprimida
+# y con menos claridad — reportado en el aire. Con voz confirmada por el VAD
+# rapido, los bins que SUBEN ya no se suavizan. Sin ese gate el ataque se arregla
+# igual pero el residuo de ruido empeora 10 dB.
+_N = 400
+_t = np.arange(_N * HOP) / SR
+_v = np.zeros_like(_t)
+_k = 1
+while _k * 150.0 < 2800:
+    _v += (1.0 / _k) * np.sin(2 * np.pi * _k * 150.0 * _t)
+    _k += 1
+_env = np.zeros_like(_t)
+_syl, _i = [], 0
+while _i + 40 * HOP < len(_t):
+    _r = int(0.005 * SR)
+    _env[_i:_i + 25 * HOP] = 1.0
+    _env[_i:_i + _r] = np.linspace(0, 1, _r)
+    _env[_i + 25 * HOP - _r:_i + 25 * HOP] = np.linspace(1, 0, _r)
+    _syl.append(_i // HOP)
+    _i += 40 * HOP
+_clean = (_v * _env * 0.05).astype(np.float32).reshape(_N, HOP)
+_mix = (_clean + rng.standard_normal(_N * HOP).reshape(_N, HOP) * 0.0055).astype(np.float32)
+_conv = (rng.standard_normal(300 * HOP) * 0.0055).astype(np.float32).reshape(300, HOP)
+
+
+def _mag(frames):
+    w = np.sqrt(np.hanning(2 * HOP)).astype(np.float32)
+    out, prev = [], np.zeros(HOP, dtype=np.float32)
+    for f in frames:
+        fr = np.concatenate([prev, f]); prev = f
+        out.append(np.abs(np.fft.rfft(fr * w)))
+    return np.array(out)
+
+
+_lo, _hi = int(300 / 50), int(3400 / 50)
+_Sc = _mag(list(_clean))[:, _lo:_hi]
+pa = make_profiler()
+pa.set_alpha(0.9); pa.set_floor(0.15); pa.set_smooth(0.96); pa.set_attack(0.80)
+pa.set_mcra_window_ms(500.0)
+pa.set_post_filter_enabled(True); pa.set_post_filter_strength(3.0)
+for f in _conv:
+    pa.process(f)
+_So = _mag([pa.process(f) for f in _mix])[:, _lo:_hi]
+_So = np.vstack([_So[1:], _So[-1:]])
+_rel = 20 * np.log10(np.maximum(_So.mean(1), 1e-9) / np.maximum(_Sc.mean(1), 1e-9))
+_ons = float(np.mean([_rel[s + 1:s + 3].mean() for s in _syl[1:]]))
+_pla = float(np.mean([_rel[s + 10:s + 22].mean() for s in _syl[1:]]))
+check("el arranque de silaba sale a nivel de meseta (%.2f dB)" % (_ons - _pla),
+      _ons - _pla > -2.0)
 
 # ---------------------------------------------------------------------------
 print()

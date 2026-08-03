@@ -381,6 +381,28 @@ slider "Reactividad del piso" en 500 ms lo acelera.
 - Tests en `test_noise_vad` (voz sostenida no contamina, salto de ruido sin voz sí se sigue y no
   dispara el freeze, hold recalculado por hop).
 
+**Ataque de sílaba (voz "limitada")** — reportado en el aire: *"noto alguna distorsión en la voz
+cuando subo la intensidad, como que quita ruido pero deja la voz con menos claridad, como limitada"*.
+Medido con sílabas de 250 ms contra la voz limpia: **el arranque de cada sílaba salía ~5.8 dB más
+atenuado que su meseta** (a Intensidad 0.9) — la envolvente se aplasta y suena a compresor.
+- Era mayormente **pre-existente** (v1.9.1: −7.32 dB; el suavizado de `p_speech` agregaba ~0.6 dB).
+  La causa es el estimador DD, que tarda 2-3 frames en reaccionar al onset.
+- Fix: con voz confirmada por el **VAD rápido** (`voice_prob_sq`, ataque instantáneo, TC 20 ms), los
+  bins de `p_speech` que **suben** no se suavizan; los que bajan y todo lo que pasa sin voz siguen
+  suavizados. Además el gate del anti-gorgojeo usa `max(voice_prob, voice_prob_sq)` — el lento cae
+  entre sílabas, que es justo cuando no hay que suavizar. Medido: ataque **−5.76 → −0.15 dB**, con
+  ruido **idéntico** (nivel −19.1 dB, std 7.89, kurt 2.46). LSD sube 0.7-1.0 dB: pasa algo más de
+  ruido residual dentro de los frames de voz, que es el trade correcto cuando el síntoma es
+  distorsión.
+- **El gate por vp_sq es imprescindible**: dejar subir `p_speech` sin gatear arregla el ataque igual
+  (−0.21 dB) pero el residuo de ruido empeora **10 dB** (−8.5 vs −19.1) — los bins de ruido que
+  parpadean hacia arriba dejan de estabilizarse.
+- El slider "Velocidad de ataque" (`beta_fast`) **no mueve la aguja** en esto (−5.72 vs −5.76):
+  actúa sobre el DD por bin, no sobre el suavizado de `p_speech`. No recomendarlo para este síntoma.
+- Dos checks viejos de `test_noise_vad` quedaron sin sentido **a propósito** (comparaban el efecto
+  del slider Anti-gorgojeo con voz vs sin voz; ahora con voz pesa poco por diseño). Reemplazados por
+  umbrales absolutos de parpadeo sin voz + el check de ataque de sílaba.
+
 **Pendiente de esa investigación (ítem 4, acordado con el usuario):** carácter par/impar en el
 excitador (armónicos pares con una no linealidad par, `h²`; **medido: genera productos de diferencia
 en los graves** — −31 dB con la rama filtrada a 1.2 kHz, −39 dB a 2 kHz: hay que filtrar alto) y
