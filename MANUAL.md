@@ -445,6 +445,8 @@ El filtro de Wiener, incluso bien configurado, puede dejar un tipo de artefacto 
 
 El post-filtro usa la misma información de probabilidad de voz para **hundir el piso de esos bins**: donde hay ruido residual (`p_speech ≈ 0`) el piso baja unos **4,5 dB por punto** del slider; en los bins de voz (`p_speech ≈ 1`) no cambia nada.
 
+Ese hundimiento es **independiente de la Intensidad**: se aplica después de ella, así que subir el Post-Filtro baja el fondo sin necesidad de subir la Intensidad. Es lo que hace funcionar la receta "Intensidad baja + Post-Filtro alto" del consejo de más abajo.
+
 Lo importante es que ese hundimiento es un valor **fijo**, no un multiplicador de la ganancia. El ruido de radio fluctúa naturalmente unos 6 dB de instante a instante; el diseño anterior multiplicaba esa fluctuación por el valor del slider (con el slider en 6, los 6 dB se volvían casi 40), y por eso lo que quedaba de fondo no era un siseo parejo sino picos aislados — el gorgojeo mismo. Restar una cantidad fija deja el fondo **más bajo y más parejo**, y de paso no toca los bins de voz con probabilidad intermedia, que antes también se llevaban el castigo.
 
 **Indicador en tiempo real:**

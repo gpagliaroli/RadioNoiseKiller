@@ -445,6 +445,8 @@ Even a well-configured Wiener filter can leave a very particular artifact called
 
 The post-filter uses that same voice-probability information to **push the floor of those bins down**: where there is residual noise (`p_speech ≈ 0`) the floor drops about **4.5 dB per slider point**; on voice bins (`p_speech ≈ 1`) nothing changes.
 
+That deepening is **independent of Intensity**: it is applied after it, so raising the Post-filter lowers the background without having to raise Intensity. That is what makes the "low Intensity + high Post-filter" recipe below work.
+
 What matters is that this deepening is a **fixed** amount, not a multiplier on the gain. Radio noise naturally fluctuates some 6 dB from instant to instant; the previous design multiplied that fluctuation by the slider value (with the slider at 6, those 6 dB became nearly 40), which is why what remained in the background was not an even hiss but isolated peaks — the warble itself. Subtracting a fixed amount leaves the background **lower and steadier**, and it also leaves alone the voice bins with intermediate probability, which used to take the same punishment.
 
 **Real-time indicator:**

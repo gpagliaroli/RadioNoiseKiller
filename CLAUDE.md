@@ -277,10 +277,21 @@ simulación, **pendiente de validación en el aire**):
   fluctuación EN dB del ruido: con s=6 los ~6 dB de fluctuación natural salían a ~18 dB, y cada
   bin que sobrevivía pegaba un pico aislado — **esa era la fuente dominante del gorgojeo con solo
   ruido**, no el MCRA. Además castigaba los bins de voz con `p_speech` intermedio (p=0.5 →
-  `gain⁴`), que es por qué había que bajar la Intensidad para compensar. Ahora el post-filtro
-  **hunde el ancla del OMLSA** para los bins de ruido: `ancla = floor · 10^(−4.5·s/20)`, constante
-  por bin, tope −60 dB (`_POST_DB_PER_UNIT`, `_POST_MIN_GAIN`). Mismo slider, mismo rango 0–10, sin
-  UI nueva; el mapeo pasa a ser **4,5 dB de profundidad extra por punto**.
+  `gain⁴`), que es por qué había que bajar la Intensidad para compensar. Ahora **resta una cantidad
+  fija de dB** en los bins de ruido: `gain · 10^(−4.5·s/20)^(1−p)`, tope −60 dB
+  (`_POST_DB_PER_UNIT`, `_POST_MIN_GAIN`). Mismo slider, mismo rango 0–10, sin UI nueva; el mapeo
+  pasa a ser **4,5 dB de profundidad extra por punto**.
+- **La profundidad extra va DESPUÉS de `gain^alpha`, no antes.** Primero se implementó dentro del
+  OMLSA (ancla profunda), que medía un poco mejor en ruido — pero **rompía la receta de operación
+  validada en el aire** ("Intensidad baja 50-60% + post-filtro alto"): `alpha` también achica la
+  profundidad extra (un bin anclado a −30 dB sale a −15 dB con alpha=0.5), así que había que subir
+  la Intensidad para domar el soplido, y al subirla se lleva voz. Reportado en el aire a las pocas
+  horas: *"para reducir el ruido o soplido necesito llegar a 0.7 al menos"*. Medido con piso 0.15 y
+  post 3: con la profundidad después de alpha, Intensidad **0.4** da −26.3 dB de ruido; antes hacía
+  falta **0.7** para llegar a −27.7 dB. **Regla: las etapas que el usuario calibra como
+  independientes deben serlo en el código** — si una entra antes de un exponente global, deja de
+  serlo en silencio. Test de regresión en `test_noise_vad` (la profundidad extra a alpha 0.5 debe
+  ser ≈ la de alpha 1.0).
 - **Anti-gorgojeo automático gateado por el VAD de frame**, sin controles nuevos: el suavizado de
   `p_speech` sube hasta `_PS_SMOOTH_QUIET=0.95` y se agrega un EMA de la ganancia final
   (`_GAIN_EMA_QUIET=0.75`), ambos escalados por `(1−voice_prob)` → con voz (vp→1) se desactivan

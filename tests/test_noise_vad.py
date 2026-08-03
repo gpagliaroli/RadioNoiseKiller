@@ -321,11 +321,12 @@ check("sin eventos: comp ON == comp OFF, salida identica (dif %.1e)" % diff, dif
 
 # ---------------------------------------------------------------------------
 print()
-print("=== Post-filtro: ancla profunda (anti-gorgojeo) ===")
+print("=== Post-filtro: profundidad fija en bins de ruido (anti-gorgojeo) ===")
 
-# El post-filtro hunde el piso de los bins de ruido en ~4.5 dB por unidad, en vez
-# de exponenciar la ganancia (que multiplicaba la fluctuacion en dB del ruido ->
-# gorgojeo, y castigaba los bins de voz con p_speech intermedio).
+# El post-filtro RESTA ~4.5 dB por unidad en los bins de ruido, en vez de
+# exponenciar la ganancia (que multiplicaba la fluctuacion en dB del ruido ->
+# gorgojeo, y castigaba los bins de voz con p_speech intermedio). Se aplica
+# DESPUES de la Intensidad, para ser independiente de ella.
 
 def _stft_pow(frames):
     w = np.sqrt(np.hanning(2 * HOP)).astype(np.float32)
@@ -368,6 +369,28 @@ check("post 6 suprime mas que post 0 (%.1f dB extra)" % (lvl0 - lvl6), lvl6 < lv
 #     residuo debe fluctuar como el ruido de entrada, no varias veces mas.
 check("post 6 no dispara la fluctuacion (%.1f dB vs %.1f dB de entrada)"
       % (std6, std_in), std6 < std_in * 1.6)
+
+# 10b. La profundidad del post-filtro NO debe depender de la Intensidad.
+#      La receta de operacion validada en el aire es "Intensidad baja + post alto":
+#      si la profundidad extra entra ANTES de gain^alpha, alpha la achica (a 0.5 un
+#      bin anclado a -30 dB sale a -15 dB) y hay que subir la Intensidad para domar
+#      el soplido — justo lo que la receta evita. Reportado en el aire.
+def _run_post_a(strength, frames, alpha):
+    p = make_profiler()
+    p.set_alpha(alpha); p.set_floor(0.1); p.set_smooth(0.96); p.set_attack(0.80)
+    if strength:
+        p.set_post_filter_enabled(True)
+        p.set_post_filter_strength(strength)
+    return [p.process(f) for f in frames]
+
+
+extra_lo = (_residuo(_run_post_a(0.0, nz2, 0.5))[1]
+            - _residuo(_run_post_a(6.0, nz2, 0.5))[1])
+extra_hi = (_residuo(_run_post_a(0.0, nz2, 1.0))[1]
+            - _residuo(_run_post_a(6.0, nz2, 1.0))[1])
+check("la profundidad del post-filtro no depende de la Intensidad "
+      "(%.1f dB a 0.5 vs %.1f dB a 1.0)" % (extra_lo, extra_hi),
+      abs(extra_lo - extra_hi) < 4.0 and extra_lo > 8.0)
 
 # 11. Indicador "Reduccion extra": negativo con post activo, 0 sin el.
 check("pf_extra_db reporta con post 6 (%.1f dB)" % p6.pf_extra_db, p6.pf_extra_db < -5.0)

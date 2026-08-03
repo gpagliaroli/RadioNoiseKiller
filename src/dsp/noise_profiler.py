@@ -24,13 +24,16 @@ class NoiseProfiler:
         → para SNR bajo: gain_dd > gain_wiener (menos supresión en bins de voz débil)
         → para SNR alto: exp(½·E₁(v)) → 1, recupera el Wiener clásico
 
-    OMLSA + control de intensidad:
+    OMLSA + control de intensidad + post-filtro:
         p_speech[k] = min(g_detect[k] / 0.80, 1)
-        ancla       = floor · 10^(−4.5·post_filter_strength/20)   (piso de los bins de ruido)
-        gain_omlsa  = gain_dd^p_speech · ancla^(1−p_speech)
-        gain_out    = gain_omlsa^alpha     (alpha=0 passthrough, alpha=1 pleno)
-        El post-filtro profundiza el ANCLA (constante por bin); no exponencia la
-        ganancia, que amplificaba la fluctuación del ruido → gorgojeo.
+        gain_omlsa  = gain_dd^p_speech · floor^(1−p_speech)
+        gain_out    = gain_omlsa^alpha                        (Intensidad)
+        gain_out    = gain_out · extra^(1−p_speech)           (post-filtro)
+                      con extra = 10^(−4.5·post_filter_strength/20)
+        El post-filtro RESTA una cantidad fija de dB en los bins de ruido; no
+        exponencia la ganancia, que amplificaba la fluctuación del ruido →
+        gorgojeo. Va DESPUÉS de alpha para ser independiente de la Intensidad
+        (la receta "Intensidad baja + post alto" depende de eso).
 
     MCRA (estimación adaptativa de noise_mag):
         S_f[k]     = α_s·S_f_prev + (1−α_s)·|Y[k]|²     (suavizado potencia)
@@ -888,26 +891,20 @@ class NoiseProfiler:
             _eff_floor = (self._floor_curve if self._perceptual_floor_enabled
                           else np.float32(self._floor))
 
-            # --- Ancla del post-filtro ---
-            # NOTA DE DISEÑO: la supresión extra de los bins de ruido se hace
-            # anclándolos a un piso MÁS PROFUNDO y CONSTANTE, no exponenciando la
-            # ganancia. El exponente viejo (gain^(1+s·(1-p))) MULTIPLICA por (1+s)
-            # la fluctuación en dB del ruido: con s=6, los ~6 dB de fluctuación
-            # natural del ruido salían a ~18 dB → cada bin que sobrevivía pegaba un
-            # pico aislado (gorgojeo), y de paso castigaba los bins de voz con
-            # p_speech intermedio (p=0.5 → gain^4). Medido en simulación con la
-            # receta intensidad 0.55 + post 6: fluctuación del residuo 18.0 → 7.7 dB
-            # (el ruido crudo fluctúa 6.4), kurtosis 4.11 → 2.44, +3.7 dB de voz y
-            # +10.6 dB de S/N de salida, a costa de 2 frames de ataque.
-            if self._post_filter_enabled and self._post_filter_strength > 0.0:
-                _anchor = np.maximum(
-                    _eff_floor * np.float32(
-                        10.0 ** (-self._POST_DB_PER_UNIT
-                                 * self._post_filter_strength / 20.0)),
-                    np.float32(self._POST_MIN_GAIN),
-                ).astype(np.float32)
-            else:
-                _anchor = _eff_floor
+            # --- Post-filtro: factor de profundidad extra para los bins de ruido ---
+            # NOTA DE DISEÑO: es una atenuación CONSTANTE (en dB, una resta), no un
+            # exponente sobre la ganancia. El exponente viejo (gain^(1+s·(1-p)))
+            # MULTIPLICA por (1+s) la fluctuación en dB del ruido: con s=6, los ~6 dB
+            # de fluctuación natural salían a ~18 dB → cada bin que sobrevivía pegaba
+            # un pico aislado (gorgojeo), y de paso castigaba los bins de voz con
+            # p_speech intermedio (p=0.5 → gain^4).
+            # Se aplica DESPUÉS de alpha (ver más abajo) — ver la nota de por qué.
+            _post_extra = (
+                np.float32(10.0 ** (-self._POST_DB_PER_UNIT
+                                    * self._post_filter_strength / 20.0))
+                if (self._post_filter_enabled and self._post_filter_strength > 0.0)
+                else None
+            )
 
             # --- Gain Log-MMSE (Ephraim-Malah 1985) ---
             g_wiener = snr_prior / (snr_prior + 1.0)
@@ -948,29 +945,40 @@ class NoiseProfiler:
                             + (1.0 - ps_a) * p_speech).astype(np.float32)
                 self._p_speech_prev = p_speech
 
-            gain_out = (gain_dd ** p_speech) * (_anchor ** (1.0 - p_speech))
+            gain_out = (gain_dd ** p_speech) * (_eff_floor ** (1.0 - p_speech))
 
             # --- Suavizado de gain en frecuencia ---
             kernel   = np.array([0.25, 0.50, 0.25], dtype=np.float32)
             gain_out = np.convolve(gain_out, kernel, mode='same')
-            # OJO: clampear con _anchor, NO con _eff_floor — con el post-filtro activo
-            # el piso es el ancla profunda y usar _eff_floor devolvería los bins
-            # suprimidos al piso normal, anulando toda la supresión extra en silencio.
-            gain_out = np.maximum(gain_out, _anchor).astype(np.float32)
+            gain_out = np.maximum(gain_out, _eff_floor).astype(np.float32)
 
             # Intensidad: gain^alpha → alpha=0 passthrough, alpha=1 reducción plena
             if self._alpha < 1.0:
                 gain_out = np.power(gain_out, self._alpha).astype(np.float32)
 
-            # Post-filtro espectral: la supresión extra ya la aplicó el ancla
-            # (_anchor, arriba). Acá solo se mide el indicador "Reducción extra":
-            # cuántos dB por debajo del piso normal quedaron los bins de ruido.
-            if self._post_filter_enabled and self._post_filter_strength > 0.0:
+            # Post-filtro espectral: baja el piso de los bins de ruido una cantidad
+            # FIJA en dB, ponderada por (1 - p_speech) — los bins de voz no se tocan.
+            #
+            # POR QUÉ VA DESPUÉS DE alpha (Intensidad): tiene que ser INDEPENDIENTE de
+            # ella. La receta de operación validada en el aire es "Intensidad baja
+            # (50-60%) + post-filtro alto": la Intensidad baja no opaca la voz y el
+            # post-filtro limpia el ruido. Si la profundidad extra entra antes,
+            # gain^alpha también la achica (un bin anclado a -30 dB sale a -15 dB con
+            # alpha=0.5) y hay que subir la Intensidad para domar el soplido — que es
+            # justo lo que la receta evita. Reportado en el aire: "para reducir el
+            # soplido necesito llegar a 0.7 al menos". Medido con piso 0.15 y post 3:
+            # con la profundidad después de alpha, Intensidad 0.4 da -26.3 dB de
+            # ruido; antes hacía falta 0.7 para llegar a -27.7 dB.
+            if _post_extra is not None:
+                p_noise  = np.float32(1.0) - p_speech
+                gain_out = np.maximum(gain_out * (_post_extra ** p_noise),
+                                      np.float32(self._POST_MIN_GAIN)).astype(np.float32)
+                # Indicador "Reducción extra": dB bajo el piso normal en bins de ruido
                 noise_mask = p_speech < 0.3
                 if np.any(noise_mask):
                     extra_db = self._POST_DB_PER_UNIT * self._post_filter_strength
                     self._pf_extra_db = -float(
-                        extra_db * np.mean(1.0 - p_speech[noise_mask]))
+                        extra_db * np.mean(p_noise[noise_mask]))
                 else:
                     self._pf_extra_db = 0.0
             else:
