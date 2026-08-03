@@ -71,6 +71,26 @@ class NoiseProfiler:
     # descarta retroactivamente y nunca contamina el estimado. No agrega latencia de
     # audio: solo el estimador consume frames viejos (ya promedia sobre ~800ms).
     _MCRA_QUAR_FRAMES:   int   = 3      # profundidad de la cuarentena (30ms @ hop 480)
+    # Freeze por VOZ: con voz presente, los frames NO alimentan λ_d. Sin esto la
+    # ventana de mínimos toma la voz sostenida por ruido, λ_d sube hasta el nivel de
+    # la voz y el cancelador empieza a restar la voz misma — medido: la voz quitada
+    # quedaba clavada en −5.4 dB por más que el S/N subiera a 30 dB (con perfil
+    # estático, que no se adapta, bajaba a −46 dB como predice el Wiener). Con el
+    # freeze: −23 dB a S/N 20, y la voz que pasa a la salida mejora de −3.4 a −0.1 dB.
+    #
+    # El gate es la confianza de PERIODICIDAD (autocorrelación), NO el vp. Motivo: el
+    # vp y la peakiness se calculan sobre snr_post, que depende de λ_d — al congelar,
+    # el ruido nuevo parece señal, eso sube el vp y realimenta el freeze. Medido: con
+    # un salto de ruido de +10 dB el vp llega a 0.89 y el estimador quedaba congelado
+    # el 67% de los frames, sin recuperarse en 3 s. La autocorrelación se calcula
+    # sobre la forma de onda cruda, así que no puede realimentarse: medido máx 0.09
+    # con saltos de ruido de hasta +20 dB, contra 0.80 de media con voz a cualquier
+    # S/N (98% de los frames por encima del umbral).
+    # Hold de 300 ms: los tramos sordos de la voz (fricativas) no son periódicos y
+    # sin el hold dejarían de proteger. Durante el warmup no aplica (igual que el
+    # freeze de fading): si no, con voz continua el warmup no terminaría nunca.
+    _MCRA_PITCH_THR:     float = 0.30   # confianza de autocorrelación para congelar
+    _MCRA_VOICE_HOLD_MS: float = 300.0  # retención tras el último frame periódico
 
     # Compensación de fading HF
     # Detecta cambios bruscos de energía (fading ionosférico) y congela MCRA para que el
@@ -187,6 +207,10 @@ class NoiseProfiler:
         self._fading_change_db:    float = 5.0   # umbral de detección (slider, 1-10 dB)
         self._fading_freeze_ms:    float = 200.0 # duración del freeze (slider, 100-500 ms)
         self._fading_freeze_frames: int  = self._calc_fading_freeze_frames()
+        # Freeze de MCRA por voz (periodicidad + hold) — ver _MCRA_PITCH_THR
+        self._mcra_voice_hold:        int = 0
+        self._mcra_voice_hold_frames: int = self._calc_voice_hold_frames()
+
         self._fading_energy_ema:   float | None = None  # EMA de energía de frame
         self._mcra_freeze_count:   int   = 0    # frames restantes de congelado MCRA
         self._fading_active:       bool  = False # True mientras hay evento de fading
@@ -263,6 +287,7 @@ class NoiseProfiler:
         self._mcra_sub_idx   = 0
         self._mcra_frames         = 0
         self._mcra_quar.clear()
+        self._mcra_voice_hold     = 0
         self._vad_energy_fast     = None
         self._vad_energy_min      = None
         self._vad_energy_fast_sq  = None
@@ -285,8 +310,10 @@ class NoiseProfiler:
             # tras cambiar el tamaño de bloque (invariante 9)
             self._floor_curve = self._build_floor_curve()
             self._hf_boost_curve = self._build_hf_boost_curve()
-            # El freeze de fading y la ventana MCRA se expresan en frames — dependen del hop
+            # El freeze de fading, el hold del freeze por voz y la ventana MCRA se
+            # expresan en frames — dependen del hop
             self._fading_freeze_frames = self._calc_fading_freeze_frames()
+            self._mcra_voice_hold_frames = self._calc_voice_hold_frames()
             self._mcra_M = self._calc_mcra_M()
         self._ola_prev        = np.zeros(self._hop, dtype=np.float32)
         self._ola_acc         = np.zeros(self._fft_n, dtype=np.float32)
@@ -308,6 +335,7 @@ class NoiseProfiler:
         self._pitch_countdown    = 0
         self._fading_energy_ema  = None
         self._mcra_freeze_count  = 0
+        self._mcra_voice_hold    = 0
         self._fading_active      = False
         self._fading_latch       = False
         if self._mode == "mcra":
@@ -419,6 +447,11 @@ class NoiseProfiler:
         """Frames de freeze según la duración en ms y el hop actual (48 kHz)."""
         hop_ms = self._hop / 48.0
         return max(1, round(self._fading_freeze_ms / hop_ms))
+
+    def _calc_voice_hold_frames(self) -> int:
+        """Frames de retención del freeze por voz (depende del hop — invariante 9)."""
+        hop_ms = self._hop / 48.0
+        return max(1, round(self._MCRA_VOICE_HOLD_MS / hop_ms))
 
     def _build_hf_boost_curve(self) -> np.ndarray:
         """Factor de over-sustracción por bin: 1.0 debajo de 2.5 kHz y rampa
@@ -586,10 +619,17 @@ class NoiseProfiler:
     def _mcra_feed(self, spec: np.ndarray) -> "np.ndarray | None":
         """Encola el frame actual y alimenta MCRA con el frame diferido de la
         cuarentena (K frames atrás), salvo que haya sido marcado como
-        contaminado por un fade/impulso detectado después de encolarlo.
+        contaminado por un fade/impulso detectado después de encolarlo, o por
+        haber voz presente (ver _MCRA_VAD_THR).
         Retorna noise_mag (None durante warmup inicial)."""
         power = (np.abs(spec) ** 2 + 1e-12).astype(np.float64)
-        self._mcra_quar.append([power, self._fading_active])
+        voiced = self._mcra_voice_hold > 0
+        self._mcra_quar.append([power, self._fading_active or voiced])
+        if voiced:
+            # El onset ya encolado tampoco debe contaminar: el vp llega 1-2 frames
+            # tarde (mismo motivo que el marcado retroactivo del fading).
+            for item in self._mcra_quar:
+                item[1] = True
         if len(self._mcra_quar) <= self._MCRA_QUAR_FRAMES:
             return self._mcra_current()
         old_power, contaminated = self._mcra_quar.popleft()
@@ -674,7 +714,7 @@ class NoiseProfiler:
         self._pitch_buf[-hop:] = chunk
 
         # Autocorrelación cada _PITCH_EVERY frames (cacheada): la comparten el
-        # pitch enhance y la confirmación de periodicidad del VAD
+        # pitch enhance, la confirmación de periodicidad del VAD y el freeze de MCRA
         if self._pitch_countdown <= 0 or self._pitch_cache is None:
             self._pitch_cache = self._pitch_autocorr()
             self._pitch_countdown = self._PITCH_EVERY
@@ -689,6 +729,14 @@ class NoiseProfiler:
                 self._pitch_f0_hold -= 1
                 if self._pitch_f0_hold == 0:
                     self._pitch_f0 = None
+
+        # Freeze de MCRA por voz: se arma con la periodicidad (inmune al estado del
+        # estimador, ver _MCRA_PITCH_THR) y se sostiene por el hold para cubrir los
+        # tramos sordos. Corre SIEMPRE, no solo con el pitch enhance activo.
+        if pitch_conf >= self._MCRA_PITCH_THR:
+            self._mcra_voice_hold = self._mcra_voice_hold_frames
+        elif self._mcra_voice_hold > 0:
+            self._mcra_voice_hold -= 1
 
         # Frame OLA: [bloque anterior | bloque actual]
         frame       = np.empty(self._fft_n, dtype=np.float32)

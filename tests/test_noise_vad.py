@@ -282,12 +282,18 @@ check("con voz, el suavizado de p_speech reduce el salto de ganancia (%.4f < %.4
       % (v_sm, v_no), v_sm < v_no)
 check("con voz el VAD no fuerza el suavizado automatico (vp=%.2f)" % vp_sm, vp_sm > 0.4)
 
-# Y sin voz el anti-gorgojeo automatico actua solo, con el slider donde este:
+# Y sin voz el anti-gorgojeo automatico actua solo, con el slider donde este: el
+# slider deberia pesar MUCHO menos sin voz que con voz. Se compara el efecto
+# RELATIVO del slider en cada caso (no los valores absolutos entre dos señales
+# distintas, que no son comparables — un check asi se rompio al mejorar el
+# estimador, sin que hubiera nada mal).
 nz_only = fluct_noise(400)
 q_sm, vp_q = _red_jump_var(0.6, nz_only)
 q_no, _ = _red_jump_var(0.0, nz_only)
-check("sin voz el salto de ganancia es chico con el slider al minimo (%.4f)" % q_no,
-      q_no < max(v_no * 0.5, 1e-9))
+efecto_voz   = v_no / max(v_sm, 1e-12)
+efecto_quiet = q_no / max(q_sm, 1e-12)
+check("el slider pesa menos sin voz que con voz (x%.2f vs x%.2f)"
+      % (efecto_quiet, efecto_voz), efecto_quiet < efecto_voz)
 check("sin voz el VAD queda bajo (vp=%.2f)" % vp_q, vp_q < 0.4)
 # El slider Anti-gorgojeo (set_smooth) dosifica _ps_smooth: 0.90->0, 0.99->0.85
 pc = NoiseProfiler(HOP)
@@ -403,6 +409,64 @@ try:
     check("reset(hop) rearma el estado por-bin del anti-gorgojeo", True)
 except Exception as e:
     check("reset(hop) rearma el estado por-bin del anti-gorgojeo: %s" % e, False)
+
+# ---------------------------------------------------------------------------
+print()
+print("=== Freeze de MCRA por voz (periodicidad) ===")
+
+# MCRA tomaba la voz SOSTENIDA por ruido: su ventana de minimos la absorbe, lambda_d
+# sube hasta el nivel de la voz y el cancelador empieza a restar la voz misma.
+# Ahora los frames con voz no alimentan el estimador. El gate es la PERIODICIDAD
+# (autocorrelacion), no el vp: el vp se calcula sobre snr_post, que depende de
+# lambda_d, asi que al congelar el ruido nuevo parece señal, sube el vp y realimenta
+# el freeze (medido: con un salto de +10 dB el estimador quedaba congelado el 67%
+# de los frames sin recuperarse en 3 s).
+
+
+def _mk_mcra(win=500.0):
+    p = make_profiler()
+    p.set_alpha(0.55); p.set_floor(0.15); p.set_smooth(0.96); p.set_attack(0.80)
+    p.set_mcra_window_ms(win)
+    return p
+
+
+# 13. Con voz sostenida, el estimador NO debe subir hasta el nivel de la voz.
+nz_conv = fluct_noise(300)
+vsus = voice_sig(200)
+pv = _mk_mcra()
+for f in nz_conv:
+    pv.process(f)
+ld_antes = float(np.mean(pv._mcra_ld))
+for f in vsus:
+    pv.process(f)
+subida = 10 * np.log10(float(np.mean(pv._mcra_ld)) / ld_antes)
+check("voz sostenida no contamina el estimador (subio %.1f dB)" % subida, subida < 3.0)
+check("el freeze por voz se activo (hold=%d)" % pv._mcra_voice_hold,
+      pv._mcra_voice_hold > 0)
+
+# 14. Un salto de ruido SIN voz debe seguirse igual (guardia del lazo de
+#     realimentacion: si el gate fuera por vp, el estimador quedaria congelado).
+nz_lo = fluct_noise(300, base=0.01)
+nz_hi = fluct_noise(200, base=0.01 * 10 ** 0.5)     # +10 dB
+pn = _mk_mcra()
+for f in nz_lo:
+    pn.process(f)
+ld0 = float(np.mean(pn._mcra_ld))
+holds = 0
+for f in nz_hi:
+    pn.process(f)
+    holds += 1 if pn._mcra_voice_hold > 0 else 0
+seg = 10 * np.log10(float(np.mean(pn._mcra_ld)) / ld0)
+check("salto de ruido sin voz: el estimador lo sigue (+%.1f dB de +10)" % seg, seg > 8.0)
+check("salto de ruido sin voz: no dispara el freeze (%d frames)" % holds, holds == 0)
+
+# 15. El hold depende del hop (invariante 9).
+ph = _mk_mcra()
+f480 = ph._mcra_voice_hold_frames
+ph.reset(240)
+check("el hold del freeze se recalcula con el hop (%d -> %d)"
+      % (f480, ph._mcra_voice_hold_frames),
+      ph._mcra_voice_hold_frames == 2 * f480)
 
 # ---------------------------------------------------------------------------
 print()

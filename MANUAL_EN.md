@@ -328,6 +328,20 @@ The algorithm estimates the noise floor continuously in real time, with no manua
 - The status indicator changes from "calibrating..." to "estimating in real time" once ready.
 - **Recommended** for long listening sessions where band conditions vary.
 
+**Protection against learning the voice**
+
+MCRA's minima tracking has a known weakness: with **sustained speech** — a long transmission
+without pauses — the minima window ends up absorbing the voice itself, the estimated floor rises to
+its level and the canceller starts subtracting the very voice it should preserve. It shows up as
+clearly audible voice in the *Preview*, and as slightly dulled voice in the output, no matter where
+Intensity is set.
+
+To prevent it, frames containing speech **do not feed** the estimator. The detection uses the
+signal's **periodicity** (autocorrelation), not its level: a rise in band noise — however large —
+is not periodic and therefore freezes nothing, so the estimator keeps chasing the noise as always.
+A 300 ms hold covers the unvoiced parts of speech (fricatives are not periodic). It is automatic
+and has no controls.
+
 **Floor memory across carrier squelch**
 
 When the radio's squelch cuts the carrier (total silence between transmissions), the MCRA automatically detects that the frame energy has dropped far below the estimated noise floor and **freezes** the estimator's entire state: it updates neither the spectral smoothing, nor the minima tracking, nor the noise estimate `λ_d`. When the signal returns, the algorithm resumes from exactly the memorized profile — with no re-calibration period and no audible noise at the start of the transmission.

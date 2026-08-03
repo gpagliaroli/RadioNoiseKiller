@@ -328,6 +328,20 @@ El algoritmo estima el piso de ruido continuamente en tiempo real, sin necesidad
 - El indicador de estado cambia de "calibrando..." a "estimando en tiempo real" una vez listo.
 - **Recomendado** para sesiones largas de escucha donde las condiciones de banda varían.
 
+**Protección contra aprender la voz**
+
+El seguimiento de mínimos del MCRA tiene una debilidad conocida: ante **voz sostenida** —una
+transmisión larga sin pausas— la ventana de mínimos termina absorbiendo la propia voz, el piso
+estimado sube hasta el nivel de ella y el cancelador empieza a restar la voz que debería conservar.
+Se nota como voz claramente audible en el *Preview* y como voz un poco apagada en la salida, sin
+importar dónde esté la Intensidad.
+
+Para evitarlo, los frames con voz **no alimentan** el estimador. La detección usa la **periodicidad**
+de la señal (autocorrelación), no su nivel: un aumento del ruido de banda —por fuerte que sea— no
+es periódico y por lo tanto no congela nada, así que el estimador sigue persiguiendo al ruido como
+siempre. Una retención de 300 ms cubre los tramos sordos de la voz (las fricativas no son
+periódicas). Es automático y no tiene controles.
+
 **Memoria de piso ante squelch de portadora**
 
 Cuando el squelch de la radio corta la portadora (silencio total entre transmisiones), el MCRA detecta automáticamente que la energía del frame cayó muy por debajo del piso de ruido estimado y **congela** todo el estado del estimador: no actualiza ni el suavizado espectral, ni el seguimiento de mínimos, ni el estimado de ruido `λ_d`. Al volver la señal, el algoritmo retoma exactamente desde el perfil memorizado — sin período de re-calibración ni ruido audible al inicio de la transmisión.

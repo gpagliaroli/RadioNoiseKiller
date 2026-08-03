@@ -355,6 +355,32 @@ bien (`(1−gain)·spec`: si suena voz, es que se está quitando voz), y medido,
   variante del rediseño. Es el comportamiento esperado del control y justo lo que el preview
   existe para mostrar.
 
+**Freeze de MCRA por voz** — la causa de fondo de "escucho voz en el preview en todo el rango de
+Intensidad". Midiendo la voz quitada contra la predicción teórica del Wiener quedó claro que **no
+seguía la teoría**: se quedaba clavada en −5.4 dB por más que el S/N subiera a 30 dB (donde un
+Wiener ideal quitaría −60 dB). Con **perfil estático** sí la seguía (−45.9 dB a S/N 30) → el
+culpable era el estimador: **MCRA toma la voz sostenida por ruido** (su ventana de mínimos la
+absorbe), λ_d sube hasta el nivel de la voz y el cancelador empieza a restar la voz misma. El
+slider "Reactividad del piso" en 500 ms lo acelera.
+- Fix: los frames con voz no alimentan λ_d (se marcan contaminados en la cuarentena que ya existía
+  para el fading, incluido el marcado retroactivo del onset).
+- **El gate es la PERIODICIDAD (autocorrelación), NO el vp** — y esto es lo importante: el vp y la
+  peakiness se calculan sobre `snr_post`, que depende de λ_d. Al congelar, el ruido nuevo parece
+  señal → sube el vp → **realimenta el freeze**. Medido con gate por vp: ante un salto de ruido de
+  +10 dB el vp llegaba a 0.89 y el estimador quedaba congelado el 67% de los frames sin recuperarse
+  en 3 s; y como además `p_speech` sube, el post-filtro tampoco suprimía (residuo −7.9 vs −14.6 dB).
+  Poner un tope de duración al freeze NO lo arregla (el estimado igual tiene que re-converger). La
+  autocorrelación se calcula sobre la forma de onda cruda y no puede realimentarse: medido máx 0.09
+  con saltos de hasta +20 dB, contra 0.80 de media con voz a cualquier S/N (98% de los frames sobre
+  el umbral). Hold de 300 ms para cubrir los tramos sordos (fricativas).
+- Medido (Adaptativo, ventana 500 ms): voz quitada **−5.4 → −23.9 dB** a S/N 20, y la **voz que pasa
+  a la salida −3.4 → −0.1 dB**. Seguimiento del ruido, anti-gorgojeo y nivel del residuo: idénticos
+  (+10.0 dB ante un salto real, std 7.30, kurt 2.09). Sin costo medible.
+- **Regla: un detector que decide congelar un estimador no puede depender de la salida de ese
+  estimador.** Si depende, se realimenta y el estado "congelado" se vuelve absorbente.
+- Tests en `test_noise_vad` (voz sostenida no contamina, salto de ruido sin voz sí se sigue y no
+  dispara el freeze, hold recalculado por hop).
+
 **Pendiente de esa investigación (ítem 4, acordado con el usuario):** carácter par/impar en el
 excitador (armónicos pares con una no linealidad par, `h²`; **medido: genera productos de diferencia
 en los graves** — −31 dB con la rama filtrada a 1.2 kHz, −39 dB a 2 kHz: hay que filtrar alto) y
