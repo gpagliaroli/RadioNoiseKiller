@@ -38,6 +38,7 @@ class ProcessingPipeline:
         self._running = False
         self._bypass  = False
         self._muted   = False   # silencia SOLO la salida al dispositivo (proceso sigue)
+        self._preview_mode = False  # "escuchar ruido eliminado" (ver _run_processor)
         self._input_gain: float = 10 ** (config.gain.input_gain_db / 20.0)
         # Ganancia de salida cacheada como lineal (escritura atómica, sin lock,
         # igual que _input_gain). En la ruta normal la aplica _limiter en el hilo
@@ -557,6 +558,9 @@ class ProcessingPipeline:
 
     def set_noise_preview(self, enabled: bool) -> None:
         self._noise_profiler.set_preview_mode(enabled)
+        # El hilo DSP lo lee por frame para saltear las etapas de coloreo
+        # (bool: escritura atómica, sin lock — mismo patrón que _input_gain)
+        self._preview_mode = bool(enabled)
 
     @property
     def anf_notched_bins(self) -> int:
@@ -920,10 +924,25 @@ class ProcessingPipeline:
                     filtered = filtered * ramp
                     self._learn_gain_prev = learn_gain
 
+                # Preview ("escuchar ruido eliminado"): lo que sale del cancelador es
+                # lo que RESTA, y es material de diagnóstico — tiene que llegar al
+                # oído tal cual. Las etapas de coloreo posteriores lo falsean, y
+                # justamente todas se disparan cuando hay voz:
+                #   - squelch: el gate cierra sin voz → no se escucharía el ruido
+                #   - nivelador: AGC de hasta +20 dB sobre una señal de bajo nivel
+                #   - EQ presencia/cuerpo: realza 1.5 kHz, plena banda de legibilidad
+                #   - excitador: con el gate por VAD ABRE con voz y le agrega armónicos
+                # Con eso, un resto de voz apenas audible salía nivelado, realzado y
+                # con armónicos nuevos: sonaba mucho más presente de lo que realmente
+                # se está quitando. Se conservan el pasabanda de salida (define la
+                # banda que se escucha) y el limitador (protección).
+                preview = self._preview_mode
+
                 # El squelch depende de voice_prob_sq, que solo se actualiza con el
                 # cancelador activo — sin _noise_enabled el vp queda congelado y el
                 # gate podría cerrar para siempre.
                 if (self._squelch_enabled and self._noise_enabled
+                        and not preview
                         and self._noise_profiler.has_profile):
                     vp = self._noise_profiler.voice_prob_sq
                     if vp >= self._squelch_threshold:
@@ -953,6 +972,7 @@ class ProcessingPipeline:
                 # ruido residual entre palabras). Sin gate: adapta en continuo, para
                 # música / audio continuo donde no hay estructura de voz que detectar.
                 if (self._voice_leveler_enabled and self._noise_enabled
+                        and not preview
                         and self._noise_profiler.has_profile):
                     hold = (self._voice_leveler_gate_voice
                             and self._noise_profiler.voice_prob < self._LEVELER_VP_THR)
@@ -971,10 +991,11 @@ class ProcessingPipeline:
 
                 with self._lock:
                     mixed = self._bandpass_out.process(filtered) if self._bandpass_post_enabled else filtered
-                    if self._presence_enabled:
+                    if self._presence_enabled and not preview:
                         mixed = self._presence.process(mixed)
                         mixed = self._body.process(mixed)
-                    mixed = self._exciter.process(mixed)
+                    if not preview:
+                        mixed = self._exciter.process(mixed)
                     out_frame = self._limiter.process(mixed, self._config.audio.sample_rate)
 
                 out_frame = self._freq_shifter.process(out_frame)

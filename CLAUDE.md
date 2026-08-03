@@ -325,6 +325,25 @@ simulación, **pendiente de validación en el aire**):
 - Normalizar la **salida** de la no linealidad (en vez de la entrada) deja a `drive` sin efecto
   — probado y descartado, queda anotado para no repetirlo.
 
+**Fix del Preview ("escuchar ruido eliminado")** — reportado por el usuario en la primera prueba en
+el aire del rediseño: "se escucha mucho la voz y no sólo el ruido". La matemática del preview está
+bien (`(1−gain)·spec`: si suena voz, es que se está quitando voz), y medido, el rediseño quita
+**menos** voz que v1.9.1 (−6.6 vs −5.4 dB con post 3). Dos causas reales:
+- **La cadena de coloreo posterior corría también en preview.** El material de diagnóstico pasaba
+  por squelch, nivelador de voz, EQ de presencia/cuerpo y excitador — **las cuatro se disparan
+  justo cuando hay voz**, así que un resto de voz apenas audible salía nivelado (hasta +20 dB),
+  realzado en 1.5 kHz y, desde el excitador nuevo, con armónicos reales (su gate por VAD **abre**
+  con voz). El rediseño del excitador empeoró esto sin querer. Ahora `_preview_mode` en el pipeline
+  saltea esas cuatro etapas; se conservan el pasabanda de salida y el limitador. Los manuales
+  afirmaban que el preview "no incluye el excitador" — era **falso** desde siempre; corregido.
+  Test permanente en `test_pipeline` (cuenta llamadas a las tres etapas con preview on/off — la
+  comparación de audio entre dos pipelines NO sirve: el hilo procesador avanza distinto en cada
+  corrida y la salida queda desfasada).
+- **La Intensidad del preset**: el usuario la subió de 0.55 a 0.9 al reajustar el preset. Medido,
+  eso solo quita **1.7 dB más de voz** — el factor más grande de toda la tabla, más que cualquier
+  variante del rediseño. Es el comportamiento esperado del control y justo lo que el preview
+  existe para mostrar.
+
 **Pendiente de esa investigación (ítem 4, acordado con el usuario):** carácter par/impar en el
 excitador (armónicos pares con una no linealidad par, `h²`; **medido: genera productos de diferencia
 en los graves** — −31 dB con la rama filtrada a 1.2 kHz, −39 dB a 2 kHz: hay que filtrar alto) y

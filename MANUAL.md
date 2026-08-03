@@ -366,7 +366,7 @@ El indicador en Avanzada Cancelador muestra **FADE** (naranja) mientras el estim
 |-----------|-------------|
 | **Reducción (dB)** | Cuánto está reduciendo el ruido en este momento. Verde = reducción fuerte (>10 dB). Amarillo = reducción moderada. |
 | **Voz (%)** | Probabilidad de que el frame actual contenga voz (señal suavizada usada internamente por el Wiener). Para calibrar el Squelch, usar el indicador **Nivel de voz** del grupo Squelch (más reactivo). |
-| **Preview: escuchar ruido eliminado** (pestaña Principal, junto a *Reducción extra*) | Invierte la salida para escuchar **todo lo que el cancelador está restando** — refleja la reducción **completa: Intensidad + Post-Filtro** (más el piso perceptual). No incluye el bandpass, la ANF ni el excitador (son etapas posteriores). Útil para verificar que no se esté eliminando voz: si en el preview se escucha voz, algo está de más. |
+| **Preview: escuchar ruido eliminado** (pestaña Principal, junto a *Reducción extra*) | Invierte la salida para escuchar **todo lo que el cancelador está restando** — refleja la reducción **completa: Intensidad + Post-Filtro** (más el piso perceptual). Mientras está activo se saltean el **squelch, el nivelador de voz, la EQ de presencia/cuerpo y el excitador**: son etapas que colorean y que se disparan justo cuando hay voz, así que falsearían el diagnóstico (un resto de voz apenas audible saldría nivelado, realzado en 1,5 kHz y con armónicos nuevos). Se conservan el pasabanda de salida —define la banda que estás escuchando— y el limitador. Útil para verificar que no se esté eliminando voz: si en el preview se escucha voz, algo está de más. |
 
 ### Controles avanzados (Pestaña Avanzada Cancelador)
 

@@ -366,7 +366,7 @@ The indicator in Advanced Canceller shows **FADE** (orange) while the estimator 
 |-----------|-------------|
 | **Reduction (dB)** | How much noise is being reduced right now. Green = strong reduction (>10 dB). Yellow = moderate reduction. |
 | **Voice (%)** | Probability that the current frame contains voice (the smoothed signal used internally by the Wiener filter). To calibrate the Squelch, use the **Voice level** indicator in the Squelch group (more reactive). |
-| **Preview: listen to removed noise** (Main tab, next to *Extra reduction*) | Inverts the output so you hear **everything the canceller is subtracting** — it reflects the **full reduction: Intensity + Post-filter** (plus the perceptual floor). It does not include the bandpass, the ANF or the exciter (later stages). Useful for checking that no voice is being removed: if you hear voice in the preview, something is too aggressive. |
+| **Preview: listen to removed noise** (Main tab, next to *Extra reduction*) | Inverts the output so you hear **everything the canceller is subtracting** — it reflects the **full reduction: Intensity + Post-filter** (plus the perceptual floor). While it is active the **squelch, voice leveller, presence/body EQ and exciter are skipped**: they are colouring stages that trigger precisely when there is speech, so they would falsify the diagnosis (a barely audible voice remnant would come out levelled, boosted at 1.5 kHz and with new harmonics). The output bandpass — which defines the band you are listening to — and the limiter are kept. Useful for checking that no voice is being removed: if you hear voice in the preview, something is too aggressive. |
 
 ### Advanced controls (Advanced Canceller tab)
 

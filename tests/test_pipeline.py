@@ -234,5 +234,58 @@ assert red_db < -6.0, f"no suprime agudos con pasabanda off (reduccion {red_db:.
 pf.stop()
 print(f"Perfil independiente del filtro: OK (agudos suprimidos {red_db:.1f} dB con filtro off)")
 
+# --- Preview: no debe pasar por las etapas de coloreo -----------------------
+# El preview es material de DIAGNOSTICO (lo que el cancelador RESTA). Si pasa
+# por el nivelador, la EQ de presencia o el excitador, un resto de voz apenas
+# audible sale nivelado, realzado en 1.5 kHz y con armonicos nuevos — y las tres
+# se disparan justo cuando hay voz (el excitador tiene gate por VAD), asi que
+# suena mucho mas presente de lo que realmente se esta quitando. El squelch
+# ademas cerraria el gate sin voz y no se escucharia el ruido eliminado.
+def _preview_calls(preview: bool) -> dict:
+    c = AppConfig()
+    d = c.dsp
+    d.noise_enabled = True
+    d.noise_mode = "mcra"
+    d.blanker_enabled = False
+    d.anf_enabled = False
+    d.squelch_enabled = True
+    d.voice_leveler_enabled = True
+    d.voice_leveler_gate_voice = False
+    d.presence_enabled = True
+    d.presence_db = 3.0
+    d.exciter_enabled = True
+    d.exciter_mix = 0.3
+    pp = ProcessingPipeline(c)
+    calls = {"exciter": 0, "presence": 0, "leveler": 0}
+    for name, obj in (("exciter", pp._exciter), ("presence", pp._presence),
+                      ("leveler", pp._agc_voice)):
+        orig = obj.process
+
+        def wrap(x, *a, _o=orig, _n=name, **k):
+            calls[_n] += 1
+            return _o(x, *a, **k)
+        obj.process = wrap
+    pp.start(headless=True)
+    try:
+        pp.set_noise_preview(preview)
+        rr = np.random.default_rng(9)
+        for i in range(200):
+            tt = (np.arange(hop) + i * hop) / 48000.0
+            v = sum((1.0 / k) * np.sin(2 * np.pi * k * 150 * tt) for k in range(1, 18))
+            pp._process(((v * 0.05) + rr.standard_normal(hop) * 0.01).astype(np.float32))
+            if i % 10 == 0:
+                time.sleep(0.004)
+        time.sleep(0.4)
+        return dict(calls)
+    finally:
+        pp.stop()
+
+
+_norm = _preview_calls(False)
+_prev = _preview_calls(True)
+assert all(v > 0 for v in _norm.values()), f"sin preview las etapas deben correr: {_norm}"
+assert all(v == 0 for v in _prev.values()), f"el preview no debe colorear: {_prev}"
+print(f"Preview sin coloreo: OK (normal {_norm}, preview {_prev})")
+
 print(f"\nErrores: {errors if errors else 'ninguno'}")
 print("\nPipeline: OK")
