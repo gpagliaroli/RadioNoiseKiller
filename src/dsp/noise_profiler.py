@@ -26,8 +26,11 @@ class NoiseProfiler:
 
     OMLSA + control de intensidad:
         p_speech[k] = min(g_detect[k] / 0.80, 1)
-        gain_omlsa  = gain_dd^p_speech · floor^(1−p_speech)
+        ancla       = floor · 10^(−4.5·post_filter_strength/20)   (piso de los bins de ruido)
+        gain_omlsa  = gain_dd^p_speech · ancla^(1−p_speech)
         gain_out    = gain_omlsa^alpha     (alpha=0 passthrough, alpha=1 pleno)
+        El post-filtro profundiza el ANCLA (constante por bin); no exponencia la
+        ganancia, que amplificaba la fluctuación del ruido → gorgojeo.
 
     MCRA (estimación adaptativa de noise_mag):
         S_f[k]     = α_s·S_f_prev + (1−α_s)·|Y[k]|²     (suavizado potencia)
@@ -79,6 +82,18 @@ class NoiseProfiler:
     _PS_SMOOTH:           float = 0.6   # suavizado temporal de p_speech por bin (anti-gorgojeo):
                                         # estabiliza la clasificación voz/ruido, fuente del ruido
                                         # musical residual. EMA ~2-3 frames, sin retraso audible.
+
+    # --- Anti-gorgojeo automático (gateado por el VAD de frame) ---------------
+    # Con voz (vp→1) ambos se desactivan solos: no tocan el ataque ni la voz.
+    # Sin voz (vp→0) estabilizan el residuo, que es donde se escucha el gorgojeo.
+    _PS_SMOOTH_QUIET:  float = 0.95   # tope del suavizado de p_speech sin voz
+    _GAIN_EMA_QUIET:   float = 0.75   # EMA de la ganancia final sin voz (~3 frames)
+
+    # --- Post-filtro espectral (supresión extra en bins de ruido) -------------
+    # dB de profundidad extra por unidad del slider (0-10 → 0-45 dB bajo el piso).
+    # NO es un exponente sobre la ganancia: ver la nota de diseño en process().
+    _POST_DB_PER_UNIT: float = 4.5
+    _POST_MIN_GAIN:    float = 0.001  # -60 dB: tope de profundidad del ancla
 
     # VAD frame-level (energy minimum tracker)
     # Dos trackers paralelos: uno lento (OMLSA) y uno rápido (squelch).
@@ -132,6 +147,7 @@ class NoiseProfiler:
         self._gain_prev:     np.ndarray | None = None
         self._snr_post_prev: np.ndarray | None = None
         self._p_speech_prev: np.ndarray | None = None
+        self._gain_out_prev: np.ndarray | None = None   # EMA anti-gorgojeo (por bin)
 
         # VAD frame-level
         self._voice_prob:    float = 0.0   # suavizado lento (OMLSA)
@@ -274,6 +290,7 @@ class NoiseProfiler:
         self._gain_prev       = None
         self._snr_post_prev   = None
         self._p_speech_prev   = None
+        self._gain_out_prev   = None      # por-bin: se rearma solo (invariante 9)
         self._voice_prob         = 0.0
         self._voice_prob_sq      = 0.0
         self._spec_conf          = 0.0
@@ -317,6 +334,8 @@ class NoiseProfiler:
             self._reset_mcra()
             self._gain_prev     = None
             self._snr_post_prev = None
+            self._p_speech_prev = None
+            self._gain_out_prev = None
             self._voice_prob    = 0.0
             self._voice_prob_sq = 0.0
             self._spec_conf     = 0.0
@@ -330,6 +349,8 @@ class NoiseProfiler:
         self._n_frames          = 0
         self._gain_prev         = None
         self._snr_post_prev     = None
+        self._p_speech_prev     = None
+        self._gain_out_prev     = None
         self._voice_prob        = 0.0
         self._voice_prob_sq     = 0.0
         self._spec_conf         = 0.0
@@ -867,6 +888,27 @@ class NoiseProfiler:
             _eff_floor = (self._floor_curve if self._perceptual_floor_enabled
                           else np.float32(self._floor))
 
+            # --- Ancla del post-filtro ---
+            # NOTA DE DISEÑO: la supresión extra de los bins de ruido se hace
+            # anclándolos a un piso MÁS PROFUNDO y CONSTANTE, no exponenciando la
+            # ganancia. El exponente viejo (gain^(1+s·(1-p))) MULTIPLICA por (1+s)
+            # la fluctuación en dB del ruido: con s=6, los ~6 dB de fluctuación
+            # natural del ruido salían a ~18 dB → cada bin que sobrevivía pegaba un
+            # pico aislado (gorgojeo), y de paso castigaba los bins de voz con
+            # p_speech intermedio (p=0.5 → gain^4). Medido en simulación con la
+            # receta intensidad 0.55 + post 6: fluctuación del residuo 18.0 → 7.7 dB
+            # (el ruido crudo fluctúa 6.4), kurtosis 4.11 → 2.44, +3.7 dB de voz y
+            # +10.6 dB de S/N de salida, a costa de 2 frames de ataque.
+            if self._post_filter_enabled and self._post_filter_strength > 0.0:
+                _anchor = np.maximum(
+                    _eff_floor * np.float32(
+                        10.0 ** (-self._POST_DB_PER_UNIT
+                                 * self._post_filter_strength / 20.0)),
+                    np.float32(self._POST_MIN_GAIN),
+                ).astype(np.float32)
+            else:
+                _anchor = _eff_floor
+
             # --- Gain Log-MMSE (Ephraim-Malah 1985) ---
             g_wiener = snr_prior / (snr_prior + 1.0)
             v        = np.maximum(g_wiener * snr_post, 1e-10)
@@ -891,49 +933,61 @@ class NoiseProfiler:
             # ganancia frame a frame (ruido musical de fondo). El EMA lo estabiliza:
             # los bins de ruido que flickean quedan anclados bajos (→ suprimidos) y
             # la voz sostenida (p_speech≈1) no se toca. Onset de voz: ~2-3 frames.
+            # El coeficiente sube hasta _PS_SMOOTH_QUIET cuando el VAD de frame no
+            # ve voz: ahí el parpadeo de la clasificación es puro ruido y estabilizarlo
+            # es gratis. Con voz (vp→1) vuelve al valor del slider → sin costo de ataque.
             if (self._p_speech_prev is None
                     or self._p_speech_prev.shape != p_speech.shape):
                 self._p_speech_prev = p_speech
             else:
-                p_speech = (self._ps_smooth * self._p_speech_prev
-                            + (1.0 - self._ps_smooth) * p_speech).astype(np.float32)
+                ps_a = np.float32(
+                    self._ps_smooth
+                    + (self._PS_SMOOTH_QUIET - self._ps_smooth) * (1.0 - self._voice_prob)
+                )
+                p_speech = (ps_a * self._p_speech_prev
+                            + (1.0 - ps_a) * p_speech).astype(np.float32)
                 self._p_speech_prev = p_speech
 
-            gain_out = (gain_dd ** p_speech) * (_eff_floor ** (1.0 - p_speech))
+            gain_out = (gain_dd ** p_speech) * (_anchor ** (1.0 - p_speech))
 
             # --- Suavizado de gain en frecuencia ---
             kernel   = np.array([0.25, 0.50, 0.25], dtype=np.float32)
             gain_out = np.convolve(gain_out, kernel, mode='same')
-            gain_out = np.maximum(gain_out, _eff_floor).astype(np.float32)
+            # OJO: clampear con _anchor, NO con _eff_floor — con el post-filtro activo
+            # el piso es el ancla profunda y usar _eff_floor devolvería los bins
+            # suprimidos al piso normal, anulando toda la supresión extra en silencio.
+            gain_out = np.maximum(gain_out, _anchor).astype(np.float32)
 
             # Intensidad: gain^alpha → alpha=0 passthrough, alpha=1 reducción plena
             if self._alpha < 1.0:
                 gain_out = np.power(gain_out, self._alpha).astype(np.float32)
 
-            # Post-filtro espectral: supresión adicional en bins de ruido residual
-            # gain_post[k] = gain[k] ^ (1 + strength * (1 - p_speech[k]))
-            # Bins de voz (p_speech=1): sin cambio. Bins de ruido (p_speech=0): gain^(1+strength)
+            # Post-filtro espectral: la supresión extra ya la aplicó el ancla
+            # (_anchor, arriba). Acá solo se mide el indicador "Reducción extra":
+            # cuántos dB por debajo del piso normal quedaron los bins de ruido.
             if self._post_filter_enabled and self._post_filter_strength > 0.0:
-                p_noise  = np.float32(1.0) - p_speech
-                # Métrica de reducción extra: extra_exp * log(gain) dB, en bins de ruido
                 noise_mask = p_speech < 0.3
                 if np.any(noise_mask):
-                    log_gain_db = 20.0 * np.log10(np.maximum(gain_out[noise_mask], 1e-6))
-                    extra_exp   = np.float32(self._post_filter_strength) * p_noise[noise_mask]
-                    self._pf_extra_db = float(np.mean(extra_exp * log_gain_db))
+                    extra_db = self._POST_DB_PER_UNIT * self._post_filter_strength
+                    self._pf_extra_db = -float(
+                        extra_db * np.mean(1.0 - p_speech[noise_mask]))
                 else:
                     self._pf_extra_db = 0.0
-                gain_out = np.power(
-                    gain_out,
-                    np.float32(1.0) + np.float32(self._post_filter_strength) * p_noise,
-                ).astype(np.float32)
-                # Usar un suelo mínimo bajo (no el _eff_floor) para no anular la supresión extra
-                gain_out = np.maximum(gain_out, np.float32(0.005))
             else:
                 # Post-filtro inactivo (checkbox off o agresividad 0): el indicador
                 # debe volver a 0 — sin esto queda congelado en el último valor
                 # medido (invariante 5: indicadores siempre actualizados)
                 self._pf_extra_db = 0.0
+
+            # --- Anti-gorgojeo: EMA de la ganancia final, gateado por el VAD ---
+            # Sin voz, la ganancia por bin todavía salta frame a frame (el residuo
+            # "burbujea"); con vp→1 el coeficiente cae a 0 y la ganancia pasa sin tocar.
+            ga = np.float32(self._GAIN_EMA_QUIET * (1.0 - self._voice_prob))
+            if (self._gain_out_prev is not None
+                    and self._gain_out_prev.shape == gain_out.shape):
+                gain_out = (ga * self._gain_out_prev
+                            + (1.0 - ga) * gain_out).astype(np.float32)
+            self._gain_out_prev = gain_out
 
             self._last_reduction_db = 20.0 * np.log10(max(float(np.mean(gain_out)), 1e-6))
 

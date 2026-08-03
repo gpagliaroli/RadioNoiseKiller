@@ -268,6 +268,73 @@ Bugs reales encontrados en revisión — cada uno es un patrón que puede reapar
    `test_post_filter_on_principal_autoenable`, falla intermitente según el estado del disco). Al
    testear un handler de slider, partir de un valor distinto conocido.
 
+## Cambios pendientes de release (post-v1.9.1)
+
+**Post-filtro rediseñado + anti-gorgojeo automático** (investigación de agosto 2026; medido en
+simulación, **pendiente de validación en el aire**):
+
+- **El post-filtro ya no exponencia la ganancia.** `gain^(1+s·(1−p))` multiplica por (1+s) la
+  fluctuación EN dB del ruido: con s=6 los ~6 dB de fluctuación natural salían a ~18 dB, y cada
+  bin que sobrevivía pegaba un pico aislado — **esa era la fuente dominante del gorgojeo con solo
+  ruido**, no el MCRA. Además castigaba los bins de voz con `p_speech` intermedio (p=0.5 →
+  `gain⁴`), que es por qué había que bajar la Intensidad para compensar. Ahora el post-filtro
+  **hunde el ancla del OMLSA** para los bins de ruido: `ancla = floor · 10^(−4.5·s/20)`, constante
+  por bin, tope −60 dB (`_POST_DB_PER_UNIT`, `_POST_MIN_GAIN`). Mismo slider, mismo rango 0–10, sin
+  UI nueva; el mapeo pasa a ser **4,5 dB de profundidad extra por punto**.
+- **Anti-gorgojeo automático gateado por el VAD de frame**, sin controles nuevos: el suavizado de
+  `p_speech` sube hasta `_PS_SMOOTH_QUIET=0.95` y se agrega un EMA de la ganancia final
+  (`_GAIN_EMA_QUIET=0.75`), ambos escalados por `(1−voice_prob)` → con voz (vp→1) se desactivan
+  solos y no tocan el ataque. `_gain_out_prev` es estado por-bin: reseteado en `reset()` y
+  `clear_profile()` (invariante 9).
+- Medido (ruido de banda fluctuante ±6 dB, MCRA, receta Intensidad 0.55 + Post 6; `std_dB` =
+  fluctuación temporal por bin, `kurt_r` = razón de kurtosis salida/entrada, la métrica objetiva
+  de ruido musical): **std 18.0 → 7.7 dB** (el ruido crudo fluctúa 6.4), **kurtosis 4.11 → 2.44**,
+  **+3.7 dB de voz**, **S/N de salida 9.7 → 20.3 dB**, ataque de voz 30 → 50 ms. Sin post-filtro
+  (defaults) el anti-gorgojeo solo: kurtosis 2.52 → 1.77. CPU: el cancelador BAJÓ ~5 µs/frame (se
+  fue el `np.power`).
+- **OJO con los presets de fábrica:** el significado numérico del slider cambió (ahora suprime más
+  a igual valor). Quedan sin tocar a propósito — hay que re-validarlos en el aire.
+- **Invariante reforzado (3ra vez que muerde el mismo patrón):** el `np.maximum` posterior al
+  suavizado en frecuencia debe clampear con **el ancla**, no con `_eff_floor`. Clampear con el piso
+  normal devuelve los bins suprimidos al piso y anula silenciosamente toda la supresión extra. Pasó
+  incluso en el prototipo de esta misma investigación: las primeras cifras del ancla profunda eran
+  en realidad "post-filtro apagado". Test de regresión en `test_noise_vad` (post 6 debe suprimir
+  ≥6 dB más que post 0).
+- **Al testear el suavizado de `p_speech` hay que hacerlo CON VOZ**: sin voz el gate automático lo
+  domina y tapa la diferencia del slider (el test viejo comparaba con solo ruido y quedó sin
+  sentido — reformulado, mide el slider con voz y el automático sin voz).
+
+**Excitador armónico reescrito** (misma investigación, **pendiente de validación en el aire**):
+
+- **No estaba generando armónicos.** `tanh(d·h) − h` vale, para señal chica, `(d−1)·h`: un realce
+  de agudos **lineal**. Medido en v1.9.1 con los defaults (drive 2, mix 0.3): **+1.79 dB** de
+  ganancia plana sobre 1 kHz, 3er armónico **58 dB abajo** (inaudible), y el realce comprimía
+  ~0.6 dB con nivel alto → brillo que sube y baja con la señal. Buena parte del carácter metálico
+  venía de ahí. Además levantaba el ruido residual **+2.07 dB** siempre (corre último, sin gate).
+- Ahora: banda 1–3.5 kHz → `tanh(d·u)/d − u` sobre la entrada **normalizada a nivel fijo**
+  (`_REF_RMS`, RMS con memoria) → se le resta el **componente lineal por proyección** (dividir por
+  `drive` no alcanza: a nivel alto el residuo todavía tiene fundamental y atenuaba 2.3 dB) → LPF
+  7 kHz. Medido: fuga lineal **±0.02 dB a cualquier nivel**, H3 real (−40 dB a drive 2, −32 dB a
+  drive 5), **independiente del nivel de entrada** (H3 = −32.0 dB a −40/−25/−10 dBFS).
+- **Gate por VAD desde el pipeline** (`set_voice_gate`, suavizado ~30 ms): con cancelador + perfil
+  solo actúa con voz → el ruido de fondo pasa de +2.07 a **0.00 dB**. Sin cancelador, gate=1.0
+  (el vp no se actualiza — invariante 2). CPU +23 µs/frame (+0.23% de un core).
+- `drive` pasa a controlar **cantidad y orden** de armónicos (antes no controlaba nada audible) y
+  `mix` la cantidad mezclada. **Los presets viejos suenan distinto**: lo audible antes era el
+  realce de agudos. Manual ES+EN con nota de migración ("si extrañás ese brillo plano, eso es EQ").
+- Normalizar la **salida** de la no linealidad (en vez de la entrada) deja a `drive` sin efecto
+  — probado y descartado, queda anotado para no repetirlo.
+
+**Pendiente de esa investigación (ítem 4, acordado con el usuario):** carácter par/impar en el
+excitador (armónicos pares con una no linealidad par, `h²`; **medido: genera productos de diferencia
+en los graves** — −31 dB con la rama filtrada a 1.2 kHz, −39 dB a 2 kHz: hay que filtrar alto) y
+**síntesis del fundamental** para recuperar graves que el filtro de la radio ya cortó (un pasa-altos
+de 300 Hz deja f0=120 Hz **32 dB abajo**: ningún EQ lo recupera, hay que sintetizarlo — se puede
+reusar el f0 + confianza que `_pitch_autocorr` ya calcula todos los frames).
+
+**Nota:** `tests/test_cpu_profile.py` está muerto — importa `models.deepfilternet`, removido con la
+arquitectura vieja de IA. No está en `run_all.py`. Borrarlo o reescribirlo cuando moleste.
+
 ## Empaquetado multiplataforma — invariantes (lecciones v1.4/v1.5)
 
 La app es Python + PySide6 empaquetada con PyInstaller para Windows y Linux. Los bugs de

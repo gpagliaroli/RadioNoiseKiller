@@ -367,7 +367,7 @@ class AdvancedAudioTab(QWidget):
         self._s_exciter_drive._val_lbl.setFixedWidth(110)
         self._s_exciter_drive.valueChanged.connect(self._on_exciter_drive)
         layout.addWidget(self._s_exciter_drive)
-        layout.addWidget(_note(tr("  ↳ Saturación tanh: cuántos armónicos se generan. Suave = sutil, agresivo = efecto notable.")))
+        layout.addWidget(_note(tr("  ↳ Saturación tanh: cuántos armónicos se generan y de qué orden. Suave = sutil, agresivo = efecto notable. No cambia el nivel de la banda: solo agrega armónicos nuevos.")))
 
         self._s_exciter_mix = SliderRow(
             tr("Mezcla:"),
@@ -380,7 +380,7 @@ class AdvancedAudioTab(QWidget):
         )
         self._s_exciter_mix.valueChanged.connect(self._on_exciter_mix)
         layout.addWidget(self._s_exciter_mix)
-        layout.addWidget(_note(tr("  ↳ Nivel de armónicos mezclados. 20–40% = zona útil sin sonar artificial.")))
+        layout.addWidget(_note(tr("  ↳ Nivel de armónicos mezclados. 20–40% = zona útil sin sonar artificial. Con el cancelador activo solo actúa cuando hay voz, así no le agrega brillo al ruido de fondo.")))
         return group
 
     # ------------------------------------------------------------------

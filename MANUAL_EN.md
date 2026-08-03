@@ -443,7 +443,9 @@ This module replaces the fixed floor with a three-zone curve:
 
 Even a well-configured Wiener filter can leave a very particular artifact called **musical noise**: instead of the original uniform background noise, short intermittent birdies appear, varying randomly from bin to bin. It is the residue of bins the VAD marked as noise but that were not fully suppressed by the spectral floor.
 
-The post-filter applies a second pass over those bins using the same voice-probability information: on bins with residual noise (`p_speech ≈ 0`) the gain is reduced further; on voice bins (`p_speech ≈ 1`) nothing changes.
+The post-filter uses that same voice-probability information to **push the floor of those bins down**: where there is residual noise (`p_speech ≈ 0`) the floor drops about **4.5 dB per slider point**; on voice bins (`p_speech ≈ 1`) nothing changes.
+
+What matters is that this deepening is a **fixed** amount, not a multiplier on the gain. Radio noise naturally fluctuates some 6 dB from instant to instant; the previous design multiplied that fluctuation by the slider value (with the slider at 6, those 6 dB became nearly 40), which is why what remained in the background was not an even hiss but isolated peaks — the warble itself. Subtracting a fixed amount leaves the background **lower and steadier**, and it also leaves alone the voice bins with intermediate probability, which used to take the same punishment.
 
 **Real-time indicator:**
 
@@ -453,9 +455,9 @@ The post-filter applies a second pass over those bins using the same voice-proba
 
 | Control | Range | Default | Description |
 |---------|-------|---------|-------------|
-| **Post-filter** | 0.0 – 10.0 | 1.0 | Strength of the second pass. **0** = off. **1** = normal: pure-noise bins get `gain²` (doubles the reduction in dB). **2** = aggressive: `gain³`. **4** = very aggressive: `gain⁵`. **10** = maximum: `gain¹¹` — on pure-noise bins suppression saturates at the internal floor (−46 dB); the high range mostly acts on intermediate voice/noise bins. Start at 1.0 and raise it, watching the Extra reduction indicator, until the musical noise disappears. |
+| **Post-filter** | 0.0 – 10.0 | 1.0 | How far the floor of the noise bins is pushed down: **~4.5 dB per point**. **0** = off. **1** = −4.5 dB. **2** = −9 dB. **6** = −27 dB. **10** = −45 dB, with an internal ceiling of −60 dB total gain. Start at 1.0 and raise it, watching the Extra reduction indicator, until the background is even. |
 
-> **Note:** High values (>2.5) with very low SNR signals can over-suppress the edges of voice transitions — and above 4 the effect on intermediate bins is strong: it can reduce voice clarity (word endings, breaths). If the voice starts to sound clipped or dull, reduce. On pure background noise there is no audible difference beyond ~5 (suppression already saturates); the high range is heard on the noise riding along with the voice.
+> **Note:** the post-filter **does not touch the voice bins**, so raising it does not dull or clip the voice — unlike the previous design, where the high range also punished intermediate voice/noise bins. What high values do change is the character of the background: above ~6 the silence between words gets very "dead", which some operators find unnatural and others find restful on long watches. It is a matter of taste, not damage to the signal.
 
 > **Tip — low Intensity + high Post-filter:** a very effective combination is to **lower the canceller's Intensity** (50–60%) and compensate with a **high Post-filter** (5–8). With both sliders together on the Main tab (Intensity + Post-filter), this is the most direct recipe for the user who doesn't want to go into the Advanced tabs. The low Intensity lets the voice through almost untouched — without the dullness that appears when raising it — while the post-filter handles the remaining noise, acting only on the bins the detector marks as noise. On many signals this yields better cancellation **with a more natural voice** than raising the Intensity alone. It is worth trying both approaches on each signal and keeping whichever sounds best.
 
@@ -590,26 +592,32 @@ Both bands can be used at once: body +4 dB and presence +4 dB produce a fuller, 
 
 Generates artificial harmonics in the 1–4 kHz zone to restore the sense of "brightness" and "presence" lost to bandpass filtering and noise reduction.
 
-The process takes the content above 1 kHz, saturates it gently with the *tanh* function (which generates 2nd and 3rd harmonics), extracts only the generated harmonics (without the original signal) and mixes them back into the audio at a low level.
+The process takes the intelligibility band (1–3.5 kHz), saturates it with the *tanh* function, **subtracts everything that was already in the original signal** and mixes back only what is left: new harmonics, landing inside the voice band (an internal 7 kHz ceiling keeps them out of the fizz region).
 
-The effect is similar to an analog exciter: the voice sounds more "airy", with more attack on consonants, without increasing the physical audio level.
+That subtraction is what separates an exciter from an equalizer, and it is worth understanding because up to version 1.9.1 it was not done properly: what got mixed back contained a copy of the band itself, so the module was really a +1.8 dB treble boost — with the harmonics 58 dB down, i.e. inaudible — and that boost rose and fell with the signal level. Much of the metallic character came from there. Now the band's level is untouched (measured: ±0.05 dB) and what is added are genuine harmonics.
+
+The effect is that of an analog exciter: the voice sounds more "airy", with more attack on consonants, without increasing the physical audio level.
 
 **It is not a substitute for the presence EQ** — they are complementary. The EQ amplifies what exists; the exciter generates new energy correlated with the voice present.
+
+With the **canceller enabled and a profile learned**, the exciter only acts while there is speech: between words it closes by itself. It runs at the end of the chain, so without that gate it brightened the residual noise just as much as the voice (+2 dB of hiss between words). Without the canceller there is no voice detection available and it works all the time, as before.
 
 ### Controls
 
 | Control | Range | Default | Description |
 |---------|-------|---------|-------------|
-| **Drive** | 1.0× – 10.0× | 2.0× | How much saturation is applied before extracting the harmonics. **Soft (1–3×):** mostly 2nd harmonic, subtle effect. **Aggressive (6–10×):** more higher-order harmonics, stronger effect but can sound artificial. Start at 2.0×. |
+| **Drive** | 1.0× – 10.0× | 2.0× | How much saturation is applied before extracting the harmonics. **Soft (1–3×):** few harmonics, low order, subtle effect. **Aggressive (6–10×):** more harmonics and of higher order, stronger effect but it can sound hard. The effect **does not depend on signal level**: the stage normalizes itself, so it sounds the same on strong or weak signals. Start at 2.0×. |
 | **Mix** | 0% – 100% | 30% | How much of the generated harmonics is added back to the original audio. **20–40%** is the useful zone — noticeable without sounding artificial. Above 60% the effect becomes very pronounced. |
+
+> **Note if you come from v1.9.1:** the module's behaviour changed, so values stored in old presets no longer sound the same — what used to be audible was the treble boost, not the harmonics. Re-tune Drive and Mix by ear. If you miss the flat brightness it used to add, that is EQ: raise it with the **presence EQ**, which is the right tool for that.
 
 ### Symptoms and adjustment
 
 | Symptom | Adjustment |
 |---------|-----------|
-| The voice sounds "metallic" or "screechy" | Lower Drive (to 1.5–2.0×) |
-| The effect is not noticeable | Raise Mix (to 40–50%) |
-| It adds background noise | Check the canceller is enabled — the exciter also amplifies the noise's harmonics |
+| The voice sounds "metallic" or "screechy" | Lower Drive (to 1.5–2.0×). *tanh* is symmetric: it generates only odd harmonics (3rd, 5th, 7th), which is the characteristic hollow timbre; the higher the Drive, the more it shows |
+| The effect is not noticeable | Raise Mix (to 40–50%) or Drive. Note: if you come from v1.9.1, the module now adds harmonics instead of lifting the treble — the change is perceived differently |
+| It adds brightness to the background noise | Enable the canceller and learn a profile: with that, the exciter closes by itself between words |
 
 ---
 

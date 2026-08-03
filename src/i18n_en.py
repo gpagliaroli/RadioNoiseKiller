@@ -183,12 +183,12 @@ CATALOG = {
     "Autor: Germán Pagliaroli": "Author: Germán Pagliaroli",
     "Intensidad:": "Intensity:",
     "Post-Filtro:": "Post-filter:",
-    "Supresión extra del 'gorgojeo' / ruido musical residual de fondo.\n"
-    "0 = apagado. Subir hasta que desaparezcan los pitidos de fondo\n"
-    "(vigilar que la voz no se recorte). Se enciende solo al pasar de 0.":
-        "Extra suppression of background 'warble' / residual musical noise.\n"
-        "0 = off. Raise it until the background birdies disappear\n"
-        "(watch that the voice isn't clipped). It turns on by itself above 0.",
+    "Hunde el piso de los bins de ruido: cada punto son ~4.5 dB más abajo\n"
+    "(el fondo queda más silencioso y parejo, sin 'gorgojeo').\n"
+    "0 = apagado. No toca los bins de voz. Se enciende solo al pasar de 0.":
+        "Pushes the noise bins' floor down: each point is ~4.5 dB deeper\n"
+        "(the background gets quieter and steadier, without 'warble').\n"
+        "0 = off. It leaves the speech bins alone. It turns on by itself above 0.",
     "Reducción activa:": "Active reduction:",
     "Preview: escuchar ruido eliminado": "Preview: listen to removed noise",
     "Emite el ruido que está siendo restado.\nSi suena como voz, bajar la Intensidad.":
@@ -349,11 +349,13 @@ CATALOG = {
     "Drive:": "Drive:",
     "suave": "soft",
     "agresivo": "aggressive",
-    "  ↳ Saturación tanh: cuántos armónicos se generan. Suave = sutil, agresivo = efecto notable.":
-        "  ↳ Tanh saturation: how many harmonics are generated. Soft = subtle, aggressive = pronounced.",
+    "  ↳ Saturación tanh: cuántos armónicos se generan y de qué orden. Suave = sutil, agresivo = efecto notable. No cambia el nivel de la banda: solo agrega armónicos nuevos.":
+        "  ↳ Tanh saturation: how many harmonics are generated and of what order. Soft = subtle, "
+        "aggressive = pronounced. It does not change the band's level: it only adds new harmonics.",
     "Mezcla:": "Mix:",
-    "  ↳ Nivel de armónicos mezclados. 20–40% = zona útil sin sonar artificial.":
-        "  ↳ Level of harmonics mixed in. 20–40% = useful range without sounding artificial.",
+    "  ↳ Nivel de armónicos mezclados. 20–40% = zona útil sin sonar artificial. Con el cancelador activo solo actúa cuando hay voz, así no le agrega brillo al ruido de fondo.":
+        "  ↳ Level of harmonics mixed in. 20–40% = useful range without sounding artificial. With the "
+        "canceller on it only acts while there is speech, so it doesn't add brightness to the background noise.",
 
     # --- Avanzada Impulsos ---
     "Supresor de impulsos  (se aplica en tiempo real)": "Impulse suppressor  (applied in real time)",

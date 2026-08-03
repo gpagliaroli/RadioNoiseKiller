@@ -959,6 +959,16 @@ class ProcessingPipeline:
                     self._agc_voice.set_hold(hold)
                     filtered = self._agc_voice.process(filtered)
 
+                # Gate del excitador por VAD: corre al final del pipeline, así que sin
+                # gate levanta el ruido residual tanto como la voz (siseo brillante
+                # entre palabras). Sin cancelador o sin perfil el vp no se actualiza
+                # (invariante 2) → 1.0 = sin gatear.
+                self._exciter.set_voice_gate(
+                    self._noise_profiler.voice_prob
+                    if (self._noise_enabled and self._noise_profiler.has_profile)
+                    else 1.0
+                )
+
                 with self._lock:
                     mixed = self._bandpass_out.process(filtered) if self._bandpass_post_enabled else filtered
                     if self._presence_enabled:

@@ -500,9 +500,9 @@ class MainWindow(QMainWindow):
         )
         self._slider_post._val_lbl.setFixedWidth(130)
         self._slider_post.setToolTip(tr(
-            "Supresión extra del 'gorgojeo' / ruido musical residual de fondo.\n"
-            "0 = apagado. Subir hasta que desaparezcan los pitidos de fondo\n"
-            "(vigilar que la voz no se recorte). Se enciende solo al pasar de 0."))
+            "Hunde el piso de los bins de ruido: cada punto son ~4.5 dB más abajo\n"
+            "(el fondo queda más silencioso y parejo, sin 'gorgojeo').\n"
+            "0 = apagado. No toca los bins de voz. Se enciende solo al pasar de 0."))
         self._slider_post.valueChanged.connect(self._on_post_filter_strength)
         layout.addWidget(self._slider_post)
         self._slider_post.set_value(self._config.dsp.post_filter_strength)

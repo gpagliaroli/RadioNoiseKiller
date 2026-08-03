@@ -262,20 +262,33 @@ p8.reset(240)
 check("hf_boost: curva redimensionada en reset (inv 9)", len(p8._hf_boost_curve) == p8._nb)
 
 # Anti-gorgojeo: el suavizado temporal de p_speech reduce el salto de ganancia
-# frame a frame (ruido musical). Comparar var del salto con smooth 0.6 vs 0.0.
-def _red_jump_var(smooth):
+# frame a frame (ruido musical). Se mide CON VOZ presente: sin voz el gate
+# automatico (_PS_SMOOTH_QUIET + EMA de ganancia) domina y tapa la diferencia
+# del slider — que es justamente lo que se quiere sin voz.
+def _red_jump_var(smooth, frames):
     p = NoiseProfiler(HOP); p.set_mode("mcra"); p._ps_smooth = smooth
-    nzp = (rng.standard_normal(400 * HOP).reshape(400, HOP) * 0.02).astype(np.float32)
     for i in range(200):
-        p.process(nzp[i])
+        p.process(frames[i])
     reds = []
     for i in range(200, 400):
-        p.process(nzp[i]); reds.append(p.last_reduction_db)
-    return float(np.var(np.diff(reds)))
-v_sm = _red_jump_var(0.6)
-v_no = _red_jump_var(0.0)
-check("suavizado p_speech reduce el salto de ganancia frame a frame (%.4f < %.4f)"
+        p.process(frames[i]); reds.append(p.last_reduction_db)
+    return float(np.var(np.diff(reds))), p.voice_prob
+
+
+mixed_vn = (voice_sig(400) + fluct_noise(400) * 0.7).astype(np.float32)
+v_sm, vp_sm = _red_jump_var(0.6, mixed_vn)
+v_no, _ = _red_jump_var(0.0, mixed_vn)
+check("con voz, el suavizado de p_speech reduce el salto de ganancia (%.4f < %.4f)"
       % (v_sm, v_no), v_sm < v_no)
+check("con voz el VAD no fuerza el suavizado automatico (vp=%.2f)" % vp_sm, vp_sm > 0.4)
+
+# Y sin voz el anti-gorgojeo automatico actua solo, con el slider donde este:
+nz_only = fluct_noise(400)
+q_sm, vp_q = _red_jump_var(0.6, nz_only)
+q_no, _ = _red_jump_var(0.0, nz_only)
+check("sin voz el salto de ganancia es chico con el slider al minimo (%.4f)" % q_no,
+      q_no < max(v_no * 0.5, 1e-9))
+check("sin voz el VAD queda bajo (vp=%.2f)" % vp_q, vp_q < 0.4)
 # El slider Anti-gorgojeo (set_smooth) dosifica _ps_smooth: 0.90->0, 0.99->0.85
 pc = NoiseProfiler(HOP)
 pc.set_smooth(0.90); check("beta 0.90 -> ps_smooth 0", abs(pc._ps_smooth - 0.0) < 1e-6)
@@ -305,6 +318,68 @@ for i in range(500):
 diff = float(np.max(np.abs(np.concatenate(out_a) - np.concatenate(out_b))))
 check("ruido suave: ningun evento de fading disparado", not fade_seen)
 check("sin eventos: comp ON == comp OFF, salida identica (dif %.1e)" % diff, diff == 0.0)
+
+# ---------------------------------------------------------------------------
+print()
+print("=== Post-filtro: ancla profunda (anti-gorgojeo) ===")
+
+# El post-filtro hunde el piso de los bins de ruido en ~4.5 dB por unidad, en vez
+# de exponenciar la ganancia (que multiplicaba la fluctuacion en dB del ruido ->
+# gorgojeo, y castigaba los bins de voz con p_speech intermedio).
+
+def _stft_pow(frames):
+    w = np.sqrt(np.hanning(2 * HOP)).astype(np.float32)
+    out, prev = [], np.zeros(HOP, dtype=np.float32)
+    for f in frames:
+        fr = np.concatenate([prev, f]); prev = f
+        out.append(np.abs(np.fft.rfft(fr * w)) ** 2 + 1e-16)
+    return np.array(out)
+
+
+def _residuo(frames, skip=120):
+    """(fluctuacion temporal en dB, nivel medio dB) en la banda de voz."""
+    P = _stft_pow(frames)[skip:][:, int(300 / 50):int(3400 / 50)]
+    return (float(np.mean(np.std(10 * np.log10(P), axis=0))),
+            10 * np.log10(float(np.mean(P))))
+
+
+def _run_post(strength, frames):
+    p = make_profiler()
+    p.set_alpha(0.55); p.set_floor(0.1); p.set_smooth(0.96); p.set_attack(0.80)
+    if strength:
+        p.set_post_filter_enabled(True)
+        p.set_post_filter_strength(strength)
+    return [p.process(f) for f in frames], p
+
+
+nz2 = fluct_noise(600)
+std_in, lvl_in = _residuo(list(nz2))
+out0, p0 = _run_post(0.0, nz2)
+out6, p6 = _run_post(6.0, nz2)
+std0, lvl0 = _residuo(out0)
+std6, lvl6 = _residuo(out6)
+
+# 9. La supresion extra llega a la salida: el clamp posterior al suavizado en
+#    frecuencia debe usar el ancla, no el piso normal (bug historico: clampear
+#    con _eff_floor anula silenciosamente toda la supresion extra).
+check("post 6 suprime mas que post 0 (%.1f dB extra)" % (lvl0 - lvl6), lvl6 < lvl0 - 6.0)
+
+# 10. Y NO amplifica la fluctuacion del residuo (eso era el gorgojeo): el
+#     residuo debe fluctuar como el ruido de entrada, no varias veces mas.
+check("post 6 no dispara la fluctuacion (%.1f dB vs %.1f dB de entrada)"
+      % (std6, std_in), std6 < std_in * 1.6)
+
+# 11. Indicador "Reduccion extra": negativo con post activo, 0 sin el.
+check("pf_extra_db reporta con post 6 (%.1f dB)" % p6.pf_extra_db, p6.pf_extra_db < -5.0)
+check("pf_extra_db en 0 sin post-filtro", p0.pf_extra_db == 0.0)
+
+# 12. El EMA de ganancia anti-gorgojeo se rearma tras reset (invariante 9).
+p6.reset(240)
+try:
+    p6.process(np.zeros(240, dtype=np.float32))
+    check("reset(hop) rearma el estado por-bin del anti-gorgojeo", True)
+except Exception as e:
+    check("reset(hop) rearma el estado por-bin del anti-gorgojeo: %s" % e, False)
 
 # ---------------------------------------------------------------------------
 print()

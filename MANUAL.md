@@ -443,7 +443,9 @@ Este módulo reemplaza el piso fijo por una curva con tres zonas:
 
 El filtro de Wiener, incluso bien configurado, puede dejar un tipo de artefacto muy particular llamado **ruido musical**: en lugar del ruido de fondo uniforme original, aparecen pitidos cortos intermitentes que varían aleatoriamente de bin en bin. Es el residuo de los bins que el VAD marcó como ruido pero que no fueron suprimidos del todo por el piso espectral.
 
-El post-filtro aplica una segunda pasada sobre esos bins usando la misma información de probabilidad de voz: en los bins donde hay ruido residual (`p_speech ≈ 0`) la ganancia se reduce adicionalmente; en los bins de voz (`p_speech ≈ 1`) no se aplica ningún cambio.
+El post-filtro usa la misma información de probabilidad de voz para **hundir el piso de esos bins**: donde hay ruido residual (`p_speech ≈ 0`) el piso baja unos **4,5 dB por punto** del slider; en los bins de voz (`p_speech ≈ 1`) no cambia nada.
+
+Lo importante es que ese hundimiento es un valor **fijo**, no un multiplicador de la ganancia. El ruido de radio fluctúa naturalmente unos 6 dB de instante a instante; el diseño anterior multiplicaba esa fluctuación por el valor del slider (con el slider en 6, los 6 dB se volvían casi 40), y por eso lo que quedaba de fondo no era un siseo parejo sino picos aislados — el gorgojeo mismo. Restar una cantidad fija deja el fondo **más bajo y más parejo**, y de paso no toca los bins de voz con probabilidad intermedia, que antes también se llevaban el castigo.
 
 **Indicador en tiempo real:**
 
@@ -453,9 +455,9 @@ El post-filtro aplica una segunda pasada sobre esos bins usando la misma informa
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
-| **Post-Filtro** | 0,0 – 10,0 | 1,0 | Fuerza de la segunda pasada. **0** = apagado. **1** = normal: los bins de ruido puro reciben `gain²` (duplica la reducción en dB). **2** = agresivo: `gain³`. **4** = muy agresivo: `gain⁵`. **10** = máximo: `gain¹¹` — en bins de ruido puro la supresión satura en el suelo interno (−46 dB); el rango alto actúa sobre todo en los bins intermedios voz/ruido. Empezar en 1,0 y subir según el indicador Reducción extra hasta que el ruido musical desaparezca. |
+| **Post-Filtro** | 0,0 – 10,0 | 1,0 | Cuánto se hunde el piso de los bins de ruido: **~4,5 dB por punto**. **0** = apagado. **1** = −4,5 dB. **2** = −9 dB. **6** = −27 dB. **10** = −45 dB, con un tope interno de −60 dB de ganancia total. Empezar en 1,0 y subir según el indicador Reducción extra hasta que el fondo quede parejo. |
 
-> **Nota:** Valores altos (>2,5) con señales de SNR muy bajo pueden producir supresión excesiva en los bordes de las transiciones de voz — y por encima de 4 el efecto sobre los bins intermedios es fuerte: puede restar claridad a la voz (consonantes finales, respiraciones). Si la voz empieza a sonar recortada u opaca, reducir. En el ruido de fondo puro no hay diferencia audible más allá de ~5 (la supresión ya satura); el rango alto se nota en el ruido pegado a la voz.
+> **Nota:** el post-filtro **no toca los bins de voz**, así que subirlo no opaca ni recorta la voz — a diferencia del diseño anterior, donde el rango alto castigaba también los bins intermedios voz/ruido. Lo que sí cambia con valores altos es el carácter del fondo: por encima de ~6 el silencio entre palabras queda muy "muerto", que a algunos operadores les resulta antinatural y a otros les descansa el oído en guardias largas. Es cuestión de gusto, no de daño a la señal.
 
 > **Consejo — Intensidad baja + Post-Filtro alto:** una combinación muy efectiva es **bajar la Intensidad del cancelador** (50–60%) y compensar con el **Post-Filtro alto** (5–8). Con los dos sliders juntos en Principal (Intensidad + Post-Filtro), es la receta más directa para el usuario que no quiere entrar a Avanzadas. La Intensidad baja deja pasar la voz casi intacta — sin la opacidad que aparece al subirla — y el post-filtro se encarga del ruido restante actuando solo sobre los bins que el detector marca como ruido. En muchas señales el resultado es mejor cancelación **con voz más natural** que subir la Intensidad sola. Vale la pena probar ambos enfoques en cada señal y quedarse con el que suene mejor.
 
@@ -590,26 +592,32 @@ Ambas bandas pueden usarse a la vez: cuerpo +4 dB y presencia +4 dB producen una
 
 Genera armónicos artificiales en la zona de 1–4 kHz para recuperar la sensación de "brillo" y "presencia" que se pierde con los filtros de paso de banda y la reducción de ruido.
 
-El proceso toma el contenido por encima de 1 kHz, lo satura suavemente con la función matemática *tanh* (que genera 2do y 3er armónico), extrae solo los armónicos generados (sin la señal original) y los mezcla de vuelta al audio a bajo nivel.
+El proceso toma la banda de legibilidad (1–3,5 kHz), la satura con la función matemática *tanh*, le **resta todo lo que estaba en la señal original** y mezcla de vuelta solo lo que quedó: armónicos nuevos, que caen dentro de la banda de la voz (un techo interno de 7 kHz evita que se vayan a la zona de fritura).
 
-El efecto es similar al de un excitador analógico: la voz suena más "aérea", con más ataque en las consonantes, sin aumentar el nivel físico del audio.
+Esa resta es lo que distingue a un excitador de un ecualizador, y conviene entenderla porque hasta la versión 1.9.1 no estaba bien hecha: lo que se mezclaba contenía una copia de la propia banda, así que el módulo era en realidad un realce de agudos de +1,8 dB — con los armónicos 58 dB más abajo, o sea inaudibles — y ese realce subía y bajaba con el nivel de la señal. De ahí venía buena parte del carácter metálico. Ahora el nivel de la banda no se toca (medido: ±0,05 dB) y lo que se agrega son armónicos de verdad.
+
+El efecto es el de un excitador analógico: la voz suena más "aérea", con más ataque en las consonantes, sin aumentar el nivel físico del audio.
 
 **No es un sustituto de la EQ de presencia** — son complementarios. La EQ amplifica lo que existe; el excitador genera energía nueva correlacionada con la voz presente.
+
+Con el **cancelador activo y con perfil**, el excitador solo actúa mientras hay voz: entre palabras se cierra solo. Corre al final de la cadena, así que sin ese gate le agregaba brillo al ruido residual igual que a la voz (+2 dB de siseo entre palabras). Sin cancelador no hay detección de voz disponible y trabaja siempre, como antes.
 
 ### Controles
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
-| **Drive** | 1,0× – 10,0× | 2,0× | Cuánta saturación se aplica antes de extraer los armónicos. **Suave (1–3×):** genera principalmente 2do armónico, efecto sutil. **Agresivo (6–10×):** más armónicos de orden superior, efecto más pronunciado pero puede sonar artificial. Comenzar en 2,0×. |
+| **Drive** | 1,0× – 10,0× | 2,0× | Cuánta saturación se aplica antes de extraer los armónicos. **Suave (1–3×):** pocos armónicos y de orden bajo, efecto sutil. **Agresivo (6–10×):** más armónicos y de orden superior, efecto más pronunciado pero puede sonar duro. El efecto **no depende del nivel de la señal**: la etapa se normaliza sola, así que suena igual con señal fuerte o débil. Comenzar en 2,0×. |
 | **Mezcla** | 0% – 100% | 30% | Cuánto de los armónicos generados se suma al audio original. **20–40%** es la zona útil — notable pero sin sonar artificial. Por encima de 60% el efecto se vuelve muy pronunciado. |
+
+> **Nota para quien viene de la v1.9.1:** el módulo cambió de comportamiento, así que los valores guardados en presets viejos ya no suenan igual — antes el efecto audible era el realce de agudos, no los armónicos. Conviene volver a ajustar Drive y Mezcla de oído. Si extrañás el brillo plano que hacía antes, eso es EQ: subilo con la **EQ de presencia**, que es la herramienta correcta para eso.
 
 ### Síntomas y ajuste
 
 | Síntoma | Ajuste |
 |---------|--------|
-| La voz suena "metálica" o "chirrillante" | Bajar Drive (a 1,5–2,0×) |
-| El efecto no se nota | Subir Mezcla (a 40–50%) |
-| Agrega ruido de fondo | Verificar que el cancelador esté activo — el excitador amplifica también los armónicos del ruido |
+| La voz suena "metálica" o "chirrillante" | Bajar Drive (a 1,5–2,0×). *tanh* es simétrica: genera solo armónicos impares (3°, 5°, 7°), que es el timbre hueco característico; cuanto más alto el Drive, más se nota |
+| El efecto no se nota | Subir Mezcla (a 40–50%) o Drive. Ojo: si venís de la v1.9.1, el módulo ahora agrega armónicos en vez de subir los agudos — el cambio se percibe distinto |
+| Agrega brillo al ruido de fondo | Activar el cancelador y aprender un perfil: con eso el excitador se cierra solo entre palabras |
 
 ---
 
