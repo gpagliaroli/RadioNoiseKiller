@@ -522,6 +522,19 @@ _pla = float(np.mean([_rel[s + 10:s + 22].mean() for s in _syl[1:]]))
 check("el arranque de silaba sale a nivel de meseta (%.2f dB)" % (_ons - _pla),
       _ons - _pla > -2.0)
 
+# Y el fondo EN LOS HUECOS entre palabras tiene que seguir suprimido: la ventana de
+# ataque se dispara por FLANCO justamente por esto. Gatearla por NIVEL de vp_sq la
+# dejaba abierta toda la transmision (el vp_sq no baja entre palabras) y el ruido de
+# los huecos subia 3.6 dB con mas parpadeo — reportado en el aire como "mucho ruido
+# de fondo y volvio el gorgojeo".
+_gaps = [g for s in _syl[1:] for g in range(s + 27, s + 39) if g < _N]
+_Sin = _mag(list(_mix))[:, _lo:_hi]
+_sup = (10 * np.log10(float(np.mean(_So[_gaps] ** 2)))
+        - 10 * np.log10(float(np.mean(_Sin[_gaps] ** 2))))
+_flick = float(np.mean(np.std(20 * np.log10(np.maximum(_So[_gaps], 1e-8)), axis=0)))
+check("el fondo entre palabras sigue suprimido (%.1f dB)" % _sup, _sup < -12.0)
+check("el fondo entre palabras no parpadea de mas (%.1f dB)" % _flick, _flick < 12.0)
+
 # ---------------------------------------------------------------------------
 print()
 if _fails:

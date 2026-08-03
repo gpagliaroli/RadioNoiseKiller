@@ -397,6 +397,22 @@ atenuado que su meseta** (a Intensidad 0.9) — la envolvente se aplasta y suena
 - **El gate por vp_sq es imprescindible**: dejar subir `p_speech` sin gatear arregla el ataque igual
   (−0.21 dB) pero el residuo de ruido empeora **10 dB** (−8.5 vs −19.1) — los bins de ruido que
   parpadean hacia arriba dejan de estabilizarse.
+- **Y tiene que dispararse POR FLANCO, no por nivel.** Primero se gateó por nivel de `vp_sq`: pasó
+  todos los tests sintéticos (con ruido solo el gate nunca abre) pero en el aire fue una regresión
+  inmediata — *"hay mucho ruido de fondo, como de ambiente, y cuando no hay voz es más notorio... la
+  cancelación no es mejor ahora y volvió el gorgojeo"*. Motivo: el onset es un transitorio de 2-4
+  frames, pero `vp_sq` **se queda alto durante toda la transmisión**, incluidos los huecos entre
+  palabras — que es exactamente donde se escucha el fondo. Con el gate por nivel el suavizado quedaba
+  desactivado ahí. Medido en una transmisión con huecos: ruido en los huecos **+3.6 dB** y parpadeo
+  +1.1 dB. Por flanco (ventana de 4 frames tras el cruce): se recupera casi todo (−27.0 vs −28.0 dB,
+  parpadeo 9.54 vs 9.23), el ataque se conserva (−0.05 dB) y el LSD **mejora** (4.67 vs 5.62 a
+  Intensidad 0.9) — el ruido extra dentro de los frames con voz también desaparece.
+- **Lección de método:** un gate de nivel sobre un VAD con release largo NO es un detector de
+  transitorios. Cuando el efecto que se busca es un transitorio (onset), disparar por flanco y acotar
+  la ventana. Y los tests de ruido-solo **no** detectan esto: el gate no abre nunca sin voz. Hay que
+  medir con una señal que tenga voz **y huecos**, que es donde el usuario escucha el fondo.
+- Guard de regresión en `test_noise_vad`: supresión y parpadeo del fondo **en los huecos entre
+  palabras**, además del ataque de sílaba.
 - El slider "Velocidad de ataque" (`beta_fast`) **no mueve la aguja** en esto (−5.72 vs −5.76):
   actúa sobre el DD por bin, no sobre el suavizado de `p_speech`. No recomendarlo para este síntoma.
 - Dos checks viejos de `test_noise_vad` quedaron sin sentido **a propósito** (comparaban el efecto

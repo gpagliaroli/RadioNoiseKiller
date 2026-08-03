@@ -111,14 +111,20 @@ class NoiseProfiler:
     # Sin voz (vp→0) estabilizan el residuo, que es donde se escucha el gorgojeo.
     _PS_SMOOTH_QUIET:  float = 0.95   # tope del suavizado de p_speech sin voz
     _GAIN_EMA_QUIET:   float = 0.75   # EMA de la ganancia final sin voz (~3 frames)
-    # Ataque: con voz confirmada por el VAD rápido, p_speech sube SIN suavizar. Sin
-    # esto el arranque de cada sílaba salía ~5.8 dB más atenuado que su meseta (a
-    # Intensidad 0.9) — la envolvente se aplasta y la voz suena "limitada". El gate
-    # por vp_sq es imprescindible: dejar subir p_speech sin gatear arregla el ataque
-    # igual, pero el residuo de ruido empeora 10 dB (los bins de ruido que parpadean
-    # hacia arriba dejan de estabilizarse). Con el gate: ataque −5.76 → −0.21 dB y
-    # ruido idéntico (mismo nivel, misma std, misma kurtosis).
-    _PS_ATTACK_VP_SQ:  float = 0.30   # vp rápido desde el cual p_speech ataca libre
+    # Ataque: al ARRANQUE de cada sílaba, p_speech sube SIN suavizar. Sin esto el
+    # arranque salía ~5.8 dB más atenuado que su meseta (a Intensidad 0.9) — la
+    # envolvente se aplasta y la voz suena "limitada".
+    # Se dispara POR FLANCO del VAD rápido, no por nivel: el onset es un transitorio
+    # de 2-4 frames, pero el vp_sq se queda alto durante toda la transmisión, así que
+    # gatear por nivel dejaba el suavizado desactivado también en los HUECOS ENTRE
+    # PALABRAS — que es justo donde se escucha el fondo. Medido en una transmisión con
+    # huecos: por nivel, el ruido en los huecos sube 3.6 dB y el parpadeo 1.1 dB
+    # (reportado en el aire como "mucho ruido de fondo y volvió el gorgojeo"); por
+    # flanco se recupera casi todo (−27.0 vs −28.0 dB y 9.54 vs 9.23) conservando el
+    # ataque (−0.05 dB). El gate por vp_sq sigue siendo imprescindible: sin ningún
+    # gate el residuo empeora 10 dB.
+    _PS_ATTACK_VP_SQ:  float = 0.30   # vp rápido que dispara la ventana de ataque
+    _PS_ATTACK_FRAMES: int   = 4      # duración de la ventana (40 ms) tras el flanco
 
     # --- Post-filtro espectral (supresión extra en bins de ruido) -------------
     # dB de profundidad extra por unidad del slider (0-10 → 0-45 dB bajo el piso).
@@ -215,6 +221,10 @@ class NoiseProfiler:
         self._fading_change_db:    float = 5.0   # umbral de detección (slider, 1-10 dB)
         self._fading_freeze_ms:    float = 200.0 # duración del freeze (slider, 100-500 ms)
         self._fading_freeze_frames: int  = self._calc_fading_freeze_frames()
+        # Ventana de ataque de p_speech (flanco del VAD rápido) — ver _PS_ATTACK_VP_SQ
+        self._atk_window: int   = 0
+        self._prev_vp_sq: float = 0.0
+
         # Freeze de MCRA por voz (periodicidad + hold) — ver _MCRA_PITCH_THR
         self._mcra_voice_hold:        int = 0
         self._mcra_voice_hold_frames: int = self._calc_voice_hold_frames()
@@ -344,6 +354,8 @@ class NoiseProfiler:
         self._fading_energy_ema  = None
         self._mcra_freeze_count  = 0
         self._mcra_voice_hold    = 0
+        self._atk_window         = 0
+        self._prev_vp_sq         = 0.0
         self._fading_active      = False
         self._fading_latch       = False
         if self._mode == "mcra":
@@ -1001,10 +1013,18 @@ class NoiseProfiler:
                     self._ps_smooth
                     + (self._PS_SMOOTH_QUIET - self._ps_smooth) * (1.0 - vp_open)
                 )
-                # Con voz confirmada, los bins que SUBEN no se suavizan (ver
-                # _PS_ATTACK_VP_SQ): el arranque de sílaba pasa entero. Los que bajan
-                # y todo lo que ocurre sin voz siguen suavizados → anti-gorgojeo intacto.
-                if self._voice_prob_sq >= self._PS_ATTACK_VP_SQ:
+                # Ventana de ataque: sólo en los frames siguientes al FLANCO del VAD
+                # rápido (ver _PS_ATTACK_VP_SQ). Dentro de ella los bins que SUBEN no
+                # se suavizan → el arranque de sílaba pasa entero. Fuera de ella —
+                # incluidos los huecos entre palabras, donde el vp_sq sigue alto — todo
+                # se suaviza normalmente → anti-gorgojeo intacto.
+                if (self._voice_prob_sq >= self._PS_ATTACK_VP_SQ
+                        and self._prev_vp_sq < self._PS_ATTACK_VP_SQ):
+                    self._atk_window = self._PS_ATTACK_FRAMES
+                elif self._atk_window > 0:
+                    self._atk_window -= 1
+                self._prev_vp_sq = self._voice_prob_sq
+                if self._atk_window > 0:
                     ps_eff = np.where(p_speech > self._p_speech_prev,
                                       np.float32(0.0), ps_a).astype(np.float32)
                 else:
