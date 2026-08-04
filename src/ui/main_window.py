@@ -381,6 +381,13 @@ class MainWindow(QMainWindow):
             tr("Excitador armónico"),
             tr("Genera armónicos en 1–4 kHz para recuperar presencia y ataque de consonantes."),
         )
+        self._chk_bass = _chk(
+            tr("Recuperar graves"),
+            tr("Sintetiza el fundamental de la voz cuando el filtro de la radio ya lo cortó\n"
+               "(un pasa-altos de 300 Hz deja un f0 de 120 Hz unos 32 dB abajo: no hay\n"
+               "energía que una EQ pueda levantar). Usa el f0 que ya detecta el cancelador.\n"
+               "Nivel ajustable en Avanzada Audio."),
+        )
 
         self._chk_blanker.toggled.connect(lambda v: self._on_module_toggled("blanker_enabled", self._pipeline.set_blanker_enabled, v))
         self._chk_bandpass_pre.toggled.connect(lambda v: self._on_module_toggled("bandpass_pre_enabled", self._pipeline.set_bandpass_pre_enabled, v))
@@ -395,6 +402,7 @@ class MainWindow(QMainWindow):
         self._chk_fading_comp.toggled.connect(lambda v: self._on_module_toggled("noise_fading_comp", self._pipeline.set_fading_comp, v))
         self._chk_voice_leveler.toggled.connect(lambda v: self._on_module_toggled("voice_leveler_enabled", self._pipeline.set_voice_leveler_enabled, v))
         self._chk_exciter.toggled.connect(lambda v: self._on_module_toggled("exciter_enabled", self._pipeline.set_exciter_enabled, v))
+        self._chk_bass.toggled.connect(lambda v: self._on_module_toggled("bass_enabled", self._pipeline.set_bass_enabled, v))
 
         return group
 
@@ -886,6 +894,7 @@ class MainWindow(QMainWindow):
             (self._chk_fading_comp, "noise_fading_comp", self._pipeline.set_fading_comp),
             (self._chk_voice_leveler, "voice_leveler_enabled", self._pipeline.set_voice_leveler_enabled),
             (self._chk_exciter,  "exciter_enabled",   self._pipeline.set_exciter_enabled),
+            (self._chk_bass,     "bass_enabled",      self._pipeline.set_bass_enabled),
         ]:
             val = getattr(self._config.dsp, key)
             cb.blockSignals(True)
@@ -955,6 +964,7 @@ class MainWindow(QMainWindow):
             (self._chk_fading_comp,       "noise_fading_comp",         self._pipeline.set_fading_comp),
             (self._chk_voice_leveler,     "voice_leveler_enabled",     self._pipeline.set_voice_leveler_enabled),
             (self._chk_exciter,           "exciter_enabled",           self._pipeline.set_exciter_enabled),
+            (self._chk_bass,              "bass_enabled",              self._pipeline.set_bass_enabled),
         ]:
             val = getattr(cfg, key)
             cb.blockSignals(True)

@@ -624,6 +624,9 @@ With the **canceller enabled and a profile learned**, the exciter only acts whil
 |---------|-------|---------|-------------|
 | **Drive** | 1.0× – 10.0× | 2.0× | How much saturation is applied before extracting the harmonics. **Soft (1–3×):** few harmonics, low order, subtle effect. **Aggressive (6–10×):** more harmonics and of higher order, stronger effect but it can sound hard. The effect **does not depend on signal level**: the stage normalizes itself, so it sounds the same on strong or weak signals. Start at 2.0×. |
 | **Mix** | 0% – 100% | 30% | How much of the generated harmonics is added back to the original audio. **20–40%** is the useful zone — noticeable without sounding artificial. Above 60% the effect becomes very pronounced. |
+| **Character** | 0% – 100% | 0% (odd) | Which harmonics are generated. **Odd (0%)**: *tanh* saturation is symmetric and produces only 3rd, 5th, 7th — bright but somewhat hollow, the classic "metallic" timbre. **Even (100%)**: 2nd and 4th, warmer and fuller. **Mixed (30–60%)** is usually the best compromise. It is a **timbre** crossfade, not a level one: moving the control does not change the volume. |
+
+> **The price of even harmonics:** any even nonlinearity generates, besides the 2nd harmonic, **difference products** between the voice's partials, which land in the low end and are heard as mud. The even branch is high-passed above 2 kHz precisely to contain them (measured: −39 dB below the signal with that filter, versus −21 dB if filtered at 600 Hz), but the effect exists. If raising Character gains warmth but loses definition in the low end, lower it.
 
 > **Note if you come from v1.9.1:** the module's behaviour changed, so values stored in old presets no longer sound the same — what used to be audible was the treble boost, not the harmonics. Re-tune Drive and Mix by ear. If you miss the flat brightness it used to add, that is EQ: raise it with the **presence EQ**, which is the right tool for that.
 
@@ -634,6 +637,44 @@ With the **canceller enabled and a profile learned**, the exciter only acts whil
 | The voice sounds "metallic" or "screechy" | Lower Drive (to 1.5–2.0×). *tanh* is symmetric: it generates only odd harmonics (3rd, 5th, 7th), which is the characteristic hollow timbre; the higher the Drive, the more it shows |
 | The effect is not noticeable | Raise Mix (to 40–50%) or Drive. Note: if you come from v1.9.1, the module now adds harmonics instead of lifting the treble — the change is perceived differently |
 | It adds brightness to the background noise | Enable the canceller and learn a profile: with that, the exciter closes by itself between words |
+| Bright but "cold" or hollow | Raise **Character** towards mixed (30–60%): it adds 2nd harmonic, which is what gives warmth |
+
+---
+
+## Restore bass
+
+**Location:** Active modules → **"Restore bass"**; level in Advanced Audio → "Harmonic exciter" group
+
+### Why an equalizer is not enough
+
+The radio's filter — an SSB rig typically starts at 300 Hz — leaves a male voice's fundamental far below the rest:
+
+| Fundamental (f0) | What remains after a 300 Hz high-pass |
+|------------------|----------------------------------------|
+| 200 Hz | −14 dB |
+| 150 Hz | −24 dB |
+| 120 Hz | −32 dB |
+| 100 Hz | −38 dB |
+
+With that loss **there is no energy left to lift**: no matter how far you raise the Body EQ, there is nothing there. The only way to get it back is to **generate it**. That is what this module does: it synthesizes a tone at the voice's f0, with its level tied to the signal, to give back the body the filter took away.
+
+The Body EQ remains the right tool when the low end **is** there and only needs reinforcing. This module is for when it is gone.
+
+### How it works
+
+The f0 comes from the **autocorrelation the canceller already computes on every frame** (the same one used by Voice pitch enhancement and by the estimator's protection), so it adds no analysis: just an oscillator with continuous phase. That is why the module works even with the canceller disabled.
+
+It only sounds when three conditions hold: speech is detected, detection confidence is high, and f0 is **below 300 Hz**. Above that the fundamental normally passed the filter and there is nothing to restore. The confidence threshold is deliberately demanding: a mis-detected f0 would be heard as a rumble.
+
+| Control | Range | Default | Description |
+|---------|-------|---------|-------------|
+| **Restore bass** | 0% – 100% | 50% | Level of the synthesized fundamental. **100%** leaves it roughly at the level it would have had in the original voice (verified: a 120 Hz voice filtered at 300 Hz goes from −58 dB back to −26 dB, where it was before the filter). **50%** is the prudent starting point. |
+
+### When to use it
+
+It makes sense on **SSB with a narrow filter**, and generally whenever the voice sounds thin or "telephone-like" despite a good level. On AM with wide audio the fundamental is usually present and the module will have little to do.
+
+> **Watch your own low cut first:** before enabling it, check your bandpass's lower limit. If what is cutting the low end is *your* filter and not the radio, lowering it (to 100–150 Hz) restores **real** bass, which will always sound better than synthesized bass.
 
 ---
 

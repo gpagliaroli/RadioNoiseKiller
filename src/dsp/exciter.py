@@ -54,10 +54,18 @@ class AuralExciter:
     _RMS_MIN:    float = 1e-6     # por debajo de esto no hay señal que excitar
     _GATE_SMOOTH: float = 0.70    # EMA del gate por VAD (~30 ms, sin clicks)
     _GATE_VP_THR: float = 0.30    # vp donde el gate ya está abierto del todo
+    # Rama PAR (armónicos 2°, 4° — timbre "cálido/pleno"): hace falta una no
+    # linealidad PAR, u². OJO: cualquier no linealidad par genera productos de
+    # DIFERENCIA (con parciales en 1.4 y 1.9 kHz aparece energía en 500 Hz), que
+    # en voz real se oyen como barro en los graves. Medido: −21 dB bajo la señal
+    # con la rama filtrada a 600 Hz, −31 dB a 1.2 kHz y −39 dB a 2 kHz. Por eso el
+    # pasa-altos de la rama par es alto: la distorsión par se paga con IMD.
+    _EVEN_HP_HZ: float = 2000.0
 
     def __init__(self, sample_rate: int = 48000):
         self._drive:   float = 2.0
         self._mix:     float = 0.3
+        self._character: float = 0.0   # 0 = impar puro, 1 = par puro
         self._enabled: bool  = True
 
         nyq = sample_rate / 2.0
@@ -66,19 +74,28 @@ class AuralExciter:
             btype='band', output='sos').astype(np.float64)
         self._sos_lp = butter(
             2, min(self._LP_HZ / nyq, 0.99), btype='low', output='sos').astype(np.float64)
+        self._sos_even_hp = butter(
+            2, min(self._EVEN_HP_HZ / nyq, 0.99), btype='high',
+            output='sos').astype(np.float64)
 
         self._zi_band: np.ndarray | None = None
         self._zi_lp:   np.ndarray | None = None
+        self._zi_even: np.ndarray | None = None
         self._rms_h:   float = 0.0
         self._proj:    float = 0.0    # coef. de proyección suavizado (parte lineal)
+        self._rms_odd: float = 0.0    # RMS de cada rama, para que "carácter" sea
+        self._rms_even: float = 0.0   # un crossfade real y no un cambio de nivel
         self._gate:    float = 1.0
         self._gate_target: float = 1.0
 
     def reset(self) -> None:
         self._zi_band = None
         self._zi_lp   = None
+        self._zi_even = None
         self._rms_h   = 0.0
         self._proj    = 0.0
+        self._rms_odd = 0.0
+        self._rms_even = 0.0
         self._gate    = 1.0
         self._gate_target = 1.0
 
@@ -87,6 +104,11 @@ class AuralExciter:
 
     def set_mix(self, mix: float) -> None:
         self._mix = float(np.clip(mix, 0.0, 1.0))
+
+    def set_character(self, character: float) -> None:
+        """0 = solo armónicos impares (timbre hueco/brillante, tanh pura),
+        1 = solo pares (más cálido/pleno, a costa de productos de diferencia)."""
+        self._character = float(np.clip(character, 0.0, 1.0))
 
     def set_enabled(self, enabled: bool) -> None:
         self._enabled = bool(enabled)
@@ -116,6 +138,8 @@ class AuralExciter:
             self._zi_band = sosfilt_zi(self._sos_band) * x[0]
         if self._zi_lp is None:
             self._zi_lp = sosfilt_zi(self._sos_lp) * 0.0
+        if self._zi_even is None:
+            self._zi_even = sosfilt_zi(self._sos_even_hp) * 0.0
 
         h, self._zi_band = sosfilt(self._sos_band, x, zi=self._zi_band)
 
@@ -137,6 +161,23 @@ class AuralExciter:
             self._proj = a * self._proj + (1.0 - a) * (float(np.dot(u, resid)) / den)
         odd = resid - self._proj * u
 
-        harm, self._zi_lp = sosfilt(self._sos_lp, scale * odd, zi=self._zi_lp)
+        if self._character > 0.0:
+            # Rama PAR: u² (no linealidad par → armónicos 2°, 4°). Se le quita la
+            # continua y se filtra alto para acotar los productos de diferencia.
+            ev = u * u
+            ev, self._zi_even = sosfilt(self._sos_even_hp, ev - float(np.mean(ev)),
+                                        zi=self._zi_even)
+            # Igualar RMS de las dos ramas (con memoria) para que "carácter" sea un
+            # crossfade de timbre y no un salto de nivel.
+            self._rms_odd  = a * self._rms_odd + (1.0 - a) * float(np.sqrt(np.mean(odd * odd)))
+            self._rms_even = a * self._rms_even + (1.0 - a) * float(np.sqrt(np.mean(ev * ev)))
+            if self._rms_even > 1e-15:
+                ev = ev * (self._rms_odd / self._rms_even)
+            c = self._character
+            branch = (1.0 - c) * odd + c * ev
+        else:
+            branch = odd
+
+        harm, self._zi_lp = sosfilt(self._sos_lp, scale * branch, zi=self._zi_lp)
 
         return (x + (self._mix * self._gate) * harm).astype(np.float32)

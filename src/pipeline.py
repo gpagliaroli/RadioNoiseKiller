@@ -8,6 +8,7 @@ from audio.devices import AudioDevice
 from audio.recorder import WavRecorder
 from dsp.agc import AGC
 from dsp.anf import AdaptiveNotchFilter
+from dsp.bass import BassSynth
 from dsp.exciter import AuralExciter
 from dsp.filters import BandpassFilter, PresenceFilter
 from dsp.freq_shift import FrequencyShifter
@@ -109,7 +110,11 @@ class ProcessingPipeline:
         self._exciter = AuralExciter(config.audio.sample_rate)
         self._exciter.set_drive(config.dsp.exciter_drive)
         self._exciter.set_mix(config.dsp.exciter_mix)
+        self._exciter.set_character(config.dsp.exciter_character)
         self._exciter.set_enabled(config.dsp.exciter_enabled)
+        self._bass = BassSynth(config.audio.sample_rate)
+        self._bass.set_amount(config.dsp.bass_amount)
+        self._bass.set_enabled(config.dsp.bass_enabled)
         self._presence = PresenceFilter(config.audio.sample_rate)
         self._presence.set_freq(config.dsp.presence_freq)
         self._presence.set_gain_db(config.dsp.presence_db)
@@ -346,6 +351,10 @@ class ProcessingPipeline:
         self.set_exciter_enabled(dsp.exciter_enabled)
         self.set_exciter_drive(dsp.exciter_drive)
         self.set_exciter_mix(dsp.exciter_mix)
+        self.set_exciter_character(dsp.exciter_character)
+
+        self.set_bass_enabled(dsp.bass_enabled)
+        self.set_bass_amount(dsp.bass_amount)
 
         self.set_presence_enabled(dsp.presence_enabled)
         self.set_presence_freq(dsp.presence_freq)
@@ -672,6 +681,25 @@ class ProcessingPipeline:
         self._config.dsp.exciter_mix = mix
         self._exciter.set_mix(mix)
 
+    def set_exciter_character(self, character: float) -> None:
+        character = float(np.clip(character, 0.0, 1.0))   # == rango del slider (inv 1)
+        self._config.dsp.exciter_character = character
+        self._exciter.set_character(character)
+
+    def set_bass_enabled(self, v: bool) -> None:
+        self._config.dsp.bass_enabled = bool(v)
+        self._bass.set_enabled(bool(v))
+
+    def set_bass_amount(self, amount: float) -> None:
+        amount = float(np.clip(amount, 0.0, 1.0))         # == rango del slider (inv 1)
+        self._config.dsp.bass_amount = amount
+        self._bass.set_amount(amount)
+
+    @property
+    def bass_f0(self) -> "float | None":
+        """f0 del fundamental sintetizado, o None si no está actuando (indicador)."""
+        return self._bass.f0 if self._bass.active else None
+
     @property
     def peak_reduction_db(self) -> float:
         """Reducción aplicada por el limitador en el último frame. 0.0 = sin actividad."""
@@ -989,6 +1017,12 @@ class ProcessingPipeline:
                     else 1.0
                 )
 
+                # Recuperación de graves: el f0 sale de la autocorrelación que el
+                # profiler ya calcula por frame (independiente del refuerzo de pitch).
+                if self._config.dsp.bass_enabled and not preview:
+                    _f0, _conf = self._noise_profiler.pitch_detect
+                    self._bass.set_voice(_f0, _conf)
+
                 with self._lock:
                     mixed = self._bandpass_out.process(filtered) if self._bandpass_post_enabled else filtered
                     if self._presence_enabled and not preview:
@@ -996,6 +1030,10 @@ class ProcessingPipeline:
                         mixed = self._body.process(mixed)
                     if not preview:
                         mixed = self._exciter.process(mixed)
+                        # DESPUÉS del pasabanda de salida: si fuera antes, el propio
+                        # filtro se comería el fundamental que acabamos de sintetizar
+                        # (es justo la banda que la radio ya había cortado).
+                        mixed = self._bass.process(mixed)
                     out_frame = self._limiter.process(mixed, self._config.audio.sample_rate)
 
                 out_frame = self._freq_shifter.process(out_frame)

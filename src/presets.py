@@ -147,6 +147,9 @@ class PresetManager:
                 "exciter_enabled":           dsp.exciter_enabled,
                 "exciter_drive":             dsp.exciter_drive,
                 "exciter_mix":               dsp.exciter_mix,
+                "exciter_character":         dsp.exciter_character,
+                "bass_enabled":              dsp.bass_enabled,
+                "bass_amount":               dsp.bass_amount,
                 "presence_enabled":          dsp.presence_enabled,
                 "presence_freq":             dsp.presence_freq,
                 "presence_db":               dsp.presence_db,
@@ -246,6 +249,9 @@ class PresetManager:
         dsp.exciter_enabled    = bool(d.get("exciter_enabled",    ddef.exciter_enabled))
         dsp.exciter_drive      = float(d.get("exciter_drive",     ddef.exciter_drive))
         dsp.exciter_mix        = float(d.get("exciter_mix",       ddef.exciter_mix))
+        dsp.exciter_character  = float(d.get("exciter_character", ddef.exciter_character))
+        dsp.bass_enabled       = bool(d.get("bass_enabled",       ddef.bass_enabled))
+        dsp.bass_amount        = float(d.get("bass_amount",       ddef.bass_amount))
         dsp.presence_enabled   = bool(d.get("presence_enabled",   ddef.presence_enabled))
         dsp.presence_freq      = float(d.get("presence_freq",     ddef.presence_freq))
         dsp.presence_db        = float(d.get("presence_db",       ddef.presence_db))

@@ -419,12 +419,29 @@ atenuado que su meseta** (a Intensidad 0.9) — la envolvente se aplasta y suena
   del slider Anti-gorgojeo con voz vs sin voz; ahora con voz pesa poco por diseño). Reemplazados por
   umbrales absolutos de parpadeo sin voz + el check de ataque de sílaba.
 
-**Pendiente de esa investigación (ítem 4, acordado con el usuario):** carácter par/impar en el
-excitador (armónicos pares con una no linealidad par, `h²`; **medido: genera productos de diferencia
-en los graves** — −31 dB con la rama filtrada a 1.2 kHz, −39 dB a 2 kHz: hay que filtrar alto) y
-**síntesis del fundamental** para recuperar graves que el filtro de la radio ya cortó (un pasa-altos
-de 300 Hz deja f0=120 Hz **32 dB abajo**: ningún EQ lo recupera, hay que sintetizarlo — se puede
-reusar el f0 + confianza que `_pitch_autocorr` ya calcula todos los frames).
+**Ítem 4 de la investigación — hecho, pendiente de validación en el aire:**
+
+- **Carácter par/impar del excitador** (`exciter_character`, slider en Avanzada Audio): rama par con
+  `u²` (sin continua, pasa-altos a 2 kHz) cruzada con la impar. Medido con tono de 1.5 kHz: H2 pasa
+  de −110 dB (impar puro) a −20 dB (par puro), y con carácter 1.0 no quedan impares. Las dos ramas
+  se igualan en RMS (con memoria entre bloques) para que el control sea un **cruce de timbre y no de
+  nivel** — verificado: ±0.02 dB entre carácter 0 y 1.
+  **El pasa-altos alto de la rama par no es cosmético:** cualquier no linealidad par genera productos
+  de diferencia entre los parciales de la voz, que caen en los graves y suenan a barro. Medido con
+  dos tonos (1.4 + 1.9 kHz): el producto de 500 Hz queda a −21 dB con la rama filtrada a 600 Hz,
+  −31 dB a 1.2 kHz y −39 dB a 2 kHz. Por eso el filtro va en 2 kHz.
+- **Recuperación de graves** (`src/dsp/bass.py`, `bass_enabled`/`bass_amount`, checkbox en Módulos +
+  slider en Avanzada Audio): oscilador de fase continua en el f0 de la voz. El f0 y la confianza
+  salen de `NoiseProfiler.pitch_detect` — **property nueva**, porque `pitch_f0` solo se actualiza con
+  el checkbox de refuerzo de pitch activo y este módulo no debe depender de otro. Corre **después
+  del pasabanda de salida**: antes, el propio filtro se comería el fundamental recién sintetizado.
+  Calibración: `_REF_RATIO=2.2` está ajustado para que el 100% devuelva el fundamental al nivel que
+  tenía antes del filtro (voz de f0=120 Hz filtrada a 300 Hz: −58 dB → −26 dB, natural −26 dB).
+  Salvaguardas: confianza ≥ 0.40, f0 ≤ 300 Hz y envolvente con ataque/release — un f0 mal detectado
+  sonaría como retumbe. Verificado: silencio exacto (diferencia 0.0) con confianza baja, sin f0 o f0
+  fuera de rango, y sin clicks en los bordes de bloque.
+- No hizo falta regenerar los presets de fábrica: con el fix de `from_dict` (invariante 10) las
+  claves nuevas ausentes toman el default. **Primera vez que ese fix paga.**
 
 **Nota:** `tests/test_cpu_profile.py` está muerto — importa `models.deepfilternet`, removido con la
 arquitectura vieja de IA. No está en `run_all.py`. Borrarlo o reescribirlo cuando moleste.

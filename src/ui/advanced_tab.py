@@ -109,8 +109,9 @@ class AdvancedAudioTab(QWidget):
         for s in (self._s_presence_freq, self._s_presence, self._s_presence_q,
                   self._s_body_freq, self._s_body):
             s.set_enabled(dsp.presence_enabled)
-        for s in (self._s_exciter_drive, self._s_exciter_mix):
+        for s in (self._s_exciter_drive, self._s_exciter_mix, self._s_exciter_char):
             s.set_enabled(dsp.exciter_enabled)
+        self._s_bass.set_enabled(dsp.bass_enabled)
         # El nivelador requiere el cancelador activo (su VAD vive ahí — invariante 2)
         leveler_on = dsp.noise_enabled and dsp.voice_leveler_enabled
         self._s_leveler_max.set_enabled(leveler_on)
@@ -381,6 +382,31 @@ class AdvancedAudioTab(QWidget):
         self._s_exciter_mix.valueChanged.connect(self._on_exciter_mix)
         layout.addWidget(self._s_exciter_mix)
         layout.addWidget(_note(tr("  ↳ Nivel de armónicos mezclados. 20–40% = zona útil sin sonar artificial. Con el cancelador activo solo actúa cuando hay voz, así no le agrega brillo al ruido de fondo.")))
+
+        self._s_exciter_char = SliderRow(
+            tr("Carácter:"),
+            min_val=0.0, max_val=1.0,
+            default=_DSP_DEF.exciter_character,
+            step=0.05, unit="", fmt="{:.2f}",
+        )
+        self._s_exciter_char._update_label = lambda v: self._s_exciter_char._val_lbl.setText(
+            f"{v*100:.0f}%  ({tr('impar') if v < 0.25 else tr('mixto') if v < 0.75 else tr('par')})"
+        )
+        self._s_exciter_char._val_lbl.setFixedWidth(110)
+        self._s_exciter_char.valueChanged.connect(self._on_exciter_char)
+        layout.addWidget(self._s_exciter_char)
+        layout.addWidget(_note(tr("  ↳ Qué armónicos se generan. Impar (tanh pura) = brillante y algo hueco, es el timbre metálico clásico. Par = más cálido y pleno, pero agrega productos de diferencia en los graves: subirlo mucho puede enturbiar. Mixto suele ser el mejor compromiso.")))
+
+        self._s_bass = SliderRow(
+            tr("Recuperar graves:"),
+            min_val=0.0, max_val=1.0,
+            default=_DSP_DEF.bass_amount,
+            step=0.05, unit="", fmt="{:.2f}",
+        )
+        self._s_bass._update_label = lambda v: self._s_bass._val_lbl.setText(f"{v*100:.0f}%")
+        self._s_bass.valueChanged.connect(self._on_bass_amount)
+        layout.addWidget(self._s_bass)
+        layout.addWidget(_note(tr("  ↳ Nivel del fundamental sintetizado (100% ≈ el que tendría una voz natural). Solo suena con voz detectada y f0 por debajo de 300 Hz. Requiere el módulo «Recuperar graves» activo.")))
         return group
 
     # ------------------------------------------------------------------
@@ -421,6 +447,8 @@ class AdvancedAudioTab(QWidget):
         self._s_pitch.set_value(cfg.pitch_shift_hz)
         self._s_exciter_drive.set_value(cfg.exciter_drive)
         self._s_exciter_mix.set_value(cfg.exciter_mix)
+        self._s_exciter_char.set_value(cfg.exciter_character)
+        self._s_bass.set_value(cfg.bass_amount)
 
     def _reset_defaults(self) -> None:
         defaults = DSPConfig()
@@ -446,6 +474,8 @@ class AdvancedAudioTab(QWidget):
         self._config.dsp.exciter_mix   = defaults.exciter_mix
         self._pipeline.set_exciter_drive(defaults.exciter_drive)
         self._pipeline.set_exciter_mix(defaults.exciter_mix)
+        self._pipeline.set_exciter_character(defaults.exciter_character)
+        self._pipeline.set_bass_amount(defaults.bass_amount)
         self._load_values()
 
     # ------------------------------------------------------------------
@@ -482,6 +512,12 @@ class AdvancedAudioTab(QWidget):
     def _on_exciter_mix(self, val: float) -> None:
         self._config.dsp.exciter_mix = val
         self._pipeline.set_exciter_mix(val)
+
+    def _on_exciter_char(self, val: float) -> None:
+        self._pipeline.set_exciter_character(val)
+
+    def _on_bass_amount(self, val: float) -> None:
+        self._pipeline.set_bass_amount(val)
 
     def reload(self) -> None:
         self._load_values()

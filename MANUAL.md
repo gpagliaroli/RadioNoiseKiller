@@ -624,6 +624,9 @@ Con el **cancelador activo y con perfil**, el excitador solo actúa mientras hay
 |---------|-------|---------|-------------|
 | **Drive** | 1,0× – 10,0× | 2,0× | Cuánta saturación se aplica antes de extraer los armónicos. **Suave (1–3×):** pocos armónicos y de orden bajo, efecto sutil. **Agresivo (6–10×):** más armónicos y de orden superior, efecto más pronunciado pero puede sonar duro. El efecto **no depende del nivel de la señal**: la etapa se normaliza sola, así que suena igual con señal fuerte o débil. Comenzar en 2,0×. |
 | **Mezcla** | 0% – 100% | 30% | Cuánto de los armónicos generados se suma al audio original. **20–40%** es la zona útil — notable pero sin sonar artificial. Por encima de 60% el efecto se vuelve muy pronunciado. |
+| **Carácter** | 0% – 100% | 0% (impar) | Qué armónicos se generan. **Impar (0%)**: la saturación *tanh* es simétrica y produce sólo 3°, 5°, 7° — brillante pero algo hueco, es el timbre "metálico" clásico. **Par (100%)**: 2° y 4°, más cálido y pleno. **Mixto (30–60%)** suele ser el mejor compromiso. Es un cruce de **timbre**, no de nivel: mover el control no cambia el volumen. |
+
+> **El precio de los armónicos pares:** cualquier no linealidad par genera, además del 2° armónico, **productos de diferencia** entre los parciales de la voz, que caen en los graves y se escuchan como barro. La rama par está filtrada por encima de 2 kHz justamente para acotarlos (medido: −39 dB bajo la señal con ese filtro, contra −21 dB si se filtrara a 600 Hz), pero el efecto existe. Si al subir el Carácter la voz gana calidez pero pierde definición en los graves, bajarlo.
 
 > **Nota para quien viene de la v1.9.1:** el módulo cambió de comportamiento, así que los valores guardados en presets viejos ya no suenan igual — antes el efecto audible era el realce de agudos, no los armónicos. Conviene volver a ajustar Drive y Mezcla de oído. Si extrañás el brillo plano que hacía antes, eso es EQ: subilo con la **EQ de presencia**, que es la herramienta correcta para eso.
 
@@ -634,6 +637,44 @@ Con el **cancelador activo y con perfil**, el excitador solo actúa mientras hay
 | La voz suena "metálica" o "chirrillante" | Bajar Drive (a 1,5–2,0×). *tanh* es simétrica: genera solo armónicos impares (3°, 5°, 7°), que es el timbre hueco característico; cuanto más alto el Drive, más se nota |
 | El efecto no se nota | Subir Mezcla (a 40–50%) o Drive. Ojo: si venís de la v1.9.1, el módulo ahora agrega armónicos en vez de subir los agudos — el cambio se percibe distinto |
 | Agrega brillo al ruido de fondo | Activar el cancelador y aprender un perfil: con eso el excitador se cierra solo entre palabras |
+| Suena brillante pero "frío" o hueco | Subir el **Carácter** hacia mixto (30–60%): agrega 2° armónico, que es el que da calidez |
+
+---
+
+## Recuperar graves
+
+**Ubicación:** Módulos activos → **"Recuperar graves"**; nivel en Avanzada Audio → grupo "Excitador armónico"
+
+### Por qué no alcanza con ecualizar
+
+El filtro de la radio —el de un equipo SSB arranca típicamente en 300 Hz— deja el fundamental de una voz masculina muy por debajo del resto:
+
+| Fundamental (f0) | Cuánto queda tras un pasa-altos de 300 Hz |
+|------------------|-------------------------------------------|
+| 200 Hz | −14 dB |
+| 150 Hz | −24 dB |
+| 120 Hz | −32 dB |
+| 100 Hz | −38 dB |
+
+Con esa pérdida **no queda energía que levantar**: por más que se suba la EQ de Cuerpo, no hay nada ahí. La única forma de recuperarlo es **generarlo**. Eso hace este módulo: sintetiza un tono en el f0 de la voz, con el nivel atado a la señal, para devolverle el cuerpo que el filtro se llevó.
+
+La EQ de Cuerpo sigue siendo la herramienta correcta cuando los graves **sí están** y sólo hay que reforzarlos. Este módulo es para cuando ya no están.
+
+### Cómo funciona
+
+El f0 sale de la **autocorrelación que el cancelador ya calcula en cada frame** (la misma que usan el Refuerzo de pitch y la protección del estimador), así que no agrega análisis: sólo un oscilador de fase continua. Por eso el módulo funciona incluso con el cancelador desactivado.
+
+Sólo suena cuando se cumplen las tres condiciones: hay voz detectada, la confianza de la detección es alta y el f0 está **por debajo de 300 Hz**. Por encima de eso el fundamental normalmente pasó el filtro y no hay nada que recuperar. El umbral de confianza es deliberadamente exigente: un f0 mal detectado se escucharía como un retumbe.
+
+| Control | Rango | Default | Descripción |
+|---------|-------|---------|-------------|
+| **Recuperar graves** | 0% – 100% | 50% | Nivel del fundamental sintetizado. **100%** lo deja aproximadamente en el nivel que tendría en la voz original (verificado: una voz de 120 Hz filtrada a 300 Hz pasa de −58 dB a −26 dB, que es donde estaba antes del filtro). **50%** es el punto de partida prudente. |
+
+### Cuándo usarlo
+
+Tiene sentido en **SSB con filtro angosto** y en general cuando la voz suena delgada o "telefónica" pese a tener buen nivel. En AM con audio ancho el fundamental suele estar presente y el módulo no va a tener mucho que hacer.
+
+> **Ojo con el corte de entrada:** antes de activarlo, revisá el límite inferior de tu pasabanda. Si el que está cortando los graves es *tu* filtro y no la radio, bajarlo (a 100–150 Hz) recupera graves **reales**, que siempre van a sonar mejor que los sintetizados.
 
 ---
 

@@ -159,3 +159,89 @@ _step = float(np.max(np.abs(np.diff(np.concatenate(_o)))))
 print(f"  Salto maximo al conmutar el gate: {_step:.5f}")
 assert _step < float(np.max(np.abs(np.diff(_x)))) * 1.5, "click al abrir/cerrar el gate"
 print("  Excitador: OK")
+
+# --- Caracter par/impar del excitador ---------------------------------------
+print("\n=== Excitador: caracter par/impar ===")
+_x15 = (0.1 * np.sin(2 * np.pi * 1500 * _t)).astype(np.float32)
+
+
+def _ex_char(x, char, drive=5.0, mix=1.0):
+    ex = AuralExciter(SR)
+    ex.set_drive(drive); ex.set_mix(mix); ex.set_enabled(True); ex.set_character(char)
+    out = []
+    for i in range(0, len(x), 480):
+        ex.set_voice_gate(1.0)
+        out.append(ex.process(x[i:i + 480].astype(np.float32)))
+    return np.concatenate(out)
+
+
+_S_odd = _spec_db(_ex_char(_x15, 0.0))
+_S_even = _spec_db(_ex_char(_x15, 1.0))
+_h2_odd = _S_odd[_bin(3000)] - _S_odd[_bin(1500)]
+_h2_even = _S_even[_bin(3000)] - _S_even[_bin(1500)]
+_h3_even = _S_even[_bin(4500)] - _S_even[_bin(1500)]
+print(f"  H2: impar {_h2_odd:.1f} dB -> par {_h2_even:.1f} dB   (H3 en par: {_h3_even:.1f} dB)")
+assert _h2_odd < -60.0, "tanh pura no deberia generar armonicos pares"
+assert _h2_even > -35.0, "el caracter par no genera 2do armonico"
+assert _h3_even < -60.0, "el caracter par no deberia dejar armonicos impares"
+
+# El caracter es un crossfade de TIMBRE: no debe cambiar el nivel de salida
+_vv = np.zeros(SR, dtype=np.float64)
+for _k in range(1, 20):
+    if _k * 150 < 3400:
+        _vv += (1.0 / _k) * np.sin(2 * np.pi * _k * 150 * _t)
+_vv = (_vv * 0.05).astype(np.float32)
+_levels = [20 * np.log10(np.sqrt(np.mean(_ex_char(_vv, c) ** 2))
+                         / np.sqrt(np.mean(_vv ** 2))) for c in (0.0, 0.5, 1.0)]
+print(f"  Nivel vs caracter: {', '.join(f'{v:+.2f}' for v in _levels)} dB")
+assert max(_levels) - min(_levels) < 1.0, "el caracter cambia el nivel (deberia ser timbre)"
+print("  Caracter par/impar: OK")
+
+# --- Recuperacion de graves (sintesis del fundamental) ----------------------
+# Un pasa-altos de 300 Hz (filtro tipico de SSB) deja el fundamental de una voz de
+# 120 Hz unos 32 dB abajo: no hay energia que una EQ pueda levantar, hay que
+# sintetizarla. Ver dsp/bass.py.
+from dsp.bass import BassSynth            # noqa: E402
+from scipy.signal import sosfilt as _sosfilt, butter as _butter   # noqa: E402
+
+print("\n=== BassSynth ===")
+_F0 = 120.0
+_vb = np.zeros(SR, dtype=np.float64)
+for _k in range(1, 25):
+    if _k * _F0 < 3400:
+        _vb += (1.0 / _k) * np.sin(2 * np.pi * _k * _F0 * _t + 0.7 * _k)
+_vb = (_vb * 0.05).astype(np.float32)
+_hp = _butter(4, 300 / (SR / 2), btype='high', output='sos')
+_vbf = _sosfilt(_hp, _vb).astype(np.float32)
+
+
+def _bass_run(frames_src, amount, f0=_F0, conf=0.8):
+    bs = BassSynth(SR)
+    bs.set_enabled(True); bs.set_amount(amount)
+    out = []
+    for i in range(0, len(frames_src), 480):
+        bs.set_voice(f0, conf)
+        out.append(bs.process(frames_src[i:i + 480]))
+    return np.concatenate(out)
+
+
+_nat = _spec_db(_vb)[_bin(_F0)]
+_filt = _spec_db(_vbf)[_bin(_F0)]
+_rest = _spec_db(_bass_run(_vbf, 1.0))[_bin(_F0)]
+print(f"  @120 Hz: natural {_nat:.1f} dB, filtrada {_filt:.1f} dB, restaurada {_rest:.1f} dB")
+assert _filt < _nat - 20.0, "el filtro de prueba deberia matar el fundamental"
+assert _rest > _filt + 20.0, "no restaura el fundamental"
+assert abs(_rest - _nat) < 4.0, "el 100% deberia dejarlo cerca del nivel natural"
+
+# No debe sonar cuando no corresponde (un f0 mal detectado se escucha como retumbe)
+for _lab, _f0, _cf in (("confianza baja", _F0, 0.2), ("sin f0", None, 0.9),
+                       ("f0 fuera de rango", 400.0, 0.9)):
+    _d = float(np.max(np.abs(_bass_run(_vbf, 1.0, _f0, _cf) - _vbf)))
+    assert _d == 0.0, f"BassSynth suena con {_lab}"
+print("  Silencio con f0 dudoso o fuera de rango: OK")
+
+# Fase continua entre bloques (sin clicks)
+_yb = _bass_run(_vbf, 1.0)
+_edges = max(abs(_yb[i * 480] - _yb[i * 480 - 1]) for i in range(1, len(_yb) // 480))
+assert _edges <= float(np.max(np.abs(np.diff(_vbf)))) * 1.5, "click en el borde de bloque"
+print(f"  Continuidad de fase entre bloques: OK (salto {_edges:.5f})")

@@ -174,6 +174,41 @@ def test_canceller_subcontrols_require_noise():
     print("Sub-controles del cancelador gateados      OK")
 
 
+def test_bass_and_character_controls():
+    """Recuperar graves: modulo propio (no depende del cancelador — su f0 sale de
+    la autocorrelacion, que corre siempre) y su slider se gatea con el checkbox.
+    El Caracter del excitador se gatea con el excitador."""
+    w = _win()
+    aud = w._adv_audio_tab
+
+    w._chk_bass.setChecked(False)
+    _app.processEvents()
+    assert not aud._s_bass._slider.isEnabled(), "el slider de graves deberia estar apagado"
+
+    w._chk_bass.setChecked(True)
+    _app.processEvents()
+    assert aud._s_bass._slider.isEnabled(), "el slider de graves no se habilito"
+    assert w._config.dsp.bass_enabled, "el checkbox no llego a la config"
+
+    # No depende del cancelador (a diferencia de los sub-modulos, invariante 2)
+    w._chk_noise.setChecked(False)
+    _app.processEvents()
+    assert aud._s_bass._slider.isEnabled(), "los graves no deberian depender del cancelador"
+    w._chk_noise.setChecked(True)
+
+    w._chk_exciter.setChecked(False)
+    _app.processEvents()
+    assert not aud._s_exciter_char._slider.isEnabled(), "el caracter deberia seguir al excitador"
+    w._chk_exciter.setChecked(True)
+    _app.processEvents()
+    assert aud._s_exciter_char._slider.isEnabled(), "el caracter no se habilito"
+
+    aud._s_exciter_char.set_value(0.6, emit=True)
+    _app.processEvents()
+    assert abs(w._config.dsp.exciter_character - 0.6) < 1e-6, "el caracter no llego a la config"
+    print("Graves y caracter: gating y config          OK")
+
+
 def test_voice_leveler_requires_noise():
     """El nivelador de voz vive en Avanzada Audio pero su VAD requiere el
     cancelador (invariante 2)."""
@@ -589,6 +624,7 @@ if __name__ == "__main__":
     test_about_dialog()
     test_auto_load_respects_saved_mode()
     test_canceller_subcontrols_require_noise()
+    test_bass_and_character_controls()
     test_voice_leveler_requires_noise()
     test_leveler_continuous_checkbox()
     test_bandpass_sliders_gated_by_mode()

@@ -45,6 +45,9 @@ class DSPConfig:
     exciter_enabled:   bool  = False
     exciter_drive:     float = 2.0   # saturación tanh (1.0=suave, 10.0=fuerte)
     exciter_mix:       float = 0.3   # nivel de armónicos mezclados al original (0.0–1.0)
+    exciter_character: float = 0.0   # 0 = armónicos impares (hueco), 1 = pares (cálido)
+    bass_enabled:      bool  = False # síntesis del fundamental (graves que cortó la radio)
+    bass_amount:       float = 0.5   # nivel del fundamental sintetizado (0–1; 1 ≈ natural)
     presence_freq:   float = 2000.0 # Hz, centro del pico de presencia (1000-2000)
     presence_db:     float = 0.0    # dB, ganancia del pico de presencia
     presence_q:      float = 0.7    # Q del pico de presencia
@@ -146,6 +149,9 @@ class AppConfig:
                 "exciter_enabled":   self.dsp.exciter_enabled,
                 "exciter_drive":     self.dsp.exciter_drive,
                 "exciter_mix":       self.dsp.exciter_mix,
+                "exciter_character": self.dsp.exciter_character,
+                "bass_enabled":      self.dsp.bass_enabled,
+                "bass_amount":       self.dsp.bass_amount,
                 "presence_freq":  self.dsp.presence_freq,
                 "body_freq":      self.dsp.body_freq,
                 "body_db":        self.dsp.body_db,
@@ -255,6 +261,9 @@ class AppConfig:
         self.dsp.exciter_enabled   = bool(d.get("exciter_enabled",   self.dsp.exciter_enabled))
         self.dsp.exciter_drive     = float(d.get("exciter_drive",    self.dsp.exciter_drive))
         self.dsp.exciter_mix       = float(d.get("exciter_mix",      self.dsp.exciter_mix))
+        self.dsp.exciter_character = float(d.get("exciter_character", self.dsp.exciter_character))
+        self.dsp.bass_enabled      = bool(d.get("bass_enabled",      self.dsp.bass_enabled))
+        self.dsp.bass_amount       = float(d.get("bass_amount",      self.dsp.bass_amount))
         self.dsp.presence_freq  = d.get("presence_freq",  self.dsp.presence_freq)
         self.dsp.presence_db    = d.get("presence_db",    self.dsp.presence_db)
         self.dsp.presence_q     = d.get("presence_q",     self.dsp.presence_q)

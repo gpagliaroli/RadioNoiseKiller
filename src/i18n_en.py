@@ -353,6 +353,27 @@ CATALOG = {
         "  ↳ Tanh saturation: how many harmonics are generated and of what order. Soft = subtle, "
         "aggressive = pronounced. It does not change the band's level: it only adds new harmonics.",
     "Mezcla:": "Mix:",
+    "Carácter:": "Character:",
+    "impar": "odd",
+    "mixto": "mixed",
+    "par": "even",
+    "  ↳ Qué armónicos se generan. Impar (tanh pura) = brillante y algo hueco, es el timbre metálico clásico. Par = más cálido y pleno, pero agrega productos de diferencia en los graves: subirlo mucho puede enturbiar. Mixto suele ser el mejor compromiso.":
+        "  ↳ Which harmonics are generated. Odd (pure tanh) = bright and somewhat hollow, the classic "
+        "metallic timbre. Even = warmer and fuller, but it adds difference products in the low end: "
+        "raising it too far can muddy the sound. Mixed is usually the best compromise.",
+    "Recuperar graves:": "Restore bass:",
+    "  ↳ Nivel del fundamental sintetizado (100% ≈ el que tendría una voz natural). Solo suena con voz detectada y f0 por debajo de 300 Hz. Requiere el módulo «Recuperar graves» activo.":
+        "  ↳ Level of the synthesized fundamental (100% ≈ what a natural voice would have). It only "
+        "sounds with detected speech and f0 below 300 Hz. Requires the «Restore bass» module enabled.",
+    "Recuperar graves": "Restore bass",
+    "Sintetiza el fundamental de la voz cuando el filtro de la radio ya lo cortó\n"
+    "(un pasa-altos de 300 Hz deja un f0 de 120 Hz unos 32 dB abajo: no hay\n"
+    "energía que una EQ pueda levantar). Usa el f0 que ya detecta el cancelador.\n"
+    "Nivel ajustable en Avanzada Audio.":
+        "Synthesizes the voice's fundamental when the radio's filter has already cut it\n"
+        "(a 300 Hz high-pass leaves a 120 Hz f0 some 32 dB down: there is no energy\n"
+        "for an EQ to lift). It uses the f0 the canceller already detects.\n"
+        "Level adjustable in Advanced Audio.",
     "  ↳ Nivel de armónicos mezclados. 20–40% = zona útil sin sonar artificial. Con el cancelador activo solo actúa cuando hay voz, así no le agrega brillo al ruido de fondo.":
         "  ↳ Level of harmonics mixed in. 20–40% = useful range without sounding artificial. With the "
         "canceller on it only acts while there is speech, so it doesn't add brightness to the background noise.",
