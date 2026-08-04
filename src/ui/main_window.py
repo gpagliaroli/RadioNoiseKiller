@@ -383,9 +383,10 @@ class MainWindow(QMainWindow):
         )
         self._chk_bass = _chk(
             tr("Recuperar graves"),
-            tr("Sintetiza el fundamental de la voz cuando el filtro de la radio ya lo cortó\n"
+            tr("Devuelve el fundamental de la voz cuando el filtro de la radio ya lo cortó\n"
                "(un pasa-altos de 300 Hz deja un f0 de 120 Hz unos 32 dB abajo: no hay\n"
-               "energía que una EQ pueda levantar). Usa el f0 que ya detecta el cancelador.\n"
+               "energía que una EQ pueda levantar). Lo DERIVA de los armónicos que sí\n"
+               "pasaron, así que suena como parte de la voz y no como un tono agregado.\n"
                "Nivel ajustable en Avanzada Audio."),
         )
 

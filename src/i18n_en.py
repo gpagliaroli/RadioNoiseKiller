@@ -362,17 +362,20 @@ CATALOG = {
         "metallic timbre. Even = warmer and fuller, but it adds difference products in the low end: "
         "raising it too far can muddy the sound. Mixed is usually the best compromise.",
     "Recuperar graves:": "Restore bass:",
-    "  ↳ Nivel del fundamental sintetizado (100% ≈ el que tendría una voz natural). Solo suena con voz detectada y f0 por debajo de 300 Hz. Requiere el módulo «Recuperar graves» activo.":
-        "  ↳ Level of the synthesized fundamental (100% ≈ what a natural voice would have). It only "
-        "sounds with detected speech and f0 below 300 Hz. Requires the «Restore bass» module enabled.",
+    "  ↳ Nivel del fundamental recuperado (100% ≈ el que tendría una voz natural). Se deriva de los armónicos de la propia voz: sin voz no hay de dónde derivarlo y se calla solo. Requiere el módulo «Recuperar graves» activo.":
+        "  ↳ Level of the recovered fundamental (100% ≈ what a natural voice would have). It is "
+        "derived from the voice's own harmonics: with no speech there is nothing to derive it from, "
+        "so it goes quiet by itself. Requires the «Restore bass» module enabled.",
     "Recuperar graves": "Restore bass",
-    "Sintetiza el fundamental de la voz cuando el filtro de la radio ya lo cortó\n"
+    "Devuelve el fundamental de la voz cuando el filtro de la radio ya lo cortó\n"
     "(un pasa-altos de 300 Hz deja un f0 de 120 Hz unos 32 dB abajo: no hay\n"
-    "energía que una EQ pueda levantar). Usa el f0 que ya detecta el cancelador.\n"
+    "energía que una EQ pueda levantar). Lo DERIVA de los armónicos que sí\n"
+    "pasaron, así que suena como parte de la voz y no como un tono agregado.\n"
     "Nivel ajustable en Avanzada Audio.":
-        "Synthesizes the voice's fundamental when the radio's filter has already cut it\n"
+        "Brings back the voice's fundamental when the radio's filter has already cut it\n"
         "(a 300 Hz high-pass leaves a 120 Hz f0 some 32 dB down: there is no energy\n"
-        "for an EQ to lift). It uses the f0 the canceller already detects.\n"
+        "for an EQ to lift). It DERIVES it from the harmonics that did get through, so\n"
+        "it sounds like part of the voice and not like an added tone.\n"
         "Level adjustable in Advanced Audio.",
     "  ↳ Nivel de armónicos mezclados. 20–40% = zona útil sin sonar artificial. Con el cancelador activo solo actúa cuando hay voz, así no le agrega brillo al ruido de fondo.":
         "  ↳ Level of harmonics mixed in. 20–40% = useful range without sounding artificial. With the "

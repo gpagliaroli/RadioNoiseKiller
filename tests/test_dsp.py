@@ -1,7 +1,7 @@
 import sys
 sys.path.insert(0, "src")
 import numpy as np
-from config import DSPConfig, RadioMode
+from config import DSPConfig
 from dsp.filters import BandpassFilter
 from dsp.gain import GainLimiter
 from dsp.level import LevelMeter
@@ -40,12 +40,12 @@ print(f"  OK: {e_1k > e_100 * 3 and e_1k > e_10k * 3}")
 gl = GainLimiter(gain_db=6.0, limit_db=-3.0)
 loud = np.ones(480, dtype=np.float32) * 2.0  # señal que excede el límite
 out = gl.process(loud, SR)
-print(f"\n=== GainLimiter ===")
+print("\n=== GainLimiter ===")
 print(f"  Max entrada: {loud.max():.2f} | Max salida: {out.max():.4f} (limite ~{10**(-3/20):.4f})")
 assert out.max() <= 10 ** (-3 / 20) * 1.01, "la salida supera el limite"
 
 # --- Gain Limiter: rodilla suave (curva de transferencia) ---
-print(f"\n=== GainLimiter — rodilla suave ===")
+print("\n=== GainLimiter — rodilla suave ===")
 
 def peak_out_db(level_db, limit_db=-1.0, n=SR // 2):
     g = GainLimiter(gain_db=0.0, limit_db=limit_db)
@@ -81,7 +81,7 @@ print("  Carry entre chunks: OK")
 lm = LevelMeter()
 silence = np.zeros(480, dtype=np.float32)
 signal  = np.ones(480, dtype=np.float32) * 0.5
-print(f"\n=== LevelMeter ===")
+print("\n=== LevelMeter ===")
 print(f"  Silencio: {lm.process(silence):.1f} dBFS")
 print(f"  0.5 RMS:  {lm.process(signal):.1f} dBFS  (esperado ~-6 dBFS)")
 
@@ -197,51 +197,68 @@ print(f"  Nivel vs caracter: {', '.join(f'{v:+.2f}' for v in _levels)} dB")
 assert max(_levels) - min(_levels) < 1.0, "el caracter cambia el nivel (deberia ser timbre)"
 print("  Caracter par/impar: OK")
 
-# --- Recuperacion de graves (sintesis del fundamental) ----------------------
+# --- Recuperacion de graves (derivada de los armonicos) ---------------------
 # Un pasa-altos de 300 Hz (filtro tipico de SSB) deja el fundamental de una voz de
-# 120 Hz unos 32 dB abajo: no hay energia que una EQ pueda levantar, hay que
-# sintetizarla. Ver dsp/bass.py.
-from dsp.bass import BassSynth            # noqa: E402
+# 120 Hz unos 32 dB abajo: no hay energia que una EQ pueda levantar. Se recupera
+# DERIVANDOLO de los armonicos que sobrevivieron (band^2 -> la diferencia entre
+# armonicos adyacentes cae en f0), no sintetizandolo aparte. Ver dsp/bass.py.
+from dsp.bass import BassRestorer          # noqa: E402
 from scipy.signal import sosfilt as _sosfilt, butter as _butter   # noqa: E402
 
-print("\n=== BassSynth ===")
-_F0 = 120.0
-_vb = np.zeros(SR, dtype=np.float64)
-for _k in range(1, 25):
-    if _k * _F0 < 3400:
-        _vb += (1.0 / _k) * np.sin(2 * np.pi * _k * _F0 * _t + 0.7 * _k)
-_vb = (_vb * 0.05).astype(np.float32)
-_hp = _butter(4, 300 / (SR / 2), btype='high', output='sos')
-_vbf = _sosfilt(_hp, _vb).astype(np.float32)
+print("\n=== BassRestorer ===")
 
 
-def _bass_run(frames_src, amount, f0=_F0, conf=0.8):
-    bs = BassSynth(SR)
-    bs.set_enabled(True); bs.set_amount(amount)
-    out = []
-    for i in range(0, len(frames_src), 480):
-        bs.set_voice(f0, conf)
-        out.append(bs.process(frames_src[i:i + 480]))
-    return np.concatenate(out)
+def _voice_glide(n_samp, f_lo=110.0, f_hi=140.0):
+    """Voz con entonacion real: f0 sube y baja como en una frase."""
+    tt = np.arange(n_samp) / SR
+    f0 = f_lo + (f_hi - f_lo) * 0.5 * (1 + np.sin(2 * np.pi * 0.7 * tt))
+    ph = 2 * np.pi * np.cumsum(f0) / SR
+    s = np.zeros_like(tt)
+    for k in range(1, 25):
+        s += (1.0 / k) * np.sin(k * ph + 0.7 * k)
+    return (s * (0.6 + 0.4 * np.sin(2 * np.pi * 3.0 * tt)) * 0.05).astype(np.float32)
 
 
-_nat = _spec_db(_vb)[_bin(_F0)]
-_filt = _spec_db(_vbf)[_bin(_F0)]
-_rest = _spec_db(_bass_run(_vbf, 1.0))[_bin(_F0)]
-print(f"  @120 Hz: natural {_nat:.1f} dB, filtrada {_filt:.1f} dB, restaurada {_rest:.1f} dB")
-assert _filt < _nat - 20.0, "el filtro de prueba deberia matar el fundamental"
-assert _rest > _filt + 20.0, "no restaura el fundamental"
+_vb = _voice_glide(SR)
+_hp300 = _butter(4, 300 / (SR / 2), btype='high', output='sos')
+_vbf = _sosfilt(_hp300, _vb).astype(np.float32)
+_bp_f0 = _butter(2, [80 / (SR / 2), 180 / (SR / 2)], btype='band', output='sos')
+
+
+def _bass_run(src, amount):
+    br = BassRestorer(SR)
+    br.set_enabled(True); br.set_amount(amount)
+    return np.concatenate([br.process(src[i:i + 480]) for i in range(0, len(src), 480)])
+
+
+def _f0_db(y):
+    return 20 * np.log10(np.sqrt(np.mean(_sosfilt(_bp_f0, y) ** 2)) + 1e-12)
+
+
+_nat, _filt = _f0_db(_vb), _f0_db(_vbf)
+_rest = _f0_db(_bass_run(_vbf, 1.0))
+print(f"  Fundamental: natural {_nat:.1f} dB, filtrado {_filt:.1f} dB, restaurado {_rest:.1f} dB")
+assert _filt < _nat - 15.0, "el filtro de prueba deberia matar el fundamental"
+assert _rest > _filt + 15.0, "no restaura el fundamental"
 assert abs(_rest - _nat) < 4.0, "el 100% deberia dejarlo cerca del nivel natural"
 
-# No debe sonar cuando no corresponde (un f0 mal detectado se escucha como retumbe)
-for _lab, _f0, _cf in (("confianza baja", _F0, 0.2), ("sin f0", None, 0.9),
-                       ("f0 fuera de rango", 400.0, 0.9)):
-    _d = float(np.max(np.abs(_bass_run(_vbf, 1.0, _f0, _cf) - _vbf)))
-    assert _d == 0.0, f"BassSynth suena con {_lab}"
-print("  Silencio con f0 dudoso o fuera de rango: OK")
+# Lo restaurado tiene que ser LA VOZ, no un tono pegado encima: se compara con el
+# fundamental original. El oscilador independiente daba +0.01 aca (reportado en el
+# aire como "muy artificial"); derivado de los armonicos va en fase con la voz.
+_ref = _sosfilt(_bp_f0, _vb)[960:]
+_got = _sosfilt(_bp_f0, _bass_run(_vbf, 0.5) - _vbf)[960:]
+_corr = float(np.corrcoef(_ref, _got)[0, 1])
+print(f"  Coherencia con el fundamental original: {_corr:+.3f}")
+assert _corr > 0.5, "el grave restaurado no esta en fase con la voz (suena artificial)"
 
-# Fase continua entre bloques (sin clicks)
-_yb = _bass_run(_vbf, 1.0)
-_edges = max(abs(_yb[i * 480] - _yb[i * 480 - 1]) for i in range(1, len(_yb) // 480))
-assert _edges <= float(np.max(np.abs(np.diff(_vbf)))) * 1.5, "click en el borde de bloque"
-print(f"  Continuidad de fase entre bloques: OK (salto {_edges:.5f})")
+# Sin voz no hay armonicos de donde derivar: no debe retumbar (el oscilador
+# agregaba +3.3 dB aca porque la autocorrelacion se dispara con cualquier cosa)
+_nzb = (np.random.default_rng(5).standard_normal(SR) * 0.01).astype(np.float32)
+_nzf = _sosfilt(_hp300, _nzb).astype(np.float32)
+_lp200 = _butter(2, 200 / (SR / 2), btype='low', output='sos')
+_added = _bass_run(_nzf, 1.0) - _nzf
+_rumble = (20 * np.log10(np.sqrt(np.mean(_sosfilt(_lp200, _added) ** 2)) + 1e-12)
+           - 20 * np.log10(np.sqrt(np.mean(_nzf ** 2)) + 1e-12))
+print(f"  Con ruido solo agrega {_rumble:.1f} dB bajo 200 Hz")
+assert _rumble < -10.0, "retumba con ruido (deberia callarse sin voz)"
+print("  Recuperacion de graves: OK")

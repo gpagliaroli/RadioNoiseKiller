@@ -8,7 +8,7 @@ from audio.devices import AudioDevice
 from audio.recorder import WavRecorder
 from dsp.agc import AGC
 from dsp.anf import AdaptiveNotchFilter
-from dsp.bass import BassSynth
+from dsp.bass import BassRestorer
 from dsp.exciter import AuralExciter
 from dsp.filters import BandpassFilter, PresenceFilter
 from dsp.freq_shift import FrequencyShifter
@@ -112,7 +112,7 @@ class ProcessingPipeline:
         self._exciter.set_mix(config.dsp.exciter_mix)
         self._exciter.set_character(config.dsp.exciter_character)
         self._exciter.set_enabled(config.dsp.exciter_enabled)
-        self._bass = BassSynth(config.audio.sample_rate)
+        self._bass = BassRestorer(config.audio.sample_rate)
         self._bass.set_amount(config.dsp.bass_amount)
         self._bass.set_enabled(config.dsp.bass_enabled)
         self._presence = PresenceFilter(config.audio.sample_rate)
@@ -696,11 +696,6 @@ class ProcessingPipeline:
         self._bass.set_amount(amount)
 
     @property
-    def bass_f0(self) -> "float | None":
-        """f0 del fundamental sintetizado, o None si no está actuando (indicador)."""
-        return self._bass.f0 if self._bass.active else None
-
-    @property
     def peak_reduction_db(self) -> float:
         """Reducción aplicada por el limitador en el último frame. 0.0 = sin actividad."""
         return self._limiter.last_reduction_db
@@ -1016,12 +1011,6 @@ class ProcessingPipeline:
                     if (self._noise_enabled and self._noise_profiler.has_profile)
                     else 1.0
                 )
-
-                # Recuperación de graves: el f0 sale de la autocorrelación que el
-                # profiler ya calcula por frame (independiente del refuerzo de pitch).
-                if self._config.dsp.bass_enabled and not preview:
-                    _f0, _conf = self._noise_profiler.pitch_detect
-                    self._bass.set_voice(_f0, _conf)
 
                 with self._lock:
                     mixed = self._bandpass_out.process(filtered) if self._bandpass_post_enabled else filtered

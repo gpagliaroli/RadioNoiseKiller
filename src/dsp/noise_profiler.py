@@ -1156,15 +1156,6 @@ class NoiseProfiler:
         return v
 
     @property
-    def pitch_detect(self) -> "tuple[float | None, float]":
-        """(f0, confianza) del último análisis de autocorrelación, INDEPENDIENTE del
-        checkbox de refuerzo de pitch (que solo gatea `pitch_f0`). Lo usa la
-        recuperación de graves, que no debería depender de otro módulo."""
-        if self._pitch_cache is None:
-            return (None, 0.0)
-        return self._pitch_cache
-
-    @property
     def pitch_f0(self) -> "float | None":
         """f0 detectado (Hz) por el refuerzo de pitch SSB, o None si no hay detección activa."""
         return self._pitch_f0

@@ -430,16 +430,28 @@ atenuado que su meseta** (a Intensidad 0.9) — la envolvente se aplasta y suena
   de diferencia entre los parciales de la voz, que caen en los graves y suenan a barro. Medido con
   dos tonos (1.4 + 1.9 kHz): el producto de 500 Hz queda a −21 dB con la rama filtrada a 600 Hz,
   −31 dB a 1.2 kHz y −39 dB a 2 kHz. Por eso el filtro va en 2 kHz.
-- **Recuperación de graves** (`src/dsp/bass.py`, `bass_enabled`/`bass_amount`, checkbox en Módulos +
-  slider en Avanzada Audio): oscilador de fase continua en el f0 de la voz. El f0 y la confianza
-  salen de `NoiseProfiler.pitch_detect` — **property nueva**, porque `pitch_f0` solo se actualiza con
-  el checkbox de refuerzo de pitch activo y este módulo no debe depender de otro. Corre **después
-  del pasabanda de salida**: antes, el propio filtro se comería el fundamental recién sintetizado.
-  Calibración: `_REF_RATIO=2.2` está ajustado para que el 100% devuelva el fundamental al nivel que
-  tenía antes del filtro (voz de f0=120 Hz filtrada a 300 Hz: −58 dB → −26 dB, natural −26 dB).
-  Salvaguardas: confianza ≥ 0.40, f0 ≤ 300 Hz y envolvente con ataque/release — un f0 mal detectado
-  sonaría como retumbe. Verificado: silencio exacto (diferencia 0.0) con confianza baja, sin f0 o f0
-  fuera de rango, y sin clicks en los bordes de bloque.
+- **Recuperación de graves** (`src/dsp/bass.py` → `BassRestorer`, `bass_enabled`/`bass_amount`,
+  checkbox en Módulos + slider en Avanzada Audio): **deriva** el fundamental de los armónicos que
+  sobrevivieron al filtro (banda 250–1000 Hz → `band²` → LP 320 Hz → HP 60 Hz, normalizado por el
+  RMS de la banda porque el cuadrado es cuadrático). Cada par de armónicos adyacentes produce su
+  diferencia, que es f0. Corre **después del pasabanda de salida**: antes, el propio filtro se
+  comería lo recuperado. `_REF_GAIN=1.4` calibra el 100% al nivel previo al filtro. CPU 75 µs/frame.
+  - **La primera versión era un oscilador en el f0 detectado, y fue un fracaso en el aire**:
+    *"quedó muy artificial, y son como demasiados bajos y como que vienen con un poco de delay"*.
+    Los tres síntomas salían de lo mismo — el oscilador es independiente de la voz. Medido:
+    **coherencia +0.01** con el fundamental original (con entonación real, f0 oscilando 110–140 Hz)
+    contra **+0.78** derivándolo; **latencia** de decenas de ms (f0 cacheado cada 3 frames +
+    suavizado + envolvente) contra **0 ms**; y con **ruido solo** el oscilador agregaba **+3.3 dB**
+    bajo 200 Hz (la autocorrelación se dispara con cualquier cosa periódica) contra **−19.1 dB**.
+    Como no hay armónicos de donde derivar sin voz, el módulo nuevo no necesita VAD, ni umbral de
+    confianza, ni envolvente, ni depender del cancelador.
+  - **Trampa de medición que casi lo tapa:** el primer test de coherencia usaba una voz de f0
+    CONSTANTE y le pasaba al oscilador el f0 exacto — su mejor caso posible — y daba +0.77, mejor
+    que el derivado. Con f0 variable y el f0 real de la autocorrelación se desploma a +0.01.
+    **Para evaluar algo que sigue a la voz hay que usar una voz que se mueva** (entonación), y
+    alimentarlo con el detector real, no con el valor verdadero.
+  - `NoiseProfiler.pitch_detect` (property que se había agregado para esto) quedó sin uso y se
+    eliminó.
 - No hizo falta regenerar los presets de fábrica: con el fix de `from_dict` (invariante 10) las
   claves nuevas ausentes toman el default. **Primera vez que ese fix paga.**
 

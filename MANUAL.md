@@ -656,19 +656,25 @@ El filtro de la radio —el de un equipo SSB arranca típicamente en 300 Hz— d
 | 120 Hz | −32 dB |
 | 100 Hz | −38 dB |
 
-Con esa pérdida **no queda energía que levantar**: por más que se suba la EQ de Cuerpo, no hay nada ahí. La única forma de recuperarlo es **generarlo**. Eso hace este módulo: sintetiza un tono en el f0 de la voz, con el nivel atado a la señal, para devolverle el cuerpo que el filtro se llevó.
+Con esa pérdida **no queda energía que levantar**: por más que se suba la EQ de Cuerpo, no hay nada ahí. La única forma de recuperarlo es **regenerarlo**.
 
 La EQ de Cuerpo sigue siendo la herramienta correcta cuando los graves **sí están** y sólo hay que reforzarlos. Este módulo es para cuando ya no están.
 
 ### Cómo funciona
 
-El f0 sale de la **autocorrelación que el cancelador ya calcula en cada frame** (la misma que usan el Refuerzo de pitch y la protección del estimador), así que no agrega análisis: sólo un oscilador de fase continua. Por eso el módulo funciona incluso con el cancelador desactivado.
+No sintetiza un tono aparte: **deriva el fundamental de los armónicos que sí pasaron el filtro**, que es como lo hacen los restauradores de graves analógicos. La banda de 250 a 1000 Hz —donde viven el 3° y 4° armónico de una voz masculina— se eleva al cuadrado, y cada par de armónicos adyacentes produce su diferencia, que es exactamente el fundamental (4·f0 − 3·f0 = f0). Un pasa-bajos se queda con eso.
 
-Sólo suena cuando se cumplen las tres condiciones: hay voz detectada, la confianza de la detección es alta y el f0 está **por debajo de 300 Hz**. Por encima de eso el fundamental normalmente pasó el filtro y no hay nada que recuperar. El umbral de confianza es deliberadamente exigente: un f0 mal detectado se escucharía como un retumbe.
+Esa diferencia importa mucho al oído:
+
+- **Suena como la voz, no encima de ella.** El grave sale del propio material vocal, así que trae su fase, su entonación y su vibrato. Medido con una voz cuyo f0 oscila entre 110 y 140 Hz —como una frase real—, lo recuperado correlaciona **+0,78** con el fundamental original. Una versión anterior de este módulo, que sintetizaba un tono independiente en el f0 detectado, daba **+0,01**: un tono pegado encima, que batía contra los armónicos. Se escuchaba artificial.
+- **No llega tarde.** Es procesamiento muestra a muestra, sin detección de tono ni envolvente: latencia **0 ms**. Sintetizando hacía falta detectar el f0 (que se calcula cada 3 frames), suavizarlo y abrir una envolvente — el grave entraba varias decenas de milisegundos después de la voz.
+- **Se calla solo.** Sin voz no hay armónicos de donde derivar nada. Con ruido solo, el módulo agrega **−19 dB** respecto del ruido, o sea nada; la versión que sintetizaba agregaba **+3 dB** porque el detector de tono se dispara con cualquier cosa periódica.
+
+Por eso el módulo no necesita detección de voz, ni umbral de confianza, ni depende del cancelador.
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
-| **Recuperar graves** | 0% – 100% | 50% | Nivel del fundamental sintetizado. **100%** lo deja aproximadamente en el nivel que tendría en la voz original (verificado: una voz de 120 Hz filtrada a 300 Hz pasa de −58 dB a −26 dB, que es donde estaba antes del filtro). **50%** es el punto de partida prudente. |
+| **Recuperar graves** | 0% – 100% | 35% | Nivel del fundamental recuperado. **100%** lo deja aproximadamente donde estaba antes del filtro (verificado: una voz con entonación pasa de −55 dB filtrada a −32,5 dB, y el natural es −32,5 dB). **35%** es el punto de partida: conviene subirlo de a poco, porque el exceso de graves se nota rápido. |
 
 ### Cuándo usarlo
 

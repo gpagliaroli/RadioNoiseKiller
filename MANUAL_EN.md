@@ -656,19 +656,25 @@ The radio's filter — an SSB rig typically starts at 300 Hz — leaves a male v
 | 120 Hz | −32 dB |
 | 100 Hz | −38 dB |
 
-With that loss **there is no energy left to lift**: no matter how far you raise the Body EQ, there is nothing there. The only way to get it back is to **generate it**. That is what this module does: it synthesizes a tone at the voice's f0, with its level tied to the signal, to give back the body the filter took away.
+With that loss **there is no energy left to lift**: no matter how far you raise the Body EQ, there is nothing there. The only way to get it back is to **regenerate it**.
 
 The Body EQ remains the right tool when the low end **is** there and only needs reinforcing. This module is for when it is gone.
 
 ### How it works
 
-The f0 comes from the **autocorrelation the canceller already computes on every frame** (the same one used by Voice pitch enhancement and by the estimator's protection), so it adds no analysis: just an oscillator with continuous phase. That is why the module works even with the canceller disabled.
+It does not synthesize a separate tone: it **derives the fundamental from the harmonics that did get through the filter**, which is how analog bass restorers do it. The 250–1000 Hz band — where a male voice's 3rd and 4th harmonics live — is squared, and each pair of adjacent harmonics produces their difference, which is exactly the fundamental (4·f0 − 3·f0 = f0). A low-pass keeps just that.
 
-It only sounds when three conditions hold: speech is detected, detection confidence is high, and f0 is **below 300 Hz**. Above that the fundamental normally passed the filter and there is nothing to restore. The confidence threshold is deliberately demanding: a mis-detected f0 would be heard as a rumble.
+That difference matters a lot to the ear:
+
+- **It sounds like the voice, not on top of it.** The low end comes from the vocal material itself, so it carries its phase, its intonation and its vibrato. Measured on a voice whose f0 swings between 110 and 140 Hz — like a real phrase — what is recovered correlates **+0.78** with the original fundamental. An earlier version of this module, which synthesized an independent tone at the detected f0, scored **+0.01**: a tone pasted on top, beating against the harmonics. It sounded artificial.
+- **It is not late.** This is sample-by-sample processing, with no pitch detection and no envelope: **0 ms** latency. Synthesizing required detecting f0 (computed every 3 frames), smoothing it and opening an envelope — the low end came in several tens of milliseconds after the voice.
+- **It goes quiet by itself.** With no speech there are no harmonics to derive anything from. On noise alone the module adds **−19 dB** relative to the noise, i.e. nothing; the synthesizing version added **+3 dB**, because the pitch detector fires on anything periodic.
+
+That is why the module needs no voice detection, no confidence threshold, and does not depend on the canceller.
 
 | Control | Range | Default | Description |
 |---------|-------|---------|-------------|
-| **Restore bass** | 0% – 100% | 50% | Level of the synthesized fundamental. **100%** leaves it roughly at the level it would have had in the original voice (verified: a 120 Hz voice filtered at 300 Hz goes from −58 dB back to −26 dB, where it was before the filter). **50%** is the prudent starting point. |
+| **Restore bass** | 0% – 100% | 35% | Level of the recovered fundamental. **100%** leaves it roughly where it was before the filter (verified: a voice with intonation goes from −55 dB filtered to −32.5 dB, and the natural level is −32.5 dB). **35%** is the starting point: raise it gradually, because excess bass shows up quickly. |
 
 ### When to use it
 
