@@ -450,6 +450,16 @@ atenuado que su meseta** (a Intensidad 0.9) — la envolvente se aplasta y suena
     que el derivado. Con f0 variable y el f0 real de la autocorrelación se desploma a +0.01.
     **Para evaluar algo que sigue a la voz hay que usar una voz que se mueva** (entonación), y
     alimentarlo con el detector real, no con el valor verdadero.
+  - **Segunda trampa, del mismo tipo: NO calibrar niveles con armónicos 1/k.** El primer
+    `_REF_GAIN` se ajustó con esa voz, donde el fundamental es el parcial más fuerte. En una voz
+    real la fuente glotal cae ~12 dB/oct y domina el **F1 (300–800 Hz)** — que cae justo dentro de
+    la banda que se eleva al cuadrado, así que produce mucha más diferencia. Medido con cuatro voces
+    realistas (fuente con tilt + formantes): el 100% quedaba **+10 a +13 dB por encima** del
+    fundamental natural, y solo +2 dB con la 1/k. Reportado en el aire: *"el efecto es muy fuerte,
+    más de 15% es demasiado"*. Con `_REF_GAIN=0.37` el exceso queda en ±1.7 dB y la dispersión
+    entre voces es 2.7 dB. El generador de voz del test ahora incluye tilt glótico + formantes.
+  - Se evaluó normalizar por el RMS **total** en vez del de la banda: centra mejor la media (−0.9 dB)
+    pero la dispersión entre voces se va a **18.2 dB** contra 2.7 — descartado.
   - `NoiseProfiler.pitch_detect` (property que se había agregado para esto) quedó sin uso y se
     eliminó.
 - No hizo falta regenerar los presets de fábrica: con el fix de `from_dict` (invariante 10) las

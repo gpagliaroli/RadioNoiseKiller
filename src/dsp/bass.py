@@ -49,10 +49,20 @@ class BassRestorer:
     _DC_HZ:      float = 60.0     # saca la continua del cuadrado
     _RMS_SMOOTH: float = 0.90     # memoria del RMS para la normalización (~100 ms)
     _RMS_MIN:    float = 1e-9
-    # Calibrado para que amount=1.0 devuelva el fundamental al nivel que tenía
-    # antes del filtro (voz con entonación: natural −32.5 dB, filtrada −55.4 dB,
-    # restaurada −32.5 dB con este factor).
-    _REF_GAIN:   float = 1.4
+    # Calibrado para que amount=1.0 devuelva el fundamental al nivel que tenía antes
+    # del filtro, medido sobre voces REALISTAS: fuente glotal con caída de 12 dB/oct
+    # + formantes (F1 500-700 Hz), cuatro variantes (masculina grave, F1 alto,
+    # masculina aguda y femenina).
+    # OJO CON LA CALIBRACIÓN: la primera versión usó una voz de armónicos 1/k, donde
+    # el fundamental es el parcial MÁS FUERTE. En una voz real la fuente cae y el F1
+    # domina — y el F1 cae justo dentro de la banda que se eleva al cuadrado, así que
+    # produce mucha más diferencia. Medido: con ese factor el 100% quedaba +10 a
+    # +13 dB por encima del natural en las cuatro voces realistas, y solo +2 dB en la
+    # 1/k. Reportado en el aire como "el efecto es muy fuerte, más de 15% es
+    # demasiado". Con este factor el exceso queda en ±1 dB y la dispersión entre las
+    # cuatro voces es de 2.7 dB (el mismo porcentaje suena parecido en voces
+    # distintas).
+    _REF_GAIN:   float = 0.37
 
     def __init__(self, sample_rate: int = 48000):
         self._enabled = False

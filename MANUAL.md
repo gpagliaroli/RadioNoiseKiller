@@ -674,7 +674,9 @@ Por eso el módulo no necesita detección de voz, ni umbral de confianza, ni dep
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
-| **Recuperar graves** | 0% – 100% | 35% | Nivel del fundamental recuperado. **100%** lo deja aproximadamente donde estaba antes del filtro (verificado: una voz con entonación pasa de −55 dB filtrada a −32,5 dB, y el natural es −32,5 dB). **35%** es el punto de partida: conviene subirlo de a poco, porque el exceso de graves se nota rápido. |
+| **Recuperar graves** | 0% – 100% | 35% | Nivel del fundamental recuperado. **100%** lo deja aproximadamente donde estaba antes del filtro, verificado sobre cuatro voces (masculina grave, masculina con F1 alto, masculina aguda y femenina): el exceso queda dentro de ±1,7 dB en todas. **35%** es el punto de partida; conviene subirlo de a poco, porque el exceso de graves se nota rápido. |
+
+> **Sobre el porcentaje:** está calibrado contra el nivel que el fundamental tenía **antes** del filtro de la radio, no contra un valor arbitrario. Que el mismo porcentaje suene parecido en voces distintas también está verificado: entre esas cuatro voces la dispersión es de 2,7 dB. Aun así, "el nivel natural" no siempre es lo que uno quiere escuchar — mucha gente prefiere bastante menos.
 
 ### Cuándo usarlo
 

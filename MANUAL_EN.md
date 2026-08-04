@@ -674,7 +674,9 @@ That is why the module needs no voice detection, no confidence threshold, and do
 
 | Control | Range | Default | Description |
 |---------|-------|---------|-------------|
-| **Restore bass** | 0% – 100% | 35% | Level of the recovered fundamental. **100%** leaves it roughly where it was before the filter (verified: a voice with intonation goes from −55 dB filtered to −32.5 dB, and the natural level is −32.5 dB). **35%** is the starting point: raise it gradually, because excess bass shows up quickly. |
+| **Restore bass** | 0% – 100% | 35% | Level of the recovered fundamental. **100%** leaves it roughly where it was before the filter, verified across four voices (deep male, male with high F1, higher male and female): the excess stays within ±1.7 dB on all of them. **35%** is the starting point; raise it gradually, because excess bass shows up quickly. |
+
+> **About the percentage:** it is calibrated against the level the fundamental had **before** the radio's filter, not against an arbitrary value. That the same percentage sounds similar across different voices is also verified: across those four voices the spread is 2.7 dB. Even so, "the natural level" is not always what you want to hear — many people prefer considerably less.
 
 ### When to use it
 

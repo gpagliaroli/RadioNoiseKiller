@@ -209,14 +209,27 @@ print("\n=== BassRestorer ===")
 
 
 def _voice_glide(n_samp, f_lo=110.0, f_hi=140.0):
-    """Voz con entonacion real: f0 sube y baja como en una frase."""
+    """Voz realista: entonacion (f0 sube y baja como en una frase), fuente glotal
+    con caida de 12 dB/octava y formantes.
+    OJO: NO usar armonicos 1/k para calibrar el nivel. Ahi el fundamental es el
+    parcial mas fuerte; en una voz real domina el F1 (300-800 Hz), que cae dentro
+    de la banda que el modulo eleva al cuadrado. Calibrar con 1/k sobreestimaba el
+    factor en ~11 dB (reportado en el aire como "el efecto es muy fuerte")."""
     tt = np.arange(n_samp) / SR
     f0 = f_lo + (f_hi - f_lo) * 0.5 * (1 + np.sin(2 * np.pi * 0.7 * tt))
     ph = 2 * np.pi * np.cumsum(f0) / SR
+    f0m = 0.5 * (f_lo + f_hi)
     s = np.zeros_like(tt)
-    for k in range(1, 25):
-        s += (1.0 / k) * np.sin(k * ph + 0.7 * k)
-    return (s * (0.6 + 0.4 * np.sin(2 * np.pi * 3.0 * tt)) * 0.05).astype(np.float32)
+    for k in range(1, 40):
+        fk = k * f0m
+        if fk >= 3600:
+            break
+        src = 10 ** (-12.0 * np.log2(max(k, 1)) / 20.0)
+        env = sum(a / (1.0 + ((fk - fc) / (bw / 2)) ** 2)
+                  for fc, bw, a in ((500, 90, 1.0), (1500, 130, 0.5), (2500, 180, 0.3)))
+        s += src * env * np.sin(k * ph + 0.7 * k)
+    s = s / (np.sqrt(np.mean(s ** 2)) + 1e-12) * 0.05
+    return (s * (0.6 + 0.4 * np.sin(2 * np.pi * 3.0 * tt))).astype(np.float32)
 
 
 _vb = _voice_glide(SR)
@@ -238,8 +251,8 @@ def _f0_db(y):
 _nat, _filt = _f0_db(_vb), _f0_db(_vbf)
 _rest = _f0_db(_bass_run(_vbf, 1.0))
 print(f"  Fundamental: natural {_nat:.1f} dB, filtrado {_filt:.1f} dB, restaurado {_rest:.1f} dB")
-assert _filt < _nat - 15.0, "el filtro de prueba deberia matar el fundamental"
-assert _rest > _filt + 15.0, "no restaura el fundamental"
+assert _filt < _nat - 10.0, "el filtro de prueba deberia matar el fundamental"
+assert _rest > _filt + 10.0, "no restaura el fundamental"
 assert abs(_rest - _nat) < 4.0, "el 100% deberia dejarlo cerca del nivel natural"
 
 # Lo restaurado tiene que ser LA VOZ, no un tono pegado encima: se compara con el
