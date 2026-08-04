@@ -1,6 +1,6 @@
 ﻿# RadioNoiseKiller — Manual de Usuario
 
-**Versión 1.9.1**
+**Versión 2.0**
 
 ---
 
@@ -176,6 +176,7 @@ Cada casilla de verificación activa o desactiva un módulo del pipeline de form
 | **Filtro de paso de banda (post)** | Casi siempre activo junto con el pre. Limpia artefactos del procesamiento espectral. Corre después del cancelador y el squelch (el orden de esta lista refleja el pipeline). Sus límites pueden independizarse de la entrada (ver Cap. 5). |
 | **EQ Voz (presencia + cuerpo)** | Dos bandas paramétricas: presencia (claridad, 1–2 kHz) y cuerpo (calidez, 150–800 Hz). Activar para modelar la voz con señales debilitadas o muy filtradas. |
 | **Excitador armónico** | Para señales de voz opacas, sin brillo. Añade presencia. Comparar con y sin para decidir. |
+| **Recuperar graves** | Devuelve el fundamental de la voz cuando el filtro de la radio lo cortó, derivándolo de los armónicos que sí pasaron. Para voces que suenan delgadas o "telefónicas" pese a tener buen nivel — sobre todo en SSB con filtro angosto. |
 
 > **Consejo — activar de a uno:** al armar una configuración (o al recibir una señal nueva), activar y desactivar los módulos **de a uno por vez**, escuchando el efecto que produce cada uno. Como todos los cambios aplican en vivo, se oye la diferencia al instante: eso permite ajustar mejor cada módulo — o directamente quitarlo si en esa señal no aporta. Activar todo junto de entrada hace imposible saber qué está ayudando y qué no.
 
@@ -767,6 +768,7 @@ A la derecha de la misma fila, el botón **"🔇 Mute"** silencia la salida a lo
 | Squelch | ✅ Activo | Umbral 15%, retención 300 ms |
 | EQ Voz | ✅ Activo | Presencia +4 dB a 2000 Hz; cuerpo +3 dB a 350 Hz si la voz suena delgada |
 | Excitador armónico | ⬜ Opcional | Drive 2,0×, mezcla 25% |
+| Recuperar graves | ⬜ Opcional | Si la voz suena delgada. Empezar en 35% y subir de a poco |
 
 ### AM (ondas medias o cortas)
 
@@ -785,6 +787,7 @@ A la derecha de la misma fila, el botón **"🔇 Mute"** silencia la salida a lo
 | Squelch | ❌ No usar | Produce bombeo con música |
 | EQ Voz | ⬜ Opcional | Presencia si la voz suena apagada; cuerpo si suena delgada |
 | Excitador armónico | ⬜ Opcional | Con moderación |
+| Recuperar graves | ⬜ Opcional | En AM ancho el fundamental suele estar: revisar primero el corte inferior del pasabanda |
 
 ### Flujo de calibración recomendado
 
@@ -930,4 +933,4 @@ Los valores de los sliders **Máx Y** y **Máx X** del visualizador de espectro 
 
 ---
 
-*RadioNoiseKiller — versión 1.9.1*
+*RadioNoiseKiller — versión 2.0*

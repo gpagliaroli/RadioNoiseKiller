@@ -1,6 +1,6 @@
 ﻿# RadioNoiseKiller — User Manual
 
-**Version 1.9.1**
+**Version 2.0**
 
 ---
 
@@ -176,6 +176,7 @@ Each checkbox enables or disables one pipeline module independently and in real 
 | **Bandpass filter (post)** | Almost always on together with pre. Cleans up spectral-processing artifacts. Runs after the canceller and the squelch (this list reflects the pipeline order). Its limits can be made independent from the input (see Ch. 5). |
 | **Voice EQ (presence + body)** | Two parametric bands: presence (clarity, 1–2 kHz) and body (warmth, 150–800 Hz). Enable to shape the voice on weakened or heavily filtered signals. |
 | **Harmonic exciter** | For dull voice signals lacking brightness. Adds presence. Compare with and without to decide. |
+| **Restore bass** | Brings back the voice's fundamental when the radio's filter cut it, deriving it from the harmonics that did get through. For voices that sound thin or "telephone-like" despite a good level — above all on SSB with a narrow filter. |
 
 > **Tip — enable one at a time:** when building a configuration (or on a new signal), enable and disable the modules **one at a time**, listening to the effect each one produces. Since all changes apply live, you hear the difference instantly: that lets you tune each module better — or simply drop it if it brings nothing on that signal. Enabling everything at once makes it impossible to tell what is helping and what is not.
 
@@ -767,6 +768,7 @@ On the right of the same row, the **"🔇 Mute"** button silences the speaker ou
 | Squelch | ✅ On | Threshold 15%, hold 300 ms |
 | Voice EQ | ✅ On | Presence +4 dB at 2000 Hz; body +3 dB at 350 Hz if the voice sounds thin |
 | Harmonic exciter | ⬜ Optional | Drive 2.0×, mix 25% |
+| Restore bass | ⬜ Optional | If the voice sounds thin. Start at 35% and raise it gradually |
 
 ### AM (medium wave or shortwave)
 
@@ -785,6 +787,7 @@ On the right of the same row, the **"🔇 Mute"** button silences the speaker ou
 | Squelch | ❌ Do not use | Produces pumping with music |
 | Voice EQ | ⬜ Optional | Presence if the voice sounds dull; body if it sounds thin |
 | Harmonic exciter | ⬜ Optional | In moderation |
+| Restore bass | ⬜ Optional | On wide AM the fundamental is usually there: check the bandpass low cut first |
 
 ### Recommended calibration flow
 
@@ -930,4 +933,4 @@ The **Max Y** and **Max X** sliders of the spectrum viewer are also saved in `se
 
 ---
 
-*RadioNoiseKiller — version 1.9.1*
+*RadioNoiseKiller — version 2.0*

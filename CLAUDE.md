@@ -268,7 +268,16 @@ Bugs reales encontrados en revisión — cada uno es un patrón que puede reapar
    `test_post_filter_on_principal_autoenable`, falla intermitente según el estado del disco). Al
    testear un handler de slider, partir de un valor distinto conocido.
 
-## Cambios pendientes de release (post-v1.9.1)
+**v2.0 publicada (agosto 2026)** — release en GitHub con distribuibles Windows y Linux. Versión de
+app 2.0.0, manuales `MANUAL_RadioNoiseKiller_v2.0.pdf` (ES, 37 págs) y `..._v2.0_EN.pdf` (EN, 36
+págs). Título "v2.0 by LU6APA". **Salto de mayor, no de menor**: cambió el corazón del cancelador y,
+sobre todo, **el significado numérico de varios controles** (Post-Filtro, Intensidad, Mezcla del
+excitador). Los presets de 1.9.x cargan sin error pero no suenan igual — los 8 de fábrica se
+reajustaron en el aire. Todo el contenido de abajo se validó escuchando en la radio, con varias
+iteraciones de ida y vuelta (ver los "reportado en el aire" de cada ítem: casi todos los fixes de
+esta versión salieron de una escucha que contradijo una medición sintética).
+
+## Cambios de la v2.0
 
 **Post-filtro rediseñado + anti-gorgojeo automático** (investigación de agosto 2026; medido en
 simulación, **pendiente de validación en el aire**):

@@ -76,7 +76,7 @@
     "voice_leveler_release_ms": 1500.0
   },
   "gain": {
-    "input_gain_db": -2.5,
+    "input_gain_db": -3.0,
     "output_gain_db": 0.0,
     "peak_limit_db": -1.5
   }

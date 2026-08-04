@@ -268,7 +268,9 @@
       "PowerShell(.venv\\\\Scripts\\\\python.exe tests\\\\test_dsp.py 2>&1 | Select-Object -Last 10)",
       "PowerShell(.venv\\\\Scripts\\\\python.exe tests\\\\run_all.py 2>&1 | Select-Object -Last 5; Write-Output \"=== status ===\"; git status --short)",
       "PowerShell(.venv\\\\Scripts\\\\python.exe \"$env:TEMP\\\\rnk_bass_cal2.py\")",
-      "PowerShell(.venv\\\\Scripts\\\\python.exe tests\\\\test_dsp.py 2>&1 | Select-Object -Last 6)"
+      "PowerShell(.venv\\\\Scripts\\\\python.exe tests\\\\test_dsp.py 2>&1 | Select-Object -Last 6)",
+      "PowerShell(.venv\\\\Scripts\\\\python.exe tests\\\\run_all.py 2>&1 | Select-Object -Last 4)",
+      "PowerShell(.venv\\\\Scripts\\\\python.exe tools\\\\gen_pipeline_diagram.py; Write-Output \"=== PDFs ===\"; .venv\\\\Scripts\\\\python.exe tools\\\\gen_manual_pdf.py MANUAL.md MANUAL_RadioNoiseKiller_v2.0.pdf; .venv\\\\Scripts\\\\python.exe tools\\\\gen_manual_pdf.py MANUAL_EN.md MANUAL_RadioNoiseKiller_v2.0_EN.pdf)"
     ]
   }
 }

@@ -55,6 +55,7 @@ STAGES = [
     ("Filtro de Paso de Banda — POST", "Bandpass Filter — POST", "Limpia fugas espectrales post-procesado", "Cleans spectral leakage after processing", "st"),
     ("EQ de Voz: presencia + cuerpo", "Voice EQ: presence + body", "Realza consonantes y cuerpo de la voz", "Boosts consonants and voice body", "st"),
     ("Excitador Armónico", "Harmonic Exciter", "Genera armónicos para recuperar brillo (opcional)", "Adds harmonics to restore brightness (optional)", "st"),
+    ("Recuperar Graves", "Restore Bass", "Devuelve el fundamental que cortó la radio (opcional)", "Brings back the fundamental the radio cut (optional)", "st"),
     ("Ganancia de salida + Limitador", "Output gain + Limiter", "Nivel final y limitador de picos", "Final level and peak limiter", "st"),
     ("AUDIO — SALIDA", "AUDIO — OUTPUT", "", "", "io"),
 ]
