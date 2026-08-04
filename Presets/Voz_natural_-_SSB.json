@@ -27,7 +27,7 @@
       ],
       "SSB": [
         50,
-        4000
+        6000
       ]
     },
     "filter_order": 6,
@@ -36,10 +36,10 @@
     "anf_depth": 0.75,
     "noise_enabled": true,
     "noise_mode": "mcra",
-    "noise_alpha": 0.55,
-    "noise_floor": 0.07,
-    "noise_smooth": 0.99,
-    "noise_attack": 0.9199999999999999,
+    "noise_alpha": 0.6,
+    "noise_floor": 0.2,
+    "noise_smooth": 0.9500000000000001,
+    "noise_attack": 0.8,
     "squelch_enabled": false,
     "squelch_threshold": 0.15000000000000002,
     "squelch_hold_ms": 750.0,
@@ -62,17 +62,17 @@
     "perceptual_floor_rolloff_hz": 3000.0,
     "perceptual_floor_rolloff_depth": 0.5,
     "post_filter_enabled": true,
-    "post_filter_strength": 6.0,
+    "post_filter_strength": 3.0,
     "pitch_enhance_enabled": true,
     "pitch_enhance_strength": 0.7000000000000001,
     "noise_fading_comp": false,
-    "noise_mcra_window_ms": 800.0,
+    "noise_mcra_window_ms": 500.0,
     "noise_hf_boost": 0.0,
     "noise_fading_change_db": 5.0,
     "noise_fading_freeze_ms": 200.0,
     "voice_leveler_enabled": true,
     "voice_leveler_max_db": 12.0,
-    "voice_leveler_gate_voice": true,
+    "voice_leveler_gate_voice": false,
     "voice_leveler_release_ms": 1500.0
   },
   "gain": {
