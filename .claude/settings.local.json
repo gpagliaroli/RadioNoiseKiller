@@ -270,7 +270,10 @@
       "PowerShell(.venv\\\\Scripts\\\\python.exe \"$env:TEMP\\\\rnk_bass_cal2.py\")",
       "PowerShell(.venv\\\\Scripts\\\\python.exe tests\\\\test_dsp.py 2>&1 | Select-Object -Last 6)",
       "PowerShell(.venv\\\\Scripts\\\\python.exe tests\\\\run_all.py 2>&1 | Select-Object -Last 4)",
-      "PowerShell(.venv\\\\Scripts\\\\python.exe tools\\\\gen_pipeline_diagram.py; Write-Output \"=== PDFs ===\"; .venv\\\\Scripts\\\\python.exe tools\\\\gen_manual_pdf.py MANUAL.md MANUAL_RadioNoiseKiller_v2.0.pdf; .venv\\\\Scripts\\\\python.exe tools\\\\gen_manual_pdf.py MANUAL_EN.md MANUAL_RadioNoiseKiller_v2.0_EN.pdf)"
+      "PowerShell(.venv\\\\Scripts\\\\python.exe tools\\\\gen_pipeline_diagram.py; Write-Output \"=== PDFs ===\"; .venv\\\\Scripts\\\\python.exe tools\\\\gen_manual_pdf.py MANUAL.md MANUAL_RadioNoiseKiller_v2.0.pdf; .venv\\\\Scripts\\\\python.exe tools\\\\gen_manual_pdf.py MANUAL_EN.md MANUAL_RadioNoiseKiller_v2.0_EN.pdf)",
+      "PowerShell($p = Start-Process -FilePath \"dist_v20\\\\RadioNoiseKiller\\\\RadioNoiseKiller.exe\" -PassThru; Start-Sleep -Seconds 12; if \\(-not $p.HasExited\\) { Write-Output \"SMOKE TEST OK: vivo tras 12 s \\(PID $\\($p.Id\\)\\)\"; Stop-Process -Id $p.Id -Force } else { Write-Output \"FALLO: el exe termino con codigo $\\($p.ExitCode\\)\" })",
+      "Bash(mv \"tmp_linux/RadioNoiseKiller-linux-x86_64.zip\" \"RadioNoiseKiller_v2.0-linux-x86_64.zip\")",
+      "Bash(rmdir tmp_linux)"
     ]
   }
 }
