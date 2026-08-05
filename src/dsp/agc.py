@@ -31,6 +31,7 @@ class AGC:
         self._envelope  = 1e-6
         self._gain      = 1.0
         self._enabled   = False
+        self._max_gain_limit: "float | None" = None   # ver set_max_gain_limit
         self._attack_k  = 0.0
         self._release_k = 0.0
         # Parámetros del preset "custom" (lo usa el Nivelador de voz como AGC
@@ -91,6 +92,18 @@ class AGC:
         el nivel cambie a mitad de la captura (perfil inconsistente)."""
         self._hold = bool(hold)
 
+    def set_max_gain_limit(self, db: "float | None") -> None:
+        """Tope de ganancia ADICIONAL al del preset, en dB. None = sin tope.
+
+        Lo usa el pipeline para que el AGC no levante el ruido de banda por
+        encima de un techo elegido por el usuario ("el ruido no pasa de X dBFS").
+        Es un tope, NO un congelamiento: el AGC sigue adaptando siempre, así que
+        no puede quedar trabado. Congelarlo con un detector de voz sí se traba —
+        el detector deja de disparar con la ganancia baja y el hold no se libera
+        nunca (medido: la voz que vuelve queda 21 dB abajo)."""
+        self._max_gain_limit = (None if db is None
+                                else 10 ** (float(db) / 20.0))
+
     def set_hop(self, hop_size: int) -> None:
         """Actualiza el tamaño de bloque y recalcula las constantes de tiempo."""
         if hop_size != self._hop:
@@ -137,6 +150,8 @@ class AGC:
             self._envelope += self._release_k * (rms - self._envelope)
 
         desired = min(self._target / max(self._envelope, 1e-10), self._max_gain)
+        if self._max_gain_limit is not None:
+            desired = min(desired, self._max_gain_limit)
 
         # Reducción de ganancia: ataque rápido; recuperación: release lento
         k = self._attack_k if desired < self._gain else self._release_k

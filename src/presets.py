@@ -123,6 +123,8 @@ class PresetManager:
             "dsp": {
                 "mode":                      dsp.mode.value,
                 "agc_preset":                dsp.agc_preset,
+                "agc_noise_ceiling_enabled": dsp.agc_noise_ceiling_enabled,
+                "agc_noise_ceiling_db":      dsp.agc_noise_ceiling_db,
                 "blanker_enabled":           dsp.blanker_enabled,
                 "blanker_frame":             dsp.blanker_frame,
                 "blanker_mini":              dsp.blanker_mini,
@@ -207,6 +209,8 @@ class PresetManager:
         except ValueError:
             dsp.mode = ddef.mode
         dsp.agc_preset           = d.get("agc_preset",           ddef.agc_preset)
+        dsp.agc_noise_ceiling_enabled = bool(d.get("agc_noise_ceiling_enabled", ddef.agc_noise_ceiling_enabled))
+        dsp.agc_noise_ceiling_db = float(d.get("agc_noise_ceiling_db", ddef.agc_noise_ceiling_db))
         if dsp.agc_preset == "custom":   # AGC Custom eliminado → preset válido
             dsp.agc_preset = "medium"
         dsp.blanker_enabled      = bool(d.get("blanker_enabled",  ddef.blanker_enabled))

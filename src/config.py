@@ -42,6 +42,8 @@ class DSPConfig:
     squelch_enabled:   bool  = False
     squelch_threshold: float = 0.15  # voice_prob mínimo para gain=1.0 (0.10=sensible, 0.40=selectivo)
     squelch_hold_ms:   float = 500.0 # ms que el gate permanece abierto tras perder la voz
+    agc_noise_ceiling_enabled: bool = False  # limita la ganancia del AGC por el ruido
+    agc_noise_ceiling_db:     float = -45.0  # el ruido de banda no pasa de este nivel (-70..-25)
     exciter_enabled:   bool  = False
     exciter_drive:     float = 2.0   # saturación tanh (1.0=suave, 10.0=fuerte)
     exciter_mix:       float = 0.3   # nivel de armónicos mezclados al original (0.0–1.0)
@@ -128,6 +130,8 @@ class AppConfig:
             "dsp": {
                 "mode": self.dsp.mode.value,
                 "agc_preset": self.dsp.agc_preset,
+                "agc_noise_ceiling_enabled": self.dsp.agc_noise_ceiling_enabled,
+                "agc_noise_ceiling_db": self.dsp.agc_noise_ceiling_db,
                 "blanker_enabled":  self.dsp.blanker_enabled,
                 "bandpass_pre_enabled":  self.dsp.bandpass_pre_enabled,
                 "bandpass_post_enabled": self.dsp.bandpass_post_enabled,
@@ -235,6 +239,8 @@ class AppConfig:
         except ValueError:
             pass
         self.dsp.agc_preset       = d.get("agc_preset",       self.dsp.agc_preset)
+        self.dsp.agc_noise_ceiling_enabled = bool(d.get("agc_noise_ceiling_enabled", self.dsp.agc_noise_ceiling_enabled))
+        self.dsp.agc_noise_ceiling_db = float(d.get("agc_noise_ceiling_db", self.dsp.agc_noise_ceiling_db))
         if self.dsp.agc_preset == "custom":   # AGC Custom eliminado → preset válido
             self.dsp.agc_preset = "medium"
         self.dsp.blanker_enabled  = bool(d.get("blanker_enabled",  self.dsp.blanker_enabled))

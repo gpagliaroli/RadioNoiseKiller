@@ -126,8 +126,25 @@ Controles principales de operación: modo de recepción, AGC y activación del p
 |---------|-------------|
 | **Modo** | Selecciona el tipo de señal recibida: **AM** (amplitud modulada, ancho de banda más amplio) o **SSB** (banda lateral única, voz comprimida en frecuencia). Afecta los límites por defecto del Filtro de Paso de Banda. |
 | **AGC** | Control Automático de Ganancia. **off** = sin AGC. **slow / medium / fast** = velocidad de respuesta (ataque/release fijos por preset). Para SSB se recomienda *slow* o *medium*; para AM con señales estables, *off* o *slow*. |
+| **AGC — techo de ruido** *(Avanzada Audio)* | Limita cuánto puede amplificar el AGC, para que no levante el ruido de banda. Ver más abajo. |
 | **▶ ACTIVAR / ■ DETENER** | Inicia o detiene el procesamiento en tiempo real. Al activar, el audio fluye por todo el pipeline. |
 | **Bypass** | Pasa el audio directo de entrada a salida sin ningún procesamiento. Útil para comparar el sonido con y sin la aplicación activa. La **Ganancia de salida** (pestaña *Avanzada Audio*) también actúa en bypass, y su valor se recuerda por separado para bypass ON y OFF (ver la nota en *Ganancia y niveles*). |
+
+### AGC — techo de ruido
+
+**Ubicación:** Pestaña Avanzada Audio → grupo "AGC — techo de ruido"
+
+El AGC lleva la señal a su nivel objetivo **sin distinguir voz de ruido**. Con una estación fuerte eso es exactamente lo que uno quiere; con una señal débil, lo que mide es casi todo ruido de banda, y lo amplifica hasta **+36 dB**. El resultado es el siseo molesto que aparece cuando la estación deja de transmitir: medido, el AGC llega a su tope y el ruido queda 24 dB más arriba de lo necesario.
+
+Con esta opción, la ganancia del AGC se topea para que **el ruido de fondo no supere el nivel que elijas**. El AGC sigue adaptando normalmente — no se congela — y la voz la termina de levantar el **Nivelador de voz**, que sí distingue voz de ruido porque actúa después del cancelador.
+
+| Control | Rango | Default | Descripción |
+|---------|-------|---------|-------------|
+| **El ruido no pasa de** | −70 a −25 dBFS | −45 dBFS | Nivel máximo que se le permite al ruido de fondo. Más bajo = fondo más silencioso. |
+
+**Indicador "Tope aplicado":** muestra cuánta ganancia le queda permitida al AGC en este momento. Es la forma de darse cuenta si el techo quedó **por debajo** del piso de ruido real de la entrada: en ese caso el tope ahoga también la voz y el indicador marca **0 dB en rojo**. Si lo ves así, subí el umbral.
+
+> **Por qué es un tope y no un "congelar el AGC cuando no hay voz":** esa alternativa parece más directa pero se traba. El detector de voz trabaja sobre la señal ya amplificada por el AGC; si se congela la ganancia en un valor bajo, el detector deja de dispararse, el congelamiento no se libera nunca y la voz que vuelve queda muy por debajo (medido: 21 dB). Un tope, en cambio, deja al AGC adaptando siempre, así que no puede quedar atrapado.
 
 ### Idioma de la interfaz
 

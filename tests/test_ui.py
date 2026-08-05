@@ -209,6 +209,26 @@ def test_bass_and_character_controls():
     print("Graves y caracter: gating y config          OK")
 
 
+def test_agc_noise_ceiling_controls():
+    """Techo de ruido del AGC: el slider sigue al checkbox y ambos llegan a config."""
+    w = _win()
+    aud = w._adv_audio_tab
+
+    aud._chk_agc_ceiling.setChecked(False)
+    _app.processEvents()
+    assert not aud._s_agc_ceiling._slider.isEnabled(), "el slider deberia estar apagado"
+
+    aud._chk_agc_ceiling.setChecked(True)
+    _app.processEvents()
+    assert aud._s_agc_ceiling._slider.isEnabled(), "el slider no se habilito"
+    assert w._config.dsp.agc_noise_ceiling_enabled, "el checkbox no llego a la config"
+
+    aud._s_agc_ceiling.set_value(-50.0, emit=True)
+    _app.processEvents()
+    assert abs(w._config.dsp.agc_noise_ceiling_db + 50.0) < 1e-6, "el umbral no llego a la config"
+    print("Techo de ruido del AGC: controles           OK")
+
+
 def test_voice_leveler_requires_noise():
     """El nivelador de voz vive en Avanzada Audio pero su VAD requiere el
     cancelador (invariante 2)."""
@@ -625,6 +645,7 @@ if __name__ == "__main__":
     test_auto_load_respects_saved_mode()
     test_canceller_subcontrols_require_noise()
     test_bass_and_character_controls()
+    test_agc_noise_ceiling_controls()
     test_voice_leveler_requires_noise()
     test_leveler_continuous_checkbox()
     test_bandpass_sliders_gated_by_mode()

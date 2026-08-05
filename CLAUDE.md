@@ -277,6 +277,30 @@ reajustaron en el aire. Todo el contenido de abajo se validó escuchando en la r
 iteraciones de ida y vuelta (ver los "reportado en el aire" de cada ítem: casi todos los fixes de
 esta versión salieron de una escucha que contradijo una medición sintética).
 
+**Post-v2.0 (pendiente de release): techo de ruido del AGC.** Reportado en el aire: *"con baja señal
+el AGC sube la salida a −20 dB y queda un ruido molesto"*. El AGC de entrada lleva lo que mida a su
+target **sin distinguir voz de ruido**, y tiene hasta **+36 dB**: medido, tras el fin de una
+transmisión se va a 35.4 dB persiguiendo el ruido. El nivelador de voz no era el culpable (el
+usuario probó sacarle el modo continuo y no cambió nada).
+- Fix: `AGC.set_max_gain_limit(db)` — tope de ganancia adicional al del preset, calculado por el
+  pipeline como `techo_dBFS − piso_de_ruido_de_entrada`. `agc_noise_ceiling_enabled/_db` en
+  DSPConfig; checkbox + slider + indicador "Tope aplicado" en Avanzada Audio.
+- El piso de ruido se mide sobre la entrada **CRUDA (pre-AGC)** con seguimiento de mínimos
+  (`_track_input_noise`): si se midiera después del AGC, el tope dependería de la ganancia que está
+  limitando y se realimentaría.
+- Medido con voz a −46 dBFS y ruido a −56: con techo −45 dBFS el ruido tras la transmisión pasa de
+  −54.7 a **−77.9 dB** (−23 dB) y la voz solo baja 4 dB (el nivelador post-cancelador recupera el
+  resto). Con techo −55 (por debajo del piso real de entrada) la voz se ahoga: −62 dB. **Por eso el
+  indicador**: en 0 dB (rojo) el techo está limitando de más.
+- **Se descartó, por medición, "congelar el AGC cuando no hay voz"**, que era la idea intuitiva:
+  da −22 dB de ruido pero **se traba**. El VAD trabaja sobre la señal ya amplificada por el AGC; con
+  la ganancia congelada baja, el vp se queda en 0.01–0.12, el hold no se libera nunca y la voz que
+  vuelve queda **21 dB abajo** (medido). Es la MISMA trampa que el freeze de MCRA por vp. **Regla
+  (segunda vez): un lazo de control no puede tomar su decisión de liberarse a partir de una señal
+  que él mismo está atenuando.** Un tope no tiene el problema porque el AGC nunca deja de adaptar.
+- Tests: `test_dsp` (el tope limita y NO congela — con señal fuerte el AGC sigue bajando) y
+  `test_ui` (gating del slider por el checkbox).
+
 **Post-v2.0 (pendiente de release): los presets de fábrica no llegaban al usuario final.**
 Detectado por el usuario mirando el zip publicado: **los dos distribuibles de la v2.0 salieron sin
 ningún preset**. El de Windows con la carpeta `Presets/` **vacía** —la crea el propio smoke test al

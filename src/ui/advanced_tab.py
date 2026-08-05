@@ -112,6 +112,7 @@ class AdvancedAudioTab(QWidget):
         for s in (self._s_exciter_drive, self._s_exciter_mix, self._s_exciter_char):
             s.set_enabled(dsp.exciter_enabled)
         self._s_bass.set_enabled(dsp.bass_enabled)
+        self._s_agc_ceiling.set_enabled(dsp.agc_noise_ceiling_enabled)
         # El nivelador requiere el cancelador activo (su VAD vive ahí — invariante 2)
         leveler_on = dsp.noise_enabled and dsp.voice_leveler_enabled
         self._s_leveler_max.set_enabled(leveler_on)
@@ -121,6 +122,7 @@ class AdvancedAudioTab(QWidget):
     def _build_ui(self) -> None:
         layout = _make_scroll_layout(self)
         layout.addWidget(self._build_audio_group())
+        layout.addWidget(self._build_agc_ceiling_group())
         layout.addWidget(self._build_leveler_group())
         layout.addWidget(self._build_dsp_group())
         layout.addWidget(self._build_voice_group())
@@ -151,6 +153,43 @@ class AdvancedAudioTab(QWidget):
         layout.addWidget(self._s_block)
         layout.addWidget(_note(tr("  ↳ Menor = menor latencia. Requiere reiniciar el procesamiento.")))
         return group
+
+    def _build_agc_ceiling_group(self) -> QGroupBox:
+        group = QGroupBox(tr("AGC — techo de ruido"))
+        layout = QVBoxLayout(group)
+
+        self._chk_agc_ceiling = QCheckBox(tr("Limitar la ganancia del AGC según el ruido"))
+        self._chk_agc_ceiling.setToolTip(tr(
+            "El AGC lleva la señal a su nivel objetivo sin distinguir voz de ruido:\n"
+            "con señal débil sube el ruido de banda hasta +36 dB y queda un siseo\n"
+            "molesto. Con esto, su ganancia se topea para que el ruido no pase del\n"
+            "nivel elegido. El AGC sigue adaptando (no se congela), así que no puede\n"
+            "quedar trabado, y la voz la termina de levantar el Nivelador de voz."))
+        self._chk_agc_ceiling.toggled.connect(self._on_agc_ceiling_toggled)
+        layout.addWidget(self._chk_agc_ceiling)
+
+        act_row = QHBoxLayout()
+        act_row.addWidget(QLabel(tr("Tope aplicado:")))
+        self._lbl_agc_ceiling = QLabel("—")
+        self._lbl_agc_ceiling.setStyleSheet("color: #888;")
+        act_row.addWidget(self._lbl_agc_ceiling)
+        act_row.addStretch()
+        layout.addLayout(act_row)
+
+        self._s_agc_ceiling = SliderRow(
+            tr("El ruido no pasa de:"),
+            min_val=-70.0, max_val=-25.0,
+            default=_DSP_DEF.agc_noise_ceiling_db,
+            step=1.0, unit="dBFS", fmt="{:.0f}",
+        )
+        self._s_agc_ceiling.valueChanged.connect(self._pipeline.set_agc_noise_ceiling_db)
+        layout.addWidget(self._s_agc_ceiling)
+        layout.addWidget(_note(tr("  ↳ Bajarlo deja el fondo más silencioso. OJO: si queda por DEBAJO del piso de ruido real de la entrada, el tope ahoga también la voz — mirá el indicador «Tope aplicado»: si marca 0 dB, está limitando de más y hay que subirlo.")))
+        return group
+
+    def _on_agc_ceiling_toggled(self, v: bool) -> None:
+        self._pipeline.set_agc_noise_ceiling_enabled(v)
+        self._s_agc_ceiling.set_enabled(v)
 
     def _build_leveler_group(self) -> QGroupBox:
         group = QGroupBox(tr("Nivelador de voz  (activar en Módulos Activos)"))
@@ -447,6 +486,8 @@ class AdvancedAudioTab(QWidget):
         self._s_pitch.set_value(cfg.pitch_shift_hz)
         self._s_exciter_drive.set_value(cfg.exciter_drive)
         self._s_exciter_mix.set_value(cfg.exciter_mix)
+        self._chk_agc_ceiling.setChecked(cfg.agc_noise_ceiling_enabled)
+        self._s_agc_ceiling.set_value(cfg.agc_noise_ceiling_db)
         self._s_exciter_char.set_value(cfg.exciter_character)
         self._s_bass.set_value(cfg.bass_amount)
 

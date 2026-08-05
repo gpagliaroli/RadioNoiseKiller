@@ -107,6 +107,11 @@ class ProcessingPipeline:
         self._squelch_hold_count:  int = 0
         self._sq_gain_prev:        float = 1.0   # ganancia del gate en el frame anterior (rampa)
         self._learn_gain_prev:     float = 1.0   # ganancia del duck de aprendizaje (rampa)
+        # Techo de ruido del AGC (ver _track_input_noise)
+        self._agc_noise_ceiling_enabled: bool = config.dsp.agc_noise_ceiling_enabled
+        self._agc_noise_ceiling_db:     float = config.dsp.agc_noise_ceiling_db
+        self._in_noise_ema: "float | None" = None
+        self._in_noise_min: float = 1.0
         self._exciter = AuralExciter(config.audio.sample_rate)
         self._exciter.set_drive(config.dsp.exciter_drive)
         self._exciter.set_mix(config.dsp.exciter_mix)
@@ -355,6 +360,9 @@ class ProcessingPipeline:
 
         self.set_bass_enabled(dsp.bass_enabled)
         self.set_bass_amount(dsp.bass_amount)
+
+        self.set_agc_noise_ceiling_enabled(dsp.agc_noise_ceiling_enabled)
+        self.set_agc_noise_ceiling_db(dsp.agc_noise_ceiling_db)
 
         self.set_presence_enabled(dsp.presence_enabled)
         self.set_presence_freq(dsp.presence_freq)
@@ -686,6 +694,24 @@ class ProcessingPipeline:
         self._config.dsp.exciter_character = character
         self._exciter.set_character(character)
 
+    def set_agc_noise_ceiling_enabled(self, v: bool) -> None:
+        self._config.dsp.agc_noise_ceiling_enabled = bool(v)
+        self._agc_noise_ceiling_enabled = bool(v)
+
+    def set_agc_noise_ceiling_db(self, db: float) -> None:
+        db = float(np.clip(db, -70.0, -25.0))    # == rango del slider (invariante 1)
+        self._config.dsp.agc_noise_ceiling_db = db
+        self._agc_noise_ceiling_db = db
+
+    @property
+    def agc_gain_ceiling_db(self) -> "float | None":
+        """Tope de ganancia que impone el techo de ruido ahora mismo, o None si no
+        está activo (indicador para la UI)."""
+        if not self._agc_noise_ceiling_enabled or self._in_noise_min <= 1e-9:
+            return None
+        return max(0.0, self._agc_noise_ceiling_db
+                   - 20.0 * float(np.log10(self._in_noise_min)))
+
     def set_bass_enabled(self, v: bool) -> None:
         self._config.dsp.bass_enabled = bool(v)
         self._bass.set_enabled(bool(v))
@@ -854,6 +880,25 @@ class ProcessingPipeline:
     # Thread de procesamiento DSP (fuera del callback de audio)
     # ------------------------------------------------------------------
 
+    # Seguidor del piso de ruido de la ENTRADA (pre-AGC), por seguimiento de mínimos:
+    # el mínimo reciente del RMS es el ruido de fondo (los valles entre palabras),
+    # mientras que un promedio incluiría la voz. Mismo patrón que el tracker del VAD.
+    _IN_NOISE_EMA:   float = 0.90    # suavizado del RMS por frame (~100 ms)
+    _IN_NOISE_DECAY: float = 1.002   # el mínimo sube 0.2%/frame (~0.6 s por dB)
+
+    def _track_input_noise(self, chunk: np.ndarray) -> None:
+        rms = float(np.sqrt(np.mean(chunk.astype(np.float64) ** 2)) + 1e-12)
+        if self._in_noise_ema is None:
+            self._in_noise_ema = rms
+            self._in_noise_min = rms
+            return
+        a = self._IN_NOISE_EMA
+        self._in_noise_ema = a * self._in_noise_ema + (1.0 - a) * rms
+        if self._in_noise_ema < self._in_noise_min:
+            self._in_noise_min = self._in_noise_ema
+        else:
+            self._in_noise_min *= self._IN_NOISE_DECAY
+
     def _drain_queues(self) -> None:
         for q in (self._in_queue, self._out_queue):
             while True:
@@ -910,6 +955,19 @@ class ProcessingPipeline:
                             chunk  = chunk.copy()
                             chunk[:n_complete] = (mini * scales[:, np.newaxis].astype(np.float32)).ravel()
                             self._blanker_hits += int(np.sum(over))
+
+                # Techo de ruido: limita cuánto puede amplificar el AGC, para que
+                # no levante el ruido de banda por encima del nivel elegido. Se
+                # calcula sobre la entrada CRUDA (pre-AGC), así el tope no depende
+                # de la propia ganancia que está limitando — si dependiera, se
+                # realimentaría (la lección del freeze de MCRA). Ver _track_input_noise.
+                self._track_input_noise(chunk)
+                if self._agc_noise_ceiling_enabled and self._in_noise_min > 1e-9:
+                    noise_db = 20.0 * float(np.log10(self._in_noise_min))
+                    self._agc.set_max_gain_limit(
+                        max(0.0, self._agc_noise_ceiling_db - noise_db))
+                else:
+                    self._agc.set_max_gain_limit(None)
 
                 # Durante el aprendizaje del perfil: AGC congelado (si no, sube
                 # la ganancia sobre el ruido y el perfil captura un barrido de

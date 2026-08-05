@@ -275,3 +275,43 @@ _rumble = (20 * np.log10(np.sqrt(np.mean(_sosfilt(_lp200, _added) ** 2)) + 1e-12
 print(f"  Con ruido solo agrega {_rumble:.1f} dB bajo 200 Hz")
 assert _rumble < -10.0, "retumba con ruido (deberia callarse sin voz)"
 print("  Recuperacion de graves: OK")
+
+# --- AGC: techo de ganancia (para que no persiga el ruido) -------------------
+# El AGC lleva lo que mida a su target sin distinguir voz de ruido: con señal
+# debil sube el ruido de banda hasta +36 dB. El techo lo limita SIN congelarlo —
+# congelarlo con un detector de voz se traba, porque el detector deja de disparar
+# con la ganancia baja y el hold no se libera nunca (medido: la voz que vuelve
+# quedaba 21 dB abajo). Ver dsp/agc.py.
+from dsp.agc import AGC   # noqa: E402
+
+print("\n=== AGC: techo de ganancia ===")
+_nz_agc = (np.random.default_rng(3).standard_normal(SR) * 10 ** (-55 / 20)).astype(np.float32)
+
+
+def _agc_gain_after(limit_db):
+    a = AGC(SR, 480)
+    a.set_preset("medium")
+
+    a.set_max_gain_limit(limit_db)
+    for i in range(0, len(_nz_agc), 480):
+        a.process(_nz_agc[i:i + 480])
+    return a.gain_db
+
+
+_g_libre = _agc_gain_after(None)
+_g_tope = _agc_gain_after(12.0)
+print(f"  Ruido a -55 dBFS: sin techo {_g_libre:.1f} dB, con techo de 12 dB {_g_tope:.1f} dB")
+assert _g_libre > 25.0, "sin techo el AGC deberia perseguir el ruido hasta el tope del preset"
+assert _g_tope <= 12.5, "el techo no limita la ganancia"
+
+# Y el techo NO congela: al llegar señal fuerte el AGC baja la ganancia como siempre
+_a = AGC(SR, 480)
+_a.set_preset("fast"); _a.set_max_gain_limit(12.0)
+for i in range(0, len(_nz_agc), 480):
+    _a.process(_nz_agc[i:i + 480])
+_fuerte = (0.3 * np.sin(2 * np.pi * 800 * _t[:SR // 2])).astype(np.float32)
+for i in range(0, len(_fuerte), 480):
+    _a.process(_fuerte[i:i + 480])
+print(f"  Con señal fuerte baja a {_a.gain_db:.1f} dB (sigue adaptando, no se congelo)")
+assert _a.gain_db < 5.0, "el AGC quedo trabado con el techo puesto"
+print("  Techo de ganancia del AGC: OK")

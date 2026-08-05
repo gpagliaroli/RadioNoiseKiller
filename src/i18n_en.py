@@ -352,6 +352,25 @@ CATALOG = {
     "  ↳ Saturación tanh: cuántos armónicos se generan y de qué orden. Suave = sutil, agresivo = efecto notable. No cambia el nivel de la banda: solo agrega armónicos nuevos.":
         "  ↳ Tanh saturation: how many harmonics are generated and of what order. Soft = subtle, "
         "aggressive = pronounced. It does not change the band's level: it only adds new harmonics.",
+    "AGC — techo de ruido": "AGC — noise ceiling",
+    "Limitar la ganancia del AGC según el ruido": "Limit the AGC's gain according to the noise",
+    "El AGC lleva la señal a su nivel objetivo sin distinguir voz de ruido:\n"
+    "con señal débil sube el ruido de banda hasta +36 dB y queda un siseo\n"
+    "molesto. Con esto, su ganancia se topea para que el ruido no pase del\n"
+    "nivel elegido. El AGC sigue adaptando (no se congela), así que no puede\n"
+    "quedar trabado, y la voz la termina de levantar el Nivelador de voz.":
+        "The AGC brings the signal to its target level without telling speech from noise:\n"
+        "on a weak signal it lifts the band noise by up to +36 dB and leaves an\n"
+        "annoying hiss. With this, its gain is capped so the noise never exceeds the\n"
+        "chosen level. The AGC keeps adapting (it is not frozen), so it cannot get\n"
+        "stuck, and the Voice leveller finishes lifting the speech.",
+    "Tope aplicado:": "Cap applied:",
+    "El ruido no pasa de:": "Noise not above:",
+    "máx +{db:.0f} dB": "max +{db:.0f} dB",
+    "  ↳ Bajarlo deja el fondo más silencioso. OJO: si queda por DEBAJO del piso de ruido real de la entrada, el tope ahoga también la voz — mirá el indicador «Tope aplicado»: si marca 0 dB, está limitando de más y hay que subirlo.":
+        "  ↳ Lowering it leaves a quieter background. WATCH OUT: if it ends up BELOW the input's "
+        "actual noise floor, the cap chokes the voice too — check the «Cap applied» indicator: if it "
+        "reads 0 dB it is limiting too much and you need to raise it.",
     "Mezcla:": "Mix:",
     "Carácter:": "Character:",
     "impar": "odd",

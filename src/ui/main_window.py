@@ -1594,6 +1594,8 @@ class MainWindow(QMainWindow):
             self._lbl_leveler.setStyleSheet("color: #555; font-size: 8pt; font-weight: bold;")
             self._adv_audio_tab._lbl_leveler_act.setText("—")
             self._adv_audio_tab._lbl_leveler_act.setStyleSheet("color: #555;")
+            self._adv_audio_tab._lbl_agc_ceiling.setText("—")
+            self._adv_audio_tab._lbl_agc_ceiling.setStyleSheet("color: #555;")
             self._status_bar.showMessage(tr("Detenido."))
             self._btn_refresh_devices.setEnabled(True)
             self._combo_in.setEnabled(True)
@@ -1646,6 +1648,19 @@ class MainWindow(QMainWindow):
         self._lbl_leveler.setStyleSheet(f"color: {lev_color}; font-size: 8pt; font-weight: bold;")
         self._adv_audio_tab._lbl_leveler_act.setText(lev_text)
         self._adv_audio_tab._lbl_leveler_act.setStyleSheet(f"color: {lev_color}; font-weight: bold;")
+
+        # Techo de ruido del AGC: cuánto puede amplificar ahora mismo. En 0 dB el
+        # techo quedó por debajo del piso real de entrada y está ahogando la señal
+        # (invariante 5: el indicador se actualiza siempre, no detrás de un return).
+        ceil = self._pipeline.agc_gain_ceiling_db
+        if ceil is None:
+            self._adv_audio_tab._lbl_agc_ceiling.setText("—")
+            self._adv_audio_tab._lbl_agc_ceiling.setStyleSheet("color: #555;")
+        else:
+            col = "#ff5252" if ceil < 1.0 else "#ffb74d" if ceil < 6.0 else "#69f0ae"
+            self._adv_audio_tab._lbl_agc_ceiling.setText(
+                tr("máx +{db:.0f} dB").format(db=ceil))
+            self._adv_audio_tab._lbl_agc_ceiling.setStyleSheet(f"color: {col}; font-weight: bold;")
 
         # Grabación: tiempo transcurrido, y detección de muerte por error de
         # disco (el writer marca recording=False solo; el botón queda checked)
