@@ -142,7 +142,12 @@ With this option, the AGC's gain is capped so the **background noise never excee
 |---------|-------|---------|-------------|
 | **Noise not above** | −70 to −25 dBFS | −45 dBFS | Maximum level the background noise is allowed. Lower = quieter background. |
 
-**"Cap applied" indicator:** shows how much gain the AGC is still allowed right now. It is how you notice the ceiling landing **below** the input's actual noise floor: in that case the cap chokes the voice too and the indicator reads **0 dB in red**. If you see that, raise the threshold.
+**"Cap applied" indicator:** shows the **noise floor measured on your input** and whether the cap is actually acting. That is what makes the control understandable, since the cap equals `ceiling − floor`:
+
+- *"floor −38 dBFS · no effect"* — the cap exists but the AGC never reaches it. **This is normal on a strong signal**: the AGC does not want to amplify, so there is nothing to limit. The ceiling will come into play once the signal weakens.
+- *"floor −38 dBFS · limiting to +7 dB"* — the cap is biting: the AGC would amplify further and we are not letting it. That is the expected working mode on a weak signal.
+
+Use the floor it shows to pick your threshold: **set it above that value**. Below it, the cap allows 0 dB of gain and the control stops making sense.
 
 > **Why a cap and not "freeze the AGC when there is no speech":** that alternative looks more direct but it deadlocks. The voice detector works on the signal already amplified by the AGC; if the gain is frozen at a low value, the detector stops firing, the freeze is never released and the returning voice comes back far too low (measured: 21 dB). A cap, by contrast, leaves the AGC adapting at all times, so it cannot get trapped.
 

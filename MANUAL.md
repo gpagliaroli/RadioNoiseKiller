@@ -142,7 +142,12 @@ Con esta opción, la ganancia del AGC se topea para que **el ruido de fondo no s
 |---------|-------|---------|-------------|
 | **El ruido no pasa de** | −70 a −25 dBFS | −45 dBFS | Nivel máximo que se le permite al ruido de fondo. Más bajo = fondo más silencioso. |
 
-**Indicador "Tope aplicado":** muestra cuánta ganancia le queda permitida al AGC en este momento. Es la forma de darse cuenta si el techo quedó **por debajo** del piso de ruido real de la entrada: en ese caso el tope ahoga también la voz y el indicador marca **0 dB en rojo**. Si lo ves así, subí el umbral.
+**Indicador "Tope aplicado":** muestra el **piso de ruido medido en tu entrada** y si el tope está actuando. Es el dato que hace entendible el control, porque el tope vale `techo − piso`:
+
+- *"piso −38 dBFS · sin efecto"* — el tope existe pero el AGC no lo alcanza. **Es lo normal con señal fuerte**: el AGC no quiere amplificar, así que no hay nada que limitar. El techo va a entrar en acción recién cuando la señal se debilite.
+- *"piso −38 dBFS · limitando a +7 dB"* — el tope está mordiendo: el AGC querría amplificar más y no lo dejamos. Es el modo de trabajo esperado con señal débil.
+
+Usá el piso que muestra para elegir el umbral: **ponelo por encima de ese valor**. Si lo ponés por debajo, el tope da 0 dB de ganancia permitida y el control deja de tener sentido.
 
 > **Por qué es un tope y no un "congelar el AGC cuando no hay voz":** esa alternativa parece más directa pero se traba. El detector de voz trabaja sobre la señal ya amplificada por el AGC; si se congela la ganancia en un valor bajo, el detector deja de dispararse, el congelamiento no se libera nunca y la voz que vuelve queda muy por debajo (medido: 21 dB). Un tope, en cambio, deja al AGC adaptando siempre, así que no puede quedar atrapado.
 

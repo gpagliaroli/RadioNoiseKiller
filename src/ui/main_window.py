@@ -1652,15 +1652,22 @@ class MainWindow(QMainWindow):
         # Techo de ruido del AGC: cuánto puede amplificar ahora mismo. En 0 dB el
         # techo quedó por debajo del piso real de entrada y está ahogando la señal
         # (invariante 5: el indicador se actualiza siempre, no detrás de un return).
-        ceil = self._pipeline.agc_gain_ceiling_db
-        if ceil is None:
+        ceil  = self._pipeline.agc_gain_ceiling_db
+        floor = self._pipeline.input_noise_db
+        if ceil is None or floor is None:
             self._adv_audio_tab._lbl_agc_ceiling.setText("—")
             self._adv_audio_tab._lbl_agc_ceiling.setStyleSheet("color: #555;")
-        else:
-            col = "#ff5252" if ceil < 1.0 else "#ffb74d" if ceil < 6.0 else "#69f0ae"
+        elif self._pipeline.agc_ceiling_limiting:
+            # Está mordiendo: el AGC quiere más ganancia de la permitida
             self._adv_audio_tab._lbl_agc_ceiling.setText(
-                tr("máx +{db:.0f} dB").format(db=ceil))
+                tr("piso {fl:.0f} dBFS · limitando a +{db:.0f} dB").format(fl=floor, db=ceil))
+            col = "#ff5252" if ceil < 1.0 else "#ffb74d"
             self._adv_audio_tab._lbl_agc_ceiling.setStyleSheet(f"color: {col}; font-weight: bold;")
+        else:
+            # El tope existe pero el AGC no lo alcanza: no está limitando nada
+            self._adv_audio_tab._lbl_agc_ceiling.setText(
+                tr("piso {fl:.0f} dBFS · sin efecto").format(fl=floor))
+            self._adv_audio_tab._lbl_agc_ceiling.setStyleSheet("color: #888;")
 
         # Grabación: tiempo transcurrido, y detección de muerte por error de
         # disco (el writer marca recording=False solo; el botón queda checked)

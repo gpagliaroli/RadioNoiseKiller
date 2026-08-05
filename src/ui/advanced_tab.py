@@ -184,7 +184,7 @@ class AdvancedAudioTab(QWidget):
         )
         self._s_agc_ceiling.valueChanged.connect(self._pipeline.set_agc_noise_ceiling_db)
         layout.addWidget(self._s_agc_ceiling)
-        layout.addWidget(_note(tr("  ↳ Bajarlo deja el fondo más silencioso. OJO: si queda por DEBAJO del piso de ruido real de la entrada, el tope ahoga también la voz — mirá el indicador «Tope aplicado»: si marca 0 dB, está limitando de más y hay que subirlo.")))
+        layout.addWidget(_note(tr("  ↳ Ponerlo POR ENCIMA del piso que muestra el indicador (si queda por debajo, no hay ganancia posible y el tope no sirve). Con señal fuerte el AGC no quiere amplificar y el indicador dice «sin efecto»: es normal, el techo actúa recién cuando la señal se debilita.")))
         return group
 
     def _on_agc_ceiling_toggled(self, v: bool) -> None:

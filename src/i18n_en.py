@@ -366,11 +366,13 @@ CATALOG = {
         "stuck, and the Voice leveller finishes lifting the speech.",
     "Tope aplicado:": "Cap applied:",
     "El ruido no pasa de:": "Noise not above:",
-    "máx +{db:.0f} dB": "max +{db:.0f} dB",
-    "  ↳ Bajarlo deja el fondo más silencioso. OJO: si queda por DEBAJO del piso de ruido real de la entrada, el tope ahoga también la voz — mirá el indicador «Tope aplicado»: si marca 0 dB, está limitando de más y hay que subirlo.":
-        "  ↳ Lowering it leaves a quieter background. WATCH OUT: if it ends up BELOW the input's "
-        "actual noise floor, the cap chokes the voice too — check the «Cap applied» indicator: if it "
-        "reads 0 dB it is limiting too much and you need to raise it.",
+    "piso {fl:.0f} dBFS · limitando a +{db:.0f} dB":
+        "floor {fl:.0f} dBFS · limiting to +{db:.0f} dB",
+    "piso {fl:.0f} dBFS · sin efecto": "floor {fl:.0f} dBFS · no effect",
+    "  ↳ Ponerlo POR ENCIMA del piso que muestra el indicador (si queda por debajo, no hay ganancia posible y el tope no sirve). Con señal fuerte el AGC no quiere amplificar y el indicador dice «sin efecto»: es normal, el techo actúa recién cuando la señal se debilita.":
+        "  ↳ Set it ABOVE the floor shown by the indicator (below it, no gain is possible and the cap "
+        "is useless). On a strong signal the AGC does not want to amplify and the indicator reads «no "
+        "effect»: that is normal — the ceiling only acts once the signal weakens.",
     "Mezcla:": "Mix:",
     "Carácter:": "Character:",
     "impar": "odd",

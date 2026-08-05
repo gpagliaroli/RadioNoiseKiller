@@ -712,6 +712,23 @@ class ProcessingPipeline:
         return max(0.0, self._agc_noise_ceiling_db
                    - 20.0 * float(np.log10(self._in_noise_min)))
 
+    @property
+    def input_noise_db(self) -> "float | None":
+        """Piso de ruido medido en la entrada (pre-AGC), en dBFS. Es el dato que
+        hace entendible el techo: el tope vale `techo − piso`, así que un techo por
+        debajo del piso da 0 dB de ganancia permitida."""
+        if self._in_noise_ema is None or self._in_noise_min <= 1e-9:
+            return None
+        return 20.0 * float(np.log10(self._in_noise_min))
+
+    @property
+    def agc_ceiling_limiting(self) -> bool:
+        """True si el tope está MORDIENDO ahora (el AGC quiere más ganancia de la
+        permitida). Con señal fuerte el AGC no quiere amplificar, así que un tope
+        de 0 dB no limita nada — sin esto el indicador alarma sin motivo."""
+        cap = self.agc_gain_ceiling_db
+        return cap is not None and self._agc.enabled and self._agc.gain_db >= cap - 0.5
+
     def set_bass_enabled(self, v: bool) -> None:
         self._config.dsp.bass_enabled = bool(v)
         self._bass.set_enabled(bool(v))
