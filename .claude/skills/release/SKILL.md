@@ -69,6 +69,13 @@ diagnósticos — correrlos a mano si el release tocó enumeración de dispositi
 5. Zip: `RadioNoiseKiller_vX.Y.zip`.
 6. Smoke test: lanzar el exe, confirmar vivo ~10 s, matar. (El título/ventana no son
    enumerables desde la sesión del agente — vivo alcanza; la verificación visual es del usuario.)
+7. **Verificar el CONTENIDO del zip antes de publicar**, no solo que exista:
+   `RadioNoiseKiller/Presets/*.json` (los 7 de fábrica), los dos PDFs y el binario.
+   En v2.0 se publicaron los dos zips **sin ningún preset** — el de Windows con la carpeta
+   `Presets/` vacía (la crea el propio smoke test al ejecutar el exe, lo que la hace parecer
+   correcta) y el de Linux directamente sin la carpeta. Lo detectó el usuario mirando el zip.
+   Ojo también: si se corre el exe antes de zipear, quedan dentro `PerfilesRuido/` y
+   `settings.json` del smoke test — inofensivos pero conviene saberlo.
 
 ## 6. Build Linux (artifact del CI)
 

@@ -277,6 +277,25 @@ reajustaron en el aire. Todo el contenido de abajo se validó escuchando en la r
 iteraciones de ida y vuelta (ver los "reportado en el aire" de cada ítem: casi todos los fixes de
 esta versión salieron de una escucha que contradijo una medición sintética).
 
+**Post-v2.0 (pendiente de release): los presets de fábrica no llegaban al usuario final.**
+Detectado por el usuario mirando el zip publicado: **los dos distribuibles de la v2.0 salieron sin
+ningún preset**. El de Windows con la carpeta `Presets/` **vacía** —la crea el propio smoke test al
+ejecutar el exe, así que *parece* correcta— y el de Linux directamente sin la carpeta. Los assets
+del release ya se corrigieron re-empaquetando (sin tocar el binario), pero el problema de fondo era
+estructural: **`resource_path()` y `presets_dir()` NO son la misma carpeta en un bundle** —
+los recursos empaquetados viven en `_MEIPASS` (`_internal/`) y la carpeta de presets es escribible,
+junto al ejecutable. Agregar los presets a `datas` del spec no alcanza: quedan en `_internal/Presets`,
+donde la app no los busca.
+- Fix: los dos specs empaquetan `Presets/*.json` como recurso y `utils.seed_factory_presets()` los
+  copia a la carpeta escribible en el primer arranque (solo si no hay ningún `.json`, para respetar
+  a quien borró alguno a propósito). Se llama desde `MainWindow.__init__` antes de crear el
+  `PresetManager`.
+- Tests en `test_presets`: el seed copia y no vuelve a pisar; y los dos specs empaquetan los JSON.
+- Skill de release: paso nuevo que obliga a **verificar el contenido del zip** (presets, PDFs y
+  binario) antes de publicar. **Regla: verificar que el artefacto contenga lo que debe, no solo que
+  el build haya terminado bien.** Una carpeta vacía creada por el smoke test se ve igual que una
+  carpeta correcta en un listado.
+
 ## Cambios de la v2.0
 
 **Post-filtro rediseñado + anti-gorgojeo automático** (investigación de agosto 2026; medido en

@@ -282,6 +282,56 @@ def test_missing_bandpass_mode_uses_default():
         print("Bandpass: modo ausente -> default OK")
 
 
+# ---------------------------------------------------------------------------- #
+# 5. Presets de fabrica: llegan al usuario final                                 #
+# ---------------------------------------------------------------------------- #
+
+def test_seed_factory_presets():
+    """En un bundle, los presets de fabrica viven en los recursos empaquetados
+    (_MEIPASS) y la carpeta Presets/ del usuario es OTRA (escribible, junto al
+    exe). Sin copiarlos, el usuario que baja el release abre la app y encuentra la
+    lista VACIA — paso en la v2.0, donde ademas el zip de Linux ni siquiera traia
+    la carpeta. Se verifica que la copia ocurra y que NO pise nada si ya hay algo.
+    """
+    import utils
+
+    with tempfile.TemporaryDirectory() as res_dir, tempfile.TemporaryDirectory() as data_dir:
+        src = os.path.join(res_dir, "Presets")
+        os.makedirs(src)
+        for name in ("Uno.json", "Dos.json"):
+            with open(os.path.join(src, name), "w", encoding="utf-8") as f:
+                json.dump({"name": name[:-5], "version": 1, "dsp": {}, "gain": {}}, f)
+
+        orig_env = os.environ.get(utils.DATA_DIR_ENV)
+        orig_resource = utils.resource_path
+        os.environ[utils.DATA_DIR_ENV] = data_dir
+        utils.resource_path = lambda rel: os.path.join(res_dir, rel)
+        try:
+            assert utils.seed_factory_presets() == 2, "no copio los presets de fabrica"
+            assert len(PresetManager(utils.presets_dir()).list_names()) == 2
+
+            # Segunda corrida: ya hay presets, no debe tocar nada (respeta al que
+            # borro alguno a proposito y no pisa ajustes en cada arranque)
+            assert utils.seed_factory_presets() == 0, "volvio a copiar sobre lo existente"
+        finally:
+            utils.resource_path = orig_resource
+            if orig_env is None:
+                os.environ.pop(utils.DATA_DIR_ENV, None)
+            else:
+                os.environ[utils.DATA_DIR_ENV] = orig_env
+    print("Seed de presets de fabrica       OK")
+
+
+def test_specs_bundle_factory_presets():
+    """Los dos .spec tienen que empaquetar los JSON de Presets/, o el seed no
+    tiene de donde copiar."""
+    root = os.path.join(os.path.dirname(__file__), "..")
+    for spec in ("reductor.spec", "reductor-linux.spec"):
+        src = open(os.path.join(root, spec), encoding="utf-8").read()
+        assert '"Presets"' in src and "Presets" in src, f"{spec} no empaqueta los presets"
+    print("Specs empaquetan los presets     OK")
+
+
 if __name__ == "__main__":
     test_capture_covers_all_dsp_fields()
     test_capture_covers_all_gain_fields()
@@ -293,5 +343,7 @@ if __name__ == "__main__":
     test_load_applies_mode()
     test_missing_keys_use_factory_defaults()
     test_missing_bandpass_mode_uses_default()
+    test_seed_factory_presets()
+    test_specs_bundle_factory_presets()
     print()
     print("Todos los tests pasaron.")

@@ -98,7 +98,11 @@ a = Analysis(
     [str(SRC / "main.py")],
     pathex=[str(SRC)],
     binaries=extra_binaries,
-    datas=[(str(ROOT / "Images" / "RNK_ico.png"), "Images")],
+    # Los presets de fábrica viajan como recurso; en el primer arranque
+    # utils.seed_factory_presets() los copia a la carpeta escribible
+    # (_MEIPASS y la carpeta Presets/ del usuario NO son la misma).
+    datas=[(str(ROOT / "Images" / "RNK_ico.png"), "Images")]
+          + [(str(p), "Presets") for p in sorted((ROOT / "Presets").glob("*.json"))],
     hiddenimports=[
         "sounddevice",
         "cffi",

@@ -22,7 +22,7 @@ from ui.spectrum_widget import SpectrumWidget
 from ui.waterfall_widget import WaterfallWidget
 from presets import PresetManager
 from noise_profiles import NoiseProfileManager
-from utils import settings_path, presets_dir, noise_profiles_dir
+from utils import settings_path, presets_dir, noise_profiles_dir, seed_factory_presets
 
 # Borde de aviso para los combos de dispositivo cuando la combinación de APIs
 # es incompatible (entrada y salida en APIs de host distintas → -9993).
@@ -46,6 +46,9 @@ class MainWindow(QMainWindow):
         set_language(self._config.language)  # antes de construir cualquier widget
 
         self._pipeline = ProcessingPipeline(self._config)
+        # Primer arranque de un bundle: los presets de fábrica viven en los recursos
+        # empaquetados y hay que copiarlos a la carpeta escribible (ver utils).
+        seed_factory_presets()
         self._preset_manager = PresetManager(presets_dir())
         self._noise_profile_manager = NoiseProfileManager(noise_profiles_dir())
         # Nombre del perfil de ruido nombrado actualmente cargado (para mostrarlo en la UI).

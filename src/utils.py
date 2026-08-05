@@ -70,3 +70,35 @@ def presets_dir() -> str:
     return _data_subdir("Presets")
 
 
+def seed_factory_presets() -> int:
+    """Copia los presets de fábrica del bundle a la carpeta Presets/ del usuario si
+    está vacía. Devuelve cuántos copió.
+
+    Hace falta porque las dos carpetas NO son la misma en un bundle: los recursos
+    empaquetados viven en `_MEIPASS` (subcarpeta `_internal/`) y la carpeta de
+    presets es escribible, junto al ejecutable. Sin este paso el usuario que baja
+    el release se encuentra la lista de presets VACÍA — pasó en la v2.0, donde
+    además el zip de Linux ni siquiera traía la carpeta.
+
+    Solo copia si el destino no tiene ningún .json: así respeta a quien borró
+    alguno a propósito, y no pisa los ajustes del usuario en cada arranque.
+    En desarrollo origen y destino son la misma carpeta y no hace nada.
+    """
+    dst = presets_dir()
+    src = resource_path("Presets")
+    if os.path.abspath(src) == os.path.abspath(dst) or not os.path.isdir(src):
+        return 0
+    if any(f.lower().endswith(".json") for f in os.listdir(dst)):
+        return 0
+    import shutil
+    n = 0
+    for name in sorted(os.listdir(src)):
+        if name.lower().endswith(".json"):
+            try:
+                shutil.copy2(os.path.join(src, name), os.path.join(dst, name))
+                n += 1
+            except OSError:
+                pass
+    return n
+
+
