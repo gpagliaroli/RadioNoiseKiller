@@ -4,6 +4,11 @@ on:
   push:
     tags: ['v*']        # solo al cerrar una version (git push origin vX.Y)
   workflow_dispatch:     # o manualmente desde la pestana Actions
+    inputs:
+      arm64:
+        description: 'Compilar tambien para ARM64 / Raspberry Pi (experimental, runner pago)'
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -54,8 +59,14 @@ jobs:
   # ------------------------------------------------------------------------
   # ARM64 (Raspberry Pi) — EXPERIMENTAL, nunca verificado en hardware real.
   #
-  # continue-on-error: un fallo aca NO debe frenar el release; el build de
-  # x86_64 es el que cuenta hasta que alguien confirme que el de ARM arranca.
+  # OPT-IN A PROPOSITO (if: inputs.arm64): este repo es PRIVADO y los runners
+  # ARM64 solo son gratis en repos publicos — en privados se facturan por
+  # minuto. Al agregarlo como job normal, el primer run quedo CANCELADO ENTERO,
+  # incluido el job de x86_64 que si funcionaba: `continue-on-error` no protege
+  # de eso, porque la cancelacion ocurre antes de que el job arranque (cero
+  # pasos ejecutados). Por eso queda apagado por defecto y NO corre en los tags:
+  # el build del release no puede depender de un runner que quizas no este
+  # disponible. Para probarlo: Actions -> Run workflow -> tildar la opcion.
   #
   # Dos decisiones que parecen arbitrarias y no lo son:
   #   - ubuntu-22.04-arm y no 24.04: un binario compilado contra una glibc mas
@@ -68,6 +79,7 @@ jobs:
   # ------------------------------------------------------------------------
   build-arm64:
     name: Linux ARM64 / Raspberry Pi (experimental)
+    if: inputs.arm64
     runs-on: ubuntu-22.04-arm
     continue-on-error: true
 
