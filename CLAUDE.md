@@ -310,7 +310,16 @@ usuario probó sacarle el modo continuo y no cambió nada).
   (segunda vez): un lazo de control no puede tomar su decisión de liberarse a partir de una señal
   que él mismo está atenuando.** Un tope no tiene el problema porque el AGC nunca deja de adaptar.
 - Tests: `test_dsp` (el tope limita y NO congela — con señal fuerte el AGC sigue bajando) y
-  `test_ui` (gating del slider por el checkbox).
+  `test_ui` (gating del slider por el checkbox, y que el control esté en la pestaña Principal).
+- El control vive en **Principal → grupo Control, debajo del combo de AGC** (pedido del usuario:
+  es un ajuste del AGC y se calibra escuchando). No está en Avanzada Audio.
+- **Descartado — auto-mute por temporizador.** El usuario había propuesto mutear la salida tras N
+  segundos sin señal, para la radio prendida sin nadie transmitiendo. Con el techo puesto dejó de
+  hacer falta: *"ya no tiene sentido, la implementación actual es buena y suficiente"*. **No
+  reproponerlo** salvo que aparezca un síntoma nuevo que el techo no cubra.
+- Beneficio secundario que notó el usuario en el aire: **también ayuda con S/N baja**. Tiene
+  sentido — el AGC deja de amplificar una señal que es mayormente ruido, así que el cancelador
+  recibe algo más limpio.
 
 **Post-v2.0 (pendiente de release): los presets de fábrica no llegaban al usuario final.**
 Detectado por el usuario mirando el zip publicado: **los dos distribuibles de la v2.0 salieron sin

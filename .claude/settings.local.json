@@ -273,7 +273,15 @@
       "PowerShell(.venv\\\\Scripts\\\\python.exe tools\\\\gen_pipeline_diagram.py; Write-Output \"=== PDFs ===\"; .venv\\\\Scripts\\\\python.exe tools\\\\gen_manual_pdf.py MANUAL.md MANUAL_RadioNoiseKiller_v2.0.pdf; .venv\\\\Scripts\\\\python.exe tools\\\\gen_manual_pdf.py MANUAL_EN.md MANUAL_RadioNoiseKiller_v2.0_EN.pdf)",
       "PowerShell($p = Start-Process -FilePath \"dist_v20\\\\RadioNoiseKiller\\\\RadioNoiseKiller.exe\" -PassThru; Start-Sleep -Seconds 12; if \\(-not $p.HasExited\\) { Write-Output \"SMOKE TEST OK: vivo tras 12 s \\(PID $\\($p.Id\\)\\)\"; Stop-Process -Id $p.Id -Force } else { Write-Output \"FALLO: el exe termino con codigo $\\($p.ExitCode\\)\" })",
       "Bash(mv \"tmp_linux/RadioNoiseKiller-linux-x86_64.zip\" \"RadioNoiseKiller_v2.0-linux-x86_64.zip\")",
-      "Bash(rmdir tmp_linux)"
+      "Bash(rmdir tmp_linux)",
+      "PowerShell(.venv\\\\Scripts\\\\python.exe \"$env:TEMP\\\\rnk_agc.py\")",
+      "PowerShell(.venv\\\\Scripts\\\\python.exe \"$env:TEMP\\\\rnk_agc2.py\")",
+      "PowerShell(.venv\\\\Scripts\\\\python.exe -c \"import sys; sys.path.insert\\(0,'src'\\); import i18n_en; print\\('catalogo EN OK:', len\\(i18n_en.CATALOG\\), 'claves'\\)\"; .venv\\\\Scripts\\\\python.exe tests\\\\run_all.py 2>&1 | Select-Object -Last 13)",
+      "PowerShell(git push *)",
+      "PowerShell(.venv\\\\Scripts\\\\python.exe \"$env:TEMP\\\\rnk_floor.py\")",
+      "Bash(sed -i 's/self\\\\._adv_audio_tab\\\\._lbl_agc_ceiling/self._lbl_agc_ceiling/g' src/ui/main_window.py)",
+      "Bash(sed -i 's/self\\\\._lbl_agc_ceiling\\\\.setStyleSheet\\(\"color: #555;\"\\)/self._lbl_agc_ceiling.setStyleSheet\\(\"color: #555; font-size: 8pt;\"\\)/g; s/self\\\\._lbl_agc_ceiling\\\\.setStyleSheet\\(\"color: #888;\"\\)/self._lbl_agc_ceiling.setStyleSheet\\(\"color: #888; font-size: 8pt;\"\\)/g; s/self\\\\._lbl_agc_ceiling\\\\.setStyleSheet\\(f\"color: {col}; font-weight: bold;\"\\)/self._lbl_agc_ceiling.setStyleSheet\\(f\"color: {col}; font-size: 8pt; font-weight: bold;\"\\)/g' src/ui/main_window.py)",
+      "Bash(QT_QPA_PLATFORM=offscreen RNK_DATA_DIR=/tmp/rnk_chk .venv/Scripts/python.exe -c ' *)"
     ]
   }
 }
