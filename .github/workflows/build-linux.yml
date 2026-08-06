@@ -7,6 +7,7 @@ on:
 
 jobs:
   build:
+    name: Linux x86_64
     runs-on: ubuntu-latest
 
     steps:
@@ -48,4 +49,94 @@ jobs:
         with:
           name: RadioNoiseKiller-linux-x86_64
           path: dist/RadioNoiseKiller-linux-x86_64.zip
+          retention-days: 30
+
+  # ------------------------------------------------------------------------
+  # ARM64 (Raspberry Pi) — EXPERIMENTAL, nunca verificado en hardware real.
+  #
+  # continue-on-error: un fallo aca NO debe frenar el release; el build de
+  # x86_64 es el que cuenta hasta que alguien confirme que el de ARM arranca.
+  #
+  # Dos decisiones que parecen arbitrarias y no lo son:
+  #   - ubuntu-22.04-arm y no 24.04: un binario compilado contra una glibc mas
+  #     nueva que la del destino no arranca. Raspberry Pi OS Bookworm trae
+  #     glibc 2.36; 22.04 tiene 2.35 (sirve), 24.04 tiene 2.39 (no).
+  #   - Python 3.12 y no 3.14: en aarch64 la disponibilidad de wheels
+  #     (PySide6, scipy) va por detras de x86_64. Si con 3.12 tampoco hay
+  #     wheels, pip intenta compilar desde fuente y el job se va a tardar
+  #     muchisimo o a fallar — que es justamente lo que estamos por averiguar.
+  # ------------------------------------------------------------------------
+  build-arm64:
+    name: Linux ARM64 / Raspberry Pi (experimental)
+    runs-on: ubuntu-22.04-arm
+    continue-on-error: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libportaudio2 portaudio19-dev libasound2-dev \
+            libxcb-xinerama0 libxcb-cursor0 libgl1
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Stamp build id
+        run: |
+          echo "BUILD_ID = \"$(git rev-parse --short HEAD) $(date -u +%Y-%m-%d) arm64\"" > src/buildinfo.py
+          cat src/buildinfo.py
+
+      - name: Build with PyInstaller
+        run: |
+          python -m PyInstaller reductor-linux.spec --clean --noconfirm
+
+      - name: Aviso de build experimental
+        run: |
+          cat > dist/RadioNoiseKiller/EXPERIMENTAL.txt <<'EOF'
+          BUILD EXPERIMENTAL — ARM64 / Raspberry Pi
+          =========================================
+
+          Este paquete se compila automaticamente pero NUNCA fue verificado en
+          una Raspberry Pi real: puede no arrancar, o arrancar y no encontrar
+          los dispositivos de audio.
+
+          Compilado en Ubuntu 22.04 ARM64 (glibc 2.35). Deberia funcionar en
+          Raspberry Pi OS Bookworm (glibc 2.36) y posteriores. En sistemas con
+          glibc mas vieja no va a arrancar.
+
+          Requiere del sistema:  libportaudio2  libxcb-xinerama0
+
+          Si no funciona, la alternativa que no depende de este paquete es
+          correr la app desde el codigo fuente en la propia Pi:
+
+              sudo apt install python3 python3-venv libportaudio2 libxcb-xinerama0
+              python3 -m venv .venv
+              .venv/bin/pip install sounddevice numpy scipy PySide6
+              .venv/bin/python src/main.py
+
+          Reportes (funcione o no) en:
+          https://github.com/gpagliaroli/RadioNoiseKiller/issues
+          EOF
+          cat dist/RadioNoiseKiller/EXPERIMENTAL.txt
+
+      - name: Create ZIP
+        run: |
+          cd dist
+          zip -r RadioNoiseKiller-linux-aarch64-EXPERIMENTAL.zip RadioNoiseKiller/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RadioNoiseKiller-linux-aarch64-EXPERIMENTAL
+          path: dist/RadioNoiseKiller-linux-aarch64-EXPERIMENTAL.zip
           retention-days: 30
