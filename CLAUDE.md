@@ -537,8 +537,18 @@ atenuado que su meseta** (a Intensidad 0.9) — la envolvente se aplasta y suena
 - No hizo falta regenerar los presets de fábrica: con el fix de `from_dict` (invariante 10) las
   claves nuevas ausentes toman el default. **Primera vez que ese fix paga.**
 
-**Nota:** `tests/test_cpu_profile.py` está muerto — importa `models.deepfilternet`, removido con la
-arquitectura vieja de IA. No está en `run_all.py`. Borrarlo o reescribirlo cuando moleste.
+**`tests/test_cpu_profile.py` — benchmark de CPU (reescrito, agosto 2026).** Estaba muerto desde que
+se removió la arquitectura de IA (importaba `models.deepfilternet`); se reescribió sobre los módulos
+actuales en vez de borrarlo, porque el caso del AMD A6 lo hace útil. **No es un test de regresión**:
+no está en `run_all.py` y no falla nunca. Da µs por frame de 10 ms y % de un núcleo, por módulo y
+para el pipeline completo en tres configuraciones.
+- **El pipeline hay que medirlo con `time.process_time()`, no cronometrando `_process()`.** El DSP
+  corre en el hilo procesador; `_process()` solo encola, así que cronometrarlo mide la cola y las
+  tres configuraciones dan lo mismo. `process_time` cuenta la CPU de todos los hilos e ignora los
+  `sleep` que hacen falta para darle aire al procesador. (Primera versión: los tres perfiles daban
+  ~780 µs idénticos, y encima el `sleep(0.3)` estaba DENTRO de la ventana de medición.)
+- Referencia en el equipo de desarrollo: pipeline mínimo ~195 µs (1.9% de un core), típico
+  (adaptativo + post-filtro) ~234 µs (2.3%), todo activado ~391 µs (3.9%).
 
 ## Empaquetado multiplataforma — invariantes (lecciones v1.4/v1.5)
 
@@ -551,9 +561,19 @@ empaquetado se descubren en el hardware del usuario, no en CI — anticiparlos:
    (está en el venv) que TODAS sus DT_NEEDED estén en el bundle o sean libs del sistema —
    un plugin presente pero sin sus dependencias falla silencioso (dlopen) y el síntoma aparece
    solo en runtime en la máquina del usuario.
-2. **Audio en Linux: preferir las libs del sistema.** `libasound` y `libportaudio` bundleadas
-   (las del runner de CI) no cargan los plugins ALSA/Pulse del host — dispositivos virtuales
-   desaparecen. Ambas se excluyen del bundle (ver `reductor-linux.spec`); no revertir.
+2. **Audio en Linux: `libasound` FUERA del bundle, `libportaudio` DENTRO.** No son simétricas y la
+   diferencia importa:
+   - **`libasound` se excluye** (filtro explícito sobre `a.binaries` en `reductor-linux.spec`). La
+     bundleada es la del runner de CI y no puede cargar los plugins ALSA del host (pulse/pipewire/
+     default están en otras rutas y versiones), así que la enumeración de PortAudio se queda solo
+     con dispositivos `hw:` y los virtuales desaparecen. Excluida, se usa la del sistema — ABI
+     estable, presente en cualquier Linux con audio. **No revertir.**
+   - **`libportaudio` se bundlea a propósito** (`find_shared_lib` la busca en el sistema del build
+     y la agrega a `extra_binaries`): el wheel de `sounddevice` en Linux NO la trae, así que sin
+     esto el bundle no tiene backend de audio. La copia bundleada carga la `libasound` **del
+     sistema** en runtime, que es lo que hace funcionar la combinación.
+   - Este ítem decía que "ambas se excluyen", lo cual era falso desde siempre — el spec nunca hizo
+     eso. Detectado revisando el bundle de la v2.0. **La doc describía la intención, no el código.**
 3. **Wayland necesita los plugins de decoración** (`wayland-decoration-client`) que los hooks de
    PyInstaller NO recolectan, y `QT_WAYLAND_DECORATION=bradient` (hook `pyi_rth_wayland.py`)
    porque en GNOME Qt elige `adwaita` (requiere libQt6Svg/DBus) y no hace fallback si falla.
@@ -584,6 +604,7 @@ En bundle: junto al `.exe` / `.bin`
 | `tests/test_presets.py` | `_capture()` cubre DSPConfig/GainConfig, roundtrips, rename/delete, claves ausentes → default de fábrica (invariante 10) |
 | `tests/test_noise_vad.py` | VAD del squelch (ruido fluctuante, voz armónica, release AGC), cuarentena MCRA, clamps de fading. **Validar detectores con ruido fluctuante y voz con envolvente — el gaussiano estacionario da falsos OK** |
 | `tests/test_integration.py` | Pipeline headless (`start(headless=True)`) con TODOS los módulos activos: warmup MCRA, ciclo squelch, cambios de modo en caliente, cambio de block size con reinicio |
+| `tests/test_cpu_profile.py` | **Diagnóstico, no regresión** (fuera de `run_all`): µs/frame y % de un núcleo por módulo y del pipeline completo en 3 configuraciones. Medir el pipeline con `process_time`, no cronometrando `_process()` |
 | `tests/test_ui.py` | UI offscreen (`QT_QPA_PLATFORM=offscreen` + `MainWindow`): orden de pestañas (Módulos en pos 1), "Módulos activos" en su pestaña, visibilidad de botones de perfiles por modo estático/MCRA, gating de controles Avanzados por módulo (invariante 2), restauración de checkboxes desde config (invariante 8), aviso proactivo de dispositivos de APIs incompatibles (ACTIVAR deshabilitado + combos marcados). **SliderRow deshabilita los hijos — testear con `row._slider.isEnabled()`, no `row.isEnabled()`** |
 
 ## Estado del proyecto

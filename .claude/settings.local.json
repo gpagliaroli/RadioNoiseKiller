@@ -281,7 +281,11 @@
       "PowerShell(.venv\\\\Scripts\\\\python.exe \"$env:TEMP\\\\rnk_floor.py\")",
       "Bash(sed -i 's/self\\\\._adv_audio_tab\\\\._lbl_agc_ceiling/self._lbl_agc_ceiling/g' src/ui/main_window.py)",
       "Bash(sed -i 's/self\\\\._lbl_agc_ceiling\\\\.setStyleSheet\\(\"color: #555;\"\\)/self._lbl_agc_ceiling.setStyleSheet\\(\"color: #555; font-size: 8pt;\"\\)/g; s/self\\\\._lbl_agc_ceiling\\\\.setStyleSheet\\(\"color: #888;\"\\)/self._lbl_agc_ceiling.setStyleSheet\\(\"color: #888; font-size: 8pt;\"\\)/g; s/self\\\\._lbl_agc_ceiling\\\\.setStyleSheet\\(f\"color: {col}; font-weight: bold;\"\\)/self._lbl_agc_ceiling.setStyleSheet\\(f\"color: {col}; font-size: 8pt; font-weight: bold;\"\\)/g' src/ui/main_window.py)",
-      "Bash(QT_QPA_PLATFORM=offscreen RNK_DATA_DIR=/tmp/rnk_chk .venv/Scripts/python.exe -c ' *)"
+      "Bash(QT_QPA_PLATFORM=offscreen RNK_DATA_DIR=/tmp/rnk_chk .venv/Scripts/python.exe -c ' *)",
+      "PowerShell(.venv\\\\Scripts\\\\python.exe tests\\\\test_cpu_profile.py)",
+      "PowerShell(.venv\\\\Scripts\\\\python.exe tests\\\\test_cpu_profile.py 2>&1 | Select-Object -Last 12)",
+      "Bash(grep -n \"test_devices.py\\\\` | Enumeración\" -B 2 -A 12 CLAUDE.md)",
+      "Bash(grep -n \"^| \\\\`tests/test_ui.py\\\\`\" CLAUDE.md)"
     ]
   }
 }
