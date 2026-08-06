@@ -126,13 +126,13 @@ The main operating controls: reception mode, AGC and processing activation.
 |---------|-------------|
 | **Mode** | Selects the type of received signal: **AM** (amplitude modulation, wider bandwidth) or **SSB** (single sideband, voice compressed in frequency). Affects the default limits of the Bandpass Filter. |
 | **AGC** | Automatic Gain Control. **off** = no AGC. **slow / medium / fast** = response speed (attack/release fixed per preset). For SSB, *slow* or *medium* is recommended; for AM with stable signals, *off* or *slow*. |
-| **AGC — noise ceiling** *(Advanced Audio)* | Limits how much the AGC can amplify, so it does not lift the band noise. See below. |
+| **Noise ceiling** | Limits how much the AGC can amplify, so it does not lift the band noise. See below. |
 | **▶ START / ■ STOP** | Starts or stops real-time processing. When started, audio flows through the whole pipeline. |
 | **Bypass** | Passes audio straight from input to output with no processing. Useful for comparing the sound with and without the application active. The **Output gain** (*Advanced Audio* tab) also acts in bypass, and its value is remembered separately for bypass ON and OFF (see the note under *Gain and levels*). |
 
 ### AGC — noise ceiling
 
-**Location:** Advanced Audio tab → "AGC — noise ceiling" group
+**Location:** Main tab → "Control" group, below the AGC selector
 
 The AGC brings the signal to its target level **without telling speech from noise**. On a strong station that is exactly what you want; on a weak signal, what it measures is mostly band noise, and it amplifies it by up to **+36 dB**. The result is the annoying hiss that shows up when the station stops transmitting: measured, the AGC hits its ceiling and the noise ends up 24 dB higher than it needs to be.
 

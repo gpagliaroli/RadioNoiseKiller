@@ -210,20 +210,25 @@ def test_bass_and_character_controls():
 
 
 def test_agc_noise_ceiling_controls():
-    """Techo de ruido del AGC: el slider sigue al checkbox y ambos llegan a config."""
+    """Techo de ruido del AGC: vive en el grupo Control de la pestaña Principal
+    (es un ajuste del AGC y se calibra escuchando, junto al combo que lo activa),
+    NO en Avanzada Audio. El slider sigue al checkbox y ambos llegan a config."""
     w = _win()
-    aud = w._adv_audio_tab
 
-    aud._chk_agc_ceiling.setChecked(False)
-    _app.processEvents()
-    assert not aud._s_agc_ceiling._slider.isEnabled(), "el slider deberia estar apagado"
+    principal = w._tabs.widget(0)
+    assert w._chk_agc_ceiling in principal.findChildren(QCheckBox), \
+        "el techo de ruido no esta en la pestaña Principal"
 
-    aud._chk_agc_ceiling.setChecked(True)
+    w._chk_agc_ceiling.setChecked(False)
     _app.processEvents()
-    assert aud._s_agc_ceiling._slider.isEnabled(), "el slider no se habilito"
+    assert not w._s_agc_ceiling._slider.isEnabled(), "el slider deberia estar apagado"
+
+    w._chk_agc_ceiling.setChecked(True)
+    _app.processEvents()
+    assert w._s_agc_ceiling._slider.isEnabled(), "el slider no se habilito"
     assert w._config.dsp.agc_noise_ceiling_enabled, "el checkbox no llego a la config"
 
-    aud._s_agc_ceiling.set_value(-50.0, emit=True)
+    w._s_agc_ceiling.set_value(-50.0, emit=True)
     _app.processEvents()
     assert abs(w._config.dsp.agc_noise_ceiling_db + 50.0) < 1e-6, "el umbral no llego a la config"
     print("Techo de ruido del AGC: controles           OK")

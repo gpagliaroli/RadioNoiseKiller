@@ -270,10 +270,53 @@ class MainWindow(QMainWindow):
         agc_row.addStretch()
         layout.addLayout(agc_row)
 
+        # Techo de ruido del AGC: vive acá y no en Avanzada Audio porque es un
+        # control del AGC y se ajusta escuchando, junto al combo que lo activa.
+        ceil_row = QHBoxLayout()
+        ceil_lbl = QLabel("")
+        ceil_lbl.setFixedWidth(_ROW_LABEL_W)
+        ceil_row.addWidget(ceil_lbl)
+        self._chk_agc_ceiling = QCheckBox(tr("Techo de ruido"))
+        self._chk_agc_ceiling.setToolTip(tr(
+            "El AGC lleva la señal a su nivel objetivo sin distinguir voz de ruido:\n"
+            "con señal débil sube el ruido de banda hasta +36 dB y queda un siseo\n"
+            "molesto. Con esto, su ganancia se topea para que el ruido no pase del\n"
+            "nivel elegido. El AGC sigue adaptando (no se congela), así que no puede\n"
+            "quedar trabado, y la voz la termina de levantar el Nivelador de voz."))
+        self._chk_agc_ceiling.toggled.connect(self._on_agc_ceiling_toggled)
+        ceil_row.addWidget(self._chk_agc_ceiling)
+        self._lbl_agc_ceiling = QLabel("—")
+        self._lbl_agc_ceiling.setStyleSheet("color: #555; font-size: 8pt;")
+        ceil_row.addWidget(self._lbl_agc_ceiling)
+        ceil_row.addStretch()
+        layout.addLayout(ceil_row)
+
+        self._s_agc_ceiling = SliderRow(
+            tr("El ruido no pasa de:"),
+            min_val=-70.0, max_val=-25.0,
+            default=DSPConfig().agc_noise_ceiling_db,
+            step=1.0, unit="dBFS", fmt="{:.0f}",
+        )
+        self._s_agc_ceiling.valueChanged.connect(self._on_agc_ceiling_db)
+        layout.addWidget(self._s_agc_ceiling)
+        self._chk_agc_ceiling.setChecked(self._config.dsp.agc_noise_ceiling_enabled)
+        self._s_agc_ceiling.set_value(self._config.dsp.agc_noise_ceiling_db)
+        self._s_agc_ceiling.set_enabled(self._config.dsp.agc_noise_ceiling_enabled)
+
         self._check_bypass = QCheckBox(tr("Bypass (sin procesamiento)"))
         self._check_bypass.toggled.connect(self._on_bypass_toggled)
         layout.addWidget(self._check_bypass)
         return group
+
+    def _on_agc_ceiling_toggled(self, v: bool) -> None:
+        self._config.dsp.agc_noise_ceiling_enabled = bool(v)
+        self._pipeline.set_agc_noise_ceiling_enabled(v)
+        self._s_agc_ceiling.set_enabled(v)
+        self._schedule_save()
+
+    def _on_agc_ceiling_db(self, val: float) -> None:
+        self._pipeline.set_agc_noise_ceiling_db(val)
+        self._schedule_save()
 
     def _build_modules_tab(self) -> QWidget:
         tab = QWidget()
@@ -1007,6 +1050,11 @@ class MainWindow(QMainWindow):
         # --- Sliders Intensidad + Post-Filtro (sin emitir: no re-disparar handlers) ---
         self._slider_noise.set_value(cfg.noise_alpha * 100.0)
         self._slider_post.set_value(cfg.post_filter_strength)
+        self._chk_agc_ceiling.blockSignals(True)
+        self._chk_agc_ceiling.setChecked(cfg.agc_noise_ceiling_enabled)
+        self._chk_agc_ceiling.blockSignals(False)
+        self._s_agc_ceiling.set_value(cfg.agc_noise_ceiling_db)
+        self._s_agc_ceiling.set_enabled(cfg.agc_noise_ceiling_enabled)
 
         # --- Sliders de ganancia ---
         self._s_gain_in.set_value(self._config.gain.input_gain_db)
@@ -1594,8 +1642,8 @@ class MainWindow(QMainWindow):
             self._lbl_leveler.setStyleSheet("color: #555; font-size: 8pt; font-weight: bold;")
             self._adv_audio_tab._lbl_leveler_act.setText("—")
             self._adv_audio_tab._lbl_leveler_act.setStyleSheet("color: #555;")
-            self._adv_audio_tab._lbl_agc_ceiling.setText("—")
-            self._adv_audio_tab._lbl_agc_ceiling.setStyleSheet("color: #555;")
+            self._lbl_agc_ceiling.setText("—")
+            self._lbl_agc_ceiling.setStyleSheet("color: #555; font-size: 8pt;")
             self._status_bar.showMessage(tr("Detenido."))
             self._btn_refresh_devices.setEnabled(True)
             self._combo_in.setEnabled(True)
@@ -1655,19 +1703,19 @@ class MainWindow(QMainWindow):
         ceil  = self._pipeline.agc_gain_ceiling_db
         floor = self._pipeline.input_noise_db
         if ceil is None or floor is None:
-            self._adv_audio_tab._lbl_agc_ceiling.setText("—")
-            self._adv_audio_tab._lbl_agc_ceiling.setStyleSheet("color: #555;")
+            self._lbl_agc_ceiling.setText("—")
+            self._lbl_agc_ceiling.setStyleSheet("color: #555; font-size: 8pt;")
         elif self._pipeline.agc_ceiling_limiting:
             # Está mordiendo: el AGC quiere más ganancia de la permitida
-            self._adv_audio_tab._lbl_agc_ceiling.setText(
+            self._lbl_agc_ceiling.setText(
                 tr("piso {fl:.0f} dBFS · limitando a +{db:.0f} dB").format(fl=floor, db=ceil))
             col = "#ff5252" if ceil < 1.0 else "#ffb74d"
-            self._adv_audio_tab._lbl_agc_ceiling.setStyleSheet(f"color: {col}; font-weight: bold;")
+            self._lbl_agc_ceiling.setStyleSheet(f"color: {col}; font-size: 8pt; font-weight: bold;")
         else:
             # El tope existe pero el AGC no lo alcanza: no está limitando nada
-            self._adv_audio_tab._lbl_agc_ceiling.setText(
+            self._lbl_agc_ceiling.setText(
                 tr("piso {fl:.0f} dBFS · sin efecto").format(fl=floor))
-            self._adv_audio_tab._lbl_agc_ceiling.setStyleSheet("color: #888;")
+            self._lbl_agc_ceiling.setStyleSheet("color: #888; font-size: 8pt;")
 
         # Grabación: tiempo transcurrido, y detección de muerte por error de
         # disco (el writer marca recording=False solo; el botón queda checked)

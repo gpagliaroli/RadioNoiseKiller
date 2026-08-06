@@ -352,7 +352,7 @@ CATALOG = {
     "  ↳ Saturación tanh: cuántos armónicos se generan y de qué orden. Suave = sutil, agresivo = efecto notable. No cambia el nivel de la banda: solo agrega armónicos nuevos.":
         "  ↳ Tanh saturation: how many harmonics are generated and of what order. Soft = subtle, "
         "aggressive = pronounced. It does not change the band's level: it only adds new harmonics.",
-    "AGC — techo de ruido": "AGC — noise ceiling",
+    "Techo de ruido": "Noise ceiling",
     "Limitar la ganancia del AGC según el ruido": "Limit the AGC's gain according to the noise",
     "El AGC lleva la señal a su nivel objetivo sin distinguir voz de ruido:\n"
     "con señal débil sube el ruido de banda hasta +36 dB y queda un siseo\n"

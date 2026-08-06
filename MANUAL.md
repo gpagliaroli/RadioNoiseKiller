@@ -126,13 +126,13 @@ Controles principales de operación: modo de recepción, AGC y activación del p
 |---------|-------------|
 | **Modo** | Selecciona el tipo de señal recibida: **AM** (amplitud modulada, ancho de banda más amplio) o **SSB** (banda lateral única, voz comprimida en frecuencia). Afecta los límites por defecto del Filtro de Paso de Banda. |
 | **AGC** | Control Automático de Ganancia. **off** = sin AGC. **slow / medium / fast** = velocidad de respuesta (ataque/release fijos por preset). Para SSB se recomienda *slow* o *medium*; para AM con señales estables, *off* o *slow*. |
-| **AGC — techo de ruido** *(Avanzada Audio)* | Limita cuánto puede amplificar el AGC, para que no levante el ruido de banda. Ver más abajo. |
+| **Techo de ruido** | Limita cuánto puede amplificar el AGC, para que no levante el ruido de banda. Ver más abajo. |
 | **▶ ACTIVAR / ■ DETENER** | Inicia o detiene el procesamiento en tiempo real. Al activar, el audio fluye por todo el pipeline. |
 | **Bypass** | Pasa el audio directo de entrada a salida sin ningún procesamiento. Útil para comparar el sonido con y sin la aplicación activa. La **Ganancia de salida** (pestaña *Avanzada Audio*) también actúa en bypass, y su valor se recuerda por separado para bypass ON y OFF (ver la nota en *Ganancia y niveles*). |
 
 ### AGC — techo de ruido
 
-**Ubicación:** Pestaña Avanzada Audio → grupo "AGC — techo de ruido"
+**Ubicación:** Pestaña Principal → grupo "Control", debajo del selector de AGC
 
 El AGC lleva la señal a su nivel objetivo **sin distinguir voz de ruido**. Con una estación fuerte eso es exactamente lo que uno quiere; con una señal débil, lo que mide es casi todo ruido de banda, y lo amplifica hasta **+36 dB**. El resultado es el siseo molesto que aparece cuando la estación deja de transmitir: medido, el AGC llega a su tope y el ruido queda 24 dB más arriba de lo necesario.
 
