@@ -60,13 +60,16 @@ jobs:
   # ARM64 (Raspberry Pi) — EXPERIMENTAL, nunca verificado en hardware real.
   #
   # OPT-IN A PROPOSITO (if: inputs.arm64): este repo es PRIVADO y los runners
-  # ARM64 solo son gratis en repos publicos — en privados se facturan por
-  # minuto. Al agregarlo como job normal, el primer run quedo CANCELADO ENTERO,
-  # incluido el job de x86_64 que si funcionaba: `continue-on-error` no protege
-  # de eso, porque la cancelacion ocurre antes de que el job arranque (cero
-  # pasos ejecutados). Por eso queda apagado por defecto y NO corre en los tags:
-  # el build del release no puede depender de un runner que quizas no este
-  # disponible. Para probarlo: Actions -> Run workflow -> tildar la opcion.
+  # ARM64 solo son gratis en repos PUBLICOS — en privados se facturan por minuto.
+  # Un job que puede costar plata no debe correr solo en cada tag. Para probarlo:
+  # Actions -> Run workflow -> tildar la opcion.
+  #
+  # NUNCA SE PUDO EJECUTAR (agosto 2026): los dos intentos terminaron cancelados
+  # apenas arrancar, con cero pasos — y el segundo con el job ARM ya salteado, lo
+  # que descarta que la causa sea este job. El run del tag v2.0 (4/8) si habia
+  # funcionado. Todo apunta a la cuota mensual de Actions del plan gratuito para
+  # repos privados: al agotarse, GitHub cancela los jobs en cola. Verificar en
+  # github.com/settings/billing antes de sacar conclusiones sobre este workflow.
   #
   # Dos decisiones que parecen arbitrarias y no lo son:
   #   - ubuntu-22.04-arm y no 24.04: un binario compilado contra una glibc mas
