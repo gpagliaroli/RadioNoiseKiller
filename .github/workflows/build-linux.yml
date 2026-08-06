@@ -64,12 +64,16 @@ jobs:
   # Un job que puede costar plata no debe correr solo en cada tag. Para probarlo:
   # Actions -> Run workflow -> tildar la opcion.
   #
-  # NUNCA SE PUDO EJECUTAR (agosto 2026): los dos intentos terminaron cancelados
-  # apenas arrancar, con cero pasos — y el segundo con el job ARM ya salteado, lo
-  # que descarta que la causa sea este job. El run del tag v2.0 (4/8) si habia
-  # funcionado. Todo apunta a la cuota mensual de Actions del plan gratuito para
-  # repos privados: al agotarse, GitHub cancela los jobs en cola. Verificar en
-  # github.com/settings/billing antes de sacar conclusiones sobre este workflow.
+  # VERIFICADO que COMPILA (agosto 2026): binario ELF aarch64 de 64 bits, 542
+  # entradas, los 7 presets, plugins wayland presentes, libasound fuera. Tarda
+  # ~2 min. Python 3.12 en aarch64 tiene wheels de PySide6/scipy/numpy, asi que
+  # no hay que compilar nada desde fuente. Lo que sigue SIN verificar es que
+  # ARRANQUE en una Raspberry Pi real — de ahi el EXPERIMENTAL.
+  #
+  # Si algun run aparece "cancelled" con CERO pasos: no es este workflow. La
+  # anotacion del job dice "The job was not acquired by Runner of type hosted
+  # even after multiple attempts" — GitHub no consiguio asignar runner. Es
+  # transitorio: reintentar mas tarde. Paso el 6/8 y al rato funciono solo.
   #
   # Dos decisiones que parecen arbitrarias y no lo son:
   #   - ubuntu-22.04-arm y no 24.04: un binario compilado contra una glibc mas
