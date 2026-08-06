@@ -277,6 +277,26 @@ reajustaron en el aire. Todo el contenido de abajo se validó escuchando en la r
 iteraciones de ida y vuelta (ver los "reportado en el aire" de cada ítem: casi todos los fixes de
 esta versión salieron de una escucha que contradijo una medición sintética).
 
+**Post-v2.0 (pendiente de release): cascada — profundidad, escala de color y marcadores.** Cierra
+los tres ítems que habían quedado fuera de alcance en la v1.8.
+- **Profundidad ajustable** (combo 15/30/60/120 s en la barra del espectro, persistida en
+  `WindowConfig.waterfall_history_sec`). El ring se dimensiona SIEMPRE para el máximo (120 s ≈
+  7 MB) y la profundidad solo cambia **cuántas filas se dibujan**: así ampliar la ventana muestra
+  historia que ya estaba capturada, en vez de reasignar el buffer y perderla. El paso del eje de
+  tiempo se adapta (5/10/15/30 s) para no amontonar etiquetas.
+- **Escala de color en el margen SUPERIOR, no a la derecha.** `_ML`/`_MR` tienen que seguir siendo
+  los mismos que en `SpectrumWidget` — de eso depende que los ejes de frecuencia de los dos
+  gráficos queden alineados, que fue el punto de diseño original de la cascada. `_MT` sí se puede
+  crecer sin desalinear nada (4 → 15 px), y ahí entran la barra de degradado y la etiqueta de
+  fuente, que antes se dibujaba **encima** de la fila más nueva.
+- **Marcadores de heterodino**: `AdaptiveNotchFilter` ahora expone `tone_freqs` (antes solo el
+  conteo `notched_bins`); el pipeline lo publica y `_tick_levels` se lo pasa a la cascada, que
+  dibuja marcas rojas sobre el eje de frecuencia. Se lee sin lock: es diagnóstico y el peor caso es
+  un frame viejo (invariante 7). Solo se alimenta con la cascada visible — si está oculta es
+  trabajo tirado. Sin ANF activo, `tone_freqs` devuelve None y no hay marcas.
+- Verificado headless renderizando a QPixmap y contando píxeles del marcador (con tonos: aparece;
+  sin tonos: cero). Test en `test_ui`.
+
 **Post-v2.0 (pendiente de release): techo de ruido del AGC.** Reportado en el aire: *"con baja señal
 el AGC sube la salida a −20 dB y queda un ruido molesto"*. El AGC de entrada lleva lo que mida a su
 target **sin distinguir voz de ruido**, y tiene hasta **+36 dB**: medido, tras el fin de una
@@ -1199,8 +1219,8 @@ Cambios v1.8:
     (splitter con 2 widgets, toggle muestra/oculta + gatea el combo, cambio de fuente persiste,
     push de filas headless sin crash). Verificado visualmente con datos sintéticos (piso + voz +
     heterodino barriendo + QSB): colormap y orientación tiempo/frecuencia correctos.
-  - **Fuera de alcance (posible futuro):** slider de profundidad de historia (fijo 30 s),
-    colorbar/leyenda, marcadores de heterodino.
+  - **Los tres ítems "fuera de alcance" se hicieron post-v2.0** (profundidad, colorbar, marcadores
+    de heterodino) — ver más abajo.
   - OJO patrón repetido: el hook ruff borró `import WaterfallWidget` y `QSplitter` por agregarse en
     un Edit y usarse en el siguiente — re-agregados. (Ya documentado como riesgo; pasó de nuevo.)
 - **AGC Custom eliminado** (decisión del usuario: sumaba 4 sliders y complejidad sin uso real —

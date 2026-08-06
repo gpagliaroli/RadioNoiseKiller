@@ -275,6 +275,12 @@ CATALOG = {
     "Lo cancelado": "Cancelled",
     "Piso de ruido": "Noise floor",
     "Cascada": "Waterfall",
+    "Profundidad de la cascada. Más historia = se ve el QSB y los\n"
+    "heterodinos intermitentes a lo largo del tiempo; menos historia =\n"
+    "más detalle temporal. No descarta lo ya capturado: es un zoom.":
+        "Waterfall depth. More history = QSB and intermittent heterodynes\n"
+        "become visible over time; less history = more time detail.\n"
+        "It does not discard what was captured: it is a zoom.",
     "Relación señal/ruido de banda completa (suavizada ~1s):\n"
     "señal actual vs piso de ruido estimado por el cancelador.\n"
     "Con solo ruido marca ~0 dB.":

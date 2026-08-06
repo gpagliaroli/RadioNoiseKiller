@@ -103,6 +103,7 @@ class WindowConfig:
     spectrum_max_freq_hz: int = 12000
     spectrum_show_waterfall: bool = True        # cascada visible bajo el espectro
     waterfall_source:        str  = "input"     # "input" | "output"
+    waterfall_history_sec:   int  = 30          # profundidad de la cascada (15/30/60/120)
 
 
 @dataclass
@@ -204,6 +205,7 @@ class AppConfig:
                 "spectrum_max_freq_hz": self.window.spectrum_max_freq_hz,
                 "spectrum_show_waterfall": self.window.spectrum_show_waterfall,
                 "waterfall_source":        self.window.waterfall_source,
+                "waterfall_history_sec":   self.window.waterfall_history_sec,
             },
         }
         with open(path, "w", encoding="utf-8") as f:
@@ -327,3 +329,5 @@ class AppConfig:
         self.window.spectrum_show_waterfall = bool(w.get("spectrum_show_waterfall", self.window.spectrum_show_waterfall))
         _wf_src = str(w.get("waterfall_source", self.window.waterfall_source))
         self.window.waterfall_source = _wf_src if _wf_src in ("input", "output") else "input"
+        _wf_hist = int(w.get("waterfall_history_sec", self.window.waterfall_history_sec))
+        self.window.waterfall_history_sec = _wf_hist if _wf_hist in (15, 30, 60, 120) else 30

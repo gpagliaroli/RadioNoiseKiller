@@ -756,6 +756,19 @@ class MainWindow(QMainWindow):
         self._waterfall_widget.set_source_label(self._combo_waterfall_src.currentText())
         self._combo_waterfall_src.currentIndexChanged.connect(self._on_waterfall_source_changed)
 
+        self._combo_waterfall_hist = QComboBox()
+        for secs in (15, 30, 60, 120):
+            self._combo_waterfall_hist.addItem(f"{secs}s", secs)
+        _wh = self._combo_waterfall_hist.findData(self._config.window.waterfall_history_sec)
+        self._combo_waterfall_hist.setCurrentIndex(max(0, _wh))
+        self._combo_waterfall_hist.setEnabled(self._config.window.spectrum_show_waterfall)
+        self._combo_waterfall_hist.setToolTip(tr(
+            "Profundidad de la cascada. Más historia = se ve el QSB y los\n"
+            "heterodinos intermitentes a lo largo del tiempo; menos historia =\n"
+            "más detalle temporal. No descarta lo ya capturado: es un zoom."))
+        self._waterfall_widget.set_history_sec(self._config.window.waterfall_history_sec)
+        self._combo_waterfall_hist.currentIndexChanged.connect(self._on_waterfall_hist_changed)
+
         ctrl.addWidget(self._chk_spec_pre)
         ctrl.addSpacing(12)
         ctrl.addWidget(self._chk_spec_post)
@@ -766,6 +779,7 @@ class MainWindow(QMainWindow):
         ctrl.addSpacing(18)
         ctrl.addWidget(self._chk_waterfall)
         ctrl.addWidget(self._combo_waterfall_src)
+        ctrl.addWidget(self._combo_waterfall_hist)
         ctrl.addStretch()
 
         self._lbl_snr = QLabel(tr("S/N: —"))
@@ -1462,6 +1476,7 @@ class MainWindow(QMainWindow):
     def _on_waterfall_toggled(self, on: bool) -> None:
         self._waterfall_widget.setVisible(on)
         self._combo_waterfall_src.setEnabled(on)
+        self._combo_waterfall_hist.setEnabled(on)
         self._spectrum_widget.set_waterfall_enabled(on)
         if on:
             self._waterfall_widget.clear()
@@ -1471,6 +1486,12 @@ class MainWindow(QMainWindow):
             if total > 0:
                 self._spectrum_splitter.setSizes([total // 2, total - total // 2])
         self._config.window.spectrum_show_waterfall = bool(on)
+        self._schedule_save()
+
+    def _on_waterfall_hist_changed(self, _idx: int) -> None:
+        secs = int(self._combo_waterfall_hist.currentData())
+        self._waterfall_widget.set_history_sec(float(secs))
+        self._config.window.waterfall_history_sec = secs
         self._schedule_save()
 
     def _on_waterfall_source_changed(self, _idx: int) -> None:
@@ -1741,6 +1762,13 @@ class MainWindow(QMainWindow):
         else:
             self._lbl_snr.setText(tr("S/N: —"))
             self._lbl_snr.setStyleSheet("color: #888; font-weight: bold;")
+
+        # Marcadores de heterodino en la cascada: los tonos que el ANF cancela.
+        # Solo si la cascada está visible (si no, es trabajo tirado).
+        if self._config.window.spectrum_show_waterfall and self._pipeline.is_running():
+            self._waterfall_widget.set_tone_freqs(self._pipeline.anf_tone_freqs)
+        else:
+            self._waterfall_widget.set_tone_freqs(None)
 
     def _restore_or_center(self) -> None:
         # Pantalla de referencia: la que contiene la posición guardada (setups

@@ -285,7 +285,9 @@
       "PowerShell(.venv\\\\Scripts\\\\python.exe tests\\\\test_cpu_profile.py)",
       "PowerShell(.venv\\\\Scripts\\\\python.exe tests\\\\test_cpu_profile.py 2>&1 | Select-Object -Last 12)",
       "Bash(grep -n \"test_devices.py\\\\` | Enumeración\" -B 2 -A 12 CLAUDE.md)",
-      "Bash(grep -n \"^| \\\\`tests/test_ui.py\\\\`\" CLAUDE.md)"
+      "Bash(grep -n \"^| \\\\`tests/test_ui.py\\\\`\" CLAUDE.md)",
+      "PowerShell(.venv\\\\Scripts\\\\python.exe \"$env:TEMP\\\\rnk_wf_check.py\")",
+      "PowerShell(.venv\\\\Scripts\\\\python.exe -c \"import sys; sys.path.insert\\(0,'src'\\); import i18n_en; print\\('catalogo:', len\\(i18n_en.CATALOG\\)\\)\"; .venv\\\\Scripts\\\\python.exe tests\\\\run_all.py 2>&1 | Select-Object -Last 5)"
     ]
   }
 }

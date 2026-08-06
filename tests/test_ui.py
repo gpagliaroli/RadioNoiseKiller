@@ -493,7 +493,25 @@ def test_waterfall_toggle_and_source():
         wf.push_row(db)
     wf.resize(600, 200)
     wf.repaint()
-    print("Cascada: toggle + fuente + push headless    OK")
+
+    # Profundidad de historia: el combo la cambia y persiste. El buffer NO se
+    # redimensiona (esta dimensionado para el maximo): cambiarla es un zoom, no
+    # descarta lo capturado.
+    buffer_filas = wf._rows
+    for secs in (15, 120, 30):
+        _set_combo(w._combo_waterfall_hist, secs)
+        assert w._config.window.waterfall_history_sec == secs, "no persistio la profundidad"
+        assert wf._visible_rows() <= wf._rows
+        wf.repaint()
+    assert wf._rows == buffer_filas, "el buffer no deberia redimensionarse"
+    assert wf._visible_rows() < buffer_filas, "a 30 s deberia dibujar menos que el buffer"
+    assert w._combo_waterfall_hist.isEnabled() == w._chk_waterfall.isChecked()
+
+    # Marcadores de heterodino: aceptar tonos, ninguno, y repintar sin crashear
+    for tonos in (np.array([1500.0, 3200.0], dtype=np.float32), None):
+        wf.set_tone_freqs(tonos)
+        wf.repaint()
+    print("Cascada: toggle + fuente + profundidad + marcadores  OK")
 
 
 def test_incompatible_devices_disable_activate():

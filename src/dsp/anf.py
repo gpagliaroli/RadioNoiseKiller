@@ -28,6 +28,7 @@ class AdaptiveNotchFilter:
                  threshold: float = 3.0,
                  depth: float = 0.9,
                  kernel_size: int = 15):
+        self._sample_rate = int(sample_rate)
         self._threshold   = float(np.clip(threshold, 1.1, 30.0))
         self._depth       = float(np.clip(depth, 0.0, 1.0))
         self._kernel_size = max(3, int(kernel_size) | 1)
@@ -41,6 +42,7 @@ class AdaptiveNotchFilter:
         self._ola_win:  np.ndarray = np.zeros(0, dtype=np.float32)
         self._smooth_gains: np.ndarray | None = None
         self._last_notched_bins: int = 0
+        self._last_tone_freqs: "np.ndarray | None" = None
 
     def _init_ola(self, hop: int) -> None:
         self._hop      = hop
@@ -96,6 +98,13 @@ class AdaptiveNotchFilter:
             is_tone  = mag > self._threshold * (baseline + 1e-12)
 
             self._last_notched_bins = int(np.sum(is_tone))
+            # Frecuencias de los tonos, para el marcador de la cascada. Se
+            # rebindea un array nuevo (no se muta el anterior): la UI lo lee sin
+            # lock y en el peor caso ve el frame previo — material de diagnostico
+            # (misma decision que pop_blanker_hits, invariante 7).
+            idx = np.flatnonzero(is_tone)
+            self._last_tone_freqs = (idx * (self._sample_rate / (2.0 * self._hop))
+                                     ).astype(np.float32)
             gain_inst = np.where(
                 is_tone,
                 (1.0 - self._depth) + self._depth * baseline / (mag + 1e-12),
@@ -137,3 +146,9 @@ class AdaptiveNotchFilter:
     @property
     def notched_bins(self) -> int:
         return self._last_notched_bins
+
+    @property
+    def tone_freqs(self) -> "np.ndarray | None":
+        """Frecuencias (Hz) de los tonos cancelados en el ultimo frame, o None si
+        el ANF esta desactivado. Lo usa el marcador de heterodinos de la cascada."""
+        return self._last_tone_freqs if self._enabled else None

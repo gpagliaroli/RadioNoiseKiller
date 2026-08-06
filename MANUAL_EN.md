@@ -877,6 +877,10 @@ In Static profile mode, the yellow floor is captured from the **⏺ Learn noise*
 
 Both sliders rescale **the spectrum and the waterfall** at the same time.
 
+**Colour scale:** at the top left of the waterfall there is a bar with the gradient and the dB range it represents (from −80 dB up to the *Max Y* slider value). It lets you read the colours without guessing: moving *Max Y* changes the range and the bar reflects it.
+
+**Heterodyne markers:** when the **ANF** is enabled, the frequencies where it is cancelling tones appear marked in red along the waterfall's bottom axis. A steady heterodyne shows as a fixed mark; an intermittent one blinks. It is the quick way to confirm the ANF is catching the tone that bothers you — and to discover tones sneaking in unnoticed.
+
 ### Waterfall
 
 Below the instantaneous spectrum is the **waterfall**: a time-frequency display with history (~30 seconds). The horizontal axis is frequency (aligned with the spectrum above), the vertical axis is time (the top row is *now*, downward is the past), and color represents the intensity at each frequency (blue = weak / noise floor, up to red = strong). It lets you **see** the evolution over time that the instantaneous spectrum cannot show: signal QSB (fading), heterodynes that come and go, and intermittent interference (QRM).
@@ -885,6 +889,7 @@ Below the instantaneous spectrum is the **waterfall**: a time-frequency display 
 |---------|-------------|
 | **"Waterfall" checkbox** | Shows or hides the waterfall. When hidden, the instantaneous spectrum takes the full height. The state is saved automatically. |
 | **Input / Output selector** | Chooses which signal feeds the waterfall: **Input** (before processing — to see the interference as it arrives) or **Output** (after processing — to see the effect of the filter chain). |
+| **Depth selector (15 / 30 / 60 / 120 s)** | How much history is shown. More depth to follow slow QSB or tell whether a heterodyne is intermittent; less to look at the fine time detail of the last few seconds. **It does not discard what was captured**: the buffer always keeps 120 s and the selector is a zoom, so widening the window reveals history that was already there. The time axis adjusts its ticks automatically. |
 
 **Resizing the split:** the spectrum and the waterfall are separated by a **draggable divider**. By default the tab is split in half, but you can drag the divider up or down with the mouse to give more room to whichever you are watching (more waterfall to track the fading, more spectrum for instantaneous detail).
 

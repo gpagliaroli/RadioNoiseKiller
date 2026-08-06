@@ -877,6 +877,10 @@ En modo Perfil estático, el piso amarillo se captura desde el botón **⏺ Apre
 
 Los dos sliders reescalan **tanto el espectro como la cascada** a la vez.
 
+**Escala de color:** arriba a la izquierda de la cascada hay una barra con el degradado y el rango en dB que representa (de −80 dB hasta el valor del slider *Máx Y*). Sirve para leer los colores sin adivinar: mover *Máx Y* cambia el rango y la barra lo refleja.
+
+**Marcadores de heterodino:** cuando el **ANF** está activo, las frecuencias donde está cancelando tonos aparecen marcadas en rojo sobre el eje inferior de la cascada. Un heterodino estable se ve como una marca fija; uno intermitente parpadea. Es la forma rápida de confirmar que el ANF está agarrando el tono que molesta — y de descubrir tonos que se cuelan sin que uno los note.
+
 ### Cascada (waterfall)
 
 Debajo del espectro instantáneo aparece la **cascada**: una representación tiempo-frecuencia con historia (~30 segundos). El eje horizontal es la frecuencia (alineado con el espectro de arriba), el eje vertical es el tiempo (la fila superior es *ahora*, hacia abajo es el pasado) y el color representa la intensidad en cada frecuencia (azul = débil/piso de ruido, hasta rojo = fuerte). Permite **ver** la evolución en el tiempo que el espectro instantáneo no muestra: el QSB (fading) de la señal, los heterodinos que aparecen y desaparecen, y la interferencia (QRM) intermitente.
@@ -885,6 +889,7 @@ Debajo del espectro instantáneo aparece la **cascada**: una representación tie
 |---------|-------------|
 | **Casilla "Cascada"** | Muestra u oculta la cascada. Al ocultarla, el espectro instantáneo ocupa toda la altura. El estado se guarda automáticamente. |
 | **Selector Entrada / Salida** | Elige qué señal alimenta la cascada: **Entrada** (antes del procesamiento — para ver la interferencia tal como llega) o **Salida** (después del procesamiento — para ver el efecto de la cadena de filtros). |
+| **Selector de profundidad (15 / 30 / 60 / 120 s)** | Cuánta historia se muestra. Más profundidad para seguir un QSB lento o ver si un heterodino es intermitente; menos para mirar el detalle temporal de los últimos segundos. **No descarta lo capturado**: el buffer siempre guarda 120 s y el selector es un zoom, así que ampliar la ventana muestra historia que ya estaba ahí. El eje de tiempo ajusta sus marcas solo. |
 
 **Redimensionar el reparto:** el espectro y la cascada están separados por un **divisor arrastrable**. Por defecto la pestaña se divide a la mitad, pero podés arrastrar el divisor con el mouse hacia arriba o hacia abajo para darle más espacio al que estés mirando (más cascada para seguir el fading, más espectro para ver el detalle instantáneo).
 
