@@ -287,5 +287,45 @@ assert all(v > 0 for v in _norm.values()), f"sin preview las etapas deben correr
 assert all(v == 0 for v in _prev.values()), f"el preview no debe colorear: {_prev}"
 print(f"Preview sin coloreo: OK (normal {_norm}, preview {_prev})")
 
+# --- Piso de ruido de la entrada: debe medir el RUIDO, no el nivel ----------
+# El techo de ruido del AGC vale (techo - piso), asi que si el seguidor mide el
+# nivel de la voz en vez del ruido, el control queda inservible. La primera
+# version usaba un minimo con decaimiento y trepaba hacia la voz: con voz a -20
+# dBFS y ruido a -40 marcaba -28 (reportado en el aire: "el piso que detecta
+# incluye voz, el piso marcado es lo que indica el VU"). Ahora es minimo por
+# ventana deslizante, el mismo patron que usa MCRA.
+_pf_cfg = AppConfig()
+_pf_cfg.dsp.agc_noise_ceiling_enabled = True
+_pf_cfg.dsp.agc_preset = "off"
+_pf_cfg.dsp.noise_enabled = False
+_pf_cfg.dsp.blanker_enabled = False
+_pf_cfg.dsp.anf_enabled = False
+_pp = ProcessingPipeline(_pf_cfg)
+
+_rr = np.random.default_rng(4)
+_VOZ_DB, _RUIDO_DB = -20.0, -40.0
+_tt = np.arange(1200 * hop) / 48000.0
+_vv = np.zeros_like(_tt)
+for _k in range(1, 20):
+    if _k * 130 < 3400:
+        _vv += (1.0 / _k) * np.sin(2 * np.pi * _k * 130 * _tt)
+_vv /= (np.sqrt(np.mean(_vv ** 2)) + 1e-12)
+_ee = np.zeros_like(_tt)
+for _i in range(1200):
+    if (_i % 40) < 25:                       # 250 ms de voz cada 400 ms
+        _ee[_i * hop:(_i + 1) * hop] = 1.0
+_xx = (_vv * _ee * 10 ** (_VOZ_DB / 20) * np.sqrt(2)
+       + _rr.standard_normal(1200 * hop) * 10 ** (_RUIDO_DB / 20)).astype(np.float32)
+for _i in range(1200):
+    _pp._track_input_noise(_xx[_i * hop:(_i + 1) * hop])
+
+_piso = _pp.input_noise_db
+print(f"Piso de entrada medido: {_piso:.1f} dBFS "
+      f"(ruido real {_RUIDO_DB:.0f}, voz {_VOZ_DB:.0f})")
+assert abs(_piso - _RUIDO_DB) < 4.0, \
+    f"el seguidor no mide el piso ({_piso:.1f} dB con ruido en {_RUIDO_DB:.0f})"
+assert _piso < _VOZ_DB - 12.0, "el piso esta contaminado por la voz"
+print("Piso de ruido de entrada: OK")
+
 print(f"\nErrores: {errors if errors else 'ninguno'}")
 print("\nPipeline: OK")

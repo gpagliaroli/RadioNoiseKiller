@@ -285,9 +285,20 @@ usuario probó sacarle el modo continuo y no cambió nada).
 - Fix: `AGC.set_max_gain_limit(db)` — tope de ganancia adicional al del preset, calculado por el
   pipeline como `techo_dBFS − piso_de_ruido_de_entrada`. `agc_noise_ceiling_enabled/_db` en
   DSPConfig; checkbox + slider + indicador "Tope aplicado" en Avanzada Audio.
-- El piso de ruido se mide sobre la entrada **CRUDA (pre-AGC)** con seguimiento de mínimos
-  (`_track_input_noise`): si se midiera después del AGC, el tope dependería de la ganancia que está
-  limitando y se realimentaría.
+- El piso de ruido se mide sobre la entrada **CRUDA (pre-AGC)**: si se midiera después del AGC, el
+  tope dependería de la ganancia que está limitando y se realimentaría.
+- **El seguidor tiene que ser mínimo por VENTANA DESLIZANTE, no mínimo con decaimiento.** La primera
+  versión usaba un mínimo que sube 0.2%/frame; eso trepa ~1.7 dB/s hacia el nivel de la señal, así
+  que con voz continua **mide la voz, no el ruido**. Medido con voz a −20 dBFS y ruido a −40:
+  marcaba **−28 dBFS**, a mitad de camino. Reportado en el aire: *"el piso que detecta incluye voz,
+  el piso marcado es lo que indica el VU"*. Con subtramas + mínimo global (el patrón que ya usa
+  MCRA, ventana ~4 s, EMA corto de 30 ms para que las pausas entre palabras registren): **−39.4 dBFS**,
+  a 0.6 dB del real. Ventana en frames → depende del hop, se recalcula en `start()` (invariante 9).
+  Test en `test_pipeline`.
+- **El indicador debe decir si el límite está ACTUANDO, no solo su valor.** Mostraba "máx +0 dB" en
+  rojo con entrada fuerte y el usuario lo leyó como un error — y tenía razón en que no informaba:
+  con señal fuerte el AGC no quiere amplificar, así que ese tope no limita nada. Ahora muestra el
+  piso medido y distingue *"sin efecto"* de *"limitando a +X dB"*.
 - Medido con voz a −46 dBFS y ruido a −56: con techo −45 dBFS el ruido tras la transmisión pasa de
   −54.7 a **−77.9 dB** (−23 dB) y la voz solo baja 4 dB (el nivelador post-cancelador recupera el
   resto). Con techo −55 (por debajo del piso real de entrada) la voz se ahoga: −62 dB. **Por eso el

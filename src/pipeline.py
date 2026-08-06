@@ -110,8 +110,7 @@ class ProcessingPipeline:
         # Techo de ruido del AGC (ver _track_input_noise)
         self._agc_noise_ceiling_enabled: bool = config.dsp.agc_noise_ceiling_enabled
         self._agc_noise_ceiling_db:     float = config.dsp.agc_noise_ceiling_db
-        self._in_noise_ema: "float | None" = None
-        self._in_noise_min: float = 1.0
+        self._reset_input_noise()
         self._exciter = AuralExciter(config.audio.sample_rate)
         self._exciter.set_drive(config.dsp.exciter_drive)
         self._exciter.set_mix(config.dsp.exciter_mix)
@@ -806,6 +805,9 @@ class ProcessingPipeline:
             self._squelch_hold_count  = 0
             self._sq_gain_prev        = 1.0
             self._learn_gain_prev     = 1.0
+            # La ventana de mínimos se expresa en frames: depende del hop (inv. 9)
+            self._reset_input_noise()
+            self._bass.reset()
             self._agc.set_hold(False)
             self._in_acc  = np.zeros(0, dtype=np.float32)
             self._out_acc = np.zeros(0, dtype=np.float32)
@@ -897,24 +899,52 @@ class ProcessingPipeline:
     # Thread de procesamiento DSP (fuera del callback de audio)
     # ------------------------------------------------------------------
 
-    # Seguidor del piso de ruido de la ENTRADA (pre-AGC), por seguimiento de mínimos:
-    # el mínimo reciente del RMS es el ruido de fondo (los valles entre palabras),
-    # mientras que un promedio incluiría la voz. Mismo patrón que el tracker del VAD.
-    _IN_NOISE_EMA:   float = 0.90    # suavizado del RMS por frame (~100 ms)
-    _IN_NOISE_DECAY: float = 1.002   # el mínimo sube 0.2%/frame (~0.6 s por dB)
+    # Seguidor del piso de ruido de la ENTRADA (pre-AGC) por MÍNIMOS EN VENTANA
+    # DESLIZANTE — el mismo patrón que usa MCRA (subtramas + mínimo global).
+    #
+    # OJO: la primera versión usaba un mínimo con decaimiento (sube 0.2%/frame).
+    # Eso NO mide el piso: con voz continua el "mínimo" trepa ~1.7 dB/s hacia el
+    # nivel de la voz. Medido con voz a −20 dBFS y ruido a −40, marcaba −28 dBFS —
+    # a mitad de camino entre los dos. Reportado en el aire: *"el piso que detecta
+    # incluye voz, el piso marcado es lo que indica el VU"*. Con la ventana
+    # deslizante marca −39.4 dBFS, a 0.6 dB del piso real.
+    #
+    # El mínimo solo sube cuando TODA la ventana subió, así que las pausas entre
+    # palabras alcanzan para fijarlo. El EMA es corto (TC ~30 ms) justamente para
+    # que esas pausas registren.
+    _IN_NOISE_EMA:     float = 0.70    # suavizado del RMS por frame (~30 ms)
+    _IN_NOISE_SUB_MS:  float = 1000.0  # duración de cada subtrama
+    _IN_NOISE_NSUB:    int   = 4       # subtramas → ventana total ~4 s
+
+    def _reset_input_noise(self) -> None:
+        hop_ms = (self._config.audio.block_size
+                  / self._config.audio.sample_rate * 1000.0)
+        self._in_sub_frames = max(1, round(self._IN_NOISE_SUB_MS / hop_ms))
+        self._in_noise_ema = None
+        self._in_ring = [float("inf")] * self._IN_NOISE_NSUB
+        self._in_ring_idx = 0
+        self._in_cur_min = float("inf")
+        self._in_sub_count = 0
+        self._in_noise_min = 1.0
 
     def _track_input_noise(self, chunk: np.ndarray) -> None:
         rms = float(np.sqrt(np.mean(chunk.astype(np.float64) ** 2)) + 1e-12)
         if self._in_noise_ema is None:
             self._in_noise_ema = rms
-            self._in_noise_min = rms
-            return
-        a = self._IN_NOISE_EMA
-        self._in_noise_ema = a * self._in_noise_ema + (1.0 - a) * rms
-        if self._in_noise_ema < self._in_noise_min:
-            self._in_noise_min = self._in_noise_ema
         else:
-            self._in_noise_min *= self._IN_NOISE_DECAY
+            a = self._IN_NOISE_EMA
+            self._in_noise_ema = a * self._in_noise_ema + (1.0 - a) * rms
+
+        self._in_cur_min = min(self._in_cur_min, self._in_noise_ema)
+        self._in_sub_count += 1
+        if self._in_sub_count >= self._in_sub_frames:
+            self._in_ring[self._in_ring_idx] = self._in_cur_min
+            self._in_ring_idx = (self._in_ring_idx + 1) % self._IN_NOISE_NSUB
+            self._in_cur_min = self._in_noise_ema
+            self._in_sub_count = 0
+
+        mn = min(min(self._in_ring), self._in_cur_min)
+        self._in_noise_min = mn if mn != float("inf") else self._in_noise_ema
 
     def _drain_queues(self) -> None:
         for q in (self._in_queue, self._out_queue):
