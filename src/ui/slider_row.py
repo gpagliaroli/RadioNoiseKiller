@@ -87,6 +87,17 @@ class SliderRow(QWidget):
         self._lbl.setEnabled(enabled)
         self._val_lbl.setEnabled(enabled)
 
+    def setToolTip(self, text: str) -> None:
+        """Propaga el tooltip a los HIJOS, no solo al contenedor.
+
+        Sin esto el tooltip solo aparece al pasar por los pocos pixeles de la
+        fila que no ocupa ninguno de los tres widgets — es decir, casi nunca:
+        justo sobre el slider (que es donde el usuario apunta) no se muestra.
+        Mismo patron que set_enabled, que tampoco sirve sobre el contenedor."""
+        super().setToolTip(text)
+        for w in (self._lbl, self._slider, self._val_lbl):
+            w.setToolTip(text)
+
     # ------------------------------------------------------------------
     # Internos
     # ------------------------------------------------------------------

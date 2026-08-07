@@ -33,6 +33,15 @@ La aplicación aplica una serie de procesos en cadena — el **pipeline** — do
 - No corrige el nivel de los desvanecimientos (fading) de propagación — aunque la **Compensación fading HF** (Cap. 7) evita que el cancelador de ruido se desajuste durante los fades.
 - No mejora señales con nivel de señal (S-meter) muy bajo — necesita algo de señal para trabajar.
 
+### Ayuda dentro de la aplicación
+
+**Todos los sliders tienen un texto de ayuda**: dejá el mouse un segundo sobre el nombre, la barra
+o el valor del control y aparece un cartel con qué hace, hacia dónde moverlo y qué se paga a cambio.
+Es la versión corta de lo que explican los capítulos que siguen — sirve para ajustar sin soltar la
+radio, y el manual queda para cuando querés el porqué.
+
+También podés hacer **click derecho sobre cualquier slider** para restaurar su valor de fábrica.
+
 ---
 
 ## Glosario de términos
@@ -126,6 +135,7 @@ Controles principales de operación: modo de recepción, AGC y activación del p
 |---------|-------------|
 | **Modo** | Selecciona el tipo de señal recibida: **AM** (amplitud modulada, ancho de banda más amplio) o **SSB** (banda lateral única, voz comprimida en frecuencia). Afecta los límites por defecto del Filtro de Paso de Banda. |
 | **AGC** | Control Automático de Ganancia. **off** = sin AGC. **slow / medium / fast** = velocidad de respuesta (ataque/release fijos por preset). Para SSB se recomienda *slow* o *medium*; para AM con señales estables, *off* o *slow*. |
+| **Nivelar en continuo (música)** | Casilla del **Nivelador de voz** (Cap. 7), puesta acá porque se cambia según lo que se esté escuchando: marcada para música o audio continuo, sin marcar para voz. Requiere el cancelador y el nivelador activos. |
 | **Techo de ruido** | Limita cuánto puede amplificar el AGC, para que no levante el ruido de banda. Ver más abajo. |
 | **▶ ACTIVAR / ■ DETENER** | Inicia o detiene el procesamiento en tiempo real. Al activar, el audio fluye por todo el pipeline. |
 | **Bypass** | Pasa el audio directo de entrada a salida sin ningún procesamiento. Útil para comparar el sonido con y sin la aplicación activa. La **Ganancia de salida** (pestaña *Avanzada Audio*) también actúa en bypass, y su valor se recuerda por separado para bypass ON y OFF (ver la nota en *Ganancia y niveles*). |
@@ -542,7 +552,7 @@ La diferencia con el AGC general (Cap. 2) es el **gate por detección de voz**: 
 |---------|-------|---------|-------------|
 | **Ganancia máxima** | 0 – 20 dB | +12 dB | Tope de amplificación para voz débil. Subir para señales DX muy por debajo del nivel objetivo; bajar si al aparecer una estación fuerte tras una débil el arranque suena excesivo. Con 0 dB el módulo solo atenúa (nunca amplifica). |
 | **Velocidad de respuesta** | 200 – 3000 ms | 1500 ms | Qué tan rápido sigue el nivelador los cambios de nivel (el *release* del AGC). **Rápido (200–600 ms):** sigue un fading cíclico y rápido, sin dejar "pozos" de volumen al bajar la señal. **Suave (2000–3000 ms):** nivelado más estable, menos riesgo de bombear el ruido de fondo. |
-| **Nivelar en continuo (música)** | casilla | off | Desactiva el gate por detección de voz: el nivelador adapta **en todo momento**, sin esperar voz. **Activar para música o audio continuo** — donde el detector de voz no reconoce estructura de voz y, con el gate, el nivelador quedaría congelado. Para voz en banda ruidosa dejar **off** (evita re-amplificar el ruido en las pausas). |
+| **Nivelar en continuo (música)** | casilla | off | *(La casilla está en la pestaña **Principal** → grupo "Control", debajo del selector de AGC — se cambia según el material que se escucha, así que va a la vista.)* Desactiva el gate por detección de voz: el nivelador adapta **en todo momento**, sin esperar voz. **Activar para música o audio continuo** — donde el detector de voz no reconoce estructura de voz y, con el gate, el nivelador quedaría congelado. Para voz en banda ruidosa dejar **off** (evita re-amplificar el ruido en las pausas). |
 
 > **Cuándo activarlo:** sesiones largas con estaciones de niveles dispares o QSB pronunciado, especialmente con squelch activo (los saltos de nivel entre transmisiones se notan más al no haber ruido de fondo que los enmascare).
 

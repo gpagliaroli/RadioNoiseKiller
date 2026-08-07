@@ -7,6 +7,7 @@ from PySide6.QtCore import Qt, QTimer, Signal
 from config import AppConfig, RadioMode, AudioConfig, DSPConfig
 from pipeline import ProcessingPipeline
 from ui.slider_row import SliderRow
+from ui.tooltips import apply_tooltips
 from i18n import tr
 
 _BLOCK_SIZES    = [240, 480, 960, 1920]
@@ -85,6 +86,7 @@ class AdvancedAudioTab(QWidget):
         self._build_ui()
         self._load_values()
         self.refresh_enabled_states()
+        apply_tooltips(self)
         _wire_change_notifications(self)
 
     def refresh_enabled_states(self) -> None:
@@ -116,7 +118,6 @@ class AdvancedAudioTab(QWidget):
         leveler_on = dsp.noise_enabled and dsp.voice_leveler_enabled
         self._s_leveler_max.set_enabled(leveler_on)
         self._s_leveler_release.set_enabled(leveler_on)
-        self._chk_leveler_continuous.setEnabled(leveler_on)
 
     def _build_ui(self) -> None:
         layout = _make_scroll_layout(self)
@@ -192,18 +193,6 @@ class AdvancedAudioTab(QWidget):
         layout.addWidget(self._s_leveler_release)
         layout.addWidget(_note(tr("  ↳ Qué tan rápido sigue el nivelador los cambios de nivel. Rápido = sigue el fading cíclico y rápido; suave = más estable, menos bombeo.")))
 
-        self._chk_leveler_continuous = QCheckBox(tr("Nivelar en continuo (música / sin detección de voz)"))
-        self._chk_leveler_continuous.setToolTip(tr(
-            "Desactivado (default): el nivelador adapta solo cuando el detector\n"
-            "de voz confirma voz presente — evita amplificar el ruido en las\n"
-            "pausas entre palabras (ideal para voz en banda ruidosa).\n"
-            "Activado: adapta en continuo, sin esperar voz — usar para música o\n"
-            "audio continuo, donde no hay estructura de voz que detectar."))
-        # Checkbox marcado = nivelar continuo = SIN gate por voz
-        self._chk_leveler_continuous.toggled.connect(
-            lambda on: self._pipeline.set_voice_leveler_gate_voice(not on))
-        layout.addWidget(self._chk_leveler_continuous)
-        layout.addWidget(_note(tr("  ↳ Para música o audio continuo con fading: el detector de voz no lo reconoce y el nivelador quedaría congelado — esta casilla lo nivela igual.")))
         return group
 
     def _build_dsp_group(self) -> QGroupBox:
@@ -436,9 +425,6 @@ class AdvancedAudioTab(QWidget):
         )
         self._s_leveler_max.set_value(cfg.voice_leveler_max_db)
         self._s_leveler_release.set_value(cfg.voice_leveler_release_ms)
-        self._chk_leveler_continuous.blockSignals(True)
-        self._chk_leveler_continuous.setChecked(not cfg.voice_leveler_gate_voice)
-        self._chk_leveler_continuous.blockSignals(False)
         self._s_presence_freq.set_value(cfg.presence_freq)
         self._s_presence.set_value(cfg.presence_db)
         self._s_presence_q.set_value(cfg.presence_q)
@@ -542,6 +528,7 @@ class AdvancedImpulseTab(QWidget):
         self._build_ui()
         self._load_values()
         self.refresh_enabled_states()
+        apply_tooltips(self)
         _wire_change_notifications(self)
 
     def refresh_enabled_states(self) -> None:
@@ -713,6 +700,7 @@ class AdvancedCancellerTab(QWidget):
         self._build_ui()
         self._load_values()
         self.refresh_enabled_states()
+        apply_tooltips(self)
         _wire_change_notifications(self)
 
     def refresh_enabled_states(self) -> None:

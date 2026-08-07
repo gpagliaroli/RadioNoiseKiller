@@ -18,6 +18,7 @@ from ui.vu_meter import VuMeter
 from ui.advanced_tab import AdvancedAudioTab, AdvancedImpulseTab, AdvancedCancellerTab
 from ui.presets_tab import PresetsTab
 from ui.slider_row import SliderRow
+from ui.tooltips import apply_tooltips
 from ui.spectrum_widget import SpectrumWidget
 from ui.waterfall_widget import WaterfallWidget
 from presets import PresetManager
@@ -170,6 +171,7 @@ class MainWindow(QMainWindow):
         self._btn_about.clicked.connect(self._show_about)
         self._status_bar.addPermanentWidget(self._btn_about)
 
+        apply_tooltips(self)
         self._apply_dark_style()
 
     def _build_main_tab(self) -> QWidget:
@@ -270,8 +272,27 @@ class MainWindow(QMainWindow):
         agc_row.addStretch()
         layout.addLayout(agc_row)
 
-        # Techo de ruido del AGC: vive acá y no en Avanzada Audio porque es un
-        # control del AGC y se ajusta escuchando, junto al combo que lo activa.
+        # "Nivelar en continuo" y el techo de ruido viven acá y no en Avanzada
+        # Audio: los dos son ajustes del comportamiento del AGC y se deciden
+        # escuchando, así que van junto al combo que lo activa.
+        cont_row = QHBoxLayout()
+        cont_lbl = QLabel("")
+        cont_lbl.setFixedWidth(_ROW_LABEL_W)
+        cont_row.addWidget(cont_lbl)
+        self._chk_leveler_continuous = QCheckBox(
+            tr("Nivelar en continuo (música / sin detección de voz)"))
+        self._chk_leveler_continuous.setToolTip(tr(
+            "Desactivado (default): el nivelador adapta solo cuando el detector\n"
+            "de voz confirma voz presente — evita amplificar el ruido en las\n"
+            "pausas entre palabras (ideal para voz en banda ruidosa).\n"
+            "Activado: adapta en continuo, sin esperar voz — usar para música o\n"
+            "audio continuo, donde no hay estructura de voz que detectar."))
+        # Checkbox marcado = nivelar continuo = SIN gate por voz
+        self._chk_leveler_continuous.toggled.connect(self._on_leveler_continuous)
+        cont_row.addWidget(self._chk_leveler_continuous)
+        cont_row.addStretch()
+        layout.addLayout(cont_row)
+
         ceil_row = QHBoxLayout()
         ceil_lbl = QLabel("")
         ceil_lbl.setFixedWidth(_ROW_LABEL_W)
@@ -299,6 +320,8 @@ class MainWindow(QMainWindow):
         )
         self._s_agc_ceiling.valueChanged.connect(self._on_agc_ceiling_db)
         layout.addWidget(self._s_agc_ceiling)
+        self._chk_leveler_continuous.setChecked(not self._config.dsp.voice_leveler_gate_voice)
+        self._refresh_control_gating()
         self._chk_agc_ceiling.setChecked(self._config.dsp.agc_noise_ceiling_enabled)
         self._s_agc_ceiling.set_value(self._config.dsp.agc_noise_ceiling_db)
         self._s_agc_ceiling.set_enabled(self._config.dsp.agc_noise_ceiling_enabled)
@@ -307,6 +330,11 @@ class MainWindow(QMainWindow):
         self._check_bypass.toggled.connect(self._on_bypass_toggled)
         layout.addWidget(self._check_bypass)
         return group
+
+    def _on_leveler_continuous(self, on: bool) -> None:
+        # Marcado = nivelar en continuo = SIN gate por voz
+        self._pipeline.set_voice_leveler_gate_voice(not on)
+        self._schedule_save()
 
     def _on_agc_ceiling_toggled(self, v: bool) -> None:
         self._config.dsp.agc_noise_ceiling_enabled = bool(v)
@@ -1064,6 +1092,10 @@ class MainWindow(QMainWindow):
         # --- Sliders Intensidad + Post-Filtro (sin emitir: no re-disparar handlers) ---
         self._slider_noise.set_value(cfg.noise_alpha * 100.0)
         self._slider_post.set_value(cfg.post_filter_strength)
+        self._chk_leveler_continuous.blockSignals(True)
+        self._chk_leveler_continuous.setChecked(not cfg.voice_leveler_gate_voice)
+        self._chk_leveler_continuous.blockSignals(False)
+        self._refresh_control_gating()
         self._chk_agc_ceiling.blockSignals(True)
         self._chk_agc_ceiling.setChecked(cfg.agc_noise_ceiling_enabled)
         self._chk_agc_ceiling.blockSignals(False)
@@ -1248,7 +1280,18 @@ class MainWindow(QMainWindow):
             self._adv_audio_tab.refresh_enabled_states()
             self._adv_impulse_tab.refresh_enabled_states()
             self._adv_canceller_tab.refresh_enabled_states()
+        self._refresh_control_gating()
         self._schedule_save()
+
+    def _refresh_control_gating(self) -> None:
+        """Gating de los controles del grupo Control que dependen de un módulo.
+        'Nivelar en continuo' solo aplica con el nivelador activo, que a su vez
+        necesita el cancelador (su VAD vive ahí — invariante 2)."""
+        if not hasattr(self, "_chk_leveler_continuous"):
+            return
+        d = self._config.dsp
+        self._chk_leveler_continuous.setEnabled(
+            d.noise_enabled and d.voice_leveler_enabled)
 
     def _on_gain_in_changed(self, val: float) -> None:
         self._config.gain.input_gain_db = val

@@ -576,4 +576,290 @@ CATALOG = {
         "same API (for example, both [WASAPI]).",
     "Dispositivos compatibles. Listo para ACTIVAR.":
         "Compatible devices. Ready to START.",
+
+    # --- Tooltips de los sliders (ui/tooltips.py) ---
+    "Cuánto ruido resta el cancelador en los bins que marca como ruido.\n"
+    "0% = pasa todo sin tocar; 100% = reducción plena.\n"
+    "Calibralo con el Preview: subilo mientras lo que se elimina sea sólo\n"
+    "ruido, y bajá un paso donde empiece a filtrarse voz.\n"
+    "Receta recomendada: Intensidad baja (50–60%) + Post-Filtro alto.":
+        "How much noise the canceller subtracts in the bins it flags as noise.\n"
+        "0% = everything passes untouched; 100% = full reduction.\n"
+        "Calibrate it with Preview: raise it while what gets removed is only\n"
+        "noise, then back off one step where voice starts leaking through.\n"
+        "Recommended recipe: low Strength (50-60%) + high Post-Filter.",
+    "Nivel máximo al que el AGC puede levantar el ruido de fondo.\n"
+    "Ponelo POR ENCIMA del piso que muestra el indicador de al lado: si\n"
+    "queda por debajo, no hay ganancia posible y el AGC no amplifica nada.\n"
+    "Más bajo = fondo más silencioso cuando la señal es débil o no hay nadie.":
+        "Highest level the AGC is allowed to lift background noise to.\n"
+        "Set it ABOVE the floor shown by the indicator next to it: if it sits\n"
+        "below, no gain is possible and the AGC amplifies nothing.\n"
+        "Lower = quieter background when the signal is weak or nobody is on.",
+    "Ganancia sobre la señal que llega de la radio, antes de todo el proceso.\n"
+    "Ajustala para que el VU de entrada trabaje cómodo sin llegar al rojo:\n"
+    "el cancelador y el AGC trabajan mejor con un nivel sano.\n"
+    "Si la entrada satura, bajala acá antes que en la radio.":
+        "Gain on the signal coming from the radio, before any processing.\n"
+        "Set it so the input VU works comfortably without hitting red: the\n"
+        "canceller and the AGC do better with a healthy level.\n"
+        "If the input clips, turn it down here before touching the radio.",
+    "Volumen final que sale al parlante o auricular. También actúa en Bypass.\n"
+    "Se recuerda por separado para Bypass encendido y apagado, así podés\n"
+    "comparar el antes y el después a nivel parejo.":
+        "Final volume sent to the speaker or headphones. It also works in Bypass.\n"
+        "It is remembered separately for Bypass on and off, so you can compare\n"
+        "before and after at a matched level.",
+    "Techo al que el limitador sujeta los picos para que nada sature la salida.\n"
+    "−1 a −3 dB es lo habitual. El indicador de al lado avisa cuándo actúa:\n"
+    "si está siempre encendido, bajá la ganancia de salida en vez de subir esto.":
+        "Ceiling the limiter holds peaks to, so nothing clips the output.\n"
+        "-1 to -3 dB is usual. The indicator next to it shows when it acts:\n"
+        "if it is always lit, lower the output gain instead of raising this.",
+    "Cuántas muestras procesa el DSP por vez. Es el compromiso latencia/CPU:\n"
+    "más chico responde antes pero cuesta más; más grande alivia el equipo.\n"
+    "480 (10 ms) es el equilibrio; si la CPU va justa, 960 baja bastante el\n"
+    "costo y 20 ms de retardo siguen siendo imperceptibles al escuchar.\n"
+    "REQUIERE detener y volver a activar el procesamiento.":
+        "How many samples the DSP processes at a time. It trades latency for CPU:\n"
+        "smaller responds sooner but costs more; larger eases the machine.\n"
+        "480 (10 ms) is the balance; if CPU is tight, 960 cuts the cost a lot and\n"
+        "20 ms of delay is still imperceptible while listening.\n"
+        "REQUIRES stopping and starting processing again.",
+    "Cuánto puede amplificar el nivelador a una estación débil para emparejarla\n"
+    "con las fuertes. Alto = menos manotazos al volumen, pero también levanta\n"
+    "el ruido que viene con esa señal débil. 9–12 dB anda bien.":
+        "How much the leveler may amplify a weak station to match the strong ones.\n"
+        "High = less reaching for the volume knob, but it also lifts the noise\n"
+        "that comes with that weak signal. 9-12 dB works well.",
+    "Qué tan rápido persigue el nivelador los cambios de nivel.\n"
+    "Rápido (400–600 ms) para fading cíclico y música con QSB; suave (1500 ms\n"
+    "o más) para que no bombee. Si escuchás la ganancia 'respirar', andá hacia\n"
+    "suave.":
+        "How fast the leveler chases level changes.\n"
+        "Fast (400-600 ms) for cyclic fading and music with QSB; smooth (1500 ms\n"
+        "or more) so it does not pump. If you hear the gain 'breathing', go\n"
+        "toward smooth.",
+    "Corte inferior del filtro de entrada en AM. Subilo para sacar retumbe,\n"
+    "zumbido de red y ruido de motor; bajarlo deja más cuerpo en la voz.":
+        "Low cutoff of the input filter in AM. Raise it to remove rumble, mains\n"
+        "hum and engine noise; lowering it leaves more body in the voice.",
+    "Corte superior del filtro de entrada en AM. Bajarlo saca siseo y QRM del\n"
+    "canal de al lado; subirlo deja más brillo y claridad en las consonantes.":
+        "High cutoff of the input filter in AM. Lowering it removes hiss and QRM\n"
+        "from the adjacent channel; raising it leaves more brightness and clearer\n"
+        "consonants.",
+    "Corte inferior del filtro de entrada en SSB. En banda angosta subirlo un\n"
+    "poco (300 Hz) limpia mucho retumbe sin tocar la inteligibilidad.":
+        "Low cutoff of the input filter in SSB. In narrow band, raising it a bit\n"
+        "(300 Hz) cleans up a lot of rumble without hurting intelligibility.",
+    "Corte superior del filtro de entrada en SSB. 2700–2900 Hz es el ancho\n"
+    "clásico de fonía; angostarlo le da menos soplido que masticar al cancelador.":
+        "High cutoff of the input filter in SSB. 2700-2900 Hz is the classic voice\n"
+        "width; narrowing it gives the canceller less hiss to chew on.",
+    "Corte inferior del filtro de SALIDA en AM (sólo con 'Salida independiente').\n"
+    "Sirve para dejar la entrada angosta —menos ruido al cancelador— y la salida\n"
+    "más ancha, para que la voz no llegue doblemente apagada.":
+        "Low cutoff of the OUTPUT filter in AM (only with 'Output independent').\n"
+        "Useful to keep the input narrow -less noise into the canceller- and the\n"
+        "output wider, so the voice does not arrive doubly muffled.",
+    "Corte superior del filtro de SALIDA en AM (sólo con 'Salida independiente').\n"
+    "Poniéndolo por encima del corte de entrada se recupera el borde de la voz\n"
+    "que se perdía al encadenar dos filtros con el mismo corte.":
+        "High cutoff of the OUTPUT filter in AM (only with 'Output independent').\n"
+        "Setting it above the input cutoff recovers the edge of the voice that was\n"
+        "lost when chaining two filters with the same cutoff.",
+    "Corte inferior del filtro de SALIDA en SSB (sólo con 'Salida independiente').":
+        "Low cutoff of the OUTPUT filter in SSB (only with 'Output independent').",
+    "Corte superior del filtro de SALIDA en SSB (sólo con 'Salida independiente').\n"
+    "3200–3500 Hz con la entrada en 2700 deja la voz más abierta sin dejar\n"
+    "entrar más ruido al cancelador.":
+        "High cutoff of the OUTPUT filter in SSB (only with 'Output independent').\n"
+        "3200-3500 Hz with the input at 2700 leaves the voice more open without\n"
+        "letting more noise into the canceller.",
+    "Qué tan abrupto es el corte en el borde de la banda.\n"
+    "Mayor orden = paredes más verticales contra el QRM vecino, pero más\n"
+    "ringing en los transitorios y más CPU. 4 es el default sensato; 6–8 sólo\n"
+    "si te entra una estación pegada al costado.":
+        "How steep the cutoff is at the band edge.\n"
+        "Higher order = more vertical walls against adjacent QRM, but more ringing\n"
+        "on transients and more CPU. 4 is the sensible default; 6-8 only if a\n"
+        "station is sitting right next to you.",
+    "Dónde se aplica el refuerzo de cuerpo. Buscá el fundamental del corresponsal:\n"
+    "300–400 Hz en voces graves, 400–500 Hz en agudas.\n"
+    "Movelo mientras escuchás hasta que la voz gane 'pecho'.":
+        "Where the body boost is applied. Look for the correspondent's fundamental:\n"
+        "300-400 Hz on deep voices, 400-500 Hz on higher ones.\n"
+        "Move it while listening until the voice gains 'chest'.",
+    "Cuánto se refuerza esa banda. +2 a +4 dB alcanza para dar cuerpo; más\n"
+    "empieza a retumbar y tapa la claridad. En 0 dB no hace nada.":
+        "How much that band is boosted. +2 to +4 dB is enough for body; more starts\n"
+        "to boom and masks clarity. At 0 dB it does nothing.",
+    "Dónde se aplica el realce de presencia. 1500–2000 Hz es la zona de las\n"
+    "consonantes, que es lo que hace entender las palabras.\n"
+    "Más abajo suena nasal, más arriba sisea.":
+        "Where the presence boost is applied. 1500-2000 Hz is the consonant range,\n"
+        "which is what makes words understandable.\n"
+        "Lower sounds nasal, higher hisses.",
+    "Cuánto se realza la presencia. +3 a +6 dB despabila una voz apagada.\n"
+    "Ojo: también levanta el siseo que dejó el cancelador. En 0 dB no hace nada.":
+        "How much presence is boosted. +3 to +6 dB wakes up a dull voice.\n"
+        "Careful: it also lifts the hiss the canceller left. At 0 dB it does nothing.",
+    "Ancho de la campana de presencia. Angosto corrige un punto muy concreto;\n"
+    "ancho suena más natural pero mueve más banda.\n"
+    "Empezá ancho y angostá sólo si buscás algo puntual.":
+        "Width of the presence bell. Narrow fixes one very specific spot; wide\n"
+        "sounds more natural but moves more of the band.\n"
+        "Start wide and narrow it only if you are after something specific.",
+    "Corrige el tono cuando el BFO de la radio está corrido y las voces suenan\n"
+    "de pato o de ultratumba. Movelo hasta que suene natural.\n"
+    "En 0 Hz no hace nada; en AM dejalo en 0.":
+        "Corrects pitch when the radio's BFO is off and voices sound like a duck or\n"
+        "come from beyond the grave. Move it until it sounds natural.\n"
+        "At 0 Hz it does nothing; in AM leave it at 0.",
+    "Cuánta saturación se usa para fabricar los armónicos que la radio perdió.\n"
+    "Suave (1–3) es sutil; agresivo (6–10) genera armónicos de orden más alto y\n"
+    "puede sonar duro. No cambia el volumen ni depende del nivel de la señal.":
+        "How much saturation is used to build the harmonics the radio lost.\n"
+        "Soft (1-3) is subtle; aggressive (6-10) generates higher-order harmonics\n"
+        "and can sound harsh. It changes neither volume nor depends on signal level.",
+    "Cuánto de esos armónicos se suma al audio. 20–40% es la zona útil;\n"
+    "por encima de 60% empieza a sonar artificial.\n"
+    "Con el cancelador activo sólo actúa cuando hay voz.":
+        "How much of those harmonics is added to the audio. 20-40% is the useful\n"
+        "range; above 60% it starts to sound artificial.\n"
+        "With the canceller active it only acts when there is voice.",
+    "Timbre de los armónicos generados, no volumen.\n"
+    "Impar = brillante y algo hueco (el clásico sonido metálico); par = más\n"
+    "cálido y pleno, pero mete productos de diferencia en los graves.\n"
+    "Mixto (30–60%) suele ser el mejor compromiso.":
+        "Timbre of the generated harmonics, not volume.\n"
+        "Odd = bright and slightly hollow (the classic metallic sound); even =\n"
+        "warmer and fuller, but it adds difference products in the bass.\n"
+        "Mixed (30-60%) is usually the best compromise.",
+    "Nivel del fundamental grave que la radio no transmitió y se reconstruye\n"
+    "a partir de los armónicos que sí llegaron. 100% ≈ el que tendría una voz\n"
+    "natural. Empezá en 35% y subí de a poco: el exceso de graves se nota\n"
+    "enseguida. Se calla solo cuando no hay voz.":
+        "Level of the low fundamental the radio never transmitted, rebuilt from the\n"
+        "harmonics that did arrive. 100% is roughly what a natural voice would have.\n"
+        "Start at 35% and go up slowly: too much bass shows up quickly.\n"
+        "It goes quiet on its own when there is no voice.",
+    "Cuántas veces por encima del piso de ruido tiene que estar un pico de\n"
+    "10 ms para borrarlo (chasquidos de encendido, arranques de motor).\n"
+    "Agresivo puede comerse consonantes fuertes; suave deja pasar impulsos.\n"
+    "15 es un buen punto de partida.":
+        "How many times above the noise floor a 10 ms peak has to be for it to be\n"
+        "erased (switch clicks, engine starts).\n"
+        "Aggressive may eat strong consonants; soft lets impulses through.\n"
+        "15 is a good starting point.",
+    "Lo mismo pero para micro-impulsos de menos de 1 ms: cerco eléctrico,\n"
+    "línea de alta tensión, chispas.\n"
+    "Bajalo si escuchás 'tics' rápidos que el otro umbral no agarra.":
+        "Same thing but for micro-impulses under 1 ms: electric fences, power lines,\n"
+        "sparks.\n"
+        "Lower it if you hear fast 'ticks' the other threshold does not catch.",
+    "Cuánto tiene que sobresalir una frecuencia sobre sus vecinas para que el\n"
+    "ANF la trate como tono. Sensible agarra heterodinos débiles pero puede\n"
+    "tocar armónicos de la voz; selectivo va sólo por los silbidos evidentes.":
+        "How far a frequency has to stand above its neighbours for the ANF to treat\n"
+        "it as a tone. Sensitive catches weak heterodynes but may touch voice\n"
+        "harmonics; selective goes only after the obvious whistles.",
+    "Cuánto se atenúa el tono detectado.\n"
+    "OJO: valores altos opacan bastante la voz — 50% es el balance recomendado.\n"
+    "Si el heterodino sigue molestando, probá primero subir la Sensibilidad.":
+        "How much the detected tone is attenuated.\n"
+        "CAREFUL: high values noticeably dull the voice - 50% is the recommended\n"
+        "balance. If the heterodyne still bothers you, try raising Sensitivity first.",
+    "Cuánto ruido se deja pasar en los bins que el detector marca como ruido.\n"
+    "Más bajo = más silencio, pero más riesgo de gorgojeo y de que suene\n"
+    "'muerto'; más alto = fondo audible pero natural. 10–15% es lo habitual.\n"
+    "Un piso alto también transmite más el swing del fading.":
+        "How much noise is let through in the bins the detector flags as noise.\n"
+        "Lower = more silence, but more risk of warbling and of sounding 'dead';\n"
+        "higher = audible but natural background. 10-15% is usual.\n"
+        "A high floor also passes more of the fading swing.",
+    "Estabiliza la clasificación voz/ruido entre frames, que es de donde sale\n"
+    "el ruido musical. Más alto = fondo más parejo y sin gorgojeo, pero el\n"
+    "cancelador reacciona más lento. La zona útil es 96–98%.":
+        "Stabilises the voice/noise decision between frames, which is where musical\n"
+        "noise comes from. Higher = flatter background with no warbling, but the\n"
+        "canceller reacts more slowly. The useful range is 96-98%.",
+    "Qué tan rápido sube la ganancia en los bins donde aparece voz.\n"
+    "Rápido conserva mejor el ataque de cada palabra; suave reduce artefactos.\n"
+    "Si la voz suena recortada al arrancar, hacelo más rápido.":
+        "How fast gain rises in the bins where voice appears.\n"
+        "Fast preserves the attack of each word better; smooth reduces artifacts.\n"
+        "If the voice sounds clipped at the start, make it faster.",
+    "Cada cuánto puede reaccionar el estimador a cambios del ruido (sólo en\n"
+    "modo Adaptativo). Corto sigue el ruido cíclico típico de onda corta;\n"
+    "largo da un estimado más estable.\n"
+    "Si el ruido cambia rápido y sentís un vaivén, acortalo.":
+        "How often the estimator may react to noise changes (Adaptive mode only).\n"
+        "Short follows the cyclic noise typical of shortwave; long gives a more\n"
+        "stable estimate.\n"
+        "If the noise changes fast and you feel a see-saw, shorten it.",
+    "Sube el piso estimado por encima de ~2.5 kHz, donde el estimador queda\n"
+    "corto y se cuela el siseo. Es progresivo: cuanto más alta la frecuencia,\n"
+    "más refuerzo. Cuesta algo de brillo — compensá con Excitador o Presencia.":
+        "Raises the estimated floor above ~2.5 kHz, where the estimator falls short\n"
+        "and hiss leaks through. It is progressive: the higher the frequency, the\n"
+        "more boost. It costs some brightness - make up for it with the Exciter or\n"
+        "Presence.",
+    "Cuánto tiene que cambiar la energía para dar un desvanecimiento por\n"
+    "detectado. Sensible (1–4 dB) dispara con QSB suave; selectivo sólo con\n"
+    "fades marcados. Sólo cuenta si además hay voz presente, así que una\n"
+    "subida de ruido de banda no lo dispara.":
+        "How much the energy has to change before a fade counts as detected.\n"
+        "Sensitive (1-4 dB) triggers on gentle QSB; selective only on marked fades.\n"
+        "It only counts if there is voice present too, so a broadband noise rise\n"
+        "does not trigger it.",
+    "Cuánto tiempo queda congelado el estimador de ruido después de detectar\n"
+    "un desvanecimiento, para que no aprenda el bajón como si fuera el piso.\n"
+    "Más largo protege mejor en fades lentos; más corto vuelve antes a seguir\n"
+    "el ruido real.":
+        "How long the noise estimator stays frozen after detecting a fade, so it\n"
+        "does not learn the dip as if it were the floor.\n"
+        "Longer protects better on slow fades; shorter goes back to tracking the\n"
+        "real noise sooner.",
+    "Cuánta certeza de que hay voz hace falta para abrir el gate y dejar pasar\n"
+    "el audio. Bajo abre fácil (y deja pasar ruido); alto es más selectivo pero\n"
+    "puede cortar voz débil. Si el gate no abre con señales flojas, bajalo.":
+        "How much certainty that there is voice is needed to open the gate and let\n"
+        "audio through. Low opens easily (and lets noise in); high is more selective\n"
+        "but may cut weak voice. If the gate will not open on weak signals, lower it.",
+    "Cuánto se mantiene abierto el gate después de que se dejó de detectar voz.\n"
+    "Corto corta las pausas entre palabras; largo deja pasar más ruido entre\n"
+    "frases. 300–500 ms es lo habitual.":
+        "How long the gate stays open after voice stops being detected.\n"
+        "Short cuts the pauses between words; long lets more noise through between\n"
+        "sentences. 300-500 ms is usual.",
+    "Cuánto se levanta el piso en la zona de los fundamentales de la voz, para\n"
+    "que el cancelador no se lleve la calidez. Más alto = voz más llena, a\n"
+    "costa de dejar pasar algo más de ruido en esa banda.":
+        "How much the floor is raised in the range of the voice fundamentals, so the\n"
+        "canceller does not take the warmth away. Higher = fuller voice, at the cost\n"
+        "of letting slightly more noise through in that band.",
+    "Dónde se centra ese refuerzo. Bajalo para voces graves y subilo para\n"
+    "agudas, siguiendo el fundamental del corresponsal.":
+        "Where that boost is centred. Lower it for deep voices and raise it for\n"
+        "higher ones, following the correspondent's fundamental.",
+    "Desde qué frecuencia el piso empieza a bajar, o sea desde dónde se suprime\n"
+    "más en agudos. En banda angosta bajalo: si arranca después del borde de la\n"
+    "banda, el módulo no llega a actuar.":
+        "From which frequency the floor starts to drop, that is, from where highs get\n"
+        "suppressed more. In narrow band, lower it: if it starts past the band edge,\n"
+        "the module never gets to act.",
+    "Cuánto llega a bajar el piso en los agudos. Más profundo = menos siseo\n"
+    "pero también menos brillo. En SSB angosto el efecto siempre va a ser menor\n"
+    "que en AM, por el ancho de banda disponible.":
+        "How far the floor drops in the highs. Deeper = less hiss but also less\n"
+        "brightness. In narrow SSB the effect will always be smaller than in AM,\n"
+        "because of the available bandwidth.",
+    "Cuánto se protegen del cancelador los armónicos de la voz detectada.\n"
+    "Alto rescata mejor una voz enterrada en ruido; si el tono se detecta mal,\n"
+    "puede terminar protegiendo bins que eran ruido.":
+        "How much the harmonics of the detected voice are protected from the\n"
+        "canceller. High rescues a voice buried in noise better; if pitch detection\n"
+        "goes wrong, it may end up protecting bins that were noise.",
 }

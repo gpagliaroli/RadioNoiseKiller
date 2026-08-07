@@ -46,6 +46,7 @@ from i18n import tr              # noqa: E402
 from presets import PresetManager  # noqa: E402
 from utils import presets_dir, settings_path  # noqa: E402
 from ui.main_window import MainWindow  # noqa: E402
+from ui.slider_row import SliderRow  # noqa: E402
 
 # Red de seguridad: si el redirect fallara, los tests escribirían sobre los datos
 # reales del usuario. Mejor romper acá que borrar un preset de fábrica.
@@ -254,36 +255,38 @@ def test_voice_leveler_requires_noise():
 
 def test_leveler_continuous_checkbox():
     """La casilla 'Nivelar en continuo' invierte el gate por voz del nivelador
-    (marcada = sin gate = música) y se gatea con el cancelador + nivelador."""
+    (marcada = sin gate = musica) y se gatea con el cancelador + nivelador.
+    Vive en el grupo Control de la pestaña Principal (hay que tenerla a la vista
+    para elegir voz/musica), no en Avanzada Audio."""
     w = _win()
-    aud = w._adv_audio_tab
+    assert w._chk_leveler_continuous in w._tabs.widget(0).findChildren(QCheckBox),         "la casilla no esta en la pestaña Principal"
 
     # Gateada por el cancelador + nivelador (invariante 2)
     w._chk_noise.setChecked(True)
     w._chk_voice_leveler.setChecked(True)
     _app.processEvents()
-    assert aud._chk_leveler_continuous.isEnabled(), "casilla deberia habilitarse"
+    assert w._chk_leveler_continuous.isEnabled(), "casilla deberia habilitarse"
 
     # Estado inicial conocido (settings.json de dev puede tener gate=False → casilla
     # ya marcada); sin esto setChecked(True) seria no-op y no dispararia la señal.
-    aud._chk_leveler_continuous.blockSignals(True)
-    aud._chk_leveler_continuous.setChecked(False)
-    aud._chk_leveler_continuous.blockSignals(False)
+    w._chk_leveler_continuous.blockSignals(True)
+    w._chk_leveler_continuous.setChecked(False)
+    w._chk_leveler_continuous.blockSignals(False)
 
     calls = []
     orig = w._pipeline.set_voice_leveler_gate_voice
     w._pipeline.set_voice_leveler_gate_voice = lambda g: calls.append(g)
     try:
-        aud._chk_leveler_continuous.setChecked(True)   # continuo → SIN gate de voz
+        w._chk_leveler_continuous.setChecked(True)   # continuo → SIN gate de voz
         assert calls[-1] is False, "continuo marcado deberia desactivar el gate (gate=False)"
-        aud._chk_leveler_continuous.setChecked(False)  # gateado por voz
+        w._chk_leveler_continuous.setChecked(False)  # gateado por voz
         assert calls[-1] is True, "continuo desmarcado deberia activar el gate (gate=True)"
     finally:
         w._pipeline.set_voice_leveler_gate_voice = orig
 
     w._chk_noise.setChecked(False)
     _app.processEvents()
-    assert not aud._chk_leveler_continuous.isEnabled(), \
+    assert not w._chk_leveler_continuous.isEnabled(), \
         "casilla habilitada sin cancelador (invariante 2)"
     print("Nivelador: casilla continuo + gating         OK")
 
@@ -656,6 +659,25 @@ def test_bypass_remembers_output_gain():
     print("Bypass recuerda ganancia de salida (A/B)   OK")
 
 
+def test_all_sliders_have_tooltip():
+    """Todo SliderRow de la app tiene texto de ayuda, y llega a los HIJOS.
+
+    El tooltip sobre el contenedor no se ve nunca: el mouse siempre esta encima
+    del label, del slider o del valor. Por eso SliderRow.setToolTip lo propaga y
+    aca se verifica sobre el QSlider, que es donde el usuario apunta.
+    Un slider nuevo sin entrada en ui/tooltips.py rompe este test a proposito."""
+    w = _win()
+    faltan = []
+    for widget in (w, w._adv_audio_tab, w._adv_impulse_tab, w._adv_canceller_tab):
+        for name, obj in vars(widget).items():
+            if isinstance(obj, SliderRow) and not obj._slider.toolTip().strip():
+                faltan.append(f"{type(widget).__name__}.{name}")
+    assert not faltan, "sliders sin tooltip: " + ", ".join(sorted(faltan))
+    # y que no sea un tooltip vacio de relleno: los textos son explicativos
+    assert len(w._slider_noise._slider.toolTip()) > 60
+    print(f"Tooltips en todos los sliders            OK")
+
+
 if __name__ == "__main__":
     test_tab_order()
     test_modules_group_moved_to_own_tab()
@@ -679,5 +701,6 @@ if __name__ == "__main__":
     test_advanced_change_marks_modified()
     test_waterfall_toggle_and_source()
     test_incompatible_devices_disable_activate()
+    test_all_sliders_have_tooltip()
     print()
     print("test_ui: OK")

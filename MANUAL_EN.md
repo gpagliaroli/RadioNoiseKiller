@@ -33,6 +33,15 @@ The application applies a series of chained processes — the **pipeline** — w
 - It does not correct the level of propagation fading — although **HF fading compensation** (Ch. 7) keeps the noise canceller from drifting during fades.
 - It does not improve signals with a very low signal level (S-meter) — it needs some signal to work with.
 
+### In-app help
+
+**Every slider has a help text**: hover for a second over the control's name, bar or value and a
+tooltip appears explaining what it does, which way to move it and what it costs in return. It is the
+short version of what the following chapters explain — handy for adjusting without letting go of the
+radio, leaving the manual for when you want the reasoning.
+
+You can also **right-click any slider** to restore its factory value.
+
 ---
 
 ## Glossary of terms
@@ -126,6 +135,7 @@ The main operating controls: reception mode, AGC and processing activation.
 |---------|-------------|
 | **Mode** | Selects the type of received signal: **AM** (amplitude modulation, wider bandwidth) or **SSB** (single sideband, voice compressed in frequency). Affects the default limits of the Bandpass Filter. |
 | **AGC** | Automatic Gain Control. **off** = no AGC. **slow / medium / fast** = response speed (attack/release fixed per preset). For SSB, *slow* or *medium* is recommended; for AM with stable signals, *off* or *slow*. |
+| **Level continuously (music)** | Checkbox belonging to the **Voice leveler** (Ch. 7), placed here because you change it depending on what you are listening to: ticked for music or continuous audio, unticked for voice. Requires the canceller and the leveler enabled. |
 | **Noise ceiling** | Limits how much the AGC can amplify, so it does not lift the band noise. See below. |
 | **▶ START / ■ STOP** | Starts or stops real-time processing. When started, audio flows through the whole pipeline. |
 | **Bypass** | Passes audio straight from input to output with no processing. Useful for comparing the sound with and without the application active. The **Output gain** (*Advanced Audio* tab) also acts in bypass, and its value is remembered separately for bypass ON and OFF (see the note under *Gain and levels*). |
@@ -542,7 +552,7 @@ The difference from the general AGC (Ch. 2) is the **voice-detection gate**: by 
 |---------|-------|---------|-------------|
 | **Max gain** | 0 – 20 dB | +12 dB | Amplification cap for weak voice. Raise it for DX signals far below the target level; lower it if a strong station arriving after a weak one starts off too loud. At 0 dB the module only attenuates (never amplifies). |
 | **Response speed** | 200 – 3000 ms | 1500 ms | How fast the leveler follows level changes (the AGC *release*). **Fast (200–600 ms):** follows fast cyclic fading without leaving volume "dips" when the signal drops. **Smooth (2000–3000 ms):** more stable leveling, less risk of pumping the background noise. |
-| **Level continuously (music)** | checkbox | off | Disables the voice-detection gate: the leveler adapts **at all times**, without waiting for voice. **Enable for music or continuous audio** — where the voice detector does not recognize voice structure and, with the gate, the leveler would stay frozen. For voice on noisy bands leave it **off** (avoids re-amplifying noise in the gaps). |
+| **Level continuously (music)** | checkbox | off | *(The checkbox lives on the **Main** tab → "Control" group, below the AGC selector — you change it depending on what you are listening to, so it stays in sight.)* Disables the voice-detection gate: the leveler adapts **at all times**, without waiting for voice. **Enable for music or continuous audio** — where the voice detector does not recognize voice structure and, with the gate, the leveler would stay frozen. For voice on noisy bands leave it **off** (avoids re-amplifying noise in the gaps). |
 
 > **When to enable it:** long sessions with stations at very different levels or pronounced QSB, especially with the squelch active (level jumps between transmissions are more noticeable when there is no background noise to mask them).
 
