@@ -82,7 +82,9 @@ python -m PyInstaller reductor.spec --clean --noconfirm
 python -m PyInstaller reductor-linux.spec --clean --noconfirm
 ```
 
-El build de Linux también corre automáticamente en GitHub Actions con cada push a `main` o `master`.
+El build de Linux también corre en GitHub Actions al pushear un tag de versión (`v*`), o a mano desde
+la pestaña *Actions*. El disparo manual tiene además la opción de compilar para **ARM64 / Raspberry
+Pi**, que por ahora es experimental: compila, pero todavía no se verificó que arranque en una Pi real.
 
 ---
 
