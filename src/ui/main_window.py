@@ -1,3 +1,4 @@
+import os
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QComboBox, QSlider, QPushButton, QStatusBar,
@@ -11,7 +12,7 @@ from audio.devices import (
     list_devices, rescan_devices, AudioDevice,
     IncompatibleDevicesError, duplex_hostapi_mismatch,
 )
-from config import AppConfig, RadioMode, GainConfig, DSPConfig
+from config import AppConfig, RadioMode, GainConfig, DSPConfig, UI_SCALES
 from i18n import tr, set_language
 from pipeline import ProcessingPipeline
 from ui.vu_meter import VuMeter
@@ -36,6 +37,24 @@ _ROW_LABEL_W = 70       # ancho de la etiqueta de la fila (columna izquierda)
 _FIELD_W = 558          # fin de la barra del slider (ancho de los VU, que arrancan en x=0)
 _COMBO_W = _FIELD_W - _ROW_LABEL_W - 8   # ancho del combo para que termine en _FIELD_W
 _WINDOW_W = 770         # ancho FIJO de la ventana (alto flexible)
+_SCALE_MARGEN = 40      # px reales de holgura para el marco de la ventana
+
+
+def ui_scales_that_fit(ancho_pantalla_real: float, aplicada: float) -> tuple:
+    """Escalas de UI que entran en una pantalla de `ancho_pantalla_real` px REALES.
+
+    A cualquier escala la ventana mide `_WINDOW_W` píxeles LÓGICOS, pero la
+    pantalla mide menos píxeles lógicos cuanto mayor es la escala — por eso la
+    comparación va en píxeles reales, no en los que reporta Qt.
+
+    Sin este filtro, elegir una escala grande en un monitor chico deja la ventana
+    más ancha que la pantalla; y como el ancho es FIJO, Qt no la puede achicar:
+    la barra de estado (donde vive el combo para deshacerlo) queda fuera de la
+    pantalla. La escala ya aplicada se incluye siempre, para que el combo pueda
+    mostrar lo que se está viendo aunque no entre.
+    """
+    entran = [s for s in UI_SCALES if _WINDOW_W * s + _SCALE_MARGEN <= ancho_pantalla_real]
+    return tuple(sorted(set(entran) | {aplicada}))
 
 
 class MainWindow(QMainWindow):
@@ -45,6 +64,15 @@ class MainWindow(QMainWindow):
         self._config = AppConfig()
         self._config.load(settings_path())
         set_language(self._config.language)  # antes de construir cualquier widget
+        # Escala REALMENTE en efecto: main.py la exporta a QT_SCALE_FACTOR desde
+        # la config antes de crear el QApplication. Se lee del entorno y no de la
+        # config porque el usuario (o un lanzador) puede haberla exportado a mano,
+        # y el combo tiene que mostrar lo que se está viendo, no lo que se guardó.
+        try:
+            self._applied_ui_scale = float(os.environ.get(
+                "QT_SCALE_FACTOR", self._config.window.ui_scale))
+        except ValueError:
+            self._applied_ui_scale = 1.0
 
         self._pipeline = ProcessingPipeline(self._config)
         # Primer arranque de un bundle: los presets de fábrica viven en los recursos
@@ -164,6 +192,20 @@ class MainWindow(QMainWindow):
         self._combo_lang.setToolTip(tr("Idioma de la interfaz — requiere reiniciar la aplicación"))
         self._combo_lang.currentIndexChanged.connect(self._on_language_changed)
         self._status_bar.addPermanentWidget(self._combo_lang)
+
+        # Escala de la interfaz: misma naturaleza que el idioma (preferencia de
+        # aplicación que se elige una vez y necesita reinicio), así que va al lado.
+        self._combo_ui_scale = QComboBox()
+        for s in self._available_ui_scales():
+            self._combo_ui_scale.addItem(f"🔍 {round(s * 100)} %", s)
+            if s == self._applied_ui_scale:
+                self._combo_ui_scale.setCurrentIndex(self._combo_ui_scale.count() - 1)
+        self._combo_ui_scale.setToolTip(tr(
+            "Tamaño de la interfaz: agranda todos los textos y controles a la vez\n"
+            "(útil en monitores donde la letra queda chica). No cambia el audio ni\n"
+            "el procesamiento. Requiere reiniciar la aplicación."))
+        self._combo_ui_scale.currentIndexChanged.connect(self._on_ui_scale_changed)
+        self._status_bar.addPermanentWidget(self._combo_ui_scale)
 
         self._btn_about = QPushButton("ℹ")
         self._btn_about.setFixedWidth(28)
@@ -1221,6 +1263,24 @@ class MainWindow(QMainWindow):
             "Language saved — restart the application to apply it."
         )
 
+    def _on_ui_scale_changed(self, idx: int) -> None:
+        scale = self._combo_ui_scale.itemData(idx)
+        if scale is None or scale == self._config.window.ui_scale:
+            return
+        self._config.window.ui_scale = float(scale)
+        self._schedule_save()
+        self._status_bar.showMessage(tr(
+            "Tamaño de la interfaz guardado ({pct} %) — reiniciar la aplicación "
+            "para aplicarlo.").format(pct=round(scale * 100)))
+
+    def _available_ui_scales(self) -> tuple:
+        """Escalas ofrecidas en el combo, según el ancho real de la pantalla."""
+        scr = QApplication.primaryScreen()
+        if scr is None:
+            return UI_SCALES
+        ancho_real = scr.availableGeometry().width() * self._applied_ui_scale
+        return ui_scales_that_fit(ancho_real, self._applied_ui_scale)
+
     def _show_about(self) -> None:
         from buildinfo import BUILD_ID
         ver = QApplication.instance().applicationVersion()
@@ -1833,6 +1893,17 @@ class MainWindow(QMainWindow):
         desired_h = self._main_tab_inner.sizeHint().height() + 145
         # Ancho FIJO (_WINDOW_W); solo se ajusta el alto al contenido.
         self.resize(_WINDOW_W, min(desired_h, screen.height() - 60))
+        # Red de seguridad de la escala de UI: si el usuario se mudo a un monitor
+        # mas chico, la ventana ya no entra y su ancho es fijo, asi que Qt no la
+        # puede achicar. Se vuelve a 100% para el proximo arranque (esta sesion
+        # ya arranco escalada) y se avisa — sin esto la barra de estado, con el
+        # combo para deshacerlo, puede quedar fuera de la pantalla.
+        if _WINDOW_W > screen.width() and self._config.window.ui_scale != 1.0:
+            self._config.window.ui_scale = 1.0
+            self._config.save(settings_path())
+            self._status_bar.showMessage(tr(
+                "La escala de la interfaz no entra en esta pantalla — se volvio "
+                "a 100 %. Reiniciar la aplicacion."))
         if self._config.window.x is not None:
             # Clamp dentro de la pantalla de referencia: la ventana COMPLETA
             # debe quedar visible (clampear solo el borde superior dejaba el

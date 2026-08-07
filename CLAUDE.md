@@ -360,6 +360,46 @@ donde la app no los busca.
   el build haya terminado bien.** Una carpeta vacía creada por el smoke test se ve igual que una
   carpeta correcta en un listado.
 
+**Post-v2.0 (pendiente de release): accesibilidad y ayuda en la UI.** Tres pedidos del usuario.
+- **"Nivelar en continuo (música)" pasa a Principal → grupo Control**, entre el combo de AGC y el
+  Techo de ruido. No es un ajuste que se deja puesto: se cambia según lo que se esté escuchando
+  (música vs. voz), así que tiene que estar a la vista. Sigue gateada por cancelador + nivelador
+  (invariante 2) vía `_refresh_control_gating()`, que corre al construir, al togglear un módulo y
+  al cargar un preset.
+- **Tooltip en los 45 sliders.** Los textos viven en `src/ui/tooltips.py`, en una tabla indexada
+  por el NOMBRE DEL ATRIBUTO del `SliderRow`, y `apply_tooltips(self)` corre tras construir cada
+  tab. Están aparte —y no en cada llamada al constructor— porque las tabs de Avanzadas ya son
+  archivos de 1000+ líneas y así el texto se lee, se revisa y se traduce junto.
+  **`SliderRow.setToolTip` tuvo que empezar a propagar a los hijos** (label / slider / valor): sobre
+  el contenedor el tooltip no aparece casi nunca, porque el mouse siempre está encima de alguno de
+  los tres — y justo sobre la barra, que es donde el usuario apunta, no se mostraba. Mismo patrón
+  que `set_enabled`, que ya tenía el problema resuelto. Guard: `test_all_sliders_have_tooltip`
+  exige tooltip no vacío **sobre el QSlider** en los SliderRow de la ventana y de las tres tabs.
+- **Escala de la interfaz (100 / 125 / 150 %)**, combo en la barra de estado al lado del idioma;
+  default 100 % = idéntico a siempre. `window.ui_scale` en settings.json; `main.py` la lee con
+  `config.read_ui_scale()` y la exporta a **`QT_SCALE_FACTOR` ANTES de crear el `QApplication`**
+  (después no tiene efecto) — por eso el lector es una función aparte, sin Qt y tolerante a un
+  settings.json roto: un JSON inválido no puede impedir que la app abra. Requiere reinicio, como
+  el idioma.
+  - **Se eligió escalar TODO y no solo la fuente** porque la UI está construida en píxeles fijos:
+    60 `setFixedWidth/Height`, `SliderRow` con label 150 / barra 400 / valor 72, y la ventana con
+    ancho FIJO en 770 (regla de UX de v1.9.1). Con `QT_SCALE_FACTOR` la geometría **lógica no
+    cambia** (verificado: la ventana sigue midiendo 770 y los labels 150) y Qt renderiza más
+    grande contra esos mismos números, así que los anchos fijos siguen valiendo y nada se corta.
+    Agrandar solo la fuente habría requerido convertir esos 60 anchos a métrica de fuente.
+  - **El combo ofrece solo las escalas que ENTRAN en la pantalla** (`ui_scales_that_fit`, función
+    pura y testeada): a mayor escala la ventana ocupa más pantalla aunque su ancho lógico no
+    cambie, así que la comparación va en píxeles REALES. En 1366 entran las tres; en 1024 se cae
+    el 150 %. Y si el usuario se muda a un monitor más chico, `_restore_or_center` **vuelve a
+    100 % para el próximo arranque y avisa** — como el ancho es fijo Qt no puede achicar la
+    ventana, y la barra de estado (donde vive el combo para deshacerlo) quedaría fuera de pantalla.
+  - Los 31 `font-size: 7/8pt` inline de los indicadores escalan proporcionalmente, así que a 100 %
+    siguen siendo los más difíciles de leer. Si el reclamo vuelve apuntando a ESOS, es un ajuste
+    aparte.
+  - Verificado con la app real a 125 % (arranca y sigue viva) y las tres escalas headless
+    (dpr sigue a `QT_SCALE_FACTOR`, ancho lógico invariante). **Falta la validación visual del
+    usuario en su monitor.**
+
 ## Cambios de la v2.0
 
 **Post-filtro rediseñado + anti-gorgojeo automático** (investigación de agosto 2026; medido en

@@ -8,6 +8,28 @@ class RadioMode(Enum):
     SSB = "SSB"
 
 
+# Escalas de interfaz ofrecidas. El tope es 150%: la ventana tiene ancho FIJO
+# (770 px logicos), asi que a 150% ocupa ~1155 px reales — mas que eso no entra
+# en una notebook de 1366 con margen para el marco.
+UI_SCALES = (1.0, 1.25, 1.5)
+
+
+def read_ui_scale(path: str) -> float:
+    """Lee SOLO la escala de la UI del settings.json.
+
+    Existe aparte de AppConfig.load() porque main.py la necesita ANTES de crear
+    el QApplication (QT_SCALE_FACTOR no tiene efecto despues), y a esa altura no
+    se puede importar nada de Qt ni construir la config entera. Tolerante a
+    cualquier problema: un settings.json roto no puede impedir que la app abra.
+    """
+    try:
+        with open(path, encoding="utf-8") as f:
+            scale = float(json.load(f).get("window", {}).get("ui_scale", 1.0))
+    except Exception:
+        return 1.0
+    return scale if scale in UI_SCALES else 1.0
+
+
 @dataclass
 class AudioConfig:
     sample_rate: int = 48000
@@ -104,6 +126,7 @@ class WindowConfig:
     spectrum_show_waterfall: bool = True        # cascada visible bajo el espectro
     waterfall_source:        str  = "input"     # "input" | "output"
     waterfall_history_sec:   int  = 30          # profundidad de la cascada (15/30/60/120)
+    ui_scale:                float = 1.0        # escala de la UI (1.0/1.25/1.5); requiere reinicio
 
 
 @dataclass
@@ -206,6 +229,7 @@ class AppConfig:
                 "spectrum_show_waterfall": self.window.spectrum_show_waterfall,
                 "waterfall_source":        self.window.waterfall_source,
                 "waterfall_history_sec":   self.window.waterfall_history_sec,
+                "ui_scale":                self.window.ui_scale,
             },
         }
         with open(path, "w", encoding="utf-8") as f:
@@ -331,3 +355,7 @@ class AppConfig:
         self.window.waterfall_source = _wf_src if _wf_src in ("input", "output") else "input"
         _wf_hist = int(w.get("waterfall_history_sec", self.window.waterfall_history_sec))
         self.window.waterfall_history_sec = _wf_hist if _wf_hist in (15, 30, 60, 120) else 30
+        # Lo lee tambien main.py ANTES de crear el QApplication (QT_SCALE_FACTOR
+        # solo tiene efecto antes de esa linea). Valor invalido -> 1.0.
+        _scale = float(w.get("ui_scale", self.window.ui_scale))
+        self.window.ui_scale = _scale if _scale in UI_SCALES else 1.0

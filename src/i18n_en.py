@@ -862,4 +862,16 @@ CATALOG = {
         "How much the harmonics of the detected voice are protected from the\n"
         "canceller. High rescues a voice buried in noise better; if pitch detection\n"
         "goes wrong, it may end up protecting bins that were noise.",
+
+    # --- Escala de la interfaz ---
+    "Tamaño de la interfaz: agranda todos los textos y controles a la vez\n"
+    "(útil en monitores donde la letra queda chica). No cambia el audio ni\n"
+    "el procesamiento. Requiere reiniciar la aplicación.":
+        "Interface size: enlarges every text and control at once (useful on\n"
+        "monitors where the type is too small). It changes neither the audio nor\n"
+        "the processing. Requires restarting the application.",
+    "Tamaño de la interfaz guardado ({pct} %) — reiniciar la aplicación para aplicarlo.":
+        "Interface size saved ({pct} %) — restart the application to apply it.",
+    "La escala de la interfaz no entra en esta pantalla — se volvio a 100 %. Reiniciar la aplicacion.":
+        "The interface scale does not fit this screen — reset to 100 %. Restart the application.",
 }

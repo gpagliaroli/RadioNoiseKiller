@@ -165,6 +165,16 @@ Use the floor it shows to pick your threshold: **set it above that value**. Belo
 
 The language selector (🌐 Español / English) sits in the **right corner of the status bar** (bottom edge of the window), visible from any tab. The change is saved instantly but **requires restarting the application** to take effect.
 
+### Interface size
+
+If text looks small on your monitor, the **🔍 100 % / 125 % / 150 %** combo — next to the language selector, in the status bar — enlarges **the whole interface at once**: type, sliders, VU meters, spectrum and buttons, keeping the exact same layout. It does not touch audio or processing. Like the language, it is saved instantly and **requires restarting the application**.
+
+It ships at **100 %**, the size it has always been — anyone who does not need it sees no change.
+
+> **About the options offered:** the window has a fixed width, so a larger scale takes up more screen (150 % is about 1155 px wide). The combo only offers the scales that **fit your monitor**: on a small screen 150 % simply does not appear. If you move to a smaller monitor and the saved scale no longer fits, the application falls back to 100 % on its own and says so in the status bar.
+
+> **System alternative:** Windows (*Settings → Display → Scale*) and GNOME have their own scaling, which the application honours. The difference is that the system setting affects **every** program; this control is for RadioNoiseKiller only.
+
 ### AGC presets
 
 The **AGC** combo on the Main tab offers three speeds with fixed attack/release, all with target −20 dBFS and max gain +36 dB:

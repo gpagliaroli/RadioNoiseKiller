@@ -165,6 +165,16 @@ Usá el piso que muestra para elegir el umbral: **ponelo por encima de ese valor
 
 El selector de idioma (🌐 Español / English) está en la **esquina derecha de la barra de estado** (borde inferior de la ventana), visible desde cualquier pestaña. El cambio se guarda al instante pero **requiere reiniciar la aplicación** para aplicarse.
 
+### Tamaño de la interfaz
+
+Si en tu monitor los textos quedan chicos, el combo **🔍 100 % / 125 % / 150 %** —al lado del selector de idioma, en la barra de estado— agranda **toda la interfaz a la vez**: letras, sliders, VU, espectro y botones, manteniendo el diseño exacto. No toca el audio ni el procesamiento. Igual que el idioma, se guarda al instante y **requiere reiniciar la aplicación**.
+
+Por defecto viene en **100 %**, que es el tamaño de siempre — quien no lo necesite no ve ningún cambio.
+
+> **Sobre las opciones que aparecen:** la ventana tiene ancho fijo, así que a mayor escala ocupa más pantalla (150 % ≈ 1155 px de ancho). El combo ofrece sólo las escalas que **entran en tu monitor**: en una pantalla chica el 150 % directamente no aparece. Si cambiás de monitor a uno más chico y la escala guardada ya no entra, la aplicación vuelve sola a 100 % y avisa en la barra de estado.
+
+> **Alternativa del sistema:** Windows (*Configuración → Pantalla → Escala*) y GNOME tienen su propio escalado, que la aplicación respeta. La diferencia es que el del sistema afecta a **todos** los programas; este control es sólo para RadioNoiseKiller.
+
 ### Presets de AGC
 
 El combo **AGC** de la pestaña Principal ofrece tres velocidades con ataque/release fijos, todos con objetivo −20 dBFS y ganancia máxima +36 dB:

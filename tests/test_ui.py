@@ -41,11 +41,11 @@ from PySide6.QtWidgets import QApplication, QCheckBox  # noqa: E402
 
 _app = QApplication.instance() or QApplication([])
 
-from config import AppConfig     # noqa: E402
+from config import AppConfig, read_ui_scale  # noqa: E402
 from i18n import tr              # noqa: E402
 from presets import PresetManager  # noqa: E402
 from utils import presets_dir, settings_path  # noqa: E402
-from ui.main_window import MainWindow  # noqa: E402
+from ui.main_window import MainWindow, ui_scales_that_fit  # noqa: E402
 from ui.slider_row import SliderRow  # noqa: E402
 
 # Red de seguridad: si el redirect fallara, los tests escribirían sobre los datos
@@ -659,6 +659,63 @@ def test_bypass_remembers_output_gain():
     print("Bypass recuerda ganancia de salida (A/B)   OK")
 
 
+def test_ui_scale_combo():
+    """El combo de escala de UI vive en la barra de estado, guarda en config y
+    NO toca nada del audio (es una preferencia de aplicacion, como el idioma)."""
+    w = _win()
+    combo = w._combo_ui_scale
+    assert combo in w._status_bar.findChildren(type(combo)), "el combo no esta en la barra de estado"
+    # La escala aplicada siempre esta ofrecida (aunque la pantalla sea chica)
+    datos = [combo.itemData(i) for i in range(combo.count())]
+    assert w._applied_ui_scale in datos, "la escala aplicada no figura en el combo"
+
+    # Elegir otra escala la persiste; el resto de la config no se toca
+    antes_dsp = w._config.dsp.noise_alpha
+    otra = next((d for d in datos if d != w._config.window.ui_scale), None)
+    if otra is not None:
+        combo.setCurrentIndex(datos.index(otra))
+        _app.processEvents()
+        assert w._config.window.ui_scale == otra, "la escala elegida no se guardo en config"
+    assert w._config.dsp.noise_alpha == antes_dsp, "cambiar la escala toco el DSP"
+    print("Escala de UI: combo + persistencia         OK")
+
+
+def test_ui_scales_that_fit():
+    """El filtro por pantalla razona en px REALES: a mayor escala la ventana
+    ocupa mas pantalla aunque su ancho logico no cambie. En una notebook de
+    1366 entran las tres; en una de 1024 el 150% se cae del combo."""
+    assert ui_scales_that_fit(1920, 1.0) == (1.0, 1.25, 1.5)
+    assert ui_scales_that_fit(1366, 1.0) == (1.0, 1.25, 1.5)
+    assert 1.5 not in ui_scales_that_fit(1024, 1.0), "ofrece 150% donde no entra"
+    # La aplicada siempre esta, aunque no entre: si no, el combo no podria
+    # mostrar el estado actual y no habria como bajarla.
+    assert 1.5 in ui_scales_that_fit(800, 1.5)
+    print("Escalas ofrecidas por tamano de pantalla   OK")
+
+
+def test_read_ui_scale_tolerante():
+    """main.py lee la escala ANTES de crear el QApplication: un settings.json
+    roto, ausente o con un valor raro NO puede impedir que la app abra."""
+    import json
+    import tempfile as _tf
+    d = _tf.mkdtemp(prefix="rnk_scale_")
+    ok = os.path.join(d, "ok.json")
+    with open(ok, "w", encoding="utf-8") as f:
+        json.dump({"window": {"ui_scale": 1.25}}, f)
+    assert read_ui_scale(ok) == 1.25
+    roto = os.path.join(d, "roto.json")
+    with open(roto, "w", encoding="utf-8") as f:
+        f.write("{ esto no es json")
+    assert read_ui_scale(roto) == 1.0, "un settings.json roto tiene que dar 1.0"
+    assert read_ui_scale(os.path.join(d, "no_existe.json")) == 1.0
+    raro = os.path.join(d, "raro.json")
+    with open(raro, "w", encoding="utf-8") as f:
+        json.dump({"window": {"ui_scale": 4.0}}, f)   # fuera de UI_SCALES
+    assert read_ui_scale(raro) == 1.0, "una escala fuera de rango tiene que dar 1.0"
+    shutil.rmtree(d, True)
+    print("read_ui_scale tolerante a settings roto    OK")
+
+
 def test_all_sliders_have_tooltip():
     """Todo SliderRow de la app tiene texto de ayuda, y llega a los HIJOS.
 
@@ -675,7 +732,7 @@ def test_all_sliders_have_tooltip():
     assert not faltan, "sliders sin tooltip: " + ", ".join(sorted(faltan))
     # y que no sea un tooltip vacio de relleno: los textos son explicativos
     assert len(w._slider_noise._slider.toolTip()) > 60
-    print(f"Tooltips en todos los sliders            OK")
+    print("Tooltips en todos los sliders            OK")
 
 
 if __name__ == "__main__":
@@ -702,5 +759,8 @@ if __name__ == "__main__":
     test_waterfall_toggle_and_source()
     test_incompatible_devices_disable_activate()
     test_all_sliders_have_tooltip()
+    test_ui_scale_combo()
+    test_ui_scales_that_fit()
+    test_read_ui_scale_tolerante()
     print()
     print("test_ui: OK")
