@@ -1,56 +1,94 @@
 # RadioNoiseKiller
 
 Software standalone de reducción de ruido en tiempo real para radio AM/SSB (ham radio).
-Procesa el audio ya demodulado entre el receptor y los parlantes/auriculares.
+Procesa el audio ya demodulado entre el receptor y los parlantes o auriculares.
 
-**Plataformas:** Windows 10/11 · Linux (build automático vía GitHub Actions)
+Todo el DSP es **numpy/scipy puro** — sin IA, sin modelos externos, sin GPU y sin internet.
+
+**Plataformas:** Windows 10/11 · Linux x86_64 · ARM64 / Raspberry Pi (experimental)
+**Idiomas:** español · inglés
+
+---
+
+## Descargas
+
+Los paquetes listos para usar están en la [página de releases](https://github.com/gpagliaroli/RadioNoiseKiller/releases/latest):
+
+| Archivo | Para |
+|---|---|
+| `RadioNoiseKiller_vX.Y.zip` | Windows 10/11 (64 bits) |
+| `RadioNoiseKiller_vX.Y-linux-x86_64.zip` | Linux x86_64 |
+| `MANUAL_RadioNoiseKiller_vX.Y.pdf` | Manual completo en español |
+| `MANUAL_RadioNoiseKiller_vX.Y_EN.pdf` | Manual completo en inglés |
+
+No requieren instalación. **El manual es la documentación de verdad**: este README es sólo el
+panorama general y las notas para quien quiera tocar el código.
 
 ---
 
 ## Características
 
-- **Cancelador de ruido estacionario** — estimador DD Wiener con suavizado OMLSA: ancla bins de ruido al floor evitando el gorgojeo (musical noise)
-- **Supresor de impulsos** — dos niveles en cascada (10ms y 0,67ms) para QRN atmosférico
-- **ANF** — filtro de muesca espectral adaptativo para heterodinos y portadoras AM
-- **AGC** — control automático de ganancia (slow / medium / fast / custom con target, ganancia máx, ataque y release ajustables)
-- **Squelch de voz** — silencia la salida entre transmisiones SSB, con hold time configurable
-- **EQ de presencia** — realce de consonantes en la zona de legibilidad
-- **Excitador armónico** — genera armónicos en 1–4 kHz para recuperar brillo post-filtrado
-- **Filtro de paso de banda** — independiente pre y post cancelador, por modo (AM / SSB)
+**Reducción de ruido**
+
+- **Cancelador de ruido estacionario** — estimador decision-directed con ganancia Log-MMSE
+  (Ephraim-Malah) y suavizado OMLSA, con anti-gorgojeo automático gateado por el detector de voz
+- **Dos modos de estimación** — perfil **estático** aprendido a mano, o **adaptativo (MCRA)** que
+  sigue el piso de ruido en continuo sin intervención
+- **Post-filtro espectral** — segunda pasada que hunde el piso sólo en los bins de ruido
+- **Supresor de impulsos** — dos niveles en cascada (10 ms y 0,67 ms) para QRN atmosférico
+- **ANF** — filtro de muesca espectral adaptativo para heterodinos, portadoras y zumbidos
+- **Compensación de fading HF** — congela el estimador durante el QSB para que no se desajuste
+- **Squelch de voz** — silencia entre transmisiones, con cierre progresivo (sin cola de squelch)
+
+**Nivel y timbre**
+
+- **AGC** — tres velocidades (slow / medium / fast), con **techo de ruido** opcional para que no
+  amplifique el ruido de banda cuando la señal es débil
+- **Nivelador de voz** — segundo AGC post-cancelador gateado por el detector de voz, para emparejar
+  estaciones de niveles dispares; con opción de nivelar en continuo para música
+- **Filtro de paso de banda** — por modo (AM / SSB), con la salida configurable independiente de la
+  entrada para no apilar dos rolloffs sobre la voz
+- **EQ de voz** — presencia (consonantes) y cuerpo (fundamentales), paramétricos
+- **Excitador armónico** — genera armónicos reales para recuperar el brillo que cortó la radio, con
+  control de carácter par/impar y gate por detección de voz
+- **Recuperar graves** — reconstruye el fundamental **derivándolo de los armónicos** que sobrevivieron
+  al filtro del receptor, sin sintetizar nada
+- **Corrección de tono** — para BFO desajustado en SSB
+
+**Interfaz y operación**
+
+- **Espectro en tiempo real** + **cascada** con historia ajustable (15–120 s), escala de color y
+  marcadores de los tonos que está cancelando el ANF
+- **Presets** — 7 perfiles de fábrica afinados en el aire, más los propios
+- **Perfiles de ruido nombrados** — guardar y recuperar el ruido de cada banda o cada hora del día
+- **Grabación a WAV** — con opción de grabar en paralelo la entrada sin procesar, para el antes/después
+- **Tamaño de interfaz ajustable** (100 / 125 / 150 %) y ayuda contextual en todos los sliders
 - **Standalone** — sin instalación de Python, sin internet, sin GPU
 
 ---
 
 ## Pipeline de procesamiento
 
-```
-Audio entrada (48kHz, mono, float32)
-  → Ganancia de entrada
-  → Supresor de impulsos (frame 10ms + mini-frame 0,67ms)
-  → AGC
-  → Filtro de paso de banda PRE  (opcional)
-  → ANF — Filtro de muesca espectral
-  → Cancelador de ruido DD Wiener + OMLSA
-  → Squelch de voz  (opcional)
-  → Filtro de paso de banda POST (opcional)
-  → EQ de presencia
-  → Excitador armónico  (opcional)
-  → GainLimiter
-Audio salida
-```
+![Pipeline de procesamiento](Images/pipeline_diagram.png)
+
+Los módulos opcionales se activan y desactivan en vivo desde la pestaña *Módulos*. El cancelador
+tiene además dos sub-módulos que corren dentro de él (refuerzo de pitch y post-filtro espectral).
 
 ---
 
 ## Uso
 
-1. Conectar la salida de audio del receptor a la entrada de la PC (o usar un cable de audio virtual para SDR por software)
-2. Seleccionar **dispositivo de entrada** y **salida** en la aplicación
+1. Conectar la salida de audio del receptor a la entrada de la PC (o usar un cable de audio virtual
+   para SDR por software)
+2. Seleccionar **dispositivo de entrada** y **salida** — ambos de la misma API de audio
 3. Elegir el modo: **AM** o **SSB**
 4. Presionar **ACTIVAR**
-5. Aprender el perfil de ruido: pulsar **⏺ Aprender ruido** durante 3–5 segundos sin señal, luego **⏹ Detener**
+5. En modo estático, aprender el perfil de ruido: **⏺ Aprender ruido** durante 3–5 segundos sin
+   señal, luego **⏹ Detener**. En modo adaptativo no hace falta: calibra solo.
 
-Para Windows: ejecutar `RadioNoiseKiller.exe`  
+Para Windows: ejecutar `RadioNoiseKiller.exe`
 Para Linux: dar permisos y ejecutar:
+
 ```bash
 chmod +x RadioNoiseKiller
 ./RadioNoiseKiller
@@ -72,13 +110,26 @@ pip install -r requirements.txt
 python src/main.py
 ```
 
+En Windows hay wrappers en la raíz: `run.cmd` (lanza la aplicación) y `test.cmd` (corre los tests).
+
+### Tests
+
+```bash
+python tests/run_all.py
+```
+
+Corre las 8 suites de regresión headless en subprocesos aislados. Los datos escribibles se redirigen
+a una carpeta temporal vía la variable `RNK_DATA_DIR`, así que **los tests nunca tocan tu
+`settings.json` ni tus presets**. `test_devices.py` y `test_hostapis.py` quedan fuera del runner:
+requieren hardware de audio y son diagnósticos. `test_cpu_profile.py` tampoco, es un benchmark.
+
 ### Empaquetar
 
 ```bash
 # Windows
 python -m PyInstaller reductor.spec --clean --noconfirm
 
-# Linux
+# Linux (x86_64 y ARM64 usan el mismo spec)
 python -m PyInstaller reductor-linux.spec --clean --noconfirm
 ```
 
@@ -92,26 +143,43 @@ Pi**, que por ahora es experimental: compila, pero todavía no se verificó que 
 
 ```
 src/
-├── main.py              # Entrada: QApplication → MainWindow
-├── config.py            # AppConfig — dataclasses + save/load JSON
-├── pipeline.py          # Orquestador del flujo DSP en tiempo real
-├── utils.py             # resource_path() y settings_path()
+├── main.py               # Entrada: escala de UI → QApplication → MainWindow
+├── config.py             # AppConfig (audio, dsp, ganancia, ventana) + save/load JSON
+├── pipeline.py           # ProcessingPipeline: orquesta audio I/O + DSP en tiempo real
+├── presets.py            # PresetManager: captura/aplica configuraciones completas
+├── noise_profiles.py     # NoiseProfileManager: perfiles de ruido nombrados
+├── i18n.py / i18n_en.py  # Traducción ES→EN (catálogo propio, sin Qt Linguist)
+├── utils.py              # Rutas de recursos y de datos escribibles (RNK_DATA_DIR)
+├── buildinfo.py          # BUILD_ID, estampado en el empaquetado
 ├── audio/
-│   ├── devices.py       # Enumeración multiplataforma (WASAPI/WDM-KS en Windows, ALSA/PulseAudio en Linux)
-│   └── stream.py        # AudioStream: callback sounddevice
+│   ├── devices.py        # Enumeración y deduplicación por API (WASAPI/WDM-KS, ALSA)
+│   ├── stream.py         # AudioStream: wrapper de sounddevice con callback
+│   └── recorder.py       # WavRecorder: grabación a WAV con hilo escritor propio
 ├── dsp/
-│   ├── noise_profiler.py# DD Wiener + OMLSA + OLA
-│   ├── anf.py           # Filtro de muesca espectral adaptativo
-│   ├── filters.py       # BandpassFilter (Butterworth IIR) + PresenceFilter (peaking EQ)
-│   ├── exciter.py       # AuralExciter (tanh + HPF 1kHz)
-│   ├── gain.py          # GainLimiter (peak follower)
-│   ├── level.py         # LevelMeter (RMS con decaimiento)
-│   └── agc.py           # Control automático de ganancia
+│   ├── noise_profiler.py # Cancelador: DD + Log-MMSE + OMLSA, MCRA, post-filtro, pitch
+│   ├── agc.py            # AGC (también usado como nivelador de voz)
+│   ├── anf.py            # AdaptiveNotchFilter: heterodinos y tonos
+│   ├── filters.py        # BandpassFilter + PresenceFilter (Butterworth / peaking IIR)
+│   ├── exciter.py        # AuralExciter: armónicos con carácter par/impar y gate por VAD
+│   ├── bass.py           # BassRestorer: fundamental derivado de los armónicos
+│   ├── freq_shift.py     # FrequencyShifter: corrección de tono SSB
+│   ├── gain.py           # GainLimiter: limitador de picos con rodilla suave
+│   └── level.py          # LevelMeter: RMS con decaimiento
 └── ui/
-    ├── main_window.py   # Ventana principal con tabs
-    ├── advanced_tab.py  # Tabs Avanzada Audio y Avanzada Ruido
-    ├── slider_row.py    # Widget label + QSlider + unidad
-    └── vu_meter.py      # VU meter custom (QPainter)
+    ├── main_window.py    # Ventana principal: 7 pestañas + barra de estado
+    ├── advanced_tab.py   # Pestañas Avanzada Audio / Impulsos / Cancelador
+    ├── presets_tab.py    # Gestión de presets
+    ├── slider_row.py     # Widget: label + QSlider escalado a float + valor
+    ├── tooltips.py       # Textos de ayuda de todos los sliders
+    ├── vu_meter.py       # VU meter custom (QPainter)
+    ├── spectrum_widget.py# Espectro en tiempo real (FFT + EMA)
+    └── waterfall_widget.py # Cascada tiempo-frecuencia
+
+Presets/                  # 7 presets de fábrica (JSON) + Presets.zip
+tests/                    # Suites de regresión (run_all.py) y diagnósticos
+tools/                    # Generadores del manual PDF, el diagrama y el zip de presets
+Images/                   # Logo, ícono y diagramas del pipeline
+.github/workflows/        # Build de Linux (x86_64 y ARM64) en Actions
 ```
 
 ---
@@ -120,22 +188,39 @@ src/
 
 | Paquete | Uso |
 |---------|-----|
-| `sounddevice` | Audio I/O via PortAudio |
+| `sounddevice` | Audio I/O vía PortAudio |
 | `numpy` | Procesamiento numérico |
-| `scipy` | Filtros IIR (Butterworth, biquad) |
+| `scipy` | Filtros IIR, FFT y funciones especiales |
 | `PySide6` | Interfaz gráfica (Qt6) |
-| `pyinstaller` | Empaquetado standalone |
+| `pyinstaller` | Empaquetado standalone (sólo desarrollo) |
 
 ---
 
 ## Notas para operadores de radio
 
-- **SDR software**: usar *Mezcla estéreo* (Stereo Mix) como entrada para capturar el audio de SDR#, HDSDR, etc. sin cable físico
-- **Squelch**: solo para transmisiones de voz SSB/AM — no usar con música (produce bombeo)
-- **Aprender ruido**: hacerlo cuando la estación no transmite para capturar el ruido real de la banda
-- **Bypass**: permite comparar la señal con y sin procesamiento en tiempo real
+- **SDR por software**: usar *Mezcla estéreo* (Stereo Mix) como entrada para capturar el audio de
+  SDR#, HDSDR, etc. sin cable físico
+- **Entrada y salida de la misma API**: PortAudio no puede combinar, por ejemplo, una entrada WASAPI
+  con una salida WDM-KS. La aplicación lo detecta y avisa antes de dejar arrancar
+- **Aprender ruido**: correrse un poco en frecuencia a un hueco **sin emisoras** antes de aprender.
+  Si entra voz o una portadora, queda horneada en el perfil y el cancelador la resta como si fuera
+  ruido
+- **Calibrar la Intensidad con el Preview**: subirla mientras lo que se elimina sea sólo ruido, y
+  bajar un paso donde empiece a filtrarse voz
+- **Receta recomendada**: Intensidad baja (50–60 %) + Post-Filtro alto. Da mejor cancelación y voz
+  más natural que subir la Intensidad sola
+- **Squelch**: sólo para transmisiones de voz — con música produce bombeo
+- **Bypass**: compara la señal con y sin procesamiento en vivo, y recuerda la ganancia de salida por
+  separado en cada estado para que la comparación sea a nivel parejo
+
+El manual desarrolla todo esto con mucho más detalle, incluido un capítulo de flujo de calibración
+recomendado.
 
 ---
+
+## Autor
+
+**Germán Pagliaroli — LU6APA**
 
 ## Licencia
 
