@@ -1487,6 +1487,11 @@ Backlog v1.7 (acordado con el usuario tras la revisión de código de julio 2026
   conmutable, colormap SDR clásico, splitter arrastrable). **Validado en el aire.**
 
 Pendiente para Fase 2:
+- **Agregar el Nivelador de voz al diagrama del pipeline** (`tools/gen_pipeline_diagram.py`, lista
+  `STAGES`). Va entre el Squelch y el Filtro de Paso de Banda POST — es la única etapa del pipeline
+  real que el diagrama no muestra. Se difirió a propósito en la v2.1: el diagrama lo comparten el
+  README y los manuales ES+EN, así que tocarlo obliga a regenerar las dos imágenes y los dos PDFs.
+  **Hacerlo junto con el próximo cambio de manual**, no suelto.
 - Validar build en Pi real (ARM64 Raspberry Pi OS Bookworm)
 - Reducir/optimizar el tamaño total de la app. **Primera pasada hecha y validada en ambas
   plataformas (v1.5):** recorte de módulos Qt sin uso en ambos specs (`QT_EXCLUDES` + filtro

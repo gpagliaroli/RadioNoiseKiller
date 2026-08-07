@@ -20,9 +20,13 @@ en orden; cada uno tiene su verificación. No publicar si algo falla.
 ## 1. Bump de versión (2 lugares)
 
 - `src/main.py` → `app.setApplicationVersion("X.Y.0")`
-- `src/ui/main_window.py` → `setWindowTitle(f"RadioNoiseKiller  vX.Y  ·  build {BUILD_ID}")`
+- `src/ui/main_window.py` → dentro de `_update_window_title()`, la línea
+  `title = "RadioNoiseKiller  vX.Y  by LU6APA"` (la versión está hardcodeada ahí, NO en un
+  `setWindowTitle` del build).
 
-## 2. Manual bilingüe
+## 2. Documentación
+
+### Manual bilingüe
 
 - `MANUAL.md` (ES): documentar los cambios de la versión y bump del número en encabezado
   (`**Versión X.Y**`) y pie (`*RadioNoiseKiller — versión X.Y*`).
@@ -40,6 +44,29 @@ en orden; cada uno tiene su verificación. No publicar si algo falla.
   usuario final; el bundle no trae presets). El zip es determinista: si no cambió nada, no
   genera diff.
 - Verificar con pypdf: cantidad de páginas y presencia de los términos nuevos en ambos.
+
+### README.md
+
+Es lo primero que ve quien llega al repo, y **envejece sin que nadie lo note** porque nada falla
+cuando queda viejo. Repasarlo en cada release, no sólo agregarle lo nuevo:
+
+- **Características**: agregar lo que trae la versión, y sobre todo **borrar o corregir lo que dejó
+  de ser cierto**. En la v2.1 seguía anunciando el preset "custom" del AGC (eliminado en la v1.8) y
+  describía el excitador como "tanh + HPF 1kHz" (reescrito en la v2.0).
+- **Estructura del proyecto**: verificar por script que no falte ningún módulo y que no haya rutas
+  fantasma. Rápido y sin criterio propio:
+  ```python
+  todos = [f for d,_,fs in os.walk("src") for f in fs
+           if f.endswith(".py") and f != "__init__.py"]
+  print([f for f in todos if f not in open("README.md", encoding="utf-8").read()])
+  ```
+  En la v2.1 faltaban 12 módulos y las cinco carpetas de raíz.
+- **Pipeline**: el README usa la imagen versionada `Images/pipeline_diagram.png`, la misma del
+  manual. **No volver a poner un bloque ASCII**: era una segunda fuente de verdad y se desincronizó.
+- **Descargas**: la tabla usa `vX.Y` genérico y apunta a `releases/latest` — no hay que tocarla
+  cada versión, pero conviene confirmar que los nombres de los assets sigan coincidiendo.
+- Chequear los números que se afirman (cantidad de presets de fábrica, de suites de test, de
+  pestañas) contra el código, no contra el README anterior.
 
 ## 3. Tests
 
