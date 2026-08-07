@@ -277,7 +277,15 @@ reajustaron en el aire. Todo el contenido de abajo se validó escuchando en la r
 iteraciones de ida y vuelta (ver los "reportado en el aire" de cada ítem: casi todos los fixes de
 esta versión salieron de una escucha que contradijo una medición sintética).
 
-**Post-v2.0 (pendiente de release): cascada — profundidad, escala de color y marcadores.** Cierra
+**v2.1 publicada (agosto 2026)** — release en GitHub con distribuibles Windows y Linux. Versión de
+app 2.1.0, manuales `MANUAL_RadioNoiseKiller_v2.1.pdf` (ES, 38 págs) y `..._v2.1_EN.pdf` (EN, 38
+págs). Título "v2.1 by LU6APA". Release de menor: no cambia el DSP del cancelador ni el significado
+de ningún control (los presets de la v2.0 suenan igual). Junta cinco tandas: la cascada que había
+quedado fuera de alcance en la v1.8, el techo de ruido del AGC, el seed de presets de fábrica que
+faltaba en los distribuibles, el job de compilación ARM64 (experimental) y la tanda de
+accesibilidad. Los cinco bloques que siguen son el detalle de esta versión.
+
+**v2.1 — cascada — profundidad, escala de color y marcadores.** Cierra
 los tres ítems que habían quedado fuera de alcance en la v1.8.
 - **Profundidad ajustable** (combo 15/30/60/120 s en la barra del espectro, persistida en
   `WindowConfig.waterfall_history_sec`). El ring se dimensiona SIEMPRE para el máximo (120 s ≈
@@ -297,7 +305,7 @@ los tres ítems que habían quedado fuera de alcance en la v1.8.
 - Verificado headless renderizando a QPixmap y contando píxeles del marcador (con tonos: aparece;
   sin tonos: cero). Test en `test_ui`.
 
-**Post-v2.0 (pendiente de release): techo de ruido del AGC.** Reportado en el aire: *"con baja señal
+**v2.1 — techo de ruido del AGC.** Reportado en el aire: *"con baja señal
 el AGC sube la salida a −20 dB y queda un ruido molesto"*. El AGC de entrada lleva lo que mida a su
 target **sin distinguir voz de ruido**, y tiene hasta **+36 dB**: medido, tras el fin de una
 transmisión se va a 35.4 dB persiguiendo el ruido. El nivelador de voz no era el culpable (el
@@ -341,7 +349,7 @@ usuario probó sacarle el modo continuo y no cambió nada).
   sentido — el AGC deja de amplificar una señal que es mayormente ruido, así que el cancelador
   recibe algo más limpio.
 
-**Post-v2.0 (pendiente de release): los presets de fábrica no llegaban al usuario final.**
+**v2.1 — los presets de fábrica no llegaban al usuario final.**
 Detectado por el usuario mirando el zip publicado: **los dos distribuibles de la v2.0 salieron sin
 ningún preset**. El de Windows con la carpeta `Presets/` **vacía** —la crea el propio smoke test al
 ejecutar el exe, así que *parece* correcta— y el de Linux directamente sin la carpeta. Los assets
@@ -360,7 +368,23 @@ donde la app no los busca.
   el build haya terminado bien.** Una carpeta vacía creada por el smoke test se ve igual que una
   carpeta correcta en un listado.
 
-**Post-v2.0 (pendiente de release): accesibilidad y ayuda en la UI.** Tres pedidos del usuario.
+**v2.1 — build ARM64 (Raspberry Pi), experimental.** Job `build-arm64` en
+`.github/workflows/build-linux.yml`, `runs-on: ubuntu-22.04-arm`, Python 3.12, `continue-on-error`.
+Es **opt-in**: solo corre por `workflow_dispatch` con el input `arm64` en true — un runner ARM es
+facturable y no se justifica en cada tag hasta que alguien confirme que el binario arranca en una Pi.
+- Verificado que **COMPILA**: ELF aarch64 de 64 bits, 542 entradas, los 7 presets, plugins wayland
+  presentes, `libasound` fuera del bundle. ~2 min. Python 3.12 en aarch64 tiene wheels de PySide6,
+  scipy y numpy, así que no compila nada desde fuente — que era el riesgo principal.
+- **Sin verificar que ARRANQUE en una Pi real** — por eso el paquete lleva `EXPERIMENTAL.txt` y no
+  se publica como asset del release. Glibc: el runner es 22.04 (2.35), Bookworm es 2.36 → el binario
+  debería correr, pero hay que probarlo.
+- **Diagnóstico mal hecho tres veces, anotado para no repetirlo:** las cancelaciones de runs no eran
+  la cuota de Actions ni el job ARM. La anotación del job lo decía: *"The job was not acquired by
+  Runner of type hosted even after multiple attempts"* — GitHub no conseguía asignar runner, era
+  transitorio, y al rato el mismo workflow corrió solo y terminó en success. **Leer la anotación del
+  job antes de teorizar sobre facturación.**
+
+**v2.1 — accesibilidad y ayuda en la UI.** Tres pedidos del usuario.
 - **"Nivelar en continuo (música)" pasa a Principal → grupo Control**, entre el combo de AGC y el
   Techo de ruido. No es un ajuste que se deja puesto: se cambia según lo que se esté escuchando
   (música vs. voz), así que tiene que estar a la vista. Sigue gateada por cancelador + nivelador

@@ -288,7 +288,8 @@
       "Bash(grep -n \"^| \\\\`tests/test_ui.py\\\\`\" CLAUDE.md)",
       "PowerShell(.venv\\\\Scripts\\\\python.exe \"$env:TEMP\\\\rnk_wf_check.py\")",
       "PowerShell(.venv\\\\Scripts\\\\python.exe -c \"import sys; sys.path.insert\\(0,'src'\\); import i18n_en; print\\('catalogo:', len\\(i18n_en.CATALOG\\)\\)\"; .venv\\\\Scripts\\\\python.exe tests\\\\run_all.py 2>&1 | Select-Object -Last 5)",
-      "PowerShell(\\(Get-CimInstance Win32_Processor | Select-Object -First 1 Name, NumberOfCores, MaxClockSpeed\\) | Format-List)"
+      "PowerShell(\\(Get-CimInstance Win32_Processor | Select-Object -First 1 Name, NumberOfCores, MaxClockSpeed\\) | Format-List)",
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -c ' *)"
     ]
   }
 }
