@@ -393,12 +393,13 @@ donde la app no los busca.
     el 150 %. Y si el usuario se muda a un monitor más chico, `_restore_or_center` **vuelve a
     100 % para el próximo arranque y avisa** — como el ancho es fijo Qt no puede achicar la
     ventana, y la barra de estado (donde vive el combo para deshacerlo) quedaría fuera de pantalla.
-  - Los 31 `font-size: 7/8pt` inline de los indicadores escalan proporcionalmente, así que a 100 %
-    siguen siendo los más difíciles de leer. Si el reclamo vuelve apuntando a ESOS, es un ajuste
-    aparte.
-  - Verificado con la app real a 125 % (arranca y sigue viva) y las tres escalas headless
-    (dpr sigue a `QT_SCALE_FACTOR`, ancho lógico invariante). **Falta la validación visual del
-    usuario en su monitor.**
+  - **Descartado — subir los indicadores de 7/8 pt.** Los 31 `font-size` inline escalan
+    proporcionalmente, así que a 100 % siguen siendo los textos más chicos de la pantalla; se le
+    ofreció al usuario subirlos y respondió que **no hace falta** (el reclamo era general, no sobre
+    esos indicadores). No reproponerlo salvo que llegue un pedido puntual sobre ellos.
+  - Verificado con la app real a 125 % y las tres escalas headless (dpr sigue a `QT_SCALE_FACTOR`,
+    ancho lógico invariante). **Validado visualmente por el usuario en su monitor** — junto con el
+    movimiento del checkbox y los tooltips de los 45 sliders.
 
 ## Cambios de la v2.0
 
