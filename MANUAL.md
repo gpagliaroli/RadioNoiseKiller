@@ -294,6 +294,41 @@ Regla práctica: la salida **igual o más ancha** que la entrada. Más angosta q
 - Para **SSB DX** con mucho ruido: bajar el Hz inferior a 300–400 Hz y el superior a 2500 Hz para reducir el ruido de banda.
 - Cambiar el orden del filtro requiere reiniciar el procesamiento (el botón se deshabilita mientras está activo).
 
+### Splatter de una estación vecina
+
+El **splatter** son los productos de intermodulación de un transmisor sobreexcitado, que se derraman
+sobre las frecuencias de al lado. En tu audio llegan como sílabas del vecino, con su propia envolvente
+de habla.
+
+**El cancelador de ruido no lo va a quitar, y no es un defecto:** el cancelador está construido sobre
+la premisa de que el ruido es estacionario, y estima el piso buscando mínimos. Algo que sube y baja
+con las sílabas de otra persona nunca entra en ese mínimo. Subir la Intensidad no ataca al splatter —
+sólo te come tu propia voz. El ANF tampoco sirve: es para tonos, y el splatter es de banda ancha.
+
+**Lo que sí funciona es el pasabanda, angostando del lado por el que entra:**
+
+1. Fijate de qué lado está el vecino. Si está *arriba* en frecuencia, bajá el **Hz superior**; si está
+   *abajo*, subí el **Hz inferior**. Angostar de los dos lados por las dudas es tirar señal.
+2. Subí el **orden del filtro** a 6 u 8. Eso empina el corte y es lo que más rinde: gana rechazo del
+   vecino sin sacrificar ancho de banda propio.
+3. Si usás **Salida independiente**, angostá la ENTRADA (le llega menos basura al cancelador) y dejá
+   la salida más ancha.
+
+> **No te pases de angosto.** La discriminación de las consonantes (/s/, /f/, /t/) vive entre 2 y
+> 4 kHz. Por debajo de **2,4 kHz** empezás a perder inteligibilidad, y ahí el remedio es peor que la
+> enfermedad: se entiende menos aunque se escuche más limpio. Es preferible tolerar algo de splatter
+> y conservar el ancho de banda.
+
+**Por qué no se puede filtrar todo:** en SSB la demodulación traslada el espectro del vecino según la
+diferencia de frecuencia entre ustedes. Su sibilancia, que en su transmisor está en 4–7 kHz, puede
+aterrizar en 800 Hz o en 2 kHz dentro de *tu* banda. Esa parte queda **co-canal**, mezclada con tu
+voz en las mismas frecuencias, y no la saca ningún filtro. El pasabanda recorta lo que quedó afuera;
+lo que entró, entró.
+
+> **El arreglo de verdad está en la radio, no acá:** un filtro de FI más angosto, el *IF shift*
+> corrido hacia el lado opuesto al vecino, o bajar el RF gain si el splatter te está bombeando el AGC
+> del receptor.
+
 ---
 
 ## Capítulo 6 — ANF: Filtro de Muesca Espectral

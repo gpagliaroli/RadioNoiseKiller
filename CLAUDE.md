@@ -309,6 +309,39 @@ con señal con voz — todos calibran.
 - **Pendiente:** la causa que corrompió la curva en la máquina del usuario sigue sin identificarse.
   El log es la herramienta para la próxima vez.
 
+**Post-v2.1 — DESCARTADO por medición: criba armónica contra el splatter de SSB.** El usuario
+preguntó si había algo de DSP para el splatter (productos de IMD de un vecino sobreexcitado). El
+cancelador no lo toca por diseño —es voz, no ruido estacionario, y el min-tracking del MCRA nunca lo
+mete en el piso—, así que se prototipó una **criba armónica**: detectar el f0 del corresponsal y
+atenuar los bins ENTRE sus armónicos (el inverso del refuerzo de pitch, que los protege).
+- **Resultado: +0,6 dB de mejora de la relación señal/interferencia. La vara acordada era 6 dB.** El
+  número no se mueve con NADA: bloque 480/960/1920, sigma 0,5–2,5, profundidad 6–30 dB, suavizado
+  0–0,7, SIR de entrada 0–12 dB, f0 separados (110 vs 170) o casi iguales (110 vs 115). Cada perilla
+  baja el splatter y la voz buena en la misma proporción. Encima cuesta 1,7–2,2 dB de daño a la voz,
+  que sí es audible como timbre hueco.
+- **Por qué falla, y es estructural:** el splatter es más fuerte justo en los huecos entre las sílabas
+  del corresponsal, y ahí la criba está obligada a abrirse porque no hay pitch al cual engancharse.
+  Mientras el corresponsal habla, su propia voz ya enmascara al vecino. El peine discrimina bien
+  (contiene 56% de la energía de la voz buena contra 5,8% del splatter) — pero sólo sirve donde no
+  hace falta.
+- **Tres hipótesis propias descartadas por medición en el camino** (vale registrarlas para no
+  repetirlas): NO era la entonación (con f0 fijo da igual), NO era el detector de pitch y NO era el
+  suavizado temporal de la máscara.
+- **Hallazgo aprovechable: el detector de pitch FUNCIONA sobre la mezcla** — 92% de los frames sonoros
+  con 2,2 Hz de error mediano, con el vecino a 6 dB de SIR. Habilita una idea que quedó sin medir: un
+  gate que cierre en los huecos gobernado por la **periodicidad del corresponsal** en vez de por
+  energía (el squelch actual usa el VAD de energía, que toma al splatter por voz y no cierra nunca).
+- **Método:** el banco se validó con una **máscara oráculo** que espía las fuentes limpias — da
+  +33,6 dB, así que el problema es separable y el instrumento mide bien. **Sin ese control no se puede
+  distinguir "la idea no sirve" de "el banco está roto"**, y en este caso los primeros números fueron
+  todos ~0 dB por un bug propio (reusar `_harmonic_mask`, cuya sigma de 1.5 bins está pensada para
+  PROTEGER armónicos: con bloque 480 la máscara vale 1,00 de media y la criba no hace literalmente
+  nada). Regla: **al evaluar una separación de fuentes, medir primero el techo teórico con una máscara
+  oráculo.**
+- Decisión del usuario: no implementarlo y documentar en el manual que contra el splatter lo que sirve
+  es el **pasabanda angostado del lado por el que entra** (Cap. 5 de ambos manuales, con el aviso de no
+  bajar de 2,4 kHz y la explicación de por qué parte del splatter es co-canal e infiltrable).
+
 **v2.1 publicada (agosto 2026)** — release en GitHub con distribuibles Windows y Linux. Versión de
 app 2.1.0, manuales `MANUAL_RadioNoiseKiller_v2.1.pdf` (ES, 38 págs) y `..._v2.1_EN.pdf` (EN, 38
 págs). Título "v2.1 by LU6APA". Release de menor: no cambia el DSP del cancelador ni el significado

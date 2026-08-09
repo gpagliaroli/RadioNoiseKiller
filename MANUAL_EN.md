@@ -294,6 +294,39 @@ Rule of thumb: output **equal to or wider** than the input. Narrower than the in
 - For **SSB DX** with heavy noise: lower the low Hz to 300–400 Hz and the high to 2500 Hz to reduce band noise.
 - Changing the filter order requires restarting processing (the control is disabled while active).
 
+### Splatter from an adjacent station
+
+**Splatter** is the intermodulation product of an overdriven transmitter spilling onto neighbouring
+frequencies. It reaches your audio as the other operator's syllables, with their own speech envelope.
+
+**The noise canceller will not remove it, and that is not a flaw:** the canceller is built on the
+premise that noise is stationary, and estimates the floor by tracking minima. Something that rises and
+falls with somebody else's syllables never enters that minimum. Raising the Strength does not attack
+splatter — it only eats your own voice. The ANF is no help either: it is for tones, and splatter is
+broadband.
+
+**What does work is the bandpass, narrowed on the side it comes in from:**
+
+1. Work out which side the neighbour is on. If they are *above* you in frequency, lower the **high
+   Hz**; if *below*, raise the **low Hz**. Narrowing both sides just in case throws away signal.
+2. Raise the **filter order** to 6 or 8. That steepens the skirt and is what pays best: more rejection
+   of the neighbour without giving up your own bandwidth.
+3. If you use **Output independent**, narrow the INPUT (less junk reaches the canceller) and leave the
+   output wider.
+
+> **Do not overdo the narrowing.** Consonant discrimination (/s/, /f/, /t/) lives between 2 and 4 kHz.
+> Below **2.4 kHz** you start losing intelligibility, and the cure becomes worse than the disease: you
+> understand less even though it sounds cleaner. Better to tolerate some splatter and keep the
+> bandwidth.
+
+**Why you cannot filter it all away:** in SSB, demodulation translates the neighbour's spectrum by the
+frequency difference between you. Their sibilance, which sits at 4–7 kHz in their transmitter, can land
+at 800 Hz or 2 kHz inside *your* passband. That part is **co-channel**, mixed with your voice at the
+same frequencies, and no filter removes it. The bandpass trims what fell outside; what got in, got in.
+
+> **The real fix is at the radio, not here:** a narrower IF filter, the *IF shift* moved away from the
+> neighbour, or lower RF gain if the splatter is pumping your receiver's AGC.
+
 ---
 
 ## Chapter 6 — ANF: Spectral Notch Filter

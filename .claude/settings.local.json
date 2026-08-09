@@ -295,7 +295,10 @@
       "Bash(kill %1)",
       "Bash(rm -f RadioNoiseKiller_v2.1.zip)",
       "Bash(git remote *)",
-      "Bash(tasklist //NH)"
+      "Bash(tasklist //NH)",
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe \"C:/Users/GPAGLI~1/AppData/Local/Temp/claude/C--Disco-D-Proyectos-ByCoding-Reductor-Ruido-Radio/679e4009-0953-4a70-a5c7-da8f09e7fc4d/scratchpad/banco_criba.py\")",
+      "Bash(awk '/^## Capítulo 5/,/^## Capítulo 6/' MANUAL.md)",
+      "Bash(awk '/^## Chapter 5/,/^## Chapter 6/' MANUAL_EN.md)"
     ]
   }
 }
