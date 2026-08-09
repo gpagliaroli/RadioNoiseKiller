@@ -277,6 +277,38 @@ reajustaron en el aire. Todo el contenido de abajo se validó escuchando en la r
 iteraciones de ida y vuelta (ver los "reportado en el aire" de cada ítem: casi todos los fixes de
 esta versión salieron de una escucha que contradijo una medición sintética).
 
+**Post-v2.1: el fallo del hilo procesador era mudo — y no se recuperaba.** Reportado en el aire:
+*"cuando arranca en modo MCRA no genera el piso de ruido; la única forma es pasar a Perfil estático
+y volver a MCRA"*, con las tres cosas fallando a la vez (no calibra, no reduce, no dibuja el piso) y
+después **se arregló solo** sin saber por qué. No se pudo reproducir en el banco: se probaron cuatro
+arranques en MCRA, incluido el `settings.json` real del usuario (`block_size` 960, ventana 500 ms) y
+con señal con voz — todos calibran.
+- **Firma del invariante 9.** Una excepción en `_run_processor` se recupera sola, así que el error
+  vuelve cada vez que el estado corrupto se vuelve a tocar; el manejador resetea el profiler y MCRA
+  no sale del warmup. Cambiar de modo lo cura porque `set_mode` rearma todo — de ahí el misterio.
+- **Causa raíz del "no se recupera": `reset()` no rearmaba las curvas por-bin si el hop no había
+  cambiado.** El manejador de errores llama a `reset()` justo para reparar el estado, pero
+  `_floor_curve`/`_hf_boost_curve` sólo se reconstruían dentro del `if hop != self._hop`, así que
+  una curva con el tamaño viejo **sobrevivía al reset** y el error se repetía para siempre. Ahora se
+  rearman también cuando su tamaño no coincide con `_nb`. Verificado: con una curva corrupta
+  inyectada, el pipeline da 1 error y se recupera solo (antes quedaba en warmup indefinidamente).
+  **Regla: el reset de recuperación tiene que poder reparar el estado que causó el error; si sólo
+  limpia buffers, el fallo se vuelve permanente.**
+- **Y era invisible.** Tres defectos en el camino de reporte: (1) el callback de error lo invoca el
+  **hilo procesador** y llamaba directo a `showMessage()` — tocar widgets fuera del hilo de la GUI es
+  comportamiento indefinido en Qt; ahora sólo guarda el texto y lo pinta `_tick_levels`. (2) El
+  mensaje era transitorio y lo pisaba el timer de 500 ms con "calibrando (~200 ms)…", que es
+  exactamente la mentira que hizo indescifrable el síntoma — ahora el aviso retiene el cartel unos
+  segundos (`_dsp_error_hold`). (3) No había contador ni rastro: `pipeline.dsp_error_count` /
+  `dsp_last_error`, y el traceback va a **`errores_dsp.log`** en la carpeta de datos, acotado a
+  `_DSP_LOG_MAX=5` por sesión. Si vuelve a pasar, el archivo dice qué línea falló.
+- **El error NO es por frame**: la línea que falla vive después del warmup, así que sale ~1 por ciclo
+  de warmup (≈1/s). Un aviso condicionado a "más de un error por tick" no lo habría mostrado.
+- Tests: `test_pipeline` (cuenta, loguea, acota el log y **se recupera solo**) y `test_ui` (el aviso
+  se ve y el timer de 500 ms no lo pisa, con el cartel volviendo a la normalidad después).
+- **Pendiente:** la causa que corrompió la curva en la máquina del usuario sigue sin identificarse.
+  El log es la herramienta para la próxima vez.
+
 **v2.1 publicada (agosto 2026)** — release en GitHub con distribuibles Windows y Linux. Versión de
 app 2.1.0, manuales `MANUAL_RadioNoiseKiller_v2.1.pdf` (ES, 38 págs) y `..._v2.1_EN.pdf` (EN, 38
 págs). Título "v2.1 by LU6APA". Release de menor: no cambia el DSP del cancelador ni el significado

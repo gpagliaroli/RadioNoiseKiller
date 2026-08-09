@@ -1,3 +1,4 @@
+import os
 import threading
 import queue
 from collections import deque
@@ -29,6 +30,9 @@ class ProcessingPipeline:
     _in_queue:  callback  →  processor thread  (chunks de block_size muestras)
     _out_queue: processor thread  →  callback  (chunks procesados)
     """
+
+    # Tope de errores del hilo procesador que se registran por sesion
+    _DSP_LOG_MAX = 5
 
     _LEARN_DUCK_GAIN: float = 0.25   # monitoreo a -12 dB durante "Aprender ruido"
     _LEVELER_VP_THR:  float = 0.30   # voice_prob mínimo para que el nivelador adapte
@@ -144,6 +148,10 @@ class ProcessingPipeline:
 
         self._on_level_update = None
         self._on_error        = None
+
+        # Diagnostico del hilo procesador (ver _log_dsp_error)
+        self._dsp_errors:     int = 0
+        self._dsp_last_error: str = ""
 
         self._in_acc:  np.ndarray = np.zeros(0, dtype=np.float32)
         self._out_acc: np.ndarray = np.zeros(0, dtype=np.float32)
@@ -765,6 +773,48 @@ class ProcessingPipeline:
     def spectrum_post_frames(self) -> deque:
         return self._spec_post_frames
 
+    # ------------------------------------------------------------------
+    # Diagnóstico del hilo procesador
+    # ------------------------------------------------------------------
+
+    @property
+    def dsp_error_count(self) -> int:
+        """Errores acumulados en el hilo procesador desde el último start()."""
+        return self._dsp_errors
+
+    @property
+    def dsp_last_error(self) -> str:
+        return self._dsp_last_error
+
+    def _log_dsp_error(self, exc: Exception) -> None:
+        """Deja el traceback en disco, acotado a los primeros del arranque.
+
+        El hilo procesador se recupera de cualquier excepción y sigue, así que sin
+        esto un fallo por frame no deja NINGÚN rastro: en un bundle no hay consola
+        y el usuario solo ve que el cancelador no calibra. Acotado a
+        `_DSP_LOG_MAX` para que un error por frame (100/s) no llene el disco, y
+        envuelto en try/except porque un problema al loguear jamás puede tumbar
+        el procesado de audio.
+        """
+        if self._dsp_errors > self._DSP_LOG_MAX:
+            return
+        try:
+            import datetime
+            import traceback
+            from utils import data_dir
+            with open(os.path.join(data_dir(), "errores_dsp.log"), "a",
+                      encoding="utf-8") as f:
+                f.write(f"\n===== {datetime.datetime.now():%Y-%m-%d %H:%M:%S} "
+                        f"(error #{self._dsp_errors}) =====\n")
+                f.write(f"modo={self._config.dsp.noise_mode} "
+                        f"block={self._config.audio.block_size}\n")
+                f.write("".join(traceback.format_exception(
+                    type(exc), exc, exc.__traceback__)))
+                if self._dsp_errors == self._DSP_LOG_MAX:
+                    f.write("[se dejan de registrar mas errores de esta sesion]\n")
+        except Exception:
+            pass
+
     def get_noise_floor_data(self) -> "tuple[np.ndarray, np.ndarray] | None":
         """Retorna (freqs_hz, db) calibrado para coincidir con la escala del SpectrumWidget."""
         db = self._noise_profiler.noise_floor_db
@@ -796,6 +846,8 @@ class ProcessingPipeline:
         with self._lock:
             if self._running:
                 return
+            self._dsp_errors     = 0
+            self._dsp_last_error = ""
             self._bandpass.reset()
             self._bandpass_out.reset()
             self._presence.reset()
@@ -1150,6 +1202,15 @@ class ProcessingPipeline:
                     pass
 
             except Exception as exc:
+                # Contador de diagnóstico: sin lock a propósito (invariante 7).
+                # Un fallo acá se repite CADA frame y el reset de abajo deja al
+                # profiler en warmup para siempre — en MCRA el síntoma es "nunca
+                # termina de calibrar", sin nada que lo explique (invariante 9).
+                # Por eso se cuenta y se deja rastro en disco: es un fallo que
+                # aparece en el aire y no se reproduce en el banco.
+                self._dsp_errors += 1
+                self._dsp_last_error = f"{type(exc).__name__}: {exc}"
+                self._log_dsp_error(exc)
                 if self._on_error:
                     self._on_error(f"Error en procesador DSP: {exc}")
                 # Reset internal DSP state so the next chunk has clean buffers

@@ -333,6 +333,19 @@ class NoiseProfiler:
             self._fading_freeze_frames = self._calc_fading_freeze_frames()
             self._mcra_voice_hold_frames = self._calc_voice_hold_frames()
             self._mcra_M = self._calc_mcra_M()
+        # Las curvas por-bin se rearman TAMBIÉN cuando su tamaño no coincide con
+        # _nb, no solo al cambiar el hop. `_run_processor` llama a reset() para
+        # recuperarse de una excepción, y sin este chequeo una curva con el tamaño
+        # viejo sobrevive al reset: el shape mismatch se repite, el manejador
+        # vuelve a resetear, y MCRA nunca sale del warmup. El síntoma es
+        # "no calibra, no reduce y no dibuja el piso", y solo se arregla cambiando
+        # de modo (set_mode rearma todo). Es el invariante 9 visto desde el lado
+        # de la recuperación: no alcanza con reconstruir en reset(hop) si el
+        # reset por error no puede reparar el estado que causó el error.
+        if self._floor_curve is None or len(self._floor_curve) != self._nb:
+            self._floor_curve = self._build_floor_curve()
+        if self._hf_boost_curve is None or len(self._hf_boost_curve) != self._nb:
+            self._hf_boost_curve = self._build_hf_boost_curve()
         self._ola_prev        = np.zeros(self._hop, dtype=np.float32)
         self._ola_acc         = np.zeros(self._fft_n, dtype=np.float32)
         self._gain_prev       = None

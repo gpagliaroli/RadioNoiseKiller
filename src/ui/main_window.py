@@ -1504,6 +1504,12 @@ class MainWindow(QMainWindow):
 
     def _update_noise_db(self) -> None:
         self._update_pf_extra()
+        # Mientras el aviso de error del DSP esté vigente no se pisa el cartel
+        # (ver _check_dsp_errors): decir "calibrando" cuando en realidad está
+        # fallando es exactamente lo que hizo el bug indescifrable.
+        if self._dsp_error_hold > 0:
+            self._dsp_error_hold -= 1
+            return
         mode = self._pipeline.noise_mode
 
         if not self._pipeline.is_running():
@@ -1783,11 +1789,46 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _setup_pipeline_callbacks(self) -> None:
-        self._pipeline.set_error_callback(
-            lambda msg: self._status_bar.showMessage(tr("Error: {msg}").format(msg=msg)) if hasattr(self, '_status_bar') else None
-        )
+        # OJO: este callback lo invoca el HILO PROCESADOR, no el de la GUI. Tocar
+        # un widget desde ahí es comportamiento indefinido en Qt — antes llamaba
+        # directo a showMessage(). Ahora solo guarda el texto (asignación de un
+        # str, atómica) y el aviso lo pinta _tick_levels, que sí corre en la GUI.
+        self._pipeline.set_error_callback(self._remember_dsp_error)
+        self._dsp_error_msg: str = ""
+        self._dsp_errors_seen: int = 0
+        self._dsp_error_hold: int = 0   # ticks de 500 ms que el aviso retiene el cartel
+
+    def _remember_dsp_error(self, msg: str) -> None:
+        """Llamado desde el HILO PROCESADOR: solo guardar, nunca tocar widgets."""
+        self._dsp_error_msg = msg
+
+    def _check_dsp_errors(self) -> None:
+        """Avisa si el hilo procesador está fallando. Corre en el hilo de la GUI.
+
+        Un fallo ahí se repite cada frame y el manejador resetea el profiler, así
+        que en MCRA el estimador nunca sale del warmup: no calibra, no hay
+        reducción y no aparece el piso en el espectro — todo junto y sin ningún
+        mensaje (invariante 9). Cambiar de modo lo 'arregla' porque `set_mode`
+        rearma el estado, que es justo lo que lo hace parecer un misterio.
+        Se compara contra el conteo del tick anterior para distinguir un error
+        aislado (ya superado) de una tormenta en curso."""
+        n = self._pipeline.dsp_error_count
+        if n == self._dsp_errors_seen:
+            return
+        nuevos = n - self._dsp_errors_seen
+        self._dsp_errors_seen = n
+        self._status_bar.showMessage(tr(
+            "⚠ Error en el procesador DSP ({n} en total) — el cancelador no puede "
+            "calibrar. Detalle en errores_dsp.log. Último: {msg}"
+        ).format(n=n, msg=self._pipeline.dsp_last_error))
+        self._label_noise.setText(tr("⚠ El procesador DSP está fallando — ver errores_dsp.log"))
+        self._label_noise.setStyleSheet("color: #ef5350; font-size: 8pt; font-weight: bold;")
+        # Reservar el cartel unos segundos: si no, el timer de 500 ms lo pisa con
+        # "calibrando (~200 ms)..." y el aviso no se llega a leer.
+        self._dsp_error_hold = 10
 
     def _tick_levels(self) -> None:
+        self._check_dsp_errors()
         self._vu_in.set_level(self._pipeline.db_in)
         self._vu_out.set_level(self._pipeline.db_out)
         lat = self._pipeline.latency_ms

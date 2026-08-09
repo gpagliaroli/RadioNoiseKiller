@@ -327,5 +327,72 @@ assert abs(_piso - _RUIDO_DB) < 4.0, \
 assert _piso < _VOZ_DB - 12.0, "el piso esta contaminado por la voz"
 print("Piso de ruido de entrada: OK")
 
+# ---------------------------------------------------------------------- #
+# Diagnostico del hilo procesador (invariante 9)                           #
+# ---------------------------------------------------------------------- #
+# Un fallo por frame en _run_processor se recupera solo, asi que el usuario NO
+# ve ningun error: en MCRA el manejador resetea el profiler cada frame y el
+# estimador nunca sale del warmup -> no calibra, no reduce y no dibuja el piso
+# en el espectro, todo junto. Cambiar de modo lo "arregla" (set_mode rearma el
+# estado), que es lo que lo vuelve indescifrable. Reportado en el aire y no
+# reproducible en el banco: por eso se cuenta y se deja traceback en disco.
+import io as _io
+import os as _os
+
+_log = _os.path.join(_os.environ.get("RNK_DATA_DIR") or ".", "errores_dsp.log")
+if _os.path.exists(_log):
+    _os.remove(_log)
+
+_cfg_e = AppConfig()
+_cfg_e.dsp.noise_mode = "mcra"
+_cfg_e.dsp.noise_enabled = True
+_cfg_e.dsp.perceptual_floor_enabled = True
+_pe = ProcessingPipeline(_cfg_e)
+_pe.start(headless=True)
+assert _pe.dsp_error_count == 0, "arranca con errores ya contados"
+# Curva por-bin con el tamano viejo: el shape mismatch del invariante 9
+_pe._noise_profiler._floor_curve = np.ones(7, dtype=np.float32)
+_rng_e = np.random.default_rng(7)
+_hop_e = _cfg_e.audio.block_size
+for _i in range(40):
+    _pe._process(_rng_e.standard_normal(_hop_e).astype(np.float32) * 0.05)
+    time.sleep(0.003)
+time.sleep(0.4)
+
+assert _pe.dsp_error_count > 0, "el fallo no quedo contado"
+assert _pe.dsp_last_error, "no se guardo el texto del ultimo error"
+assert _os.path.exists(_log), "no se escribio errores_dsp.log"
+_texto = _io.open(_log, encoding="utf-8").read()
+assert "Traceback" in _texto, "el log no trae el traceback"
+assert "modo=mcra" in _texto, "el log no registra el modo"
+_bloques = _texto.count("(error #")
+assert _bloques <= ProcessingPipeline._DSP_LOG_MAX, \
+    f"el log no esta acotado: {_bloques} bloques con {_pe.dsp_error_count} errores"
+
+# Y SE RECUPERA SOLO: reset() rearma las curvas por-bin cuyo tamano no coincide
+# con _nb. Sin eso la curva corrupta sobrevive al reset, el error se repite y
+# MCRA no sale nunca del warmup — el sintoma reportado en el aire, que solo se
+# curaba cambiando de modo.
+assert len(_pe._noise_profiler._floor_curve) == _pe._noise_profiler._nb, \
+    "reset() no rearmo la curva por-bin corrupta"
+for _i in range(160):
+    _pe._process(_rng_e.standard_normal(_hop_e).astype(np.float32) * 0.05)
+    time.sleep(0.002)
+time.sleep(0.5)
+_err_final = _pe.dsp_error_count
+assert _pe.noise_has_profile, \
+    f"MCRA no se recupero: sigue en warmup tras {_err_final} errores"
+print(f"Errores del procesador: {_err_final} contados, "
+      f"{_bloques} registrados (tope {ProcessingPipeline._DSP_LOG_MAX}), "
+      f"y MCRA se recupero solo")
+_pe.stop()
+
+# El contador se limpia en cada arranque: si no, un error viejo dejaria el aviso pegado
+_pe._noise_profiler.reset(_hop_e)
+_pe.start(headless=True)
+assert _pe.dsp_error_count == 0, "start() no reseteo el contador de errores"
+_pe.stop()
+print("Diagnostico del hilo procesador: OK")
+
 print(f"\nErrores: {errors if errors else 'ninguno'}")
 print("\nPipeline: OK")

@@ -878,4 +878,12 @@ CATALOG = {
         "Interface size saved ({pct} %) — restart the application to apply it.",
     "La escala de la interfaz no entra en esta pantalla — se volvio a 100 %. Reiniciar la aplicacion.":
         "The interface scale does not fit this screen — reset to 100 %. Restart the application.",
+
+    # --- Diagnóstico del hilo procesador ---
+    "⚠ Error en el procesador DSP ({n} en total) — el cancelador no puede "
+    "calibrar. Detalle en errores_dsp.log. Último: {msg}":
+        "⚠ DSP processor error ({n} so far) — the canceller cannot calibrate. "
+        "Details in errores_dsp.log. Last one: {msg}",
+    "⚠ El procesador DSP está fallando — ver errores_dsp.log":
+        "⚠ The DSP processor is failing — see errores_dsp.log",
 }

@@ -659,6 +659,45 @@ def test_bypass_remembers_output_gain():
     print("Bypass recuerda ganancia de salida (A/B)   OK")
 
 
+def test_dsp_error_is_visible():
+    """Un fallo del hilo procesador tiene que VERSE, y el aviso no lo pisa el
+    timer de 500 ms del cancelador.
+
+    Sin esto el fallo es mudo: el manejador de errores resetea el profiler cada
+    vez y en MCRA el cartel dice 'calibrando...' para siempre, sin nada que
+    explique por que no hay reduccion ni piso de ruido. Ademas el callback lo
+    invoca el HILO PROCESADOR, asi que no puede tocar widgets — solo guarda el
+    texto y la GUI lo pinta en su propio tick."""
+    w = _win()
+    _set_combo(w._combo_noise_mode, "mcra")   # el modo donde se reporto el sintoma
+
+    class _PipeFalso:
+        dsp_error_count = 3
+        dsp_last_error = "ValueError: shapes (961,) (7,)"
+    real = w._pipeline
+    w._pipeline = _PipeFalso()
+    try:
+        w._check_dsp_errors()
+    finally:
+        w._pipeline = real
+    assert "errores_dsp.log" in w._label_noise.text(), \
+        "el cartel del cancelador no avisa del fallo"
+    assert "3" in w._status_bar.currentMessage(), \
+        "la barra de estado no informa cuantos errores hubo"
+
+    # El timer del cancelador NO debe pisar el aviso mientras esta vigente
+    w._update_noise_db()
+    assert "errores_dsp.log" in w._label_noise.text(), \
+        "el timer de 500 ms piso el aviso de error"
+
+    # Pasada la retencion, el cartel vuelve a su ciclo normal
+    for _ in range(12):
+        w._update_noise_db()
+    assert "errores_dsp.log" not in w._label_noise.text(), \
+        "el aviso quedo pegado para siempre"
+    print("Aviso visible de error del DSP             OK")
+
+
 def test_ui_scale_combo():
     """El combo de escala de UI vive en la barra de estado, guarda en config y
     NO toca nada del audio (es una preferencia de aplicacion, como el idioma)."""
@@ -759,6 +798,7 @@ if __name__ == "__main__":
     test_waterfall_toggle_and_source()
     test_incompatible_devices_disable_activate()
     test_all_sliders_have_tooltip()
+    test_dsp_error_is_visible()
     test_ui_scale_combo()
     test_ui_scales_that_fit()
     test_read_ui_scale_tolerante()
