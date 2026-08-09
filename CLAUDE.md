@@ -1181,6 +1181,15 @@ Cambios v1.8.2 (los que estaban pendientes post-v1.8.1):
   mínimo y su máximo y comparar las unidades que aparecen ahí contra las que cita el tooltip.
   Da falsos positivos legítimos (el post-filtro cita dB por punto, el supresor cita la duración del
   impulso que ataca) — son tres, se revisan a mano.
+  **Segundo reporte, mismo patrón, ahora con las palabras:** el tooltip de Protección de armónicos
+  decía "Alto…" y la etiqueta muestra `suave/normal/fuerte`. Pasada sobre los 45: 6 reales
+  (`_s_pitch_strength`, `_s_leveler_max`, `_s_noise_smooth`, `_s_squelch_threshold`, `_s_pf_boost`
+  y `_s_anf_threshold`, que usaba "sensible/selectivo" contra `alta/media/baja`). Chequeo hermano
+  del de unidades: barrer cada `SliderRow` de mínimo a máximo, juntar las palabras entre paréntesis
+  que muestra la etiqueta, y marcar los tooltips que usan "alto/bajo" teniendo vocabulario propio
+  disponible. **El `alto/bajo` sólo es un error cuando la etiqueta ofrece una palabra específica**;
+  quedan 9 usos legítimos (frecuencia más alta, orden del armónico, "línea de alta tensión", y los
+  controles cuya etiqueta muestra sólo el número).
 - **Botón "🔇 Mute" de salida en la pestaña Principal** (pedido del usuario: silenciar la salida sin
   detener el proceso para una prueba corta). Va en la fila de Grabar (grupo Niveles y Ganancia),
   justificado a la derecha; el checkbox "incluir entrada sin procesar" quedó pegado a Grabar y el

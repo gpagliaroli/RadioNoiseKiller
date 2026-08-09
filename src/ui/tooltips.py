@@ -61,8 +61,8 @@ SLIDER_TIPS = {
     ),
     "_s_leveler_max": (
         "Cuánto puede amplificar el nivelador a una estación débil para emparejarla\n"
-        "con las fuertes. Alto = menos manotazos al volumen, pero también levanta\n"
-        "el ruido que viene con esa señal débil. 9–12 dB anda bien."
+        "con las fuertes. Hacia fuerte = menos manotazos al volumen, pero también\n"
+        "levanta el ruido que viene con esa señal débil. 9–12 dB anda bien."
     ),
     "_s_leveler_release": (
         "Qué tan rápido persigue el nivelador los cambios de nivel.\n"
@@ -175,8 +175,8 @@ SLIDER_TIPS = {
     ),
     "_s_anf_threshold": (
         "Cuánto tiene que sobresalir una frecuencia sobre sus vecinas para que el\n"
-        "ANF la trate como tono. Sensible agarra heterodinos débiles pero puede\n"
-        "tocar armónicos de la voz; selectivo va sólo por los silbidos evidentes."
+        "ANF la trate como tono. Sensibilidad alta agarra heterodinos débiles pero\n"
+        "puede tocar armónicos de la voz; baja va sólo por los silbidos evidentes."
     ),
     "_s_anf_depth": (
         "Cuánto se atenúa el tono detectado.\n"
@@ -194,8 +194,8 @@ SLIDER_TIPS = {
     ),
     "_s_noise_smooth": (
         "Estabiliza la clasificación voz/ruido entre frames, que es de donde sale\n"
-        "el ruido musical. Más alto = fondo más parejo y sin gorgojeo, pero el\n"
-        "cancelador reacciona más lento. La zona útil es 96–98%."
+        "el ruido musical. Hacia suave = fondo más parejo y sin gorgojeo; hacia\n"
+        "reactivo el cancelador responde antes. La zona útil es 96–98%."
     ),
     "_s_noise_attack": (
         "Qué tan rápido sube la ganancia en los bins donde aparece voz.\n"
@@ -227,8 +227,9 @@ SLIDER_TIPS = {
     ),
     "_s_squelch_threshold": (
         "Cuánta certeza de que hay voz hace falta para abrir el gate y dejar pasar\n"
-        "el audio. Bajo abre fácil (y deja pasar ruido); alto es más selectivo pero\n"
-        "puede cortar voz débil. Si el gate no abre con señales flojas, bajalo."
+        "el audio. Sensible abre fácil (y deja pasar ruido); selectivo filtra mejor\n"
+        "pero puede cortar voz débil. Si el gate no abre con señales flojas,\n"
+        "hacelo más sensible."
     ),
     "_s_squelch_hold": (
         "Cuánto se mantiene abierto el gate después de que se dejó de detectar voz.\n"
@@ -237,7 +238,7 @@ SLIDER_TIPS = {
     ),
     "_s_pf_boost": (
         "Cuánto se levanta el piso en la zona de los fundamentales de la voz, para\n"
-        "que el cancelador no se lleve la calidez. Más alto = voz más llena, a\n"
+        "que el cancelador no se lleve la calidez. Hacia fuerte = voz más llena, a\n"
         "costa de dejar pasar algo más de ruido en esa banda."
     ),
     "_s_pf_center": (
@@ -256,7 +257,7 @@ SLIDER_TIPS = {
     ),
     "_s_pitch_strength": (
         "Cuánto se protegen del cancelador los armónicos de la voz detectada.\n"
-        "Alto rescata mejor una voz enterrada en ruido; si el tono se detecta mal,\n"
+        "Fuerte rescata mejor una voz enterrada en ruido; si el tono se detecta mal,\n"
         "puede terminar protegiendo bins que eran ruido."
     ),
 }

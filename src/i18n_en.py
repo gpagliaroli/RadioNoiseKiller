@@ -627,11 +627,11 @@ CATALOG = {
         "20 ms of delay is still imperceptible while listening.\n"
         "REQUIRES stopping and starting processing again.",
     "Cuánto puede amplificar el nivelador a una estación débil para emparejarla\n"
-    "con las fuertes. Alto = menos manotazos al volumen, pero también levanta\n"
-    "el ruido que viene con esa señal débil. 9–12 dB anda bien.":
+    "con las fuertes. Hacia fuerte = menos manotazos al volumen, pero también\n"
+    "levanta el ruido que viene con esa señal débil. 9–12 dB anda bien.":
         "How much the leveler may amplify a weak station to match the strong ones.\n"
-        "High = less reaching for the volume knob, but it also lifts the noise\n"
-        "that comes with that weak signal. 9-12 dB works well.",
+        "Toward strong = less reaching for the volume knob, but it also lifts the\n"
+        "noise that comes with that weak signal. 9-12 dB works well.",
     "Qué tan rápido persigue el nivelador los cambios de nivel.\n"
     "Rápido (400–600 ms) para fading cíclico y música con QSB; suave (1500 ms\n"
     "o más) para que no bombee. Si escuchás la ganancia 'respirar', andá hacia\n"
@@ -760,11 +760,11 @@ CATALOG = {
         "sparks.\n"
         "Lower it if you hear fast 'ticks' the other threshold does not catch.",
     "Cuánto tiene que sobresalir una frecuencia sobre sus vecinas para que el\n"
-    "ANF la trate como tono. Sensible agarra heterodinos débiles pero puede\n"
-    "tocar armónicos de la voz; selectivo va sólo por los silbidos evidentes.":
+    "ANF la trate como tono. Sensibilidad alta agarra heterodinos débiles pero\n"
+    "puede tocar armónicos de la voz; baja va sólo por los silbidos evidentes.":
         "How far a frequency has to stand above its neighbours for the ANF to treat\n"
-        "it as a tone. Sensitive catches weak heterodynes but may touch voice\n"
-        "harmonics; selective goes only after the obvious whistles.",
+        "it as a tone. High sensitivity catches weak heterodynes but may touch voice\n"
+        "harmonics; low goes only after the obvious whistles.",
     "Cuánto se atenúa el tono detectado.\n"
     "OJO: valores altos opacan bastante la voz — 50% es el balance recomendado.\n"
     "Si el heterodino sigue molestando, probá primero subir la Sensibilidad.":
@@ -782,11 +782,11 @@ CATALOG = {
         "sounding 'dead'. 0.10-0.15 is usual; do not go below 0.05.\n"
         "A high floor also passes more of the fading swing.",
     "Estabiliza la clasificación voz/ruido entre frames, que es de donde sale\n"
-    "el ruido musical. Más alto = fondo más parejo y sin gorgojeo, pero el\n"
-    "cancelador reacciona más lento. La zona útil es 96–98%.":
+    "el ruido musical. Hacia suave = fondo más parejo y sin gorgojeo; hacia\n"
+    "reactivo el cancelador responde antes. La zona útil es 96–98%.":
         "Stabilises the voice/noise decision between frames, which is where musical\n"
-        "noise comes from. Higher = flatter background with no warbling, but the\n"
-        "canceller reacts more slowly. The useful range is 96-98%.",
+        "noise comes from. Toward smooth = flatter background with no warbling;\n"
+        "toward reactive the canceller responds sooner. Useful range: 96-98%.",
     "Qué tan rápido sube la ganancia en los bins donde aparece voz.\n"
     "Rápido conserva mejor el ataque de cada palabra; suave reduce artefactos.\n"
     "Si la voz suena recortada al arrancar, hacelo más rápido.":
@@ -825,11 +825,13 @@ CATALOG = {
         "Longer protects better on slow fades; shorter goes back to tracking the\n"
         "real noise sooner.",
     "Cuánta certeza de que hay voz hace falta para abrir el gate y dejar pasar\n"
-    "el audio. Bajo abre fácil (y deja pasar ruido); alto es más selectivo pero\n"
-    "puede cortar voz débil. Si el gate no abre con señales flojas, bajalo.":
+    "el audio. Sensible abre fácil (y deja pasar ruido); selectivo filtra mejor\n"
+    "pero puede cortar voz débil. Si el gate no abre con señales flojas,\n"
+    "hacelo más sensible.":
         "How much certainty that there is voice is needed to open the gate and let\n"
-        "audio through. Low opens easily (and lets noise in); high is more selective\n"
-        "but may cut weak voice. If the gate will not open on weak signals, lower it.",
+        "audio through. Sensitive opens easily (and lets noise in); selective filters\n"
+        "better but may cut weak voice. If the gate will not open on weak signals,\n"
+        "make it more sensitive.",
     "Cuánto se mantiene abierto el gate después de que se dejó de detectar voz.\n"
     "Corto corta las pausas entre palabras; largo deja pasar más ruido entre\n"
     "frases. 300–500 ms es lo habitual.":
@@ -837,11 +839,11 @@ CATALOG = {
         "Short cuts the pauses between words; long lets more noise through between\n"
         "sentences. 300-500 ms is usual.",
     "Cuánto se levanta el piso en la zona de los fundamentales de la voz, para\n"
-    "que el cancelador no se lleve la calidez. Más alto = voz más llena, a\n"
+    "que el cancelador no se lleve la calidez. Hacia fuerte = voz más llena, a\n"
     "costa de dejar pasar algo más de ruido en esa banda.":
         "How much the floor is raised in the range of the voice fundamentals, so the\n"
-        "canceller does not take the warmth away. Higher = fuller voice, at the cost\n"
-        "of letting slightly more noise through in that band.",
+        "canceller does not take the warmth away. Toward strong = fuller voice, at\n"
+        "the cost of letting slightly more noise through in that band.",
     "Dónde se centra ese refuerzo. Bajalo para voces graves y subilo para\n"
     "agudas, siguiendo el fundamental del corresponsal.":
         "Where that boost is centred. Lower it for deep voices and raise it for\n"
@@ -859,10 +861,10 @@ CATALOG = {
         "brightness. In narrow SSB the effect will always be smaller than in AM,\n"
         "because of the available bandwidth.",
     "Cuánto se protegen del cancelador los armónicos de la voz detectada.\n"
-    "Alto rescata mejor una voz enterrada en ruido; si el tono se detecta mal,\n"
+    "Fuerte rescata mejor una voz enterrada en ruido; si el tono se detecta mal,\n"
     "puede terminar protegiendo bins que eran ruido.":
         "How much the harmonics of the detected voice are protected from the\n"
-        "canceller. High rescues a voice buried in noise better; if pitch detection\n"
+        "canceller. Strong rescues a voice buried in noise better; if pitch detection\n"
         "goes wrong, it may end up protecting bins that were noise.",
 
     # --- Escala de la interfaz ---
