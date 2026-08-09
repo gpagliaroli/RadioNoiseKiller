@@ -886,4 +886,12 @@ CATALOG = {
         "Details in errores_dsp.log. Last one: {msg}",
     "⚠ El procesador DSP está fallando — ver errores_dsp.log":
         "⚠ The DSP processor is failing — see errores_dsp.log",
+    "⚠ No calibra: el cancelador de ruido está desactivado":
+        "⚠ Not calibrating: the noise canceller is disabled",
+    "⚠ No calibra: no llega audio de entrada (revisar dispositivo y Canal)":
+        "⚠ Not calibrating: no input audio (check the device and Channel)",
+    "⚠ El estimador adaptativo no completa la calibración — "
+    "probar Perfil estático y volver, y avisar del problema":
+        "⚠ The adaptive estimator will not finish calibrating — try Static "
+        "profile and back, and please report the problem",
 }

@@ -37,6 +37,9 @@ _ROW_LABEL_W = 70       # ancho de la etiqueta de la fila (columna izquierda)
 _FIELD_W = 558          # fin de la barra del slider (ancho de los VU, que arrancan en x=0)
 _COMBO_W = _FIELD_W - _ROW_LABEL_W - 8   # ancho del combo para que termine en _FIELD_W
 _WINDOW_W = 770         # ancho FIJO de la ventana (alto flexible)
+# Ticks del timer de 500 ms antes de dejar de decir "calibrando" en MCRA.
+# El warmup real son ~200 ms; 6 ticks (3 s) es holgado y no da falsos avisos.
+_MCRA_WAIT_TICKS = 6
 _SCALE_MARGEN = 40      # px reales de holgura para el marco de la ventana
 
 
@@ -1522,6 +1525,7 @@ class MainWindow(QMainWindow):
 
         if mode == "mcra":
             if self._pipeline.noise_has_profile:
+                self._mcra_wait = 0
                 db = self._pipeline.noise_reduction_db
                 if db >= -0.5:
                     self._lbl_noise_db.setText(tr("~0 dB"))
@@ -1541,8 +1545,17 @@ class MainWindow(QMainWindow):
             else:
                 self._lbl_noise_db.setText("—")
                 self._lbl_noise_db.setStyleSheet("color: #888; font-weight: bold;")
-                self._label_noise.setText(tr("Adaptativo (MCRA) — calibrando (~200ms)..."))
-                self._label_noise.setStyleSheet("color: #ffd600; font-size: 8pt;")
+                self._mcra_wait += 1
+                # El warmup son ~200 ms. Pasados unos segundos, seguir diciendo
+                # "calibrando" es mentir: hay que decir POR QUÉ no calibra. Sin
+                # esto el usuario ve el cancelador inerte y el cartel tranquilo
+                # (fue justo el síntoma que costó diagnosticar en el aire).
+                if self._mcra_wait < _MCRA_WAIT_TICKS:
+                    self._label_noise.setText(tr("Adaptativo (MCRA) — calibrando (~200ms)..."))
+                    self._label_noise.setStyleSheet("color: #ffd600; font-size: 8pt;")
+                else:
+                    self._label_noise.setText(self._mcra_stall_reason())
+                    self._label_noise.setStyleSheet("color: #ef5350; font-size: 8pt; font-weight: bold;")
             return
 
         # Modo estático — auto-corrige label/botones cada 500ms
@@ -1797,6 +1810,22 @@ class MainWindow(QMainWindow):
         self._dsp_error_msg: str = ""
         self._dsp_errors_seen: int = 0
         self._dsp_error_hold: int = 0   # ticks de 500 ms que el aviso retiene el cartel
+        self._mcra_wait: int = 0        # ticks que MCRA lleva sin completar el warmup
+
+    def _mcra_stall_reason(self) -> str:
+        """Por qué el estimador adaptativo no termina de calibrar.
+
+        Son cuatro causas distintas y hasta ahora las cuatro se veían igual
+        ('calibrando…' para siempre). Se ordenan de la más concreta a la más
+        genérica; la última manda a mirar el log, que es donde está el detalle."""
+        if self._pipeline.dsp_error_count:
+            return tr("⚠ El procesador DSP está fallando — ver errores_dsp.log")
+        if not self._config.dsp.noise_enabled:
+            return tr("⚠ No calibra: el cancelador de ruido está desactivado")
+        if self._pipeline.db_in < -55.0:
+            return tr("⚠ No calibra: no llega audio de entrada (revisar dispositivo y Canal)")
+        return tr("⚠ El estimador adaptativo no completa la calibración — "
+                  "probar Perfil estático y volver, y avisar del problema")
 
     def _remember_dsp_error(self, msg: str) -> None:
         """Llamado desde el HILO PROCESADOR: solo guardar, nunca tocar widgets."""

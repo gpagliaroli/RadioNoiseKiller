@@ -698,6 +698,51 @@ def test_dsp_error_is_visible():
     print("Aviso visible de error del DSP             OK")
 
 
+def test_mcra_stall_reason():
+    """Si MCRA no calibra, el cartel dice POR QUE, no 'calibrando...' para siempre.
+
+    El warmup son ~200 ms; quedarse en ese texto indefinidamente fue lo que hizo
+    indescifrable el sintoma reportado en el aire (no calibra, no reduce, no
+    dibuja el piso, y el cartel tranquilo). Las cuatro causas se ven distinto."""
+    w = _win()
+
+    class _Pipe:
+        dsp_error_count = 0
+        noise_has_profile = False
+        db_in = -20.0
+        noise_mode = "mcra"
+        post_filter_extra_db = 0.0
+
+        def is_running(self):
+            return True
+
+    w._pipeline = _Pipe()
+    w._config.dsp.noise_enabled = True
+
+    w._update_noise_db()
+    assert "calibrando" in w._label_noise.text(), "no muestra el warmup normal"
+
+    for _ in range(12):        # pasado el margen: tiene que explicar
+        w._update_noise_db()
+    generico = w._label_noise.text()
+    assert "calibrando" not in generico, "se queda en 'calibrando' para siempre"
+
+    w._config.dsp.noise_enabled = False
+    w._update_noise_db()
+    assert "desactivado" in w._label_noise.text(), "no detecta el cancelador apagado"
+
+    w._config.dsp.noise_enabled = True
+    _Pipe.db_in = -70.0
+    w._update_noise_db()
+    assert "audio de entrada" in w._label_noise.text(), "no detecta la falta de audio"
+
+    _Pipe.db_in = -20.0
+    _Pipe.dsp_error_count = 4
+    w._update_noise_db()
+    assert "errores_dsp.log" in w._label_noise.text(), "no prioriza el error del DSP"
+    print("MCRA atascado: el cartel dice por que   OK")
+
+
 def test_ui_scale_combo():
     """El combo de escala de UI vive en la barra de estado, guarda en config y
     NO toca nada del audio (es una preferencia de aplicacion, como el idioma)."""
@@ -799,6 +844,7 @@ if __name__ == "__main__":
     test_incompatible_devices_disable_activate()
     test_all_sliders_have_tooltip()
     test_dsp_error_is_visible()
+    test_mcra_stall_reason()
     test_ui_scale_combo()
     test_ui_scales_that_fit()
     test_read_ui_scale_tolerante()

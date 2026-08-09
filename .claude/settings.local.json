@@ -294,7 +294,8 @@
       "Bash(kill -0 %1)",
       "Bash(kill %1)",
       "Bash(rm -f RadioNoiseKiller_v2.1.zip)",
-      "Bash(git remote *)"
+      "Bash(git remote *)",
+      "Bash(tasklist //NH)"
     ]
   }
 }
