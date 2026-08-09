@@ -771,13 +771,15 @@ CATALOG = {
         "How much the detected tone is attenuated.\n"
         "CAREFUL: high values noticeably dull the voice - 50% is the recommended\n"
         "balance. If the heterodyne still bothers you, try raising Sensitivity first.",
-    "Cuánto ruido se deja pasar en los bins que el detector marca como ruido.\n"
-    "Más bajo = más silencio, pero más riesgo de gorgojeo y de que suene\n"
-    "'muerto'; más alto = fondo audible pero natural. 10–15% es lo habitual.\n"
+    "Ganancia mínima que puede tomar un bin: cuánto ruido se deja pasar en los\n"
+    "que el detector marca como ruido. 0.10 = nunca se le quita más del 90 %\n"
+    "de la energía. Más bajo = más silencio, pero más riesgo de gorgojeo y de\n"
+    "que suene 'muerto'. 0.10–0.15 es lo habitual; no bajar de 0.05.\n"
     "Un piso alto también transmite más el swing del fading.":
-        "How much noise is let through in the bins the detector flags as noise.\n"
-        "Lower = more silence, but more risk of warbling and of sounding 'dead';\n"
-        "higher = audible but natural background. 10-15% is usual.\n"
+        "Minimum gain a bin can take: how much noise is let through in the ones\n"
+        "the detector flags as noise. 0.10 = no bin ever loses more than 90 % of\n"
+        "its energy. Lower = more silence, but more risk of warbling and of\n"
+        "sounding 'dead'. 0.10-0.15 is usual; do not go below 0.05.\n"
         "A high floor also passes more of the fading swing.",
     "Estabiliza la clasificación voz/ruido entre frames, que es de donde sale\n"
     "el ruido musical. Más alto = fondo más parejo y sin gorgojeo, pero el\n"

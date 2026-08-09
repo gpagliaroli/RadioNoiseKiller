@@ -186,9 +186,10 @@ SLIDER_TIPS = {
 
     # ---------------- Avanzada Cancelador ---------------- #
     "_s_noise_floor": (
-        "Cuánto ruido se deja pasar en los bins que el detector marca como ruido.\n"
-        "Más bajo = más silencio, pero más riesgo de gorgojeo y de que suene\n"
-        "'muerto'; más alto = fondo audible pero natural. 10–15% es lo habitual.\n"
+        "Ganancia mínima que puede tomar un bin: cuánto ruido se deja pasar en los\n"
+        "que el detector marca como ruido. 0.10 = nunca se le quita más del 90 %\n"
+        "de la energía. Más bajo = más silencio, pero más riesgo de gorgojeo y de\n"
+        "que suene 'muerto'. 0.10–0.15 es lo habitual; no bajar de 0.05.\n"
         "Un piso alto también transmite más el swing del fading."
     ),
     "_s_noise_smooth": (

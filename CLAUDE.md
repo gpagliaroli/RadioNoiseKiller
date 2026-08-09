@@ -1173,6 +1173,14 @@ Cambios v1.8.2 (los que estaban pendientes post-v1.8.1):
   nuevas (wide/medium/narrow). Espejado en los manuales ES+EN (mismas filas de tabla). Claves i18n ES
   (keys) + traducciones EN en sync. **Regla de UX: la nota de un control usa la misma palabra
   cualitativa que muestra su etiqueta en vivo, no "bajo/alto".**
+  **Extensión (reportado post-v2.1): también las UNIDADES.** El tooltip del Piso espectral hablaba
+  de "10–15 %" mientras el control muestra `0.05`–`0.30` y el manual usa decimales — el usuario lo
+  notó enseguida. Riesgo propio de escribir muchos textos de ayuda de una sentada: se describe el
+  parámetro por lo que uno sabe que significa, no por lo que el usuario lee en pantalla. Chequeo
+  barato para repetir cuando se toquen los textos: renderizar la etiqueta de cada `SliderRow` en su
+  mínimo y su máximo y comparar las unidades que aparecen ahí contra las que cita el tooltip.
+  Da falsos positivos legítimos (el post-filtro cita dB por punto, el supresor cita la duración del
+  impulso que ataca) — son tres, se revisan a mano.
 - **Botón "🔇 Mute" de salida en la pestaña Principal** (pedido del usuario: silenciar la salida sin
   detener el proceso para una prueba corta). Va en la fila de Grabar (grupo Niveles y Ganancia),
   justificado a la derecha; el checkbox "incluir entrada sin procesar" quedó pegado a Grabar y el
