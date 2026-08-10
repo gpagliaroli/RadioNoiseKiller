@@ -633,7 +633,7 @@ class AdvancedImpulseTab(QWidget):
         )
         self._s_anf_depth.valueChanged.connect(self._pipeline.set_anf_depth)
         layout.addWidget(self._s_anf_depth)
-        layout.addWidget(_note(tr("  ↳ Atenuación aplicada al tono detectado. 100%=silencia, 50%=reduce 6dB. Valores altos opacan la voz — 50% suele ser buen balance.")))
+        layout.addWidget(_note(tr("  ↳ Atenuación aplicada al tono detectado. 100%=silencia, 50%=reduce 6dB. Se puede subir sin opacar la voz: el ANF solo actúa sobre tonos sostenidos.")))
         return group
 
     # ------------------------------------------------------------------

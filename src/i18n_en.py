@@ -423,8 +423,8 @@ CATALOG = {
     "  ↳ Ratio bin/baseline para detectar un tono. Bajar si hay tonos débiles.":
         "  ↳ Bin/baseline ratio to detect a tone. Lower it for weak tones.",
     "Profundidad:": "Depth:",
-    "  ↳ Atenuación aplicada al tono detectado. 100%=silencia, 50%=reduce 6dB. Valores altos opacan la voz — 50% suele ser buen balance.":
-        "  ↳ Attenuation applied to the detected tone. 100%=silences, 50%=reduces 6 dB. High values muffle the voice — 50% is usually a good balance.",
+    "  ↳ Atenuación aplicada al tono detectado. 100%=silencia, 50%=reduce 6dB. Se puede subir sin opacar la voz: el ANF solo actúa sobre tonos sostenidos.":
+        "  ↳ Attenuation applied to the detected tone. 100%=silences, 50%=reduces 6 dB. You can raise it without dulling the voice: the ANF only acts on sustained tones.",
     "tono": "tone",
     "tonos": "tones",
 
@@ -765,12 +765,14 @@ CATALOG = {
         "How far a frequency has to stand above its neighbours for the ANF to treat\n"
         "it as a tone. High sensitivity catches weak heterodynes but may touch voice\n"
         "harmonics; low goes only after the obvious whistles.",
-    "Cuánto se atenúa el tono detectado.\n"
-    "OJO: valores altos opacan bastante la voz — 50% es el balance recomendado.\n"
-    "Si el heterodino sigue molestando, probá primero subir la Sensibilidad.":
-        "How much the detected tone is attenuated.\n"
-        "CAREFUL: high values noticeably dull the voice - 50% is the recommended\n"
-        "balance. If the heterodyne still bothers you, try raising Sensitivity first.",
+    "Cuánto se atenúa el tono detectado. 100% lo silencia del todo.\n"
+    "Se puede subir sin miedo: el ANF solo actúa sobre tonos que se\n"
+    "sostienen, así que ya no confunde armónicos de la voz con heterodinos.\n"
+    "Si el tono igual persiste, probá subir también la Sensibilidad.":
+        "How much the detected tone is attenuated. 100% silences it completely.\n"
+        "You can raise it freely: the ANF only acts on tones that are sustained,\n"
+        "so it no longer mistakes voice harmonics for heterodynes.\n"
+        "If the tone persists anyway, try raising Sensitivity as well.",
     "Ganancia mínima que puede tomar un bin: cuánto ruido se deja pasar en los\n"
     "que el detector marca como ruido. 0.10 = nunca se le quita más del 90 %\n"
     "de la energía. Más bajo = más silencio, pero más riesgo de gorgojeo y de\n"

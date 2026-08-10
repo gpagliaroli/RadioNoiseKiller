@@ -350,7 +350,7 @@ El indicador **Actividad** muestra cuántos tonos están siendo muescados en est
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
 | **Sensibilidad** | 1,5× – 10× | 3,0× | Ratio mínimo bin/entorno para considerar un tono. **Bajar** (1,5–2,5×) para detectar tonos débiles que apenas sobresalen. **Subir** (5–10×) para ser más selectivo y solo eliminar interferencias muy fuertes. |
-| **Profundidad** | 0% – 100% | 50% | Cuánto se atenúa el tono detectado. 100% = silencia completamente el bin. 50% = reduce 6 dB. **Valores altos opacan la voz** — 50% (nuevo default en v1.7) da buen balance entre cancelar el tono y no apagar la voz. Subir a 90–100% solo para heterodinos muy molestos, vigilando que no se opaque la voz. |
+| **Profundidad** | 0% – 100% | 50% | Cuánto se atenúa el tono detectado. 100% = silencia completamente el bin. 50% = reduce 6 dB. Hasta la v2.1 los valores altos opacaban la voz, pero **la causa era que el ANF tomaba armónicos de la voz por tonos**; con la detección por persistencia eso ya no pasa (medido: 0 % de falsos positivos y 0,0 dB de pérdida sobre voz sin heterodinos). El default sigue en 50 %, pero **ahora se puede subir a 90–100 % sin que se apague la voz** — si venías conteniéndote por ese motivo, reajustalo escuchando. |
 
 ---
 
@@ -881,7 +881,7 @@ Estas técnicas, probadas en el aire, ayudan a sacar el máximo sin degradar la 
    Intensidad sola: la Intensidad baja no opaca la voz y el post-filtro limpia el ruido actuando solo
    sobre los bins que el VAD marca como ruido. Esta receta está lista como presets de fábrica
    **"Voz natural — AM"** y **"Voz natural — SSB"**.
-4. **Profundidad del ANF con mesura.** Valores altos opacan la voz; 50% es buen balance. Subir solo
+4. **Profundidad del ANF: ya se puede subir.** El motivo por el que convenía mantenerla baja (opacaba la voz) era un defecto de detección corregido en la v2.2. Subir
    si un heterodino queda audible.
 5. **Piso perceptual en SSB.** Si activás el piso espectral perceptual en SSB y no notás el rolloff,
    bajá el "Inicio del rolloff" a ~1500 Hz (ver Cap. 7).

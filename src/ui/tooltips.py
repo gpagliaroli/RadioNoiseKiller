@@ -179,9 +179,10 @@ SLIDER_TIPS = {
         "puede tocar armónicos de la voz; baja va sólo por los silbidos evidentes."
     ),
     "_s_anf_depth": (
-        "Cuánto se atenúa el tono detectado.\n"
-        "OJO: valores altos opacan bastante la voz — 50% es el balance recomendado.\n"
-        "Si el heterodino sigue molestando, probá primero subir la Sensibilidad."
+        "Cuánto se atenúa el tono detectado. 100% lo silencia del todo.\n"
+        "Se puede subir sin miedo: el ANF solo actúa sobre tonos que se\n"
+        "sostienen, así que ya no confunde armónicos de la voz con heterodinos.\n"
+        "Si el tono igual persiste, probá subir también la Sensibilidad."
     ),
 
     # ---------------- Avanzada Cancelador ---------------- #

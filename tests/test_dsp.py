@@ -315,3 +315,95 @@ for i in range(0, len(_fuerte), 480):
 print(f"  Con señal fuerte baja a {_a.gain_db:.1f} dB (sigue adaptando, no se congelo)")
 assert _a.gain_db < 5.0, "el AGC quedo trabado con el techo puesto"
 print("  Techo de ganancia del AGC: OK")
+
+
+# --------------------------------------------------------------------- #
+# ANF — persistencia: no confundir armonicos de voz con heterodinos      #
+# --------------------------------------------------------------------- #
+# El criterio espectral (mag > umbral * mediana vecina) es INSTANTANEO, y un
+# armonico de voz lo cumple igual que una portadora. Medido antes del arreglo,
+# con voz sola y NINGUN heterodino: marcaba bins en el 100% de los frames y se
+# comia 2,9 dB de voz con profundidad 0,4 (8,4 con 0,9). Lo detecto el usuario
+# viendo marcas rojas en la cascada que seguian a la voz. Lo que separa un
+# heterodino de un armonico es el TIEMPO, no el espectro.
+from dsp.anf import AdaptiveNotchFilter   # noqa: E402
+from scipy.signal import lfilter          # noqa: E402
+
+print("\n--- ANF: persistencia ---")
+
+_rng_anf = np.random.default_rng(5)
+_n_anf = 8 * SR
+_t_anf = np.arange(_n_anf) / SR
+# Voz con entonacion (los armonicos se MUEVEN — es lo que los distingue) +
+# envolvente silabica. Sin entonacion el test seria optimista.
+_f0 = 110.0 * (1.0 + 0.10 * np.sin(2 * np.pi * 0.6 * _t_anf))
+_fase = 2 * np.pi * np.cumsum(_f0) / SR
+_src = sum(np.sin(k * _fase) / (k ** 2) for k in range(1, 40))
+_vz = np.zeros(_n_anf)
+for _fc in (500.0, 1500.0, 2500.0):
+    _r = np.exp(-np.pi * 120.0 / SR)
+    _vz += lfilter([1 - _r], [1.0, -2 * _r * np.cos(2 * np.pi * _fc / SR), _r * _r], _src)
+_env = np.zeros(_n_anf)
+_i = 0
+while _i + int(0.20 * SR) < _n_anf:
+    _env[_i:_i + int(0.20 * SR)] = np.hanning(int(0.20 * SR))
+    _i += int(0.28 * SR)
+_vz = (_vz * _env + _rng_anf.standard_normal(_n_anf) * 0.004)
+_vz = (_vz / (np.sqrt(np.mean(_vz ** 2)) + 1e-12) * 0.1).astype(np.float32)
+
+
+def _corre_anf(sig, hop, depth):
+    a = AdaptiveNotchFilter(SR, threshold=3.0, depth=depth)
+    a.set_enabled(True)
+    out, marcas = [], []
+    for i in range(len(sig) // hop):
+        out.append(a.process(sig[i * hop:(i + 1) * hop]))
+        marcas.append(a.notched_bins > 0)
+    return np.concatenate(out), float(np.mean(marcas))
+
+
+def _db_anf(x):
+    return 20.0 * np.log10(np.sqrt(np.mean(x.astype(np.float64) ** 2)) + 1e-12)
+
+
+for _hop in (480, 960):
+    _out, _frac = _corre_anf(_vz, _hop, 0.9)
+    _dano = _db_anf(_out) - _db_anf(_vz[:len(_out)])
+    print(f"  Voz sola, hop {_hop}: marcas en {_frac*100:.0f}% de los frames, "
+          f"voz {_dano:+.2f} dB")
+    assert _frac < 0.05, \
+        f"el ANF marca voz como tono en el {_frac*100:.0f}% de los frames (hop {_hop})"
+    assert _dano > -0.5, \
+        f"el ANF se come {_dano:.2f} dB de voz sin ningun heterodino (hop {_hop})"
+
+# Y con un heterodino de verdad lo sigue cancelando
+_het = (0.05 * np.sin(2 * np.pi * 1350.0 * _t_anf)).astype(np.float32)
+_mez = (_vz + _het).astype(np.float32)
+_out_h, _ = _corre_anf(_mez, 960, 0.9)
+
+
+def _energia(x, lo, hi):
+    X = np.fft.rfft(x.astype(np.float64) * np.hanning(len(x)))
+    f = np.fft.rfftfreq(len(x), 1.0 / SR)
+    m = (f > lo) & (f < hi)
+    return 20.0 * np.log10(np.sqrt(np.mean(np.abs(X[m]) ** 2)) + 1e-12)
+
+
+_m2 = len(_out_h) // 2          # segunda mitad: ya enganchado
+_ref_h = _mez[:len(_out_h)]
+_d_tono = _energia(_out_h[_m2:], 1320, 1380) - _energia(_ref_h[_m2:], 1320, 1380)
+_d_voz  = _energia(_out_h[_m2:], 200, 1300) - _energia(_ref_h[_m2:], 200, 1300)
+print(f"  Heterodino 1350 Hz: {_d_tono:.1f} dB   |   voz fuera del tono: {_d_voz:+.2f} dB")
+assert _d_tono < -10.0, f"el heterodino real ya no se cancela ({_d_tono:.1f} dB)"
+assert _d_voz > -0.5, f"cancelar el tono se lleva {_d_voz:.2f} dB de voz"
+
+# La persistencia va en frames -> depende del hop (invariante 9)
+for _hp in (240, 480, 960, 1920):
+    _a2 = AdaptiveNotchFilter(SR)
+    _a2.set_enabled(True)
+    _a2.process(np.zeros(_hp, dtype=np.float32))
+    _ms = _a2._persist_frames * _hp / (SR / 1000.0)
+    assert abs(_ms - AdaptiveNotchFilter._PERSIST_MS) < 30.0, \
+        f"persistencia mal escalada con hop {_hp}: {_ms:.0f} ms"
+print("  Persistencia recalculada por hop (invariante 9): OK")
+print("  ANF: OK")

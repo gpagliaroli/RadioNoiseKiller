@@ -15,14 +15,33 @@ class AdaptiveNotchFilter:
 
     Principio de detección:
       baseline[k] = mediana de los kernel_size bins vecinos de k
-      is_tone[k]  = mag[k] > threshold × baseline[k]
-      La voz broadband y el ruido NO destacan sobre la mediana local.
+      destaca[k]  = mag[k] > threshold × baseline[k]
+      is_tone[k]  = destaca[k] Y viene destacando hace _PERSIST_MS
+
+    La segunda condición NO es opcional. El criterio espectral solo es
+    instantáneo, y un armónico de voz sobresale de la mediana local exactamente
+    igual que una portadora: medido con voz sola y NINGÚN heterodino presente,
+    el ANF marcaba bins en el 100% de los frames (15,8 bins por frame con hop
+    960) y se comía 2,9 dB de voz con profundidad 0,4 — 8,4 dB con 0,9. Era la
+    causa real de que "la Profundidad alta opaca la voz".
+
+    Lo que separa un heterodino de un armónico es el TIEMPO: la portadora se
+    queda clavada en el mismo bin durante segundos, el armónico se mueve con la
+    entonación y se apaga entre sílabas. Con 350 ms de persistencia los falsos
+    positivos sobre voz caen a 0% y el heterodino se sigue cazando el 95% de las
+    veces, a costa de ~0,4 s para engancharlo (irrelevante en algo estable).
 
     OLA: cada chunk de H muestras se analiza en un frame de 2H muestras
     ([chunk_anterior | chunk_actual]), con ventana sqrt-Hann. La salida
     es la superposición del frame anterior (segundo mitad) con el frame
     actual (primera mitad). Introduce 1 hop (10 ms) de latencia.
     """
+
+    # Tiempo que un bin tiene que venir destacando para tratarlo como tono.
+    # 350 ms: medido, lleva los falsos positivos sobre voz a 0% conservando el
+    # 95% de detección de heterodinos. En frames depende del hop → se recalcula
+    # en _init_ola (invariante 9 del proyecto).
+    _PERSIST_MS: float = 350.0
 
     def __init__(self, sample_rate: int = 48000,
                  threshold: float = 3.0,
@@ -43,6 +62,9 @@ class AdaptiveNotchFilter:
         self._smooth_gains: np.ndarray | None = None
         self._last_notched_bins: int = 0
         self._last_tone_freqs: "np.ndarray | None" = None
+        # Persistencia: frames consecutivos que cada bin lleva destacando
+        self._streak:         np.ndarray = np.zeros(0, dtype=np.int32)
+        self._persist_frames: int = 1
 
     def _init_ola(self, hop: int) -> None:
         self._hop      = hop
@@ -51,6 +73,11 @@ class AdaptiveNotchFilter:
         # sqrt-Hann: satisface COLA al 50% de solapamiento
         self._ola_win  = np.sqrt(np.hanning(2 * hop)).astype(np.float32)
         self._smooth_gains = None
+        # El hop define la duración de un frame → la persistencia en frames
+        # se recalcula acá y en ningún otro lado (invariante 9)
+        hop_ms = 1000.0 * hop / self._sample_rate
+        self._persist_frames = max(1, round(self._PERSIST_MS / hop_ms))
+        self._streak = np.zeros(hop + 1, dtype=np.int32)   # nb = 2*hop//2 + 1
 
     # ------------------------------------------------------------------
     # Control
@@ -61,6 +88,11 @@ class AdaptiveNotchFilter:
             self._ola_prev[:] = 0.0
             self._ola_acc[:]  = 0.0
         self._smooth_gains = None
+        # Sin esto, tras un reinicio del stream un bin arrastraria la racha
+        # vieja y notchearia desde el primer frame
+        self._streak[:] = 0
+        self._last_notched_bins = 0
+        self._last_tone_freqs = None
 
     def set_enabled(self, enabled: bool) -> None:
         self._enabled = bool(enabled)
@@ -95,7 +127,19 @@ class AdaptiveNotchFilter:
         if self._enabled:
             mag = np.abs(spec)
             baseline = _mf(mag, size=self._kernel_size)
-            is_tone  = mag > self._threshold * (baseline + 1e-12)
+            destaca  = mag > self._threshold * (baseline + 1e-12)
+
+            # La racha sobrevive si el vecino inmediato tambien destaca: un
+            # heterodino que deriva lentamente cruza de bin y, sin esta
+            # tolerancia, reiniciaria la cuenta cada vez y no llegaria nunca a
+            # confirmarse.
+            vecino = destaca.copy()
+            vecino[:-1] |= destaca[1:]
+            vecino[1:]  |= destaca[:-1]
+            self._streak = np.where(vecino, self._streak + 1, 0)
+
+            # Se notchea solo donde HAY tono ahora y ademas ya venia sostenido
+            is_tone = destaca & (self._streak >= self._persist_frames)
 
             self._last_notched_bins = int(np.sum(is_tone))
             # Frecuencias de los tonos, para el marcador de la cascada. Se

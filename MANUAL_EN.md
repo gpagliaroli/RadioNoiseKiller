@@ -348,7 +348,7 @@ The **Activity** indicator shows how many tones are being notched at this moment
 | Control | Range | Default | Description |
 |---------|-------|---------|-------------|
 | **Sensitivity** | 1.5× – 10× | 3.0× | Minimum bin/surroundings ratio to consider a tone. **Lower it** (1.5–2.5×) to catch weak tones that barely stand out. **Raise it** (5–10×) to be more selective and only remove very strong interference. |
-| **Depth** | 0% – 100% | 50% | How much the detected tone is attenuated. 100% = silences the bin completely. 50% = 6 dB reduction. **High values muffle the voice** — 50% (new default in v1.7) is a good balance between cancelling the tone and not dulling the voice. Raise to 90–100% only for very annoying heterodynes, watching that the voice doesn't get muffled. |
+| **Depth** | 0% – 100% | 50% | How much the detected tone is attenuated. 100% = silences the bin completely. 50% = 6 dB reduction. Up to v2.1 high values muffled the voice, but **the cause was the ANF mistaking voice harmonics for tones**; with persistence-based detection that no longer happens (measured: 0 % false positives and 0.0 dB of loss on voice with no heterodynes). The default stays at 50 %, but **you can now raise it to 90–100 % without dulling the voice** — if you were holding back for that reason, re-tune it by ear. |
 
 ---
 
@@ -879,7 +879,7 @@ These on-air techniques help get the most out of the app without degrading the v
    natural voice than raising the Intensity alone: low Intensity doesn't dull the voice, and the
    post-filter cleans the noise acting only on the bins the VAD marks as noise. This recipe ships as
    factory presets **"Voz natural — AM"** and **"Voz natural — SSB"**.
-4. **ANF Depth with restraint.** High values muffle the voice; 50% is a good balance. Raise it only
+4. **ANF Depth: you can raise it now.** The reason to keep it low (it muffled the voice) was a detection flaw fixed in v2.2. Raise it
    if a heterodyne stays audible.
 5. **Perceptual floor on SSB.** If you enable the perceptual spectral floor on SSB and don't notice
    the rolloff, lower the "Rolloff start" to ~1500 Hz (see Ch. 7).

@@ -342,6 +342,41 @@ atenuar los bins ENTRE sus armónicos (el inverso del refuerzo de pitch, que los
   es el **pasabanda angostado del lado por el que entra** (Cap. 5 de ambos manuales, con el aviso de no
   bajar de 2,4 kHz y la explicación de por qué parte del splatter es co-canal e infiltrable).
 
+**Post-v2.1: el ANF tomaba armónicos de la voz por heterodinos.** Detectado por el usuario mirando
+los **marcadores de heterodino de la cascada** (feature agregada post-v2.0): *"se ven muchas marcas
+rojas que parecen tener relación con la voz, porque si desactivo el ANF no se escucha nada extra"*.
+Los marcadores hicieron visible un defecto que llevaba ahí desde siempre.
+- **Causa:** el criterio de detección era puramente **instantáneo** — `mag[k] > umbral · mediana(bins
+  vecinos)`. Un armónico de voz sobresale de la mediana local exactamente igual que una portadora.
+- **Medido con voz sola y NINGÚN heterodino presente** (umbral 3.0, el default): marcaba bins en el
+  **100 % de los frames** (15,8 bins/frame con hop 960; 4,8 con hop 480 — peor con más resolución,
+  porque los armónicos destacan más). Daño a la voz: **−2,03 dB** con profundidad 0,4 y hop 480,
+  **−8,41 dB** con profundidad 0,9 y hop 960.
+- **Esto explica de una vez la vieja nota "los valores altos de Profundidad opacan la voz"** (que
+  motivó bajar el default de 0.9 a 0.5 en la v1.7): no era un efecto colateral difuso, era el ANF
+  notcheando la voz. La guía se reescribió en manuales, tooltip, nota de la UI y `config.py`.
+- **Fix — persistencia temporal:** un bin tiene que venir destacando `_PERSIST_MS = 350` ms para
+  tratarse como tono. Lo que separa un heterodino de un armónico es el TIEMPO, no el espectro: la
+  portadora se queda clavada en el mismo bin durante segundos, el armónico se mueve con la entonación
+  y se apaga entre sílabas. La racha tolera **±1 bin** para que un heterodino que deriva no reinicie
+  la cuenta. `notched_bins` y `tone_freqs` reportan los tonos CONFIRMADOS, así que los marcadores de
+  la cascada pasan a ser fiables.
+- **Resultado medido:** falsos positivos **100 % → 0 %**, daño a la voz **−8,41 → −0,00 dB**, y el
+  heterodino real se sigue cancelando **−17,9 dB** con **+0,00 dB** de daño colateral. Barrido de
+  persistencia: 100 ms deja 50 % de falsos positivos, 200 ms deja 15 %, 400 ms deja 0 % conservando
+  95 % de detección. El precio es ~0,4 s para enganchar un tono nuevo — irrelevante en algo estable.
+- **La persistencia va en frames → depende del hop** y se recalcula en `_init_ola` (invariante 9);
+  `reset()` limpia la racha (si no, tras reiniciar el stream un bin notchearía desde el primer frame).
+- Test permanente en `test_dsp`: voz con entonación y envolvente silábica (sin entonación el test
+  sería optimista — los armónicos no se moverían), exige <5 % de frames marcados y <0,5 dB de daño,
+  que el heterodino real se siga cancelando, y el escalado de la persistencia por hop.
+- **Lección de método: un feature de diagnóstico paga solo.** Los marcadores de la cascada se
+  agregaron para ver heterodinos, y lo que destaparon fue un bug de años en el módulo que los
+  detecta. Cuando algo del DSP se hace visible, se descubre que no hacía lo que decía.
+- **Pendiente de validación en el aire.** Ojo con una vocal sostenida y monótona de más de 350 ms:
+  en teoría podría confirmarse como tono. No apareció en el banco (la entonación real la descarta),
+  pero es el caso a escuchar.
+
 **v2.1 publicada (agosto 2026)** — release en GitHub con distribuibles Windows y Linux. Versión de
 app 2.1.0, manuales `MANUAL_RadioNoiseKiller_v2.1.pdf` (ES, 38 págs) y `..._v2.1_EN.pdf` (EN, 38
 págs). Título "v2.1 by LU6APA". Release de menor: no cambia el DSP del cancelador ni el significado
