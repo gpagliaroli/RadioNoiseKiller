@@ -438,7 +438,11 @@ señal** (−8,2 dB a S/N 30), que es lo que delató el diseño.
   mini-frames aislados— y además habría excluido las descargas de QRN reales, que duran varios
   mini-frames. No reintentarlo.
 - Test permanente en `test_dsp` (disparos, daño, distorsión, supresión de impulso real, y que
-  **nunca amplifique**). **Pendiente de validación en el aire.**
+  **nunca amplifique**).
+- **Validado en el aire (parcial): con banda limpia ya no se escucha distorsión**, que era el
+  síntoma reportado. **Falta escuchar QRN real de descargas** — ahí es donde pesa el precio del
+  rediseño (la supresión del impulso bajó de −20,3 a −13,6 dB). Si aparece que suprime de menos, la
+  perilla a mover es el umbral mini hacia abajo; el margen está en el detector, no en la rampa.
 
 **v2.1 publicada (agosto 2026)** — release en GitHub con distribuibles Windows y Linux. Versión de
 app 2.1.0, manuales `MANUAL_RadioNoiseKiller_v2.1.pdf` (ES, 38 págs) y `..._v2.1_EN.pdf` (EN, 38
