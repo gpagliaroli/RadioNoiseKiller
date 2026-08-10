@@ -354,7 +354,10 @@ assert _pe.dsp_error_count == 0, "arranca con errores ya contados"
 _pe._noise_profiler._floor_curve = np.ones(7, dtype=np.float32)
 _rng_e = np.random.default_rng(7)
 _hop_e = _cfg_e.audio.block_size
-for _i in range(40):
+# La linea que falla vive DESPUES del warmup (que es B*M frames + la cuarentena),
+# asi que hay que alimentar lo suficiente para llegar hasta ahi. Con 40 frames el
+# test pasaba a verde sin haber ejercitado nada.
+for _i in range(140):
     _pe._process(_rng_e.standard_normal(_hop_e).astype(np.float32) * 0.05)
     time.sleep(0.003)
 time.sleep(0.4)

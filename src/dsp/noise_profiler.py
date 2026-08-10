@@ -89,6 +89,8 @@ class NoiseProfiler:
     # Hold de 300 ms: los tramos sordos de la voz (fricativas) no son periódicos y
     # sin el hold dejarían de proteger. Durante el warmup no aplica (igual que el
     # freeze de fading): si no, con voz continua el warmup no terminaría nunca.
+    # El warmup dura una VENTANA COMPLETA de mínimos (ver _mcra_warmup): con una
+    # sola subtrama el estimador se daba por listo con 2 frames de voz.
     _MCRA_PITCH_THR:     float = 0.30   # confianza de autocorrelación para congelar
     _MCRA_VOICE_HOLD_MS: float = 300.0  # retención tras el último frame periódico
 
@@ -505,6 +507,27 @@ class NoiseProfiler:
         self._hf_boost = float(np.clip(v, 0.0, 1.5))
         self._hf_boost_curve = self._build_hf_boost_curve()
 
+    @property
+    def _mcra_warmup(self) -> int:
+        """Frames que MCRA necesita antes de considerarse calibrado.
+
+        Es una VENTANA COMPLETA de mínimos (B subtramas), no una sola subtrama.
+        Antes era `_mcra_M` y con bloque 1920 eso daba **2 frames**: el estimador
+        se declaraba listo con dos frames que, encima, la exención de warmup
+        había dejado entrar DURANTE la voz — o sea un piso construido sobre voz.
+        A partir de ahí el freeze por voz bloquea todo, así que ese estimado malo
+        no mejoraba hasta la primera pausa de la transmisión. Reportado en el
+        aire como "no anda el MCRA ni muestra la curva amarilla, y a los pocos
+        segundos se corrige solo".
+
+        Es la misma trampa que ya mordió con el freeze del AGC y con el freeze de
+        MCRA por vp: **un lazo de protección no puede activarse antes de que
+        exista lo que protege.** Medido: con voz continua MCRA acumula 2 frames
+        en 20 s (473 con ruido solo), así que la exención tiene que durar lo
+        suficiente para juntar una ventana entera.
+        """
+        return self._MCRA_B * self._mcra_M
+
     def _calc_mcra_M(self) -> int:
         """Frames por subtrama según la ventana en ms y el hop (48 kHz). La ventana
         total de seguimiento de mínimos es B×M frames; M más chico = ventana más
@@ -645,7 +668,7 @@ class NoiseProfiler:
 
     def _mcra_current(self) -> "np.ndarray | None":
         """Estimado actual sin actualizar. None si el warmup no terminó."""
-        if self._mcra_ld is not None and self._mcra_frames >= self._mcra_M:
+        if self._mcra_ld is not None and self._mcra_frames >= self._mcra_warmup:
             return np.sqrt(self._mcra_ld).astype(np.float32)
         return None
 
@@ -667,7 +690,7 @@ class NoiseProfiler:
             return self._mcra_current()
         old_power, contaminated = self._mcra_quar.popleft()
         # Durante el warmup se consume igual (el freeze nunca aplicó en warmup)
-        if contaminated and self._mcra_frames >= self._mcra_M:
+        if contaminated and self._mcra_frames >= self._mcra_warmup:
             return self._mcra_current()
         return self._mcra_update(old_power)
 
@@ -692,7 +715,7 @@ class NoiseProfiler:
         frame_mean = float(np.mean(power))
         noise_mean = float(np.mean(self._mcra_ld))
         if frame_mean < noise_mean * self._MCRA_SQUELCH_RATIO:
-            if self._mcra_frames >= self._mcra_M:
+            if self._mcra_frames >= self._mcra_warmup:
                 return np.sqrt(self._mcra_ld).astype(np.float32)
             return None
 
@@ -714,7 +737,7 @@ class NoiseProfiler:
             self._mcra_sub_count = 0
 
         # Esperamos al menos una subtrama completa antes de aplicar el Wiener
-        if self._mcra_frames < self._mcra_M:
+        if self._mcra_frames < self._mcra_warmup:
             self._mcra_ld = 0.95 * self._mcra_ld + 0.05 * power
             return None
 
@@ -1213,7 +1236,7 @@ class NoiseProfiler:
     @property
     def has_profile(self) -> bool:
         if self._mode == "mcra":
-            return self._mcra_frames >= self._mcra_M
+            return self._mcra_frames >= self._mcra_warmup
         return self._noise_mag is not None
 
     @property
@@ -1234,7 +1257,7 @@ class NoiseProfiler:
 
     @property
     def mcra_ready(self) -> bool:
-        return self._mode == "mcra" and self._mcra_frames >= self._mcra_M
+        return self._mode == "mcra" and self._mcra_frames >= self._mcra_warmup
 
     @property
     def noise_floor_db(self) -> "np.ndarray | None":

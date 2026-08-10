@@ -377,6 +377,27 @@ Los marcadores hicieron visible un defecto que llevaba ahí desde siempre.
   en teoría podría confirmarse como tono. No apareció en el banco (la entonación real la descarta),
   pero es el caso a escuchar.
 
+**Post-v2.1: warmup de MCRA extendido a una ventana completa (B*M).** Reportado en el aire: *"no
+anda el MCRA ni muestra la curva amarilla"*, y a los pocos segundos **se corrigió solo**. Con la app
+corriendo se verificó que **NO había `errores_dsp.log`** — o sea que no era una excepción del hilo
+procesador, que era toda la hipótesis anterior. Descartada.
+- **Lo que sí se midió:** con **voz continua** MCRA acumula **2 frames en 20 s** (473 con ruido solo)
+  — el freeze por voz haciendo lo suyo — y la exención de warmup terminaba en `_mcra_frames >= M`,
+  que con **bloque 1920 es M = 2**. El estimador se declaraba calibrado con dos frames.
+- **Cambio:** el warmup pasa a `_MCRA_B * _mcra_M` (ventana completa de mínimos), vía la property
+  `_mcra_warmup` para que las **seis** comparaciones no puedan desincronizarse. `_mcra_sub_count >=
+  _mcra_M` NO se toca: ahí M sigue significando "frames por subtrama". Warmup medido ~0,40 s en
+  bloque 480 y 1920 (antes 0,12 y 0,20 s).
+- **HONESTIDAD SOBRE EL RESULTADO: no se pudo demostrar que esto arregle el síntoma.** Midiendo el
+  error del piso estimado al activar con voz continua, el comportamiento viejo daba **+0,9 dB
+  (bloque 480) y −0,6 dB (1920)** — o sea, ya era bueno. La explicación que se había dado ("arranca
+  con un piso construido sobre voz, que es basura") **no quedó confirmada por la medición**. El
+  cambio se conserva porque declararse listo con 2 frames es indefendible y hace mentir a
+  `has_profile`/`mcra_ready`, pero **la causa del síntoma sigue sin identificarse**.
+- El test de errores del DSP en `test_pipeline` pasó de 40 a 140 frames: la línea que falla vive
+  después del warmup, y con el warmup más largo 40 frames ya no llegaban — el test se ponía verde
+  **sin ejercitar nada**. Ojo con ese patrón al tocar tiempos de warmup.
+
 **v2.1 publicada (agosto 2026)** — release en GitHub con distribuibles Windows y Linux. Versión de
 app 2.1.0, manuales `MANUAL_RadioNoiseKiller_v2.1.pdf` (ES, 38 págs) y `..._v2.1_EN.pdf` (EN, 38
 págs). Título "v2.1 by LU6APA". Release de menor: no cambia el DSP del cancelador ni el significado
