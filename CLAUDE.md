@@ -373,9 +373,14 @@ Los marcadores hicieron visible un defecto que llevaba ahí desde siempre.
 - **Lección de método: un feature de diagnóstico paga solo.** Los marcadores de la cascada se
   agregaron para ver heterodinos, y lo que destaparon fue un bug de años en el módulo que los
   detecta. Cuando algo del DSP se hace visible, se descubre que no hacía lo que decía.
-- **Pendiente de validación en el aire.** Ojo con una vocal sostenida y monótona de más de 350 ms:
-  en teoría podría confirmarse como tono. No apareció en el banco (la entonación real la descarta),
-  pero es el caso a escuchar.
+- **VALIDADO en el aire:** *"ahora funciona, ya no aparecen esas marcas rojas con la voz"*. Los
+  marcadores de la cascada quedan como indicador fiable de heterodinos reales.
+- Caso teórico que no apareció ni en el banco ni en el aire, anotado por si alguna vez se reporta:
+  una vocal sostenida y monótona de más de 350 ms podría confirmarse como tono. La entonación real
+  lo descarta.
+- **Consecuencia práctica pendiente:** con los falsos positivos en cero, el consejo de mantener baja
+  la Profundidad ya no aplica (era el síntoma del bug). El usuario venía con 0.4 justamente por eso.
+  Queda por reajustarla escuchando un heterodino real.
 
 **Post-v2.1: warmup de MCRA extendido a una ventana completa (B*M).** Reportado en el aire: *"no
 anda el MCRA ni muestra la curva amarilla"*, y a los pocos segundos **se corrigió solo**. Con la app
