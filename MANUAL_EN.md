@@ -787,7 +787,15 @@ Controls the input and output levels and protects against audio peaks. The VU me
 > readjusting each time. **Both levels are saved and survive an application restart**: you
 > calibrate them once and they stay. Loading a preset resets the *processing* level (the preset
 > carries it) but keeps the *bypass* one, because a preset describes how you process, not how loud
-> you listen to the raw signal. In bypass the gain is applied without the **Peak limit**, so raising Output too much can clip the
+> you listen to the raw signal.
+>
+> **Note: this memory covers the *output* gain only.** The *input* gain keeps a single value for
+> both modes, and that is deliberate: it sits **before** the processing, so moving it changes what
+> the DSP sees (the signal-to-noise ratio reaching the canceller, the AGC's starting point, the
+> floor measurement for the noise ceiling). Matching levels with the Input would mean you are no
+> longer comparing the same processing. For A/B always use the **Output**.
+>
+> In bypass the gain is applied without the **Peak limit**, so raising Output too much can clip the
 > raw signal.
 
 ### Peak limiter indicator

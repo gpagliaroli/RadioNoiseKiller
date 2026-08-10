@@ -789,7 +789,15 @@ Controla los niveles de entrada y salida, y protege contra picos de audio. Los m
 > nivel parejo sin reajustar cada vez. **Los dos niveles se guardan y sobreviven al reinicio de la
 > aplicación**: se calibran una vez y quedan. Cargar un preset reinicia el nivel de *procesando*
 > (el preset lo trae) pero conserva el de *bypass*, porque un preset describe cómo procesás, no a
-> qué volumen escuchás la señal cruda. En bypass la ganancia se aplica sin el **Límite de picos**, así que si subís
+> qué volumen escuchás la señal cruda.
+>
+> **Ojo: esta memoria es sólo de la Ganancia de *salida*.** La de *entrada* guarda un único valor
+> para los dos modos, y es a propósito: está **antes** del procesamiento, así que moverla cambia
+> lo que ve el DSP (la relación señal/ruido que recibe el cancelador, el punto de partida del AGC,
+> la medición del piso para el techo de ruido). Si emparejaras niveles con la Entrada dejarías de
+> comparar el mismo procesamiento. Para el A/B usá siempre la **Salida**.
+>
+> En bypass la ganancia se aplica sin el **Límite de picos**, así que si subís
 > mucho la Salida podés saturar la señal cruda.
 
 ### Indicador del limitador de picos
