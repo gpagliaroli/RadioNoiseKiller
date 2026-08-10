@@ -9,6 +9,7 @@ from audio.devices import AudioDevice
 from audio.recorder import WavRecorder
 from dsp.agc import AGC
 from dsp.anf import AdaptiveNotchFilter
+from dsp.blanker import ImpulseBlanker
 from dsp.bass import BassRestorer
 from dsp.exciter import AuralExciter
 from dsp.filters import BandpassFilter, PresenceFilter
@@ -50,11 +51,7 @@ class ProcessingPipeline:
         # procesador; se usa aquí para aplicarla también en bypass (ver _process).
         self._output_gain: float = 10 ** (config.gain.output_gain_db / 20.0)
 
-        self._blanker_frame: float = config.dsp.blanker_frame
-        self._blanker_mini:  float = config.dsp.blanker_mini
-        self._blanker_hits:  int   = 0
 
-        self._blanker_enabled:       bool = config.dsp.blanker_enabled
         self._bandpass_pre_enabled:  bool = config.dsp.bandpass_pre_enabled
         self._bandpass_post_enabled: bool = config.dsp.bandpass_post_enabled
         self._noise_enabled:         bool = config.dsp.noise_enabled
@@ -84,6 +81,10 @@ class ProcessingPipeline:
             depth=config.dsp.anf_depth,
         )
         self._anf.set_enabled(config.dsp.anf_enabled)
+        self._blanker = ImpulseBlanker(config.audio.sample_rate)
+        self._blanker.set_enabled(config.dsp.blanker_enabled)
+        self._blanker.set_frame_threshold(config.dsp.blanker_frame)
+        self._blanker.set_mini_threshold(config.dsp.blanker_mini)
         self._noise_profiler = NoiseProfiler(config.audio.block_size)
         self._noise_profiler.set_smooth(config.dsp.noise_smooth)
         self._noise_profiler.set_attack(config.dsp.noise_attack)
@@ -665,15 +666,15 @@ class ProcessingPipeline:
 
     def set_blanker_frame(self, threshold: float) -> None:
         self._config.dsp.blanker_frame = threshold
-        self._blanker_frame = float(threshold)
+        self._blanker.set_frame_threshold(threshold)
 
     def set_blanker_mini(self, threshold: float) -> None:
         self._config.dsp.blanker_mini = threshold
-        self._blanker_mini = float(threshold)
+        self._blanker.set_mini_threshold(threshold)
 
     def set_blanker_enabled(self, v: bool) -> None:
         self._config.dsp.blanker_enabled = bool(v)
-        self._blanker_enabled = bool(v)
+        self._blanker.set_enabled(bool(v))
     def set_bandpass_pre_enabled(self, v: bool) -> None:
         self._config.dsp.bandpass_pre_enabled = bool(v)
         self._bandpass_pre_enabled = bool(v)
@@ -761,9 +762,7 @@ class ProcessingPipeline:
         # incrementa entre ambas líneas. Aceptado a propósito — un lock aquí
         # agregaría contención al hilo de audio para proteger un contador
         # de diagnóstico que se lee 2 veces por segundo.
-        h = self._blanker_hits
-        self._blanker_hits = 0
-        return h
+        return self._blanker.pop_hits()
 
     @property
     def spectrum_pre_frames(self) -> deque:
@@ -854,6 +853,7 @@ class ProcessingPipeline:
             self._body.reset()
             self._freq_shifter.reset()
             self._anf.reset()
+            self._blanker.reset()
             self._noise_profiler.reset(self._config.audio.block_size)
             self._agc.set_hop(self._config.audio.block_size)
             self._agc_voice.set_hop(self._config.audio.block_size)
@@ -1015,7 +1015,6 @@ class ProcessingPipeline:
         self._spec_post_frames.clear()
 
     def _run_processor(self) -> None:
-        energy_hist = 1e-8
 
         while True:
             try:
@@ -1033,33 +1032,7 @@ class ProcessingPipeline:
                 # muta el array original in place — el blanker copia primero)
                 raw_chunk = chunk
 
-                # Supresor de impulsiones en dos niveles
-                frame_energy = float(np.dot(chunk, chunk)) / len(chunk)
-                if frame_energy < energy_hist:
-                    energy_hist = 0.95 * energy_hist + 0.05 * frame_energy
-                else:
-                    energy_hist = 0.999 * energy_hist + 0.001 * frame_energy
-
-                if self._blanker_enabled:
-                    thr_frame = self._blanker_frame
-                    if frame_energy > thr_frame * energy_hist:
-                        gain         = np.sqrt(thr_frame * energy_hist / frame_energy)
-                        chunk        = chunk * gain
-                        frame_energy = frame_energy * gain * gain
-                        self._blanker_hits += 1
-
-                    _MINI = 32
-                    n_complete = (len(chunk) // _MINI) * _MINI
-                    if n_complete > 0:
-                        mini   = chunk[:n_complete].reshape(-1, _MINI)
-                        mini_e = np.sum(mini ** 2, axis=1) / _MINI
-                        thresh = self._blanker_mini * energy_hist
-                        over   = mini_e > thresh
-                        if np.any(over):
-                            scales = np.where(over, np.sqrt(thresh / (mini_e + 1e-12)), 1.0)
-                            chunk  = chunk.copy()
-                            chunk[:n_complete] = (mini * scales[:, np.newaxis].astype(np.float32)).ravel()
-                            self._blanker_hits += int(np.sum(over))
+                chunk = self._blanker.process(chunk)
 
                 # Techo de ruido: limita cuánto puede amplificar el AGC, para que
                 # no levante el ruido de banda por encima del nivel elegido. Se
@@ -1221,8 +1194,7 @@ class ProcessingPipeline:
                     self._presence.reset()
                     self._body.reset()
                     self._exciter.reset()
-                energy_hist = 1e-8
-
+        
     # ------------------------------------------------------------------
     # Callback de audio (hilo de alta prioridad)
     # ------------------------------------------------------------------

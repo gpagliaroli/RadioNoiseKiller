@@ -407,3 +407,84 @@ for _hp in (240, 480, 960, 1920):
         f"persistencia mal escalada con hop {_hp}: {_ms:.0f} ms"
 print("  Persistencia recalculada por hop (invariante 9): OK")
 print("  ANF: OK")
+
+
+# --------------------------------------------------------------------- #
+# Supresor de impulsos: no debe tocar la voz                             #
+# --------------------------------------------------------------------- #
+# Reportado en el aire ("causa distorsion de la voz, es notoria al activarlo").
+# La version anterior comparaba contra el PISO DE RUIDO, asi que con voz 20 dB
+# sobre el piso toda silaba cruzaba el umbral: atenuaba el 26% de los
+# mini-frames sobre voz LIMPIA, -6,8 dB de voz y -6,6 dB de distorsion (casi el
+# 50% de la senal). Y el error EMPEORABA cuanto mejor era la senal.
+from dsp.blanker import ImpulseBlanker   # noqa: E402
+
+print("\n--- Supresor de impulsos ---")
+
+_hop_b = 1920
+_n_b = 6 * SR
+_t_b = np.arange(_n_b) / SR
+_f0b = 120.0 * (1.0 + 0.10 * np.sin(2 * np.pi * 0.6 * _t_b))
+_faseb = 2 * np.pi * np.cumsum(_f0b) / SR
+_srcb = sum(np.sin(k * _faseb) / (k ** 2) for k in range(1, 40))
+_vb = np.zeros(_n_b)
+for _fc in (500.0, 1500.0, 2500.0):
+    _r = np.exp(-np.pi * 120.0 / SR)
+    _vb += lfilter([1 - _r], [1.0, -2 * _r * np.cos(2 * np.pi * _fc / SR), _r * _r], _srcb)
+_envb = np.zeros(_n_b)
+_i = 0
+while _i + int(0.20 * SR) < _n_b:
+    _envb[_i:_i + int(0.20 * SR)] = np.hanning(int(0.20 * SR))
+    _i += int(0.28 * SR)
+_vb *= _envb
+_vb /= (np.sqrt(np.mean(_vb ** 2)) + 1e-12)
+_voz_b = (_vb + np.random.default_rng(3).standard_normal(_n_b) * 0.1).astype(np.float32)
+
+
+def _pasar_blanker(sig, thr_f=20.0, thr_m=12.0):
+    b = ImpulseBlanker(SR)
+    b.set_enabled(True)
+    b.set_frame_threshold(thr_f)
+    b.set_mini_threshold(thr_m)
+    o = np.concatenate([b.process(sig[i * _hop_b:(i + 1) * _hop_b])
+                        for i in range(len(sig) // _hop_b)])
+    return o, b.pop_hits()
+
+
+def _distorsion(out, ref):
+    k = np.dot(out, ref) / np.dot(ref, ref)
+    err = out - k * ref
+    return 20.0 * np.log10((np.sqrt(np.mean(err ** 2)) + 1e-12)
+                           / (np.sqrt(np.mean((k * ref) ** 2)) + 1e-12))
+
+
+_out_b, _hits_b = _pasar_blanker(_voz_b)
+_ref_b = _voz_b[:len(_out_b)]
+_dano_b = _db_anf(_out_b) - _db_anf(_ref_b)
+_dist_b = _distorsion(_out_b, _ref_b)
+_pct_b = 100.0 * _hits_b / max(1, len(_out_b) // 32)
+print(f"  Voz limpia: {_pct_b:.2f}% de disparos, voz {_dano_b:+.2f} dB, "
+      f"distorsion {_dist_b:.1f} dB")
+assert _pct_b < 2.0, f"dispara sobre voz limpia el {_pct_b:.1f}% (era 26%)"
+assert _dano_b > -1.5, f"se come {_dano_b:.2f} dB de voz sin impulsos (era -6,8)"
+assert _dist_b < -12.0, f"distorsion {_dist_b:.1f} dB sobre voz limpia (era -6,6)"
+
+# Y un impulso real se sigue suprimiendo
+_imp_b = _voz_b.copy()
+_pos_b = [int(x * SR) for x in (1.0, 2.3, 3.5, 4.7)]
+_amp_b = np.sqrt(np.mean(_voz_b ** 2)) * 10 ** (25 / 20.0)
+_rb = np.random.default_rng(9)
+for _q in _pos_b:
+    _imp_b[_q:_q + 14] += (_amp_b * _rb.standard_normal(14)).astype(np.float32)
+_out_i, _ = _pasar_blanker(_imp_b)
+_res = max(np.max(np.abs(_out_i[_q - 20:_q + 40])) for _q in _pos_b)
+_pin = max(np.max(np.abs(_imp_b[_q - 20:_q + 40])) for _q in _pos_b)
+_sup = 20.0 * np.log10(_res / _pin)
+print(f"  Impulso real: {_sup:.1f} dB")
+assert _sup < -8.0, f"ya no suprime impulsos ({_sup:.1f} dB)"
+
+# El supresor NUNCA puede amplificar (la dilatacion de la mascara lo permitia:
+# medido, subia el impulso +12,9 dB en vez de bajarlo)
+assert np.max(np.abs(_out_i)) <= np.max(np.abs(_imp_b)) * 1.01, \
+    "el supresor amplifico la senal"
+print("  Supresor de impulsos: OK")

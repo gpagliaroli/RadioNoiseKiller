@@ -398,6 +398,48 @@ procesador, que era toda la hipótesis anterior. Descartada.
   después del warmup, y con el warmup más largo 40 frames ya no llegaban — el test se ponía verde
   **sin ejercitar nada**. Ojo con ese patrón al tocar tiempos de warmup.
 
+**Post-v2.1: el supresor de impulsos destrozaba la voz.** Reportado en el aire: *"el supresor de
+impulsos causa una distorsión de la voz, es notoria al activarlo o no"*. Medido sobre voz **limpia y
+sin un solo impulso presente**: atenuaba el **26,5 %** de los mini-frames, **−6,8 dB** de voz y
+**−6,6 dB de distorsión** (casi el 50 % de la señal). Y el error **empeoraba cuanto mejor era la
+señal** (−8,2 dB a S/N 30), que es lo que delató el diseño.
+- **Dos causas.** (1) El umbral se comparaba contra el **piso de ruido** (`mini_e > k · energy_hist`):
+  con voz 20 dB sobre el piso, la energía de voz es 100× el piso contra un umbral de 12×, así que
+  toda sílaba lo cruzaba. No suprimía impulsos: **comprimía la voz** a 12 veces el nivel de ruido con
+  ataque de 0,67 ms y sin release. (2) La ganancia se aplicaba como **escalón rectangular cada 32
+  muestras**, sin crossfade — cada salto es un click de banda ancha.
+- **Rediseño en `src/dsp/blanker.py`** (`ImpulseBlanker`, extraído de `pipeline._run_processor`):
+  detección por **contraste local en el tiempo** — mediana de los mini-frames vecinos (~22 ms), el
+  mismo principio que usa el ANF en frecuencia. La voz es sostenida, así que sus vecinos están igual
+  de fuertes y el cociente da ~1.
+- **Resultado medido** (bloque 1920, umbrales 20/12): sobre voz limpia **26,5 % → 0,21 %** de
+  disparos, voz **−6,8 → −0,75 dB**, distorsión **−6,6 → −19,3 dB**. Con impulsos reales, la voz pasa
+  de **−6,6 a −0,78 dB**. **Precio: la supresión del impulso baja de −20,3 a −13,6 dB.**
+- **NO se alcanzó la vara que me había puesto** (distorsión bajo −30 dB): quedó en −19 dB. Los
+  disparos que restan son **mini-frames aislados con contraste de 100×**, y el umbral **no los
+  separa** — de 8× a 30× el resultado no se mueve. Se acepta porque el problema reportado era la
+  distorsión sobre voz y ahí la mejora es de 13 dB.
+- **Cuatro errores propios en el camino, cada uno medido y corregido** (valen como patrones):
+  1. **Rampa más ancha que el impulso**: con 64 muestras de suavizado, la corrección de un click de
+     0,3 ms se diluía y la supresión caía a −0,5 dB. *El filtro que mata el click de la corrección se
+     comía también la corrección.* Rampa corta (16) + dilatación de la máscara.
+  2. **Falta de `min(gain, 1.0)`**: al dilatar, los vecinos no son impulsos y `sqrt(thr·med/e)` les
+     daba ganancia **> 1** — amplificaba el impulso **+12,9 dB**. *Un supresor nunca puede subir nada.*
+  3. **Objetivo mal elegido**: atenuar hasta `umbral × mediana` deja el impulso 12 veces sobre sus
+     vecinos (−11,9 dB cuando hacían falta −22). En la etapa **mini** el objetivo es el **nivel
+     local**; en la etapa de **trama** sí es recortar al umbral, porque con 40 ms por trama la
+     mediana de un segundo mezcla sílabas y silencios y bajar a la mediana es un compresor brutal
+     (−2,5 dB de voz con 0,2 % de disparos).
+  4. **Convolución con retardo**: `mode="valid"` con la cola prepuesta retrasa la ganancia
+     `_RAMP−1` muestras, así que la atenuación llegaba **después** del impulso (−3,7 dB). Suavizado
+     de **fase cero**: historia a la izquierda, relleno a la derecha.
+- **Descartado y anotado:** exigir que el impulso sea breve (descartar rachas de más de 2
+  mini-frames, para no tocar ataques de sílaba). No movió ninguna cifra —los falsos disparos ya son
+  mini-frames aislados— y además habría excluido las descargas de QRN reales, que duran varios
+  mini-frames. No reintentarlo.
+- Test permanente en `test_dsp` (disparos, daño, distorsión, supresión de impulso real, y que
+  **nunca amplifique**). **Pendiente de validación en el aire.**
+
 **v2.1 publicada (agosto 2026)** — release en GitHub con distribuibles Windows y Linux. Versión de
 app 2.1.0, manuales `MANUAL_RadioNoiseKiller_v2.1.pdf` (ES, 38 págs) y `..._v2.1_EN.pdf` (EN, 38
 págs). Título "v2.1 by LU6APA". Release de menor: no cambia el DSP del cancelador ni el significado
