@@ -300,7 +300,8 @@
       "Bash(awk '/^## Capítulo 5/,/^## Capítulo 6/' MANUAL.md)",
       "Bash(awk '/^## Chapter 5/,/^## Chapter 6/' MANUAL_EN.md)",
       "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe \"C:/Users/GPAGLI~1/AppData/Local/Temp/claude/C--Disco-D-Proyectos-ByCoding-Reductor-Ruido-Radio/679e4009-0953-4a70-a5c7-da8f09e7fc4d/scratchpad/banco_anf.py\")",
-      "Bash(PYTHONIOENCODING=utf-8 powershell -NoProfile -Command 'Get-Process python -ErrorAction SilentlyContinue | Select-Object Id, StartTime, @{n='\\\\''Cmd'\\\\'';e={\\(Get-CimInstance Win32_Process -Filter \"ProcessId=$\\($_.Id\\)\"\\).CommandLine}} | Format-List')"
+      "Bash(PYTHONIOENCODING=utf-8 powershell -NoProfile -Command 'Get-Process python -ErrorAction SilentlyContinue | Select-Object Id, StartTime, @{n='\\\\''Cmd'\\\\'';e={\\(Get-CimInstance Win32_Process -Filter \"ProcessId=$\\($_.Id\\)\"\\).CommandLine}} | Format-List')",
+      "Bash(awk 'NR<=1156 && /^    def /{m=$0; n=NR} END{}' src/ui/main_window.py)"
     ]
   }
 }

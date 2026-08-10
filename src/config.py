@@ -113,6 +113,11 @@ class DSPConfig:
 class GainConfig:
     input_gain_db: float = 0.0
     output_gain_db: float = 0.0
+    # Ganancia de salida del modo BYPASS, aparte de la de procesado: la
+    # comparacion A/B a nivel parejo se calibra una vez y tiene que
+    # sobrevivir al reinicio. Antes los dos modos arrancaban con el mismo
+    # valor en cada sesion, asi que la memoria A/B no llegaba a servir.
+    output_gain_db_bypass: float = 0.0
     peak_limit_db: float = -1.0
 
 
@@ -218,6 +223,7 @@ class AppConfig:
             "gain": {
                 "input_gain_db": self.gain.input_gain_db,
                 "output_gain_db": self.gain.output_gain_db,
+                "output_gain_db_bypass": self.gain.output_gain_db_bypass,
                 "peak_limit_db": self.gain.peak_limit_db,
             },
             "window": {
@@ -339,6 +345,8 @@ class AppConfig:
         g = data.get("gain", {})
         self.gain.input_gain_db = g.get("input_gain_db", self.gain.input_gain_db)
         self.gain.output_gain_db = g.get("output_gain_db", self.gain.output_gain_db)
+        self.gain.output_gain_db_bypass = float(
+            g.get("output_gain_db_bypass", self.gain.output_gain_db))
         self.gain.peak_limit_db = g.get("peak_limit_db", self.gain.peak_limit_db)
 
         w = data.get("window", {})

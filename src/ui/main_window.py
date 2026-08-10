@@ -93,8 +93,10 @@ class MainWindow(QMainWindow):
         # de Salida salta al valor guardado del modo destino → A/B a nivel parejo sin
         # reajustar. Arranca con ambos slots en el valor de config (sin salto hasta
         # que el usuario ajuste en un modo). Ver _on_bypass_toggled / _on_gain_out_changed.
-        _og = self._config.gain.output_gain_db
-        self._out_gain_by_bypass = {False: _og, True: _og}
+        self._out_gain_by_bypass = {
+            False: self._config.gain.output_gain_db,
+            True:  self._config.gain.output_gain_db_bypass,
+        }
         # Snapshot en memoria del preset activo (dsp, gain) para chequear "(modificado)"
         # sin re-leer el JSON en cada actualización del título.
         self._preset_saved_snapshot = None
@@ -1151,9 +1153,10 @@ class MainWindow(QMainWindow):
         self._s_gain_in.set_value(self._config.gain.input_gain_db)
         self._s_gain_out.set_value(self._config.gain.output_gain_db)
         self._s_peak.set_value(self._config.gain.peak_limit_db)
-        # Cargar config/preset resetea la memoria A/B de la ganancia de salida.
-        _og = self._config.gain.output_gain_db
-        self._out_gain_by_bypass = {False: _og, True: _og}
+        # Cargar un preset resetea el slot de PROCESADO (el preset lo trae),
+        # pero conserva el de bypass: un preset describe como procesas, no a que
+        # volumen escuchas la senal cruda.
+        self._out_gain_by_bypass[False] = self._config.gain.output_gain_db
 
         # --- Pestanas avanzadas ---
         self._adv_audio_tab.reload()
@@ -2009,6 +2012,12 @@ class MainWindow(QMainWindow):
         self._update_window_title()
 
     def _save_settings(self) -> None:
+        # Los dos slots son la fuente de verdad de la ganancia de salida.
+        # `config.gain.output_gain_db` lo pisa el pipeline con el valor del modo
+        # ACTUAL (set_output_gain_db escribe config), asi que guardar sin esta
+        # sincronizacion mezclaria el nivel de bypass con el de procesado.
+        self._config.gain.output_gain_db        = self._out_gain_by_bypass[False]
+        self._config.gain.output_gain_db_bypass = self._out_gain_by_bypass[True]
         try:
             self._config.save(settings_path())
         except Exception:

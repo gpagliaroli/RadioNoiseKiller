@@ -470,6 +470,23 @@ ver desde afuera (excepción del hilo procesador, cancelador desactivado, falta 
   visible.
 - Test en `test_ui`: la rama desconocida vuelca exactamente una vez.
 
+**Post-v2.1: la ganancia A/B de bypass ahora persiste.** Reportado: *"con o sin bypass se usa el
+mismo nivel"*. El mecanismo A/B **funcionaba** —verificado manejando la UI: los dos slots guardan y
+restauran bien— pero **arrancaba con los dos slots en el mismo valor**, así que en cada arranque se
+volvía a "el mismo nivel en los dos modos" hasta ajustar de cada lado. Con una tanda de reinicios
+(la de esa sesión), la función nunca llegaba a servir.
+- `GainConfig.output_gain_db_bypass` nuevo, persistido en settings.json. Los slots se inicializan
+  desde ahí y `_save_settings` los usa como **fuente de verdad**: `set_output_gain_db` del pipeline
+  escribe `config.gain.output_gain_db` con el valor del modo ACTUAL, así que sin esa sincronización
+  guardar mezclaría el nivel de bypass con el de procesado.
+- **No va al preset, a propósito:** un preset describe cómo procesás, no a qué volumen escuchás la
+  señal cruda — y como `_capture` ya incluye `output_gain_db`, si viajara, cargar un preset pisaría
+  la calibración A/B. Cargar un preset resetea el slot de procesado y **conserva** el de bypass.
+- `test_presets::test_capture_covers_all_gain_fields` (el guard del invariante 10) **saltó solo** al
+  agregar el campo. Se le puso una lista explícita de exclusiones con su motivo, y además chequea a
+  la inversa: que los excluidos NO aparezcan en el preset. El guard sigue cubriendo campos futuros.
+- Test en `test_ui`: roundtrip por settings.json y recuperación en una sesión nueva.
+
 **v2.1 publicada (agosto 2026)** — release en GitHub con distribuibles Windows y Linux. Versión de
 app 2.1.0, manuales `MANUAL_RadioNoiseKiller_v2.1.pdf` (ES, 38 págs) y `..._v2.1_EN.pdf` (EN, 38
 págs). Título "v2.1 by LU6APA". Release de menor: no cambia el DSP del cancelador ni el significado

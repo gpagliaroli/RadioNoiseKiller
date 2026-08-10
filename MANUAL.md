@@ -138,7 +138,7 @@ Controles principales de operación: modo de recepción, AGC y activación del p
 | **Nivelar en continuo (música)** | Casilla del **Nivelador de voz** (Cap. 7), puesta acá porque se cambia según lo que se esté escuchando: marcada para música o audio continuo, sin marcar para voz. Requiere el cancelador y el nivelador activos. |
 | **Techo de ruido** | Limita cuánto puede amplificar el AGC, para que no levante el ruido de banda. Ver más abajo. |
 | **▶ ACTIVAR / ■ DETENER** | Inicia o detiene el procesamiento en tiempo real. Al activar, el audio fluye por todo el pipeline. |
-| **Bypass** | Pasa el audio directo de entrada a salida sin ningún procesamiento. Útil para comparar el sonido con y sin la aplicación activa. La **Ganancia de salida** (pestaña *Avanzada Audio*) también actúa en bypass, y su valor se recuerda por separado para bypass ON y OFF (ver la nota en *Ganancia y niveles*). |
+| **Bypass** | Pasa el audio directo de entrada a salida sin ningún procesamiento. Útil para comparar el sonido con y sin la aplicación activa. La **Ganancia de salida** también actúa en bypass, y su valor se recuerda **por separado** para bypass ON y OFF, así podés comparar a nivel parejo sin reajustar. Los dos niveles **se guardan y sobreviven al reinicio**: se calibran una vez. Un preset no se lleva el nivel de bypass — describe cómo procesás, no a qué volumen escuchás la señal cruda. |
 
 ### AGC — techo de ruido
 

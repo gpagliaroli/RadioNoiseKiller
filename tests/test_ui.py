@@ -829,6 +829,46 @@ def test_all_sliders_have_tooltip():
     print("Tooltips en todos los sliders            OK")
 
 
+def test_bypass_gain_persiste_entre_sesiones():
+    """La ganancia A/B de bypass sobrevive al reinicio de la app.
+
+    El mecanismo A/B funcionaba dentro de una sesion, pero los dos slots
+    arrancaban con el MISMO valor, asi que en cada arranque volvia a "el mismo
+    nivel en los dos modos" hasta ajustar de cada lado. Reportado en el aire
+    justo despues de una tanda de reinicios: en la practica la funcion no
+    llegaba a servir. El nivel de comparacion se calibra una vez, no por sesion.
+    """
+    w = _win()
+    w._check_bypass.setChecked(False)
+    w._s_gain_out.set_value(-5.0, emit=True)
+    _app.processEvents()
+    w._check_bypass.setChecked(True)
+    w._s_gain_out.set_value(3.0, emit=True)
+    _app.processEvents()
+    w._save_settings()
+
+    import json
+    with open(settings_path(), encoding="utf-8") as f:
+        g = json.load(f)["gain"]
+    assert g["output_gain_db"] == -5.0, "el nivel de procesado no se guardo"
+    assert g["output_gain_db_bypass"] == 3.0, "el nivel de bypass no se guardo"
+
+    # Sesion nueva: los dos slots vuelven distintos
+    w2 = _win()
+    assert w2._out_gain_by_bypass[False] == -5.0
+    assert w2._out_gain_by_bypass[True] == 3.0
+    w2._check_bypass.setChecked(True)
+    _app.processEvents()
+    assert abs(w2._s_gain_out.value() - 3.0) < 1e-6,         "al reabrir, el bypass no recupera su nivel"
+
+    # Un preset NO lleva el nivel de bypass: describe como procesas, no a que
+    # volumen escuchas la senal cruda.
+    from presets import PresetManager as _PM
+    cap = _PM._capture("x", w2._config)
+    assert "output_gain_db_bypass" not in cap.get("gain", {}),         "el preset se llevo el nivel de bypass"
+    print("Ganancia de bypass persiste entre sesiones  OK")
+
+
 if __name__ == "__main__":
     test_tab_order()
     test_modules_group_moved_to_own_tab()
@@ -837,6 +877,7 @@ if __name__ == "__main__":
     test_loaded_profile_name_label()
     test_mute_button_gating_and_state()
     test_bypass_remembers_output_gain()
+    test_bypass_gain_persiste_entre_sesiones()
     test_about_dialog()
     test_auto_load_respects_saved_mode()
     test_canceller_subcontrols_require_noise()

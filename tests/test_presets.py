@@ -42,14 +42,28 @@ def test_capture_covers_all_dsp_fields():
     print("_capture() cubre DSPConfig       OK")
 
 
+# Campos de GainConfig que NO van al preset, a proposito. Cada uno con su
+# motivo: si se agrega otro hay que justificarlo aca, y cualquier campo nuevo que
+# no este en esta lista sigue teniendo que aparecer en _capture (invariante 10).
+_GAIN_FUERA_DEL_PRESET = {
+    # El nivel al que escuchas la senal CRUDA no describe como procesas, y
+    # ademas el preset ya trae output_gain_db: si viajara, cargar un preset te
+    # pisaria la calibracion A/B. Vive solo en settings.json.
+    "output_gain_db_bypass",
+}
+
+
 def test_capture_covers_all_gain_fields():
-    """_capture() debe serializar todos los campos de GainConfig."""
+    """_capture() debe serializar todos los campos de GainConfig, salvo los
+    excluidos a proposito."""
     app  = AppConfig()
     data = PresetManager._capture("test", app)
     gain_keys = set(data["gain"].keys())
 
-    missing = _all_gain_fields() - gain_keys
+    missing = _all_gain_fields() - gain_keys - _GAIN_FUERA_DEL_PRESET
     assert not missing, f"Campos GainConfig no en preset._capture(): {sorted(missing)}"
+    colados = gain_keys & _GAIN_FUERA_DEL_PRESET
+    assert not colados, f"Campos que NO deben ir al preset: {sorted(colados)}"
     print("_capture() cubre GainConfig      OK")
 
 
