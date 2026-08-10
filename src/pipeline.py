@@ -785,6 +785,36 @@ class ProcessingPipeline:
     def dsp_last_error(self) -> str:
         return self._dsp_last_error
 
+    @property
+    def mcra_diag(self) -> str:
+        """Estado interno del estimador, para diagnosticar un warmup atascado.
+
+        Existe porque el síntoma "el adaptativo no completa la calibración" se
+        reportó tres veces sin que ninguna hipótesis de lectura de código diera:
+        no era excepción del DSP (no había log), ni cancelador apagado, ni falta
+        de audio. Con esto la próxima vez el archivo dice qué contador está
+        quieto en lugar de tener que adivinarlo."""
+        p = self._noise_profiler
+        return (f"modo_cfg={self._config.dsp.noise_mode} modo_dsp={p._mode} "
+                f"noise_enabled={self._noise_enabled} learning={p.is_learning} "
+                f"frames={p._mcra_frames} warmup={p._mcra_warmup} M={p._mcra_M} "
+                f"quar={len(p._mcra_quar)} voice_hold={p._mcra_voice_hold} "
+                f"fading={p._fading_active} ld={'None' if p._mcra_ld is None else 'ok'} "
+                f"hop={p._hop} block_cfg={self._config.audio.block_size} "
+                f"db_in={self._db_in:.1f} errores={self._dsp_errors}")
+
+    def log_diagnostic(self, titulo: str, detalle: str) -> None:
+        """Anota una línea de diagnóstico en el mismo archivo que los errores."""
+        try:
+            import datetime
+            from utils import data_dir
+            with open(os.path.join(data_dir(), "errores_dsp.log"), "a",
+                      encoding="utf-8") as f:
+                f.write(f"\n===== {datetime.datetime.now():%Y-%m-%d %H:%M:%S} "
+                        f"{titulo} =====\n{detalle}\n")
+        except Exception:
+            pass
+
     def _log_dsp_error(self, exc: Exception) -> None:
         """Deja el traceback en disco, acotado a los primeros del arranque.
 

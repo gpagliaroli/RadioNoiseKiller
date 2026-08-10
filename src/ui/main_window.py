@@ -1526,6 +1526,7 @@ class MainWindow(QMainWindow):
         if mode == "mcra":
             if self._pipeline.noise_has_profile:
                 self._mcra_wait = 0
+                self._mcra_stall_logged = False
                 db = self._pipeline.noise_reduction_db
                 if db >= -0.5:
                     self._lbl_noise_db.setText(tr("~0 dB"))
@@ -1811,6 +1812,7 @@ class MainWindow(QMainWindow):
         self._dsp_errors_seen: int = 0
         self._dsp_error_hold: int = 0   # ticks de 500 ms que el aviso retiene el cartel
         self._mcra_wait: int = 0        # ticks que MCRA lleva sin completar el warmup
+        self._mcra_stall_logged: bool = False   # un volcado por episodio
 
     def _mcra_stall_reason(self) -> str:
         """Por qué el estimador adaptativo no termina de calibrar.
@@ -1824,8 +1826,15 @@ class MainWindow(QMainWindow):
             return tr("⚠ No calibra: el cancelador de ruido está desactivado")
         if self._pipeline.db_in < -55.0:
             return tr("⚠ No calibra: no llega audio de entrada (revisar dispositivo y Canal)")
+        # Ninguna causa conocida: volcar el estado interno al log UNA vez por
+        # episodio. Este mensaje ya se reportó y las tres causas conocidas
+        # quedaron descartadas, así que sin este volcado no hay forma de saber
+        # qué contador está quieto.
+        if not self._mcra_stall_logged:
+            self._mcra_stall_logged = True
+            self._pipeline.log_diagnostic("MCRA no calibra", self._pipeline.mcra_diag)
         return tr("⚠ El estimador adaptativo no completa la calibración — "
-                  "probar Perfil estático y volver, y avisar del problema")
+                  "probar Perfil estático y volver, y mandar errores_dsp.log")
 
     def _remember_dsp_error(self, msg: str) -> None:
         """Llamado desde el HILO PROCESADOR: solo guardar, nunca tocar widgets."""

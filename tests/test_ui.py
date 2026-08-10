@@ -712,9 +712,14 @@ def test_mcra_stall_reason():
         db_in = -20.0
         noise_mode = "mcra"
         post_filter_extra_db = 0.0
+        mcra_diag = "frames=0 warmup=80"
+        volcados = []
 
         def is_running(self):
             return True
+
+        def log_diagnostic(self, titulo, detalle):
+            self.volcados.append((titulo, detalle))
 
     w._pipeline = _Pipe()
     w._config.dsp.noise_enabled = True
@@ -737,6 +742,11 @@ def test_mcra_stall_reason():
     assert "audio de entrada" in w._label_noise.text(), "no detecta la falta de audio"
 
     _Pipe.db_in = -20.0
+    # La rama "ninguna causa conocida" vuelca el estado interno al log UNA vez
+    # por episodio: es la unica forma de saber que contador esta quieto, porque
+    # las tres causas conocidas ya se descartaron cuando se reporto en el aire.
+    assert len(_Pipe.volcados) == 1,         f"la rama desconocida no volco el diagnostico ({len(_Pipe.volcados)} veces)"
+
     _Pipe.dsp_error_count = 4
     w._update_noise_db()
     assert "errores_dsp.log" in w._label_noise.text(), "no prioriza el error del DSP"

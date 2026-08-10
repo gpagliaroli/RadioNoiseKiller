@@ -449,6 +449,27 @@ señal** (−8,2 dB a S/N 30), que es lo que delató el diseño.
   rediseño (la supresión del impulso bajó de −20,3 a −13,6 dB). Si aparece que suprime de menos, la
   perilla a mover es el umbral mini hacia abajo; el margen está en el detector, no en la rampa.
 
+**Post-v2.1: "el estimador adaptativo no completa la calibración" — CUARTA rama, sin causa
+identificada.** El diagnóstico agregado antes hizo su trabajo: el usuario reportó exactamente el
+mensaje de "ninguna de las causas conocidas", lo que **descarta de una** las tres que sí se pueden
+ver desde afuera (excepción del hilo procesador, cancelador desactivado, falta de audio).
+- **Lo que se descartó leyendo código, sin éxito:** `process()` del profiler corre SIEMPRE (no está
+  detrás de `_noise_enabled`), así que `_mcra_frames` debería avanzar; `_mcra_feed` se llama
+  incondicionalmente en modo mcra; y los dos `config.dsp.noise_mode = "static"` sueltos de
+  `main_window` van después de `set_noise_profile_data`, que ya sincroniza ambos lados. La hipótesis
+  más prometedora era **profiler en `static` con la config en `mcra`** (encaja con todo, incluido que
+  el toggle de modo lo cure), pero no se encontró ningún camino que produzca esa divergencia.
+- **Se dejó de adivinar y se instrumentó.** `pipeline.mcra_diag` expone el estado interno
+  (modo de config vs modo del DSP, `noise_enabled`, learning, `_mcra_frames`, `_mcra_warmup`, `M`,
+  cuarentena, `voice_hold`, fading, si `λ_d` existe, hop vs block de config, `db_in`, errores) y
+  `log_diagnostic()` lo vuelca a `errores_dsp.log`. La cuarta rama lo escribe **una vez por
+  episodio** (`_mcra_stall_logged`, reseteado al calibrar). El mensaje ahora pide mandar el archivo.
+- **Van cuatro intentos de diagnóstico fallidos sobre este mismo síntoma.** La lección es de método:
+  cuando dos rondas de lectura de código no dan, instrumentar sale más barato que una tercera
+  hipótesis. Lo mismo valió para el bug del ANF, que sólo apareció cuando los marcadores lo hicieron
+  visible.
+- Test en `test_ui`: la rama desconocida vuelca exactamente una vez.
+
 **v2.1 publicada (agosto 2026)** — release en GitHub con distribuibles Windows y Linux. Versión de
 app 2.1.0, manuales `MANUAL_RadioNoiseKiller_v2.1.pdf` (ES, 38 págs) y `..._v2.1_EN.pdf` (EN, 38
 págs). Título "v2.1 by LU6APA". Release de menor: no cambia el DSP del cancelador ni el significado

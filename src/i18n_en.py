@@ -893,7 +893,7 @@ CATALOG = {
     "⚠ No calibra: no llega audio de entrada (revisar dispositivo y Canal)":
         "⚠ Not calibrating: no input audio (check the device and Channel)",
     "⚠ El estimador adaptativo no completa la calibración — "
-    "probar Perfil estático y volver, y avisar del problema":
+    "probar Perfil estático y volver, y mandar errores_dsp.log":
         "⚠ The adaptive estimator will not finish calibrating — try Static "
-        "profile and back, and please report the problem",
+        "profile and back, and send errores_dsp.log",
 }
