@@ -786,8 +786,10 @@ Controla los niveles de entrada y salida, y protege contra picos de audio. Los m
 > de Salida por separado para bypass ON y OFF**: ajustá un volumen cómodo para la señal cruda
 > (bypass ON) y otro para la señal procesada (bypass OFF), y a partir de ahí cada vez que alternás
 > el Bypass el control salta al valor que dejaste en ese modo. Así comparás el antes/después a un
-> nivel parejo sin reajustar cada vez. La memoria es de sesión (no se guarda) y se reinicia al
-> cargar un preset. En bypass la ganancia se aplica sin el **Límite de picos**, así que si subís
+> nivel parejo sin reajustar cada vez. **Los dos niveles se guardan y sobreviven al reinicio de la
+> aplicación**: se calibran una vez y quedan. Cargar un preset reinicia el nivel de *procesando*
+> (el preset lo trae) pero conserva el de *bypass*, porque un preset describe cómo procesás, no a
+> qué volumen escuchás la señal cruda. En bypass la ganancia se aplica sin el **Límite de picos**, así que si subís
 > mucho la Salida podés saturar la señal cruda.
 
 ### Indicador del limitador de picos

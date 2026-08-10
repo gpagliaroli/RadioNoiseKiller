@@ -138,7 +138,7 @@ The main operating controls: reception mode, AGC and processing activation.
 | **Level continuously (music)** | Checkbox belonging to the **Voice leveler** (Ch. 7), placed here because you change it depending on what you are listening to: ticked for music or continuous audio, unticked for voice. Requires the canceller and the leveler enabled. |
 | **Noise ceiling** | Limits how much the AGC can amplify, so it does not lift the band noise. See below. |
 | **▶ START / ■ STOP** | Starts or stops real-time processing. When started, audio flows through the whole pipeline. |
-| **Bypass** | Passes audio straight from input to output with no processing. Useful for comparing the sound with and without the application active. The **Output gain** (*Advanced Audio* tab) also acts in bypass, and its value is remembered separately for bypass ON and OFF (see the note under *Gain and levels*). |
+| **Bypass** | Passes audio straight from input to output with no processing. Useful for comparing the sound with and without the application active. The **Output gain** also acts in bypass, and its value is remembered **separately** for bypass ON and OFF, saved across restarts (see the note under *Gain and levels*). |
 
 ### AGC — noise ceiling
 
@@ -784,8 +784,10 @@ Controls the input and output levels and protects against audio peaks. The VU me
 > bypass ON and OFF**: set a comfortable volume for the raw signal (bypass ON) and another for the
 > processed signal (bypass OFF), and from then on every time you toggle Bypass the control jumps to
 > the value you left for that mode. This lets you compare before/after at a matched level without
-> readjusting each time. The memory is per-session (not saved) and resets when you load a preset.
-> In bypass the gain is applied without the **Peak limit**, so raising Output too much can clip the
+> readjusting each time. **Both levels are saved and survive an application restart**: you
+> calibrate them once and they stay. Loading a preset resets the *processing* level (the preset
+> carries it) but keeps the *bypass* one, because a preset describes how you process, not how loud
+> you listen to the raw signal. In bypass the gain is applied without the **Peak limit**, so raising Output too much can clip the
 > raw signal.
 
 ### Peak limiter indicator
