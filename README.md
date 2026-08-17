@@ -224,4 +224,4 @@ recomendado.
 
 ## Licencia
 
-MIT
+MIT — ver [LICENSE](LICENSE).

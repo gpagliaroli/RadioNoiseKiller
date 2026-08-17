@@ -27,6 +27,11 @@ __pycache__/
 # sin la barra inicial también ignoraría .claude/settings.json
 /settings.json
 
+# Permisos locales de Claude Code: son de esta máquina (rutas absolutas y
+# nombre de usuario), no del proyecto. El settings.json de .claude/ SÍ se
+# versiona: ahí viven los hooks, que son convención del repo.
+.claude/settings.local.json
+
 # Grabaciones del usuario
 Grabaciones/
 
