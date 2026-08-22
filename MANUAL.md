@@ -1,6 +1,6 @@
 ﻿# RadioNoiseKiller — Manual de Usuario
 
-**Versión 2.1**
+**Versión 2.2**
 
 ---
 
@@ -250,6 +250,8 @@ Detecta y atenúa transientes cortos de alta energía: descargas atmosféricas (
 - **Nivel 2 (micro-trama de 0,67 ms):** detecta impulsos muy cortos — frituras, crackles, encendido de dispositivos cercanos.
 
 El indicador **Actividad** muestra en tiempo real cuántos impulsos por segundo está detectando (⚡ N /s).
+
+> **Qué significan los umbrales (cambió en la v2.2).** Los dos números son un **contraste contra los vecinos inmediatos**, no contra el piso de ruido: "15×" quiere decir *quince veces más fuerte que el audio de al lado*. Es el mismo principio que usa el ANF, pero en el tiempo en vez de en la frecuencia. La razón es que la voz es **sostenida** — sus vecinos están igual de fuertes, así que el cociente da ~1 y el detector no dispara. Un impulso, en cambio, es un trozo aislado rodeado de nada, y salta a la vista. Hasta la v2.1 la comparación era contra el piso de ruido, lo que hacía que con una señal 20 dB sobre el piso **toda sílaba cruzara el umbral**: el módulo no suprimía impulsos, comprimía la voz. Si venías con el supresor apagado por ese motivo, se puede volver a activar.
 
 ### Controles
 
@@ -1059,4 +1061,21 @@ Los valores de los sliders **Máx Y** y **Máx X** del visualizador de espectro 
 
 ---
 
-*RadioNoiseKiller — versión 2.1*
+## Si algo falla — el archivo de diagnóstico
+
+Junto al ejecutable, en la misma carpeta que `settings.json`, la aplicación puede crear un archivo llamado **`errores_dsp.log`**. Sólo aparece si algo salió mal: **si no existe, no hubo errores**.
+
+Dos avisos de la barra de estado lo mencionan, y conviene saber qué significan:
+
+| Aviso | Qué pasó | Qué hacer |
+|-------|----------|-----------|
+| **⚠ El procesador DSP está fallando — ver errores_dsp.log** | Una operación del procesamiento lanzó una excepción. **La aplicación no se cae**: se recupera sola y sigue con el audio siguiente, pero algo no está funcionando bien. | Mandar el archivo. Adentro está la línea exacta que falló. |
+| **El estimador adaptativo no completa la calibración** | El modo Adaptativo no termina de calibrar. El aviso dice **cuál** de las causas conocidas es (falta de audio, cancelador desactivado, error del procesador). Si dice que no es ninguna de ellas, es un caso que todavía no está identificado. | Probar el rodeo que funciona —pasar a *Perfil estático* y volver a *Adaptativo*— y **mandar el archivo**: en ese caso la aplicación vuelca ahí su estado interno completo. |
+
+El archivo se limita a unos pocos errores por sesión, así que no crece sin control, y se puede borrar sin consecuencias.
+
+> **Por qué existe:** un fallo del procesamiento antes no se veía. La aplicación se recuperaba sola y seguía andando, pero con el módulo afectado a medio funcionar, y desde afuera el único síntoma era "esto no está reduciendo el ruido" — sin nada que lo explicara. Estos avisos y este archivo son para que la próxima vez haya un rastro que se pueda leer.
+
+---
+
+*RadioNoiseKiller — versión 2.2*

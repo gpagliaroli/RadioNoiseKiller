@@ -35,7 +35,8 @@ panorama general y las notas para quien quiera tocar el código.
 - **Dos modos de estimación** — perfil **estático** aprendido a mano, o **adaptativo (MCRA)** que
   sigue el piso de ruido en continuo sin intervención
 - **Post-filtro espectral** — segunda pasada que hunde el piso sólo en los bins de ruido
-- **Supresor de impulsos** — dos niveles en cascada (10 ms y 0,67 ms) para QRN atmosférico
+- **Supresor de impulsos** — dos niveles en cascada (10 ms y 0,67 ms) para QRN atmosférico,
+  detectados por contraste contra el audio vecino (no contra el piso), así la voz no dispara
 - **ANF** — filtro de muesca espectral adaptativo para heterodinos, portadoras y zumbidos
 - **Compensación de fading HF** — congela el estimador durante el QSB para que no se desajuste
 - **Squelch de voz** — silencia entre transmisiones, con cierre progresivo (sin cola de squelch)
@@ -59,6 +60,8 @@ panorama general y las notas para quien quiera tocar el código.
 
 - **Espectro en tiempo real** + **cascada** con historia ajustable (15–120 s), escala de color y
   marcadores de los tonos que está cancelando el ANF
+- **Cascada en modo Diferencia** — pinta cuánto quita el procesamiento en cada frecuencia y
+  momento, para ver de un vistazo si el cancelador está tocando la voz
 - **Presets** — 7 perfiles de fábrica afinados en el aire, más los propios
 - **Perfiles de ruido nombrados** — guardar y recuperar el ruido de cada banda o cada hora del día
 - **Grabación a WAV** — con opción de grabar en paralelo la entrada sin procesar, para el antes/después
@@ -162,6 +165,7 @@ src/
 │   ├── filters.py        # BandpassFilter + PresenceFilter (Butterworth / peaking IIR)
 │   ├── exciter.py        # AuralExciter: armónicos con carácter par/impar y gate por VAD
 │   ├── bass.py           # BassRestorer: fundamental derivado de los armónicos
+│   ├── blanker.py        # ImpulseBlanker: impulsos por contraste local en el tiempo
 │   ├── freq_shift.py     # FrequencyShifter: corrección de tono SSB
 │   ├── gain.py           # GainLimiter: limitador de picos con rodilla suave
 │   └── level.py          # LevelMeter: RMS con decaimiento

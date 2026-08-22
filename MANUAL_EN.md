@@ -1,6 +1,6 @@
 ﻿# RadioNoiseKiller — User Manual
 
-**Version 2.1**
+**Version 2.2**
 
 ---
 
@@ -250,6 +250,8 @@ Detects and attenuates short high-energy transients: atmospheric discharges (QRN
 - **Level 2 (0.67 ms micro-frame):** detects very short impulses — crackle, static, nearby devices switching on.
 
 The **Activity** indicator shows in real time how many impulses per second are being detected (⚡ N /s).
+
+> **What the thresholds mean (changed in v2.2).** Both numbers are a **contrast against the immediate neighbours**, not against the noise floor: "15×" means *fifteen times louder than the audio right next to it*. It is the same principle the ANF uses, but in time instead of frequency. The reason is that speech is **sustained** — its neighbours are just as loud, so the ratio comes out around 1 and the detector does not fire. An impulse, by contrast, is an isolated blip surrounded by nothing, and it stands out. Up to v2.1 the comparison was against the noise floor, which meant that with a signal 20 dB above the floor **every syllable crossed the threshold**: the module was not suppressing impulses, it was compressing the voice. If you had the suppressor switched off for that reason, you can turn it back on.
 
 ### Controls
 
@@ -1057,4 +1059,21 @@ The **Max Y** and **Max X** sliders of the spectrum viewer are also saved in `se
 
 ---
 
-*RadioNoiseKiller — version 2.1*
+## If something goes wrong — the diagnostic file
+
+Next to the executable, in the same folder as `settings.json`, the application may create a file called **`errores_dsp.log`**. It only appears if something went wrong: **if it is not there, there were no errors.**
+
+Two status-bar warnings refer to it, and it helps to know what they mean:
+
+| Warning | What happened | What to do |
+|---------|---------------|------------|
+| **⚠ The DSP processor is failing — see errores_dsp.log** | An operation in the processing chain raised an exception. **The application does not crash**: it recovers on its own and carries on with the next audio, but something is not working properly. | Send the file. It contains the exact line that failed. |
+| **The adaptive estimator is not completing calibration** | Adaptive mode never finishes calibrating. The warning says **which** of the known causes it is (no audio, canceller disabled, processor error). If it says it is none of them, it is a case that has not been identified yet. | Try the workaround that works — switch to *Static profile* and back to *Adaptive* — and **send the file**: in that case the application dumps its full internal state there. |
+
+The file is capped at a few errors per session, so it does not grow without bound, and it can be deleted with no consequences.
+
+> **Why it exists:** a processing failure used to be invisible. The application recovered on its own and kept running, but with the affected module half working, and from the outside the only symptom was "this is not reducing the noise" — with nothing to explain it. These warnings and this file exist so that next time there is a trail somebody can read.
+
+---
+
+*RadioNoiseKiller — version 2.2*

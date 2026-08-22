@@ -165,15 +165,18 @@ SLIDER_TIPS = {
 
     # ---------------- Avanzada Impulsos ---------------- #
     "_s_blanker_frame": (
-        "Cuántas veces por encima del piso de ruido tiene que estar un pico de\n"
-        "10 ms para borrarlo (chasquidos de encendido, arranques de motor).\n"
+        "Cuántas veces por encima de SUS VECINOS inmediatos tiene que estar un\n"
+        "pico de 10 ms para borrarlo (chasquidos, arranques de motor). Compara\n"
+        "contra el nivel de al lado, no contra el piso: la voz es sostenida, así\n"
+        "que sus vecinos están igual de fuertes y no dispara.\n"
         "Agresivo puede comerse consonantes fuertes; suave deja pasar impulsos.\n"
         "15 es un buen punto de partida."
     ),
     "_s_blanker_mini": (
         "Lo mismo pero para micro-impulsos de menos de 1 ms: cerco eléctrico,\n"
         "línea de alta tensión, chispas.\n"
-        "Bajalo si escuchás 'tics' rápidos que el otro umbral no agarra."
+        "Bajalo si escuchás 'tics' rápidos que el otro umbral no agarra, o si\n"
+        "con QRN de descargas te parece que suprime de menos."
     ),
     "_s_anf_threshold": (
         "Cuánto tiene que sobresalir una frecuencia sobre sus vecinas para que el\n"

@@ -277,7 +277,24 @@ reajustaron en el aire. Todo el contenido de abajo se validó escuchando en la r
 iteraciones de ida y vuelta (ver los "reportado en el aire" de cada ítem: casi todos los fixes de
 esta versión salieron de una escucha que contradijo una medición sintética).
 
-**Post-v2.1: el fallo del hilo procesador era mudo — y no se recuperaba.** Reportado en el aire:
+**v2.2 publicada (agosto 2026)** — release en GitHub con distribuibles Windows y Linux. Versión de
+app 2.2.0, manuales `MANUAL_RadioNoiseKiller_v2.2.pdf` (ES, 41 págs) y `..._v2.2_EN.pdf` (EN, 40
+págs). Título "v2.2 by LU6APA". **Salto de menor**: no cambia el significado de ningún control, pero
+sí **cómo se comportan dos detectores**, y en los dos casos el cambio libera valores que antes había
+que evitar:
+- El **ANF** dejó de tomar armónicos de la voz por heterodinos (persistencia temporal), así que la
+  Profundidad ya se puede subir a 90–100 % — el consejo viejo de mantenerla baja era el síntoma de
+  un defecto, no una propiedad del filtro. Los presets de fábrica se reajustaron con eso.
+- El **supresor de impulsos** compara contra el audio vecino en vez de contra el piso de ruido, así
+  que dejó de comprimir la voz. Quien lo tenía apagado por eso puede volver a activarlo.
+
+Los nueve bloques que siguen son el detalle de esta versión. Todo validado en el aire salvo lo que
+diga lo contrario. Además: cascada en **modo Diferencia**, botón de donación (Cafecito) en el
+"Acerca de", diagnóstico del hilo DSP con `errores_dsp.log` documentado en los manuales, y el
+**Nivelador de voz agregado al diagrama del pipeline** (cerró el pendiente que esperaba justamente
+un cambio de manual para no regenerar las imágenes y los PDFs dos veces).
+
+**v2.2 — el fallo del hilo procesador era mudo — y no se recuperaba.** Reportado en el aire:
 *"cuando arranca en modo MCRA no genera el piso de ruido; la única forma es pasar a Perfil estático
 y volver a MCRA"*, con las tres cosas fallando a la vez (no calibra, no reduce, no dibuja el piso) y
 después **se arregló solo** sin saber por qué. No se pudo reproducir en el banco: se probaron cuatro
@@ -309,7 +326,7 @@ con señal con voz — todos calibran.
 - **Pendiente:** la causa que corrompió la curva en la máquina del usuario sigue sin identificarse.
   El log es la herramienta para la próxima vez.
 
-**Post-v2.1 — DESCARTADO por medición: criba armónica contra el splatter de SSB.** El usuario
+**v2.2 — DESCARTADO por medición: criba armónica contra el splatter de SSB.** El usuario
 preguntó si había algo de DSP para el splatter (productos de IMD de un vecino sobreexcitado). El
 cancelador no lo toca por diseño —es voz, no ruido estacionario, y el min-tracking del MCRA nunca lo
 mete en el piso—, así que se prototipó una **criba armónica**: detectar el f0 del corresponsal y
@@ -342,7 +359,7 @@ atenuar los bins ENTRE sus armónicos (el inverso del refuerzo de pitch, que los
   es el **pasabanda angostado del lado por el que entra** (Cap. 5 de ambos manuales, con el aviso de no
   bajar de 2,4 kHz y la explicación de por qué parte del splatter es co-canal e infiltrable).
 
-**Post-v2.1: el ANF tomaba armónicos de la voz por heterodinos.** Detectado por el usuario mirando
+**v2.2 — el ANF tomaba armónicos de la voz por heterodinos.** Detectado por el usuario mirando
 los **marcadores de heterodino de la cascada** (feature agregada post-v2.0): *"se ven muchas marcas
 rojas que parecen tener relación con la voz, porque si desactivo el ANF no se escucha nada extra"*.
 Los marcadores hicieron visible un defecto que llevaba ahí desde siempre.
@@ -387,7 +404,7 @@ Los marcadores hicieron visible un defecto que llevaba ahí desde siempre.
   heterodino de armónico es la **persistencia temporal**, no el umbral. Antes bajarlo multiplicaba
   los falsos positivos.
 
-**Post-v2.1: warmup de MCRA extendido a una ventana completa (B*M).** Reportado en el aire: *"no
+**v2.2 — warmup de MCRA extendido a una ventana completa (B*M).** Reportado en el aire: *"no
 anda el MCRA ni muestra la curva amarilla"*, y a los pocos segundos **se corrigió solo**. Con la app
 corriendo se verificó que **NO había `errores_dsp.log`** — o sea que no era una excepción del hilo
 procesador, que era toda la hipótesis anterior. Descartada.
@@ -408,7 +425,7 @@ procesador, que era toda la hipótesis anterior. Descartada.
   después del warmup, y con el warmup más largo 40 frames ya no llegaban — el test se ponía verde
   **sin ejercitar nada**. Ojo con ese patrón al tocar tiempos de warmup.
 
-**Post-v2.1: el supresor de impulsos destrozaba la voz.** Reportado en el aire: *"el supresor de
+**v2.2 — el supresor de impulsos destrozaba la voz.** Reportado en el aire: *"el supresor de
 impulsos causa una distorsión de la voz, es notoria al activarlo o no"*. Medido sobre voz **limpia y
 sin un solo impulso presente**: atenuaba el **26,5 %** de los mini-frames, **−6,8 dB** de voz y
 **−6,6 dB de distorsión** (casi el 50 % de la señal). Y el error **empeoraba cuanto mejor era la
@@ -449,12 +466,12 @@ señal** (−8,2 dB a S/N 30), que es lo que delató el diseño.
   mini-frames. No reintentarlo.
 - Test permanente en `test_dsp` (disparos, daño, distorsión, supresión de impulso real, y que
   **nunca amplifique**).
-- **Validado en el aire (parcial): con banda limpia ya no se escucha distorsión**, que era el
-  síntoma reportado. **Falta escuchar QRN real de descargas** — ahí es donde pesa el precio del
-  rediseño (la supresión del impulso bajó de −20,3 a −13,6 dB). Si aparece que suprime de menos, la
-  perilla a mover es el umbral mini hacia abajo; el margen está en el detector, no en la rampa.
+- **VALIDADO en el aire, completo** (confirmado al cerrar la v2.2): banda limpia sin distorsión
+  —el síntoma reportado— y también con QRN real de descargas, donde pesaba el precio del rediseño
+  (la supresión del impulso bajó de −20,3 a −13,6 dB). Si alguna vez suprime de menos, la perilla
+  a mover es el umbral mini hacia abajo; el margen está en el detector, no en la rampa.
 
-**Post-v2.1: "el estimador adaptativo no completa la calibración" — CUARTA rama, sin causa
+**v2.2 — "el estimador adaptativo no completa la calibración" — CUARTA rama, sin causa
 identificada.** El diagnóstico agregado antes hizo su trabajo: el usuario reportó exactamente el
 mensaje de "ninguna de las causas conocidas", lo que **descarta de una** las tres que sí se pueden
 ver desde afuera (excepción del hilo procesador, cancelador desactivado, falta de audio).
@@ -475,7 +492,7 @@ ver desde afuera (excepción del hilo procesador, cancelador desactivado, falta 
   visible.
 - Test en `test_ui`: la rama desconocida vuelca exactamente una vez.
 
-**Post-v2.1: la ganancia A/B de bypass ahora persiste.** Reportado: *"con o sin bypass se usa el
+**v2.2 — la ganancia A/B de bypass ahora persiste.** Reportado: *"con o sin bypass se usa el
 mismo nivel"*. El mecanismo A/B **funcionaba** —verificado manejando la UI: los dos slots guardan y
 restauran bien— pero **arrancaba con los dos slots en el mismo valor**, así que en cada arranque se
 volvía a "el mismo nivel en los dos modos" hasta ajustar de cada lado. Con una tanda de reinicios
@@ -492,7 +509,7 @@ volvía a "el mismo nivel en los dos modos" hasta ajustar de cada lado. Con una 
   la inversa: que los excluidos NO aparezcan en el preset. El guard sigue cubriendo campos futuros.
 - Test en `test_ui`: roundtrip por settings.json y recuperación en una sesión nueva.
 
-**Post-v2.1: cascada en modo Diferencia (entrada − salida).** Pedido del usuario: *"ver del lado
+**v2.2 — cascada en modo Diferencia (entrada − salida).** Pedido del usuario: *"ver del lado
 derecho la entrada y del izquierdo la salida para tener una comparativa visual"*. Se evaluó la vista
 doble y se descartó **por dos costos concretos**: con el ancho de ventana FIJO en 770 px cada panel
 queda con ~300 px de gráfico (contra ~700), y sobre todo **se rompe la alineación del eje X con el
@@ -526,7 +543,7 @@ un solo panel, sin perder resolución ni alineación, y sin comparar dos imágen
 - **VALIDADO en el aire** (revisión visual del usuario, agosto 2026). `DIFF_SPAN=30` queda como
   rango bueno; si alguna vez satura en rojo o se ve apagado, es la única perilla a mover.
 
-**Post-v2.1: botón de donación en "Acerca de" (Cafecito).** `_DONATE_URL` en `main_window.py` →
+**v2.2 — botón de donación en "Acerca de" (Cafecito).** `_DONATE_URL` en `main_window.py` →
 `https://cafecito.app/gpagliaroli`. **Con la constante vacía el botón no se agrega**: así un
 placeholder no puede viajar en un release hacia una página rota — mantener ese guard si se toca.
 La URL va también en el tooltip porque si `QDesktopServices.openUrl` falla (xdg-open mal
@@ -1809,11 +1826,6 @@ Pendiente para Fase 2:
   soportadas; el trámite pide 2FA, Stripe Connect y W-8BEN, y GitHub no cobra comisión).
   Si eso pasa, además hay que ver si el "Acerca de" muestra un botón o dos: hoy `_DONATE_URL` es
   una sola URL y habría que convertirla en una lista de `(etiqueta, url)`.
-- **Agregar el Nivelador de voz al diagrama del pipeline** (`tools/gen_pipeline_diagram.py`, lista
-  `STAGES`). Va entre el Squelch y el Filtro de Paso de Banda POST — es la única etapa del pipeline
-  real que el diagrama no muestra. Se difirió a propósito en la v2.1: el diagrama lo comparten el
-  README y los manuales ES+EN, así que tocarlo obliga a regenerar las dos imágenes y los dos PDFs.
-  **Hacerlo junto con el próximo cambio de manual**, no suelto.
 - Validar build en Pi real (ARM64 Raspberry Pi OS Bookworm)
 - Reducir/optimizar el tamaño total de la app. **Primera pasada hecha y validada en ambas
   plataformas (v1.5):** recorte de módulos Qt sin uso en ambos specs (`QT_EXCLUDES` + filtro

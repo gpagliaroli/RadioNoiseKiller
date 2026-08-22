@@ -768,20 +768,26 @@ CATALOG = {
         "harmonics that did arrive. 100% is roughly what a natural voice would have.\n"
         "Start at 35% and go up slowly: too much bass shows up quickly.\n"
         "It goes quiet on its own when there is no voice.",
-    "Cuántas veces por encima del piso de ruido tiene que estar un pico de\n"
-    "10 ms para borrarlo (chasquidos de encendido, arranques de motor).\n"
+    "Cuántas veces por encima de SUS VECINOS inmediatos tiene que estar un\n"
+    "pico de 10 ms para borrarlo (chasquidos, arranques de motor). Compara\n"
+    "contra el nivel de al lado, no contra el piso: la voz es sostenida, así\n"
+    "que sus vecinos están igual de fuertes y no dispara.\n"
     "Agresivo puede comerse consonantes fuertes; suave deja pasar impulsos.\n"
     "15 es un buen punto de partida.":
-        "How many times above the noise floor a 10 ms peak has to be for it to be\n"
-        "erased (switch clicks, engine starts).\n"
+        "How many times above ITS IMMEDIATE NEIGHBOURS a 10 ms peak has to be for\n"
+        "it to be erased (clicks, engine starts). It compares against the level\n"
+        "right next to it, not against the floor: speech is sustained, so its\n"
+        "neighbours are just as loud and it does not trigger.\n"
         "Aggressive may eat strong consonants; soft lets impulses through.\n"
         "15 is a good starting point.",
     "Lo mismo pero para micro-impulsos de menos de 1 ms: cerco eléctrico,\n"
     "línea de alta tensión, chispas.\n"
-    "Bajalo si escuchás 'tics' rápidos que el otro umbral no agarra.":
+    "Bajalo si escuchás 'tics' rápidos que el otro umbral no agarra, o si\n"
+    "con QRN de descargas te parece que suprime de menos.":
         "Same thing but for micro-impulses under 1 ms: electric fences, power lines,\n"
         "sparks.\n"
-        "Lower it if you hear fast 'ticks' the other threshold does not catch.",
+        "Lower it if you hear fast 'ticks' the other threshold does not catch, or if\n"
+        "it seems to under-suppress on QRN from static crashes.",
     "Cuánto tiene que sobresalir una frecuencia sobre sus vecinas para que el\n"
     "ANF la trate como tono. Sensibilidad alta agarra heterodinos débiles pero\n"
     "puede tocar armónicos de la voz; baja va sólo por los silbidos evidentes.":
