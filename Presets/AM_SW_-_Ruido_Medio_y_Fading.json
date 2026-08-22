@@ -3,7 +3,9 @@
   "version": 1,
   "dsp": {
     "mode": "AM",
-    "agc_preset": "slow",
+    "agc_preset": "medium",
+    "agc_noise_ceiling_enabled": false,
+    "agc_noise_ceiling_db": -45.0,
     "blanker_enabled": true,
     "blanker_frame": 15.0,
     "blanker_mini": 15.0,
@@ -11,8 +13,8 @@
     "bandpass_post_enabled": true,
     "bandpass_limits": {
       "AM": [
-        100,
-        4500
+        50,
+        6000
       ],
       "SSB": [
         200,
@@ -36,7 +38,7 @@
     "anf_depth": 0.75,
     "noise_enabled": true,
     "noise_mode": "mcra",
-    "noise_alpha": 0.7,
+    "noise_alpha": 0.6,
     "noise_floor": 0.15000000000000002,
     "noise_smooth": 0.97,
     "noise_attack": 0.7,
@@ -45,7 +47,7 @@
     "squelch_hold_ms": 250.0,
     "exciter_enabled": true,
     "exciter_drive": 2.5,
-    "exciter_mix": 0.6000000000000001,
+    "exciter_mix": 0.4,
     "exciter_character": 0.4,
     "bass_enabled": true,
     "bass_amount": 0.15000000000000002,
@@ -62,18 +64,18 @@
     "perceptual_floor_rolloff_hz": 3000.0,
     "perceptual_floor_rolloff_depth": 0.6000000000000001,
     "post_filter_enabled": true,
-    "post_filter_strength": 2.5,
+    "post_filter_strength": 3.1,
     "pitch_enhance_enabled": true,
     "pitch_enhance_strength": 0.7000000000000001,
     "noise_fading_comp": true,
-    "noise_mcra_window_ms": 500.0,
+    "noise_mcra_window_ms": 300.0,
     "noise_hf_boost": 0.5,
     "noise_fading_change_db": 3.0,
     "noise_fading_freeze_ms": 250.0,
     "voice_leveler_enabled": true,
-    "voice_leveler_max_db": 6.0,
+    "voice_leveler_max_db": 12.0,
     "voice_leveler_gate_voice": false,
-    "voice_leveler_release_ms": 500.0
+    "voice_leveler_release_ms": 700.0
   },
   "gain": {
     "input_gain_db": -3.0,
