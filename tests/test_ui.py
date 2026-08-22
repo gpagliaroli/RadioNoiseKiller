@@ -517,6 +517,119 @@ def test_waterfall_toggle_and_source():
     print("Cascada: toggle + fuente + profundidad + marcadores  OK")
 
 
+def test_waterfall_diff_mode():
+    """Modo Diferencia de la cascada: el combo lo selecciona y persiste, la fila
+    empujada es entrada−salida en dB (sin recortar a −80, que taparia la
+    supresion profunda), la escala es fija (el slider Max Y no la toca) y el
+    signo se pinta con mitades distintas de la LUT divergente."""
+    import numpy as np
+    from ui.spectrum_widget import SpectrumWidget
+    from PySide6.QtGui import QColor
+
+    w = _win()
+    wf = w._waterfall_widget
+    w._chk_waterfall.setChecked(True)
+    _app.processEvents()
+
+    # --- combo -> config + widgets ---------------------------------------
+    _set_combo(w._combo_waterfall_src, "diff")
+    assert w._config.window.waterfall_source == "diff", "no persistio la fuente diff"
+    assert wf._diff_mode is True, "el widget no entro en modo diferencia"
+    assert w._spectrum_widget._waterfall_source == "diff"
+
+    # El buffer vacio vale 0 (= sin cambio). Con el relleno de nivel (−80) la
+    # pantalla vacia caeria en el extremo "amplificado" y se pintaria de magenta.
+    assert wf._empty_value == 0.0
+    assert float(wf._ring.max()) == 0.0 and float(wf._ring.min()) == 0.0
+
+    # --- escala fija, independiente del slider Max Y ----------------------
+    lo0, span0, lut0 = wf._scale()
+    wf.set_db_max(-40)
+    lo1, span1, _ = wf._scale()
+    assert (lo0, span0) == (lo1, span1), "Max Y movio la escala de diferencia"
+    assert (lo0, span0) == (-wf.DIFF_SPAN, 2 * wf.DIFF_SPAN)
+    assert lut0 is wf._LUT_DIFF, "modo diferencia usando la LUT de nivel"
+    # y en modo nivel vuelve a depender de Max Y
+    wf.set_diff_mode(False)
+    assert wf._scale()[2] is wf._LUT
+    wf.set_diff_mode(True)
+
+    # --- la fila empujada es la reduccion real, sin recorte a −80 ---------
+    class _FakeWf:
+        def __init__(self):
+            self.rows = []
+
+        def push_row(self, row):
+            self.rows.append(np.asarray(row))
+
+    sp = SpectrumWidget()
+    sp.show()
+    _app.processEvents()
+    fake = _FakeWf()
+    sp.waterfall = fake
+    sp.set_waterfall_enabled(True)
+    sp.set_waterfall_source("diff")
+
+    n = SpectrumWidget.FFT_SIZE
+    t = np.arange(n, dtype=np.float32) / SpectrumWidget.SAMPLE_RATE
+    tono = np.sin(2 * np.pi * 1000.0 * t).astype(np.float32)
+    # Entrada ~−32 dBFS; salida 80 dB mas abajo (supresion profunda: la salida
+    # queda MUY por debajo del piso de −80 dB de las curvas del espectro).
+    sp.pre_frames.append(0.05 * tono)
+    sp.post_frames.append(0.05e-4 * tono)
+    sp._tick()
+    assert fake.rows, "_tick no empujo ninguna fila en modo diferencia"
+    fila = fake.rows[-1]
+    pico = int(round(1000.0 / sp._freq_per_bin))
+    assert 70.0 < float(fila[pico]) < 90.0, (
+        f"la diferencia en el bin de 1 kHz deberia ser ~80 dB, dio {fila[pico]:.1f} "
+        "(si da ~48 es que se esta recortando a −80 dB antes de restar)")
+
+    # Con las dos fuentes iguales la diferencia es 0 (nada que mostrar)
+    sp.pre_frames.clear(); sp.post_frames.clear()
+    sp.pre_frames.append(0.05 * tono)
+    sp.post_frames.append(0.05 * tono)
+    sp._tick()
+    assert abs(float(fake.rows[-1][pico])) < 0.5, "sin cambio deberia dar ~0 dB"
+
+    # Falta una de las dos fuentes -> no se empuja fila (mejor hueco que mentira)
+    antes = len(fake.rows)
+    sp.post_frames.clear()
+    sp._tick()
+    assert len(fake.rows) == antes, "empujo fila con una sola fuente disponible"
+
+    # --- el signo se pinta con mitades distintas de la LUT ----------------
+    def _colores(valor):
+        wf.set_diff_mode(False); wf.set_diff_mode(True)   # limpia el buffer
+        wf.start()
+        wf.set_max_freq_hz(6000)
+        fila = np.full(wf._n_bins, valor, dtype=np.float32)
+        # Llenar TODA la profundidad visible: con menos filas la parte de abajo
+        # queda con el relleno vacio y el pixel del centro no dice nada.
+        for _ in range(wf._visible_rows()):
+            wf.push_row(fila)
+        wf.resize(600, 200)
+        pm = wf.grab()
+        img = pm.toImage()
+        # centro del area de dibujo (lejos de margenes, ejes y colorbar)
+        return QColor(img.pixel(pm.width() // 2, pm.height() // 2))
+
+    quitado = _colores(+25.0)    # se quito señal -> extremo calido
+    puesto  = _colores(-25.0)    # se amplifico   -> extremo violeta
+    neutro  = _colores(0.0)      # sin cambio     -> fondo
+    assert quitado.red() > 150 and quitado.blue() < 80, (
+        f"reduccion fuerte deberia pintar calido, dio {quitado.getRgb()}")
+    assert puesto.blue() > 100 and puesto.green() < 80, (
+        f"amplificacion deberia pintar violeta, dio {puesto.getRgb()}")
+    assert neutro.red() < 40 and neutro.green() < 40, (
+        f"sin cambio deberia quedar en el fondo, dio {neutro.getRgb()}")
+
+    # dejar la cascada como estaba para no ensuciar otros tests
+    _set_combo(w._combo_waterfall_src, "input")
+    assert wf._diff_mode is False, "no volvio a modo nivel"
+    print("Cascada: modo Diferencia (escala, resta y colores)   OK")
+
+
 def test_incompatible_devices_disable_activate():
     """Aviso proactivo -9993: con entrada/salida en APIs distintas, ACTIVAR
     queda deshabilitado y los combos marcados; al volver a ser compatibles,
@@ -613,6 +726,64 @@ def test_about_dialog():
     finally:
         QMessageBox.exec = orig
     print("Acerca de: boton + dialogo                  OK")
+
+
+def test_about_donate_button():
+    """Boton de donacion: aparece SOLO con _DONATE_URL configurada, y al
+    clickearlo abre esa URL. Sin URL no debe existir el boton (asi un
+    placeholder no puede viajar en un release hacia una pagina rota)."""
+    from PySide6.QtWidgets import QMessageBox
+    import ui.main_window as mw
+
+    w = _win()
+    cajas = []
+    orig_exec, orig_url = QMessageBox.exec, mw.QDesktopServices.openUrl
+    abiertas = []
+    QMessageBox.exec = lambda self: cajas.append(self) or 0
+    mw.QDesktopServices.openUrl = lambda u: abiertas.append(u.toString())
+    url_orig = mw._DONATE_URL
+    try:
+        # --- sin URL configurada: no hay boton de donacion ---
+        mw._DONATE_URL = ""
+        cajas.clear()
+        w._show_about()
+        textos = [b.text() for b in cajas[-1].buttons()]
+        assert not any("café" in t or "coffee" in t for t in textos), \
+            f"boton de donacion presente sin URL configurada: {textos}"
+
+        # --- con URL: aparece y abre el navegador al clickearlo ---
+        mw._DONATE_URL = "https://paypal.me/ejemplo"
+        cajas.clear()
+        w._show_about()
+        box = cajas[-1]
+        donar = [b for b in box.buttons()
+                 if "café" in b.text() or "coffee" in b.text()]
+        assert donar, f"falta el boton de donacion: {[b.text() for b in box.buttons()]}"
+        assert box.buttons(), "el dialogo quedo sin boton de cerrar"
+
+        # Simular que el usuario lo clickeo: _show_about consulta clickedButton()
+        # DESPUES de exec(), asi que hay que dejarlo elegido antes de volver.
+        cajas.clear()
+        QMessageBox.exec = lambda self: (cajas.append(self),
+                                         self.setResult(0),
+                                         _click_donar(self))[0] or 0
+        abiertas.clear()
+        w._show_about()
+        assert abiertas == ["https://paypal.me/ejemplo"], \
+            f"no se abrio la URL de donacion: {abiertas}"
+    finally:
+        QMessageBox.exec = orig_exec
+        mw.QDesktopServices.openUrl = orig_url
+        mw._DONATE_URL = url_orig
+    print("Acerca de: boton de donacion                OK")
+
+
+def _click_donar(box) -> None:
+    """Marca el boton de donacion como el clickeado, sin mostrar el dialogo."""
+    for b in box.buttons():
+        if "café" in b.text() or "coffee" in b.text():
+            b.click()
+            return
 
 
 def test_auto_load_respects_saved_mode():
@@ -879,6 +1050,7 @@ if __name__ == "__main__":
     test_bypass_remembers_output_gain()
     test_bypass_gain_persiste_entre_sesiones()
     test_about_dialog()
+    test_about_donate_button()
     test_auto_load_respects_saved_mode()
     test_canceller_subcontrols_require_noise()
     test_bass_and_character_controls()
@@ -892,6 +1064,7 @@ if __name__ == "__main__":
     test_overwrite_clears_modified_in_title()
     test_advanced_change_marks_modified()
     test_waterfall_toggle_and_source()
+    test_waterfall_diff_mode()
     test_incompatible_devices_disable_activate()
     test_all_sliders_have_tooltip()
     test_dsp_error_is_visible()

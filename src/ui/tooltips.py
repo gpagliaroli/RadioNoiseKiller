@@ -32,7 +32,9 @@ SLIDER_TIPS = {
         "Nivel máximo al que el AGC puede levantar el ruido de fondo.\n"
         "Ponelo POR ENCIMA del piso que muestra el indicador de al lado: si\n"
         "queda por debajo, no hay ganancia posible y el AGC no amplifica nada.\n"
-        "Más bajo = fondo más silencioso cuando la señal es débil o no hay nadie."
+        "Más bajo = fondo más silencioso cuando la señal es débil o no hay nadie.\n"
+        "Es un ajuste de TU estación: el piso depende del QTH, la antena y la\n"
+        "banda, así que no hay un valor recomendado. Calibralo escuchando."
     ),
     "_s_gain_in": (
         "Ganancia sobre la señal que llega de la radio, antes de todo el proceso.\n"

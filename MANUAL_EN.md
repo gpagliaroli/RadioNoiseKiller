@@ -159,6 +159,8 @@ With this option, the AGC's gain is capped so the **background noise never excee
 
 Use the floor it shows to pick your threshold: **set it above that value**. Below it, the cap allows 0 dB of gain and the control stops making sense.
 
+> **This is a per-station setting, which is why it ships disabled.** The ceiling is an **absolute** level in dBFS, but the noise floor is not a universal number: it depends on your QTH, your antenna, the band, even the time of day. A value that leaves the background perfect at one station falls below the real floor at another and **limits more than it helps** — weak speech gets choked instead of improved. That is why the factory presets ship with it **off** and carry no recommended value: it is one of the few things in this application you have to calibrate **at your own station, by listening**, and revisit if you change band or antenna. If you do not hear the hiss described above, leave it off with a clear conscience.
+
 > **Why a cap and not "freeze the AGC when there is no speech":** that alternative looks more direct but it deadlocks. The voice detector works on the signal already amplified by the AGC; if the gain is frozen at a low value, the detector stops firing, the freeze is never released and the returning voice comes back far too low (measured: 21 dB). A cap, by contrast, leaves the AGC adapting at all times, so it cannot get trapped.
 
 ### Interface language
@@ -174,6 +176,18 @@ It ships at **100 %**, the size it has always been — anyone who does not need 
 > **About the options offered:** the window has a fixed width, so a larger scale takes up more screen (150 % is about 1155 px wide). The combo only offers the scales that **fit your monitor**: on a small screen 150 % simply does not appear. If you move to a smaller monitor and the saved scale no longer fits, the application falls back to 100 % on its own and says so in the status bar.
 
 > **System alternative:** Windows (*Settings → Display → Scale*) and GNOME have their own scaling, which the application honours. The difference is that the system setting affects **every** program; this control is for RadioNoiseKiller only.
+
+### About — and how to support the project
+
+The **ℹ** button, also in the status bar, opens the *About* box: version, build identifier (handy if you report something), author and the link to the GitHub repository.
+
+The same box has a **☕ Buy me a coffee** button, which opens the project's donation page in your browser:
+
+**https://cafecito.app/gpagliaroli**
+
+RadioNoiseKiller is free and open source (MIT licence), and it will stay that way — donating is **entirely optional** and unlocks nothing. If it has earned its place on your air, that is the way to support the work.
+
+> **Note for donors outside Argentina:** Cafecito is an Argentine platform, but it does accept international cards. The donation goes through regardless of where you are.
 
 ### AGC presets
 
@@ -940,7 +954,7 @@ In Static profile mode, the yellow floor is captured from the **⏺ Learn noise*
 
 Both sliders rescale **the spectrum and the waterfall** at the same time.
 
-**Colour scale:** at the top left of the waterfall there is a bar with the gradient and the dB range it represents (from −80 dB up to the *Max Y* slider value). It lets you read the colours without guessing: moving *Max Y* changes the range and the bar reflects it.
+**Colour scale:** at the top left of the waterfall there is a bar with the gradient and the dB range it represents (from −80 dB up to the *Max Y* slider value). It lets you read the colours without guessing: moving *Max Y* changes the range and the bar reflects it. In **Difference** mode the bar switches by itself to a fixed −30 · 0 · +30 dB scale (see below).
 
 **Heterodyne markers:** when the **ANF** is enabled, the frequencies where it is cancelling tones appear marked in red along the waterfall's bottom axis. A steady heterodyne shows as a fixed mark; an intermittent one blinks. It is the quick way to confirm the ANF is catching the tone that bothers you — and to discover tones sneaking in unnoticed.
 
@@ -951,10 +965,30 @@ Below the instantaneous spectrum is the **waterfall**: a time-frequency display 
 | Control | Description |
 |---------|-------------|
 | **"Waterfall" checkbox** | Shows or hides the waterfall. When hidden, the instantaneous spectrum takes the full height. The state is saved automatically. |
-| **Input / Output selector** | Chooses which signal feeds the waterfall: **Input** (before processing — to see the interference as it arrives) or **Output** (after processing — to see the effect of the filter chain). |
+| **Input / Output / Difference selector** | Chooses what is drawn: **Input** (before processing — to see the interference as it arrives), **Output** (after processing — to see the result) or **Difference** (what processing removed; see below). |
 | **Depth selector (15 / 30 / 60 / 120 s)** | How much history is shown. More depth to follow slow QSB or tell whether a heterodyne is intermittent; less to look at the fine time detail of the last few seconds. **It does not discard what was captured**: the buffer always keeps 120 s and the selector is a zoom, so widening the window reveals history that was already there. The time axis adjusts its ticks automatically. |
 
 **Resizing the split:** the spectrum and the waterfall are separated by a **draggable divider**. By default the tab is split in half, but you can drag the divider up or down with the mouse to give more room to whichever you are watching (more waterfall to track the fading, more spectrum for instantaneous detail).
+
+#### Difference mode
+
+With the selector on **Difference**, the waterfall stops showing the level of a signal and shows **how much processing removes at each frequency, moment by moment** (input minus output, in dB). It is the direct way to answer *"what is the canceller taking away, and where?"* without having to compare two images by eye.
+
+The colour scale is different and **fixed at ±30 dB** — the *Max Y* slider does not affect it, because these numbers are differences, not levels:
+
+| Colour | Meaning |
+|--------|---------|
+| **Background (near black)** | Nothing happening there: what goes in comes out. |
+| **Blue → cyan → green → yellow → red** | Signal is being **removed**, increasingly so (up to 30 dB). It is the same colour ramp as the Input/Output modes, so it reads the same way. |
+| **Violet / magenta** | There the chain **amplifies** instead of removing. |
+
+How to read it:
+
+- **The voice band (300–2500 Hz) should stay dark while someone is talking.** If it lights up green or yellow exactly when speech arrives, the canceller is eating voice: lower **Intensity** or raise the **Spectral floor**. Same diagnosis the *Preview* gives, but showing you at which frequencies it happens.
+- **Alternating horizontal stripes** = the canceller working to the rhythm of the conversation: removing a lot during pauses and easing off when speech comes in. That is what you want to see.
+- **A bright, steady vertical line** = the ANF cancelling a heterodyne, or the post-filter on a steady tone.
+- **The whole screen tinted an even violet** = output gain, not cancellation. *Output gain* lifts everything equally and shows up as a constant violet floor; in **Bypass** you will see exactly that and nothing else, which is a good way to confirm you are reading the scale correctly.
+- **Note:** the difference covers **the whole chain**, not just the canceller — the output bandpass, voice EQ, exciter and gain show up too. To isolate the canceller, turn the other modules off and look at them one at a time (Chapter 3).
 
 ### Practical interpretation
 

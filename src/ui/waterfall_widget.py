@@ -6,17 +6,9 @@ from PySide6.QtGui import QPainter, QImage, QColor, QPen, QFont, QLinearGradient
 from i18n import tr
 
 
-def _build_sdr_lut() -> np.ndarray:
-    """LUT 256×3 (uint8) estilo SDR clásico: azul→cian→verde→amarillo→rojo,
-    interpolada linealmente entre puntos de control. Índice 0 = nivel más bajo."""
-    stops = [
-        (0.00, (0,   0,  30)),   # fondo (casi negro azulado)
-        (0.25, (0,   0, 200)),   # azul
-        (0.45, (0, 200, 200)),   # cian
-        (0.60, (0, 200,   0)),   # verde
-        (0.78, (220, 220, 0)),   # amarillo
-        (1.00, (220,  0,   0)),  # rojo
-    ]
+def _lut_from_stops(stops: list) -> np.ndarray:
+    """LUT 256×3 (uint8) interpolando linealmente entre puntos de control
+    (posición 0..1 → RGB). Índice 0 = extremo bajo de la escala."""
     xs = np.array([s[0] for s in stops])
     cols = np.array([s[1] for s in stops], dtype=np.float32)
     t = np.linspace(0.0, 1.0, 256)
@@ -26,6 +18,41 @@ def _build_sdr_lut() -> np.ndarray:
     return lut
 
 
+def _build_sdr_lut() -> np.ndarray:
+    """Escala de nivel, estilo SDR clásico: azul→cian→verde→amarillo→rojo."""
+    return _lut_from_stops([
+        (0.00, (0,   0,  30)),   # fondo (casi negro azulado)
+        (0.25, (0,   0, 200)),   # azul
+        (0.45, (0, 200, 200)),   # cian
+        (0.60, (0, 200,   0)),   # verde
+        (0.78, (220, 220, 0)),   # amarillo
+        (1.00, (220,  0,   0)),  # rojo
+    ])
+
+
+def _build_diff_lut() -> np.ndarray:
+    """Escala DIVERGENTE para el modo Diferencia (entrada − salida en dB).
+
+    El cero va al centro y se pinta con el mismo fondo que la escala de nivel,
+    así "acá no pasa nada" se ve como fondo vacío y solo saltan a la vista los
+    bins donde el procesamiento hizo algo:
+      - positivo (se quitó señal) → la MISMA rampa SDR comprimida en la mitad
+        superior, para que el ojo la lea igual que en los modos Entrada/Salida.
+      - negativo (se amplificó)   → violeta/magenta, un color que no aparece en
+        la rampa de nivel y por eso no se puede confundir con "mucha reducción".
+    """
+    return _lut_from_stops([
+        (0.00, (200,   0, 200)),   # -DIFF_SPAN: amplificado fuerte (magenta)
+        (0.25, (90,    0, 120)),   # violeta oscuro
+        (0.50, (0,     0,  30)),   # 0 dB: sin cambio = fondo
+        (0.62, (0,     0, 200)),   # azul
+        (0.72, (0,   200, 200)),   # cian
+        (0.80, (0,   200,   0)),   # verde
+        (0.89, (220, 220,   0)),   # amarillo
+        (1.00, (220,   0,   0)),   # +DIFF_SPAN: reducción máxima (rojo)
+    ])
+
+
 class WaterfallWidget(QWidget):
     """
     Cascada (waterfall): historia tiempo-frecuencia bajo el espectro.
@@ -33,6 +60,12 @@ class WaterfallWidget(QWidget):
     Eje X = frecuencia (alineado con el SpectrumWidget: mismos márgenes y max_bin),
     eje Y = tiempo (fila superior = ahora, hacia abajo = pasado, ~30 s),
     color = magnitud en dB (LUT SDR clásico).
+
+    Dos escalas, según la fuente elegida en la UI:
+      - NIVEL (Entrada / Salida): dBFS contra la rampa SDR, techo = slider Máx Y.
+      - DIFERENCIA: entrada−salida en dB con una LUT divergente y escala fija
+        (±DIFF_SPAN). Muestra CUÁNTO quita el procesamiento en cada frecuencia y
+        momento, sin tener que comparar dos imágenes a ojo.
 
     Las filas las empuja el SpectrumWidget (una por tick, dB instantáneo sin EMA)
     vía push_row(). El buffer es circular; el pintado arma un QImage escalado.
@@ -47,6 +80,12 @@ class WaterfallWidget(QWidget):
     HISTORY_MAX = 120.0        # el buffer se dimensiona para esto (~7 MB)
     TICK_MS     = 67           # igual que el timer del SpectrumWidget (~15 fps)
 
+    # Modo Diferencia: escala FIJA y simétrica en dB. No usa el slider Máx Y —
+    # ese controla un techo de nivel (dBFS) y acá los valores son diferencias.
+    # ±30 dB cubre de sobra lo que hace la cadena (el piso del cancelador son
+    # 20 dB y el post-filtro suma unos 25 más); lo que se pase, se satura.
+    DIFF_SPAN   = 30.0
+
     # OJO: _ML y _MR tienen que seguir siendo los mismos que en SpectrumWidget —
     # de eso depende que los ejes de frecuencia de los dos gráficos queden
     # alineados. Por eso la escala de color va en el margen SUPERIOR (que sí se
@@ -56,18 +95,20 @@ class WaterfallWidget(QWidget):
     _MT = 15   # margen superior: escala de color + etiqueta de fuente
     _MB = 16   # margen inferior (etiquetas Hz)
 
-    _LUT = _build_sdr_lut()
+    _LUT      = _build_sdr_lut()
+    _LUT_DIFF = _build_diff_lut()
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setMinimumHeight(80)
 
+        self._diff_mode = False   # False = nivel (Entrada/Salida); True = diferencia
         self._n_bins = self.FFT_SIZE // 2 + 1
         # El buffer se dimensiona SIEMPRE para la profundidad máxima y el zoom se
         # hace al dibujar: así cambiar la profundidad no descarta la historia ya
         # capturada ni obliga a reasignar el ring en caliente.
         self._rows   = max(1, int(self.HISTORY_MAX / (self.TICK_MS / 1000.0)))
-        self._ring   = np.full((self._rows, self._n_bins), self.DB_MIN, dtype=np.float32)
+        self._ring   = np.full((self._rows, self._n_bins), self._empty_value, dtype=np.float32)
         self._cursor = 0          # posición de la fila más nueva (recién escrita)
         self._history_sec = self.HISTORY_SEC
         self._tone_freqs: np.ndarray | None = None   # heterodinos detectados por el ANF
@@ -85,32 +126,40 @@ class WaterfallWidget(QWidget):
     # API pública
     # ------------------------------------------------------------------
 
+    @property
+    def _empty_value(self) -> float:
+        """Valor con el que se rellena el buffer vacío. En modo nivel es el piso
+        de la escala; en Diferencia es 0 (= sin cambio), porque el piso de esa
+        escala significa 'amplificado a full' y pintaría la pantalla de magenta."""
+        return 0.0 if self._diff_mode else self.DB_MIN
+
     def start(self) -> None:
-        self._ring.fill(self.DB_MIN)
+        self._ring.fill(self._empty_value)
         self._cursor = 0
         self._active = True
         self.update()
 
     def stop(self) -> None:
         self._active = False
-        self._ring.fill(self.DB_MIN)
+        self._ring.fill(self._empty_value)
         self._cursor = 0
         self.update()
 
     def clear(self) -> None:
-        self._ring.fill(self.DB_MIN)
+        self._ring.fill(self._empty_value)
         self._cursor = 0
         self.update()
 
     def push_row(self, db: np.ndarray) -> None:
-        """Agrega una fila dB (longitud n_bins) al tope de la cascada."""
+        """Agrega una fila al tope de la cascada: dB absolutos en modo nivel,
+        o entrada−salida en dB en modo Diferencia (longitud n_bins)."""
         if not self._active:
             return
         self._cursor = (self._cursor + 1) % self._rows
         n = min(len(db), self._n_bins)
         self._ring[self._cursor, :n] = db[:n]
         if n < self._n_bins:
-            self._ring[self._cursor, n:] = self.DB_MIN
+            self._ring[self._cursor, n:] = self._empty_value
         self.update()
 
     def set_db_max(self, db_max: int) -> None:
@@ -136,6 +185,19 @@ class WaterfallWidget(QWidget):
 
     def set_source_label(self, text: str) -> None:
         self._source_label = text
+        self.update()
+
+    def set_diff_mode(self, on: bool) -> None:
+        """Conmuta entre escala de NIVEL (dBFS, fuente Entrada/Salida) y escala
+        de DIFERENCIA (entrada−salida en dB). Rellena el buffer con el vacío de
+        la escala nueva: las filas viejas están en otra unidad y pintarlas con
+        la LUT nueva sería basura (main_window igual llama a clear())."""
+        on = bool(on)
+        if on == self._diff_mode:
+            return
+        self._diff_mode = on
+        self._ring.fill(self._empty_value)
+        self._cursor = 0
         self.update()
 
     def _update_max_bin(self) -> None:
@@ -166,6 +228,14 @@ class WaterfallWidget(QWidget):
         n = int(round(self._history_sec / (self.TICK_MS / 1000.0)))
         return int(np.clip(n, 1, self._rows))
 
+    def _scale(self) -> tuple:
+        """(valor del índice 0, ancho de la escala, LUT) según el modo. Único
+        lugar donde se decide el mapeo valor→color: lo comparten el pintado de
+        la cascada y la escala de color, así no se pueden desincronizar."""
+        if self._diff_mode:
+            return -self.DIFF_SPAN, 2.0 * self.DIFF_SPAN, self._LUT_DIFF
+        return self.DB_MIN, max(self._db_max - self.DB_MIN, 1.0), self._LUT
+
     def _draw_waterfall(self, p: QPainter, ml: int, mt: int, pw: int, ph: int) -> None:
         mb = self._max_bin
         nvis = self._visible_rows()
@@ -175,10 +245,10 @@ class WaterfallWidget(QWidget):
         order = (self._cursor - np.arange(nvis)) % self._rows
         rows = self._ring[order, :mb]                       # (nvis, max_bin)
 
-        span = max(self._db_max - self.DB_MIN, 1.0)
-        frac = np.clip((rows - self.DB_MIN) / span, 0.0, 1.0)
+        lo, span, lut = self._scale()
+        frac = np.clip((rows - lo) / span, 0.0, 1.0)
         idx  = (frac * 255.0).astype(np.uint8)
-        rgb  = np.ascontiguousarray(self._LUT[idx])          # (nvis, max_bin, 3) uint8
+        rgb  = np.ascontiguousarray(lut[idx])                # (nvis, max_bin, 3) uint8
         self._rgb = rgb                                      # evita GC durante el draw
 
         img = QImage(rgb.data, mb, nvis, mb * 3, QImage.Format_RGB888)
@@ -244,15 +314,20 @@ class WaterfallWidget(QWidget):
         bw, bh, by = 90, 7, (self._MT - 7) // 2
         if pw < bw + 90:
             return
+        lo, span, lut = self._scale()
         grad = QLinearGradient(ml, 0, ml + bw, 0)
         for i in range(0, 256, 15):
-            r, g, b = (int(v) for v in self._LUT[i])
+            r, g, b = (int(v) for v in lut[i])
             grad.setColorAt(i / 255.0, QColor(r, g, b))
         p.fillRect(QRectF(ml, by, bw, bh), grad)
         p.setPen(QPen(QColor("#2a3f5a"), 1))
         p.drawRect(QRectF(ml, by, bw, bh))
 
         p.setPen(QColor("#607d8b"))
-        p.drawText(QRectF(ml + bw + 3, 0, 60, self._MT),
-                   Qt.AlignLeft | Qt.AlignVCenter,
-                   f"{self.DB_MIN:.0f}..{self._db_max:.0f} dB")
+        if self._diff_mode:
+            # El signo importa más que los extremos: "+" = se quitó señal.
+            text = f"−{self.DIFF_SPAN:.0f} · 0 · +{self.DIFF_SPAN:.0f} dB"
+        else:
+            text = f"{lo:.0f}..{lo + span:.0f} dB"
+        p.drawText(QRectF(ml + bw + 3, 0, 90, self._MT),
+                   Qt.AlignLeft | Qt.AlignVCenter, text)

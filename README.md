@@ -222,6 +222,16 @@ recomendado.
 
 **Germán Pagliaroli — LU6APA**
 
+## Apoyar el proyecto
+
+RadioNoiseKiller es gratuito y de código abierto, y va a seguir siéndolo. Si te resultó
+útil en el aire y querés bancar el desarrollo, podés invitarme un café:
+
+[![Invitame un café en cafecito.app](https://cdn.cafecito.app/imgs/buttons/button_6.png)](https://cafecito.app/gpagliaroli)
+
+La donación es completamente opcional y no habilita ninguna función.
+*(Cafecito acepta tarjetas internacionales — International cards are accepted.)*
+
 ## Licencia
 
 MIT — ver [LICENSE](LICENSE).

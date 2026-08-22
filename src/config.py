@@ -129,7 +129,7 @@ class WindowConfig:
     spectrum_db_max:      int = 0
     spectrum_max_freq_hz: int = 12000
     spectrum_show_waterfall: bool = True        # cascada visible bajo el espectro
-    waterfall_source:        str  = "input"     # "input" | "output"
+    waterfall_source:        str  = "input"     # "input" | "output" | "diff" (entrada−salida)
     waterfall_history_sec:   int  = 30          # profundidad de la cascada (15/30/60/120)
     ui_scale:                float = 1.0        # escala de la UI (1.0/1.25/1.5); requiere reinicio
 
@@ -360,7 +360,7 @@ class AppConfig:
         self.window.spectrum_max_freq_hz = int(w.get("spectrum_max_freq_hz", self.window.spectrum_max_freq_hz))
         self.window.spectrum_show_waterfall = bool(w.get("spectrum_show_waterfall", self.window.spectrum_show_waterfall))
         _wf_src = str(w.get("waterfall_source", self.window.waterfall_source))
-        self.window.waterfall_source = _wf_src if _wf_src in ("input", "output") else "input"
+        self.window.waterfall_source = _wf_src if _wf_src in ("input", "output", "diff") else "input"
         _wf_hist = int(w.get("waterfall_history_sec", self.window.waterfall_history_sec))
         self.window.waterfall_history_sec = _wf_hist if _wf_hist in (15, 30, 60, 120) else 30
         # Lo lee tambien main.py ANTES de crear el QApplication (QT_SCALE_FACTOR

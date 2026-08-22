@@ -175,6 +175,8 @@ CATALOG = {
         "Noise profile \"{name}\" loaded. Ready to START.",
     "Acerca de RadioNoiseKiller": "About RadioNoiseKiller",
     "Acerca de": "About",
+    "☕ Invitame un café": "☕ Buy me a coffee",
+    "Abre la página de donación en el navegador": "Opens the donation page in your browser",
     "Versión {ver} · build {build}": "Version {ver} · build {build}",
     "Reductor de ruido para radio AM/SSB (ham radio).":
         "Noise reducer for AM/SSB radio (ham radio).",
@@ -275,6 +277,19 @@ CATALOG = {
     "Lo cancelado": "Cancelled",
     "Piso de ruido": "Noise floor",
     "Cascada": "Waterfall",
+    "Diferencia": "Difference",
+    "Qué se pinta en la cascada.\n"
+    "Entrada / Salida: nivel de la señal, con la escala del slider Máx Y.\n"
+    "Diferencia: cuánto QUITA el procesamiento en cada frecuencia\n"
+    "(entrada − salida, escala fija ±30 dB). Cálido = se quitó señal;\n"
+    "violeta = se amplificó; fondo = sin cambio. Un tinte violeta parejo\n"
+    "en toda la banda es la ganancia de salida, no cancelación.":
+        "What the waterfall shows.\n"
+        "Input / Output: signal level, using the Max Y slider's scale.\n"
+        "Difference: how much processing REMOVES at each frequency\n"
+        "(input − output, fixed ±30 dB scale). Warm = signal removed;\n"
+        "violet = amplified; background = unchanged. An even violet tint\n"
+        "across the whole band is output gain, not cancellation.",
     "Profundidad de la cascada. Más historia = se ve el QSB y los\n"
     "heterodinos intermitentes a lo largo del tiempo; menos historia =\n"
     "más detalle temporal. No descarta lo ya capturado: es un zoom.":
@@ -491,7 +506,11 @@ CATALOG = {
         "  ↳ How much the floor rises in the vocal zone. 75%=soft, 150%=normal, 250%=strong.",
     "Centro del boost:": "Boost center:",
     "vocal": "vocal",
-    "medio": "mid",
+    # "medios" (plural) = las frecuencias medias, distinto del "medio" del ancho
+    # de Q que está más arriba. Fueron la MISMA clave hasta que se desambiguó:
+    # como la clave es el texto en español, dos etiquetas iguales comparten
+    # traducción y la segunda pisaba a la primera en silencio (el Q mostraba "mid").
+    "medios": "mid",
     "  ↳ Frecuencia de máximo boost. 500 Hz=AM/SSB típico. 350 Hz=SSB muy grave.":
         "  ↳ Frequency of maximum boost. 500 Hz=typical AM/SSB. 350 Hz=very low SSB voice.",
     "Inicio del rolloff:": "Rolloff start:",
@@ -591,11 +610,15 @@ CATALOG = {
     "Nivel máximo al que el AGC puede levantar el ruido de fondo.\n"
     "Ponelo POR ENCIMA del piso que muestra el indicador de al lado: si\n"
     "queda por debajo, no hay ganancia posible y el AGC no amplifica nada.\n"
-    "Más bajo = fondo más silencioso cuando la señal es débil o no hay nadie.":
+    "Más bajo = fondo más silencioso cuando la señal es débil o no hay nadie.\n"
+    "Es un ajuste de TU estación: el piso depende del QTH, la antena y la\n"
+    "banda, así que no hay un valor recomendado. Calibralo escuchando.":
         "Highest level the AGC is allowed to lift background noise to.\n"
         "Set it ABOVE the floor shown by the indicator next to it: if it sits\n"
         "below, no gain is possible and the AGC amplifies nothing.\n"
-        "Lower = quieter background when the signal is weak or nobody is on.",
+        "Lower = quieter background when the signal is weak or nobody is on.\n"
+        "This is a setting for YOUR station: the floor depends on the QTH, the\n"
+        "antenna and the band, so there is no recommended value. Tune by ear.",
     "Ganancia sobre la señal que llega de la radio, antes de todo el proceso.\n"
     "Ajustala para que el VU de entrada trabaje cómodo sin llegar al rojo:\n"
     "el cancelador y el AGC trabajan mejor con un nivel sano.\n"

@@ -945,7 +945,7 @@ class AdvancedCancellerTab(QWidget):
             step=25.0, unit="Hz", fmt="{:.0f}",
         )
         self._s_pf_center._update_label = lambda v: self._s_pf_center._val_lbl.setText(
-            f"{v:.0f} Hz  ({tr('grave') if v < 350 else tr('vocal') if v < 700 else tr('medio')})"
+            f"{v:.0f} Hz  ({tr('grave') if v < 350 else tr('vocal') if v < 700 else tr('medios')})"
         )
         self._s_pf_center._val_lbl.setFixedWidth(110)
         self._s_pf_center.valueChanged.connect(self._on_pf_center)

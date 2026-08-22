@@ -378,9 +378,14 @@ Los marcadores hicieron visible un defecto que llevaba ahí desde siempre.
 - Caso teórico que no apareció ni en el banco ni en el aire, anotado por si alguna vez se reporta:
   una vocal sostenida y monótona de más de 350 ms podría confirmarse como tono. La entonación real
   lo descarta.
-- **Consecuencia práctica pendiente:** con los falsos positivos en cero, el consejo de mantener baja
-  la Profundidad ya no aplica (era el síntoma del bug). El usuario venía con 0.4 justamente por eso.
-  Queda por reajustarla escuchando un heterodino real.
+- **Consecuencia práctica — CERRADA (agosto 2026), y confirmó el fix.** Con los falsos positivos en
+  cero, el consejo de mantener baja la Profundidad dejó de aplicar (era el síntoma del bug). El
+  usuario reajustó los presets escuchando y el punto de operación se movió **en las dos direcciones
+  que el fix predecía**: más **profundidad** (`anf_depth` 0.25→0.60 en AM Local, 0.50→0.90 en AM SW
+  Ruido Alto; el resto ya en 0.75–1.00) y **umbral más sensible** (`anf_threshold` 3.0→2.0). Lo
+  segundo es lo interesante: ahora se puede bajar el umbral espectral porque quien discrimina
+  heterodino de armónico es la **persistencia temporal**, no el umbral. Antes bajarlo multiplicaba
+  los falsos positivos.
 
 **Post-v2.1: warmup de MCRA extendido a una ventana completa (B*M).** Reportado en el aire: *"no
 anda el MCRA ni muestra la curva amarilla"*, y a los pocos segundos **se corrigió solo**. Con la app
@@ -487,6 +492,58 @@ volvía a "el mismo nivel en los dos modos" hasta ajustar de cada lado. Con una 
   la inversa: que los excluidos NO aparezcan en el preset. El guard sigue cubriendo campos futuros.
 - Test en `test_ui`: roundtrip por settings.json y recuperación en una sesión nueva.
 
+**Post-v2.1: cascada en modo Diferencia (entrada − salida).** Pedido del usuario: *"ver del lado
+derecho la entrada y del izquierdo la salida para tener una comparativa visual"*. Se evaluó la vista
+doble y se descartó **por dos costos concretos**: con el ancho de ventana FIJO en 770 px cada panel
+queda con ~300 px de gráfico (contra ~700), y sobre todo **se rompe la alineación del eje X con el
+espectro de arriba**, que es el invariante de diseño de `_ML`/`_MR` y la razón por la que la escala
+de color vive en el margen superior. En su lugar se agregó una tercera opción al combo de fuente que
+pinta directamente **cuánto quita el procesamiento en cada frecuencia y momento** — misma pregunta,
+un solo panel, sin perder resolución ni alineación, y sin comparar dos imágenes a ojo.
+- Escala **divergente y FIJA en ±30 dB** (`DIFF_SPAN`), deliberadamente **independiente del slider
+  Máx Y**: ese controla un techo de nivel en dBFS y acá los valores son diferencias. `_scale()` es el
+  único lugar donde se decide valor→color y lo comparten la cascada y la barra de escala, así no se
+  pueden desincronizar. La mitad positiva reusa la rampa SDR (se lee igual que en Entrada/Salida) y
+  la negativa usa violeta/magenta, un color que NO aparece en la rampa de nivel — así "se amplificó"
+  no se puede confundir con "mucha reducción".
+- **El relleno del buffer vacío depende del modo** (`_empty_value`): 0 en diferencia, `DB_MIN` en
+  nivel. Con el relleno de nivel, una cascada vacía cae en el extremo "amplificado a full" y se
+  pinta entera de magenta.
+- **`_compute_db` dejó de clipear a [−80, 0]**; el clip lo hacen ahora los dos llamadores para las
+  curvas. Si se resta con ambos lados recortados, **la supresión profunda desaparece**: entrada y
+  salida chocan contra el mismo piso y la diferencia da ~0. Medido en el test: con 80 dB de
+  supresión real, la versión con clip reporta 48 dB. Las curvas del espectro no cambian.
+- Honestidad de lo que muestra: la diferencia incluye **toda la cadena**, no solo el cancelador — la
+  ganancia de salida aparece como un tinte violeta parejo (en Bypass se ve exactamente eso y nada
+  más, que sirve de verificación de que uno está leyendo bien la escala). Documentado en el tooltip
+  y en los manuales ES+EN en vez de "corregirlo" restando el offset: normalizar escondería
+  información real.
+- `waterfall_source` pasa a aceptar `"diff"` (validación en `config.py`, es `WindowConfig` → **no
+  toca presets**, así que no aplica el invariante 10). Test en `test_ui::test_waterfall_diff_mode`:
+  persistencia del combo, escala fija ante `set_db_max`, la resta real sin recorte, que no se empuje
+  fila con una sola fuente disponible, y **renderizado a QPixmap comprobando el color** (cálido /
+  violeta / fondo) — la misma técnica de los marcadores de heterodino.
+- **VALIDADO en el aire** (revisión visual del usuario, agosto 2026). `DIFF_SPAN=30` queda como
+  rango bueno; si alguna vez satura en rojo o se ve apagado, es la única perilla a mover.
+- **Tres presets de fábrica reajustados en la misma tanda** (ver [[project_factory_presets]]):
+  `AM Local - RuidoMedio`, `AM SW - Ruido Alto y Fading` y `AM SW - Ruido Medio y Fading`. Además
+  del ANF (arriba), el patrón es Intensidad más baja (0.7→0.6 en los tres) compensada con
+  post-filtro, y el nivelador más rápido (`release_ms` 1000→600 / 500→700). El **techo de ruido del
+  AGC quedó desactivado** en los tres — se agregó a `AM Local` (que no lo tenía) directamente en
+  false. Verificado que los 7 presets cargan con `matches()==True`, o sea sin "(modificado)"
+  espurio; a cuatro les faltan `agc_noise_ceiling_*` y funcionan igual gracias al fix de
+  `from_dict` (invariante 10) — **segunda vez que ese fix evita regenerar los presets**.
+- **Bug preexistente encontrado de paso y corregido: clave i18n duplicada.** `i18n_en.py` tenía
+  `"medio"` dos veces — `"medium"` para el ancho del Q (EQ Voz) y `"mid"` para el centro del boost
+  (piso perceptual). **Como la clave del catálogo ES el texto en español, dos etiquetas que dicen lo
+  mismo comparten traducción**, y en un dict literal la segunda pisa a la primera en silencio: el
+  slider de Q mostraba "mid" en inglés. No se arregla del lado del catálogo; hay que desambiguar el
+  español. La etiqueta del centro del boost pasó a **`medios`** (plural), que además es como se dice
+  en jerga de audio para las frecuencias medias: `grave / vocal / medios` → `low / vocal / mid`,
+  y el Q recupera `wide / medium / narrow`. **Chequeo barato para repetir:** parsear `i18n_en.py`
+  con `ast` y contar claves repetidas en el dict — `Counter` sobre `ast.Dict.keys` las encuentra
+  todas, y `import` no avisa nada porque el dict se construye igual.
+
 **v2.1 publicada (agosto 2026)** — release en GitHub con distribuibles Windows y Linux. Versión de
 app 2.1.0, manuales `MANUAL_RadioNoiseKiller_v2.1.pdf` (ES, 38 págs) y `..._v2.1_EN.pdf` (EN, 38
 págs). Título "v2.1 by LU6APA". Release de menor: no cambia el DSP del cancelador ni el significado
@@ -558,6 +615,22 @@ usuario probó sacarle el modo continuo y no cambió nada).
 - Beneficio secundario que notó el usuario en el aire: **también ayuda con S/N baja**. Tiene
   sentido — el AGC deja de amplificar una señal que es mayormente ruido, así que el cancelador
   recibe algo más limpio.
+- **Es un ajuste POR ESTACIÓN y los presets lo llevan apagado (agosto 2026).** Al reajustar los
+  presets el usuario lo dejó desactivado en los tres, con este razonamiento: *"el piso de ruido que
+  yo percibo no es el mismo en otro QTH y puede limitar más que ayudar"*. Es correcto y es una
+  propiedad del control, no una preferencia: el techo es un nivel **absoluto en dBFS**, mientras que
+  el piso depende del QTH, la antena, la banda y la hora. Un preset que viaje con un techo calibrado
+  en otra estación puede quedar **por debajo** del piso real del que lo carga → 0 dB de ganancia
+  permitida → ahoga la voz débil en vez de mejorarla, y el síntoma no se parece en nada a la causa.
+  Manuales ES+EN y el tooltip del slider ahora dicen explícitamente que **no hay un valor
+  recomendado** y que se calibra escuchando en la propia estación.
+  - **No se lo sacó del preset** (a diferencia de la ganancia A/B de bypass): el campo sigue en
+    `_capture`, así que alguien que arma su preset personal se lo lleva, que es lo correcto. Lo que
+    cambia es que los **de fábrica** lo traen en `false`.
+  - Patrón a tener en cuenta al agregar controles: **un umbral absoluto calibrado contra el entorno
+    de RF de una estación no es portable.** Los controles que se expresan en relación a algo medido
+    (el piso estimado, el S/N, un porcentaje) sí viajan bien entre estaciones; los que se expresan
+    en dBFS absolutos, no. Si aparece otro control así, el default debe ser "desactivado".
 
 **v2.1 — los presets de fábrica no llegaban al usuario final.**
 Detectado por el usuario mirando el zip publicado: **los dos distribuibles de la v2.0 salieron sin

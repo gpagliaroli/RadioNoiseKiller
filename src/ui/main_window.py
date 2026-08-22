@@ -5,8 +5,8 @@ from PySide6.QtWidgets import (
     QGroupBox, QCheckBox, QTabWidget, QApplication,
     QScrollArea, QFrame, QInputDialog, QMessageBox, QSplitter, QGridLayout,
 )
-from PySide6.QtCore import Qt, QTimer, QPoint
-from PySide6.QtGui import QFont
+from PySide6.QtCore import Qt, QTimer, QPoint, QUrl
+from PySide6.QtGui import QFont, QDesktopServices
 
 from audio.devices import (
     list_devices, rescan_devices, AudioDevice,
@@ -41,6 +41,20 @@ _WINDOW_W = 770         # ancho FIJO de la ventana (alto flexible)
 # El warmup real son ~200 ms; 6 ticks (3 s) es holgado y no da falsos avisos.
 _MCRA_WAIT_TICKS = 6
 _SCALE_MARGEN = 40      # px reales de holgura para el marco de la ventana
+
+# URL de donación que abre el botón del diálogo "Acerca de".
+# VACÍA = el botón NO aparece. Es a propósito: así un placeholder no puede
+# viajar en un release y mandar a la gente a una página rota o ajena.
+#
+# Plataforma elegida: Cafecito → https://cafecito.app/USUARIO
+# (Cafecito cobra ~5% local; los pagos del exterior son OPT-IN desde el panel
+# de la cuenta y suman ~4,8% + USD 0,35, liquidando en pesos al oficial.)
+#
+# Si alguna vez se cambia de plataforma, acá sólo se toca la URL. Único cuidado
+# si se volviera a PayPal: NO usar la forma `donate/?business=` con el email —
+# este repo es público y el correo quedaría expuesto a los rastreadores de spam;
+# el "ID de comerciante" cumple la misma función sin publicarlo.
+_DONATE_URL = "https://cafecito.app/gpagliaroli"
 
 
 def ui_scales_that_fit(ancho_pantalla_real: float, aplicada: float) -> tuple:
@@ -823,12 +837,23 @@ class MainWindow(QMainWindow):
         self._chk_waterfall.toggled.connect(self._on_waterfall_toggled)
 
         self._combo_waterfall_src = QComboBox()
-        for label, data in ((tr("Entrada"), "input"), (tr("Salida"), "output")):
+        for label, data in ((tr("Entrada"), "input"),
+                            (tr("Salida"), "output"),
+                            (tr("Diferencia"), "diff")):
             self._combo_waterfall_src.addItem(label, data)
         _wf_idx = self._combo_waterfall_src.findData(self._config.window.waterfall_source)
         self._combo_waterfall_src.setCurrentIndex(max(0, _wf_idx))
         self._combo_waterfall_src.setEnabled(self._config.window.spectrum_show_waterfall)
+        self._combo_waterfall_src.setToolTip(tr(
+            "Qué se pinta en la cascada.\n"
+            "Entrada / Salida: nivel de la señal, con la escala del slider Máx Y.\n"
+            "Diferencia: cuánto QUITA el procesamiento en cada frecuencia\n"
+            "(entrada − salida, escala fija ±30 dB). Cálido = se quitó señal;\n"
+            "violeta = se amplificó; fondo = sin cambio. Un tinte violeta parejo\n"
+            "en toda la banda es la ganancia de salida, no cancelación."))
         self._waterfall_widget.set_source_label(self._combo_waterfall_src.currentText())
+        self._waterfall_widget.set_diff_mode(
+            self._config.window.waterfall_source == "diff")
         self._combo_waterfall_src.currentIndexChanged.connect(self._on_waterfall_source_changed)
 
         self._combo_waterfall_hist = QComboBox()
@@ -1309,7 +1334,25 @@ class MainWindow(QMainWindow):
             box.setIconPixmap(pix)
         else:
             box.setIcon(QMessageBox.Icon.Information)
+
+        # Botón de donación. Sin URL configurada no se agrega (ver _DONATE_URL):
+        # más vale que no esté a que lleve a una página rota.
+        btn_donar = None
+        if _DONATE_URL:
+            btn_donar = box.addButton(tr("☕ Invitame un café"),
+                                      QMessageBox.ButtonRole.ActionRole)
+            # La URL va en el tooltip a propósito: si openUrl falla (xdg-open mal
+            # configurado en algún Linux) el botón no haría NADA visible. Así al
+            # menos se puede leer y copiar a mano.
+            btn_donar.setToolTip(
+                tr("Abre la página de donación en el navegador") + "\n" + _DONATE_URL)
+        box.addButton(QMessageBox.StandardButton.Ok)
+
         box.exec()
+        # Los botones ActionRole cierran el diálogo, así que el navegador se abre
+        # después de exec(); QDesktopServices lo lanza sin bloquear la UI.
+        if btn_donar is not None and box.clickedButton() is btn_donar:
+            QDesktopServices.openUrl(QUrl(_DONATE_URL))
 
     def _on_mode_changed(self, idx: int) -> None:
         mode: RadioMode = self._combo_mode.itemData(idx)
@@ -1624,6 +1667,9 @@ class MainWindow(QMainWindow):
         source = self._combo_waterfall_src.currentData()
         self._spectrum_widget.set_waterfall_source(source)
         self._waterfall_widget.set_source_label(self._combo_waterfall_src.currentText())
+        # El modo cambia la escala (nivel dBFS vs diferencia): antes del clear,
+        # porque set_diff_mode también rellena el buffer con su propio vacío.
+        self._waterfall_widget.set_diff_mode(source == "diff")
         self._waterfall_widget.clear()   # la fuente cambió: no mezclar historia
         self._config.window.waterfall_source = source
         self._schedule_save()

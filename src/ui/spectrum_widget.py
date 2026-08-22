@@ -67,7 +67,7 @@ class SpectrumWidget(QWidget):
         # (instantánea, sin EMA) de la fuente elegida. None = sin cascada.
         self.waterfall            = None
         self._waterfall_on        = False
-        self._waterfall_source    = "input"   # "input" | "output"
+        self._waterfall_source    = "input"   # "input" | "output" | "diff"
 
         self._timer = QTimer(self)
         self._timer.setInterval(67)   # ~15 fps — reduce GIL contention con el thread de audio
@@ -152,7 +152,7 @@ class SpectrumWidget(QWidget):
         self._waterfall_on = bool(on)
 
     def set_waterfall_source(self, source: str) -> None:
-        self._waterfall_source = source if source in ("input", "output") else "input"
+        self._waterfall_source = source if source in ("input", "output", "diff") else "input"
 
     def _update_max_bin(self) -> None:
         self._max_bin = min(self._n_bins,
@@ -166,8 +166,9 @@ class SpectrumWidget(QWidget):
         if not self.isVisible():
             return
         changed = False
-        wf_pre  = self._waterfall_on and self._waterfall_source == "input"
-        wf_post = self._waterfall_on and self._waterfall_source == "output"
+        wf_diff = self._waterfall_on and self._waterfall_source == "diff"
+        wf_pre  = wf_diff or (self._waterfall_on and self._waterfall_source == "input")
+        wf_post = wf_diff or (self._waterfall_on and self._waterfall_source == "output")
         raw_pre = raw_post = None
 
         if self._show_pre or self._show_cancelled or self._floor_learning or wf_pre:
@@ -175,6 +176,7 @@ class SpectrumWidget(QWidget):
             if frames:
                 db = self._compute_db(np.concatenate(frames))
                 raw_pre = db
+                db = np.clip(db, self.DB_MIN, 0.0)
                 self._ema_pre = db if self._ema_pre is None else (
                     self.ALPHA * db + (1.0 - self.ALPHA) * self._ema_pre
                 )
@@ -186,15 +188,22 @@ class SpectrumWidget(QWidget):
             if frames:
                 db = self._compute_db(np.concatenate(frames))
                 raw_post = db
+                db = np.clip(db, self.DB_MIN, 0.0)
                 self._ema_post = db if self._ema_post is None else (
                     self.ALPHA * db + (1.0 - self.ALPHA) * self._ema_post
                 )
                 self._db_post = self._ema_post
                 changed = True
 
-        # Empujar la fila CRUDA (instantánea, sin EMA) a la cascada.
+        # Empujar la fila CRUDA (instantánea, sin EMA) a la cascada. En modo
+        # Diferencia hace falta que las DOS estén disponibles en el mismo tick;
+        # si falta una no se empuja nada (mejor un hueco que una fila falsa).
         if self.waterfall is not None and self._waterfall_on:
-            row = raw_pre if self._waterfall_source == "input" else raw_post
+            if wf_diff:
+                row = (raw_pre - raw_post
+                       if raw_pre is not None and raw_post is not None else None)
+            else:
+                row = raw_pre if self._waterfall_source == "input" else raw_post
             if row is not None:
                 self.waterfall.push_row(row)
 
@@ -202,6 +211,10 @@ class SpectrumWidget(QWidget):
             self.update()
 
     def _compute_db(self, samples: np.ndarray) -> np.ndarray:
+        """dB SIN clipear. El clip a [DB_MIN, 0] lo hace el llamador para las
+        curvas; la cascada en modo Diferencia necesita el valor crudo, porque
+        recortar ambos lados a −80 dB haría desaparecer justo la supresión más
+        profunda (entrada y salida chocarían contra el mismo piso → diff ≈ 0)."""
         if len(samples) < self.FFT_SIZE:
             samples = np.pad(samples, (self.FFT_SIZE - len(samples), 0))
         else:
@@ -209,7 +222,7 @@ class SpectrumWidget(QWidget):
         mag = np.abs(np.fft.rfft(samples * self._window))
         mag = np.maximum(mag, 1e-10)
         db  = 20.0 * np.log10(mag / (self.FFT_SIZE / 2.0))
-        return np.clip(db, self.DB_MIN, 0.0).astype(np.float32)
+        return db.astype(np.float32)
 
     # ------------------------------------------------------------------
     # Pintado

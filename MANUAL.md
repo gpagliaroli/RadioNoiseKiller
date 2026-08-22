@@ -159,6 +159,8 @@ Con esta opción, la ganancia del AGC se topea para que **el ruido de fondo no s
 
 Usá el piso que muestra para elegir el umbral: **ponelo por encima de ese valor**. Si lo ponés por debajo, el tope da 0 dB de ganancia permitida y el control deja de tener sentido.
 
+> **Es un ajuste personal de cada estación, y por eso viene desactivado.** El techo es un nivel **absoluto** en dBFS, pero el piso de ruido no es un número universal: depende de tu QTH, de la antena, de la banda y hasta de la hora. Un valor que en una estación deja el fondo perfecto, en otra queda por debajo del piso real y **limita más de lo que ayuda** — la voz débil se ahoga en vez de mejorar. Por eso los presets de fábrica lo traen **apagado** y no llevan un valor recomendado: es de las pocas cosas de esta aplicación que hay que calibrar **en tu propia estación, escuchando**, y volver a mirar si cambiás de banda o de antena. Si no notás el siseo que describe el párrafo de arriba, dejalo apagado sin culpa.
+
 > **Por qué es un tope y no un "congelar el AGC cuando no hay voz":** esa alternativa parece más directa pero se traba. El detector de voz trabaja sobre la señal ya amplificada por el AGC; si se congela la ganancia en un valor bajo, el detector deja de dispararse, el congelamiento no se libera nunca y la voz que vuelve queda muy por debajo (medido: 21 dB). Un tope, en cambio, deja al AGC adaptando siempre, así que no puede quedar atrapado.
 
 ### Idioma de la interfaz
@@ -174,6 +176,18 @@ Por defecto viene en **100 %**, que es el tamaño de siempre — quien no lo nec
 > **Sobre las opciones que aparecen:** la ventana tiene ancho fijo, así que a mayor escala ocupa más pantalla (150 % ≈ 1155 px de ancho). El combo ofrece sólo las escalas que **entran en tu monitor**: en una pantalla chica el 150 % directamente no aparece. Si cambiás de monitor a uno más chico y la escala guardada ya no entra, la aplicación vuelve sola a 100 % y avisa en la barra de estado.
 
 > **Alternativa del sistema:** Windows (*Configuración → Pantalla → Escala*) y GNOME tienen su propio escalado, que la aplicación respeta. La diferencia es que el del sistema afecta a **todos** los programas; este control es sólo para RadioNoiseKiller.
+
+### Acerca de — y cómo apoyar el proyecto
+
+El botón **ℹ**, también en la barra de estado, abre el cuadro *Acerca de*: versión, identificador de compilación (útil si reportás algo), autor y el enlace al repositorio en GitHub.
+
+Ahí mismo hay un botón **☕ Invitame un café**, que abre en el navegador la página de donaciones del proyecto:
+
+**https://cafecito.app/gpagliaroli**
+
+RadioNoiseKiller es gratuito y de código abierto (licencia MIT), y va a seguir siéndolo — la donación es **completamente opcional** y no habilita ninguna función. Si te resultó útil en el aire y querés bancar el desarrollo, es la forma de hacerlo.
+
+> **Si estás fuera de Argentina:** Cafecito es una plataforma argentina, pero acepta tarjetas internacionales. La donación entra igual desde donde estés.
 
 ### Presets de AGC
 
@@ -942,7 +956,7 @@ En modo Perfil estático, el piso amarillo se captura desde el botón **⏺ Apre
 
 Los dos sliders reescalan **tanto el espectro como la cascada** a la vez.
 
-**Escala de color:** arriba a la izquierda de la cascada hay una barra con el degradado y el rango en dB que representa (de −80 dB hasta el valor del slider *Máx Y*). Sirve para leer los colores sin adivinar: mover *Máx Y* cambia el rango y la barra lo refleja.
+**Escala de color:** arriba a la izquierda de la cascada hay una barra con el degradado y el rango en dB que representa (de −80 dB hasta el valor del slider *Máx Y*). Sirve para leer los colores sin adivinar: mover *Máx Y* cambia el rango y la barra lo refleja. En el modo **Diferencia** la barra cambia sola: pasa a una escala fija de −30 · 0 · +30 dB (ver más abajo).
 
 **Marcadores de heterodino:** cuando el **ANF** está activo, las frecuencias donde está cancelando tonos aparecen marcadas en rojo sobre el eje inferior de la cascada. Un heterodino estable se ve como una marca fija; uno intermitente parpadea. Es la forma rápida de confirmar que el ANF está agarrando el tono que molesta — y de descubrir tonos que se cuelan sin que uno los note.
 
@@ -953,10 +967,30 @@ Debajo del espectro instantáneo aparece la **cascada**: una representación tie
 | Control | Descripción |
 |---------|-------------|
 | **Casilla "Cascada"** | Muestra u oculta la cascada. Al ocultarla, el espectro instantáneo ocupa toda la altura. El estado se guarda automáticamente. |
-| **Selector Entrada / Salida** | Elige qué señal alimenta la cascada: **Entrada** (antes del procesamiento — para ver la interferencia tal como llega) o **Salida** (después del procesamiento — para ver el efecto de la cadena de filtros). |
+| **Selector Entrada / Salida / Diferencia** | Elige qué se pinta: **Entrada** (antes del procesamiento — para ver la interferencia tal como llega), **Salida** (después — para ver el resultado) o **Diferencia** (lo que el procesamiento quitó; ver abajo). |
 | **Selector de profundidad (15 / 30 / 60 / 120 s)** | Cuánta historia se muestra. Más profundidad para seguir un QSB lento o ver si un heterodino es intermitente; menos para mirar el detalle temporal de los últimos segundos. **No descarta lo capturado**: el buffer siempre guarda 120 s y el selector es un zoom, así que ampliar la ventana muestra historia que ya estaba ahí. El eje de tiempo ajusta sus marcas solo. |
 
 **Redimensionar el reparto:** el espectro y la cascada están separados por un **divisor arrastrable**. Por defecto la pestaña se divide a la mitad, pero podés arrastrar el divisor con el mouse hacia arriba o hacia abajo para darle más espacio al que estés mirando (más cascada para seguir el fading, más espectro para ver el detalle instantáneo).
+
+#### Modo Diferencia
+
+Con el selector en **Diferencia**, la cascada deja de mostrar el nivel de una señal y pasa a mostrar **cuánto le quita el procesamiento a cada frecuencia, momento a momento** (entrada menos salida, en dB). Es la forma directa de responder *"¿qué me está sacando el cancelador, y dónde?"* sin tener que comparar dos imágenes a ojo.
+
+La escala de color es distinta y **fija en ±30 dB** — el slider *Máx Y* no la afecta, porque acá los números no son niveles sino diferencias:
+
+| Color | Significado |
+|-------|-------------|
+| **Fondo (casi negro)** | Ahí no pasa nada: entra y sale igual. |
+| **Azul → cian → verde → amarillo → rojo** | Se está **quitando** señal, cada vez más (hasta 30 dB). Es la misma rampa de colores de los modos Entrada/Salida, así que se lee igual. |
+| **Violeta / magenta** | Ahí la cadena **amplifica** en vez de quitar. |
+
+Cómo leerlo:
+
+- **La banda de voz (300–2500 Hz) debería quedar oscura mientras alguien habla.** Si se enciende en verde o amarillo justo cuando llega la voz, el cancelador te está comiendo voz: bajá **Intensidad** o subí **Piso espectral**. Es el mismo diagnóstico que da el *Preview*, pero viendo en qué frecuencias pasa.
+- **Franjas horizontales que alternan** = el cancelador trabajando al ritmo de la conversación: quita mucho en las pausas y afloja cuando entra la voz. Es lo que se espera.
+- **Una línea vertical brillante y fija** = el ANF cancelando un heterodino, o el post-filtro sobre un tono estable.
+- **Toda la pantalla teñida de violeta parejo** = ganancia de salida, no cancelación. La *Ganancia de salida* levanta todo por igual y aparece como un piso violeta constante; en **Bypass** vas a ver exactamente eso y nada más, que es una buena forma de confirmar que estás leyendo bien la escala.
+- **Ojo:** la diferencia incluye **toda la cadena**, no solo el cancelador — el pasabanda de salida, el EQ de voz, el excitador y la ganancia también aparecen. Para aislar el cancelador, la técnica es apagar los demás módulos y mirar de a uno (Capítulo 3).
 
 ### Interpretación práctica
 
