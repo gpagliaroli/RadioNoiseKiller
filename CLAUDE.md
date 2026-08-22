@@ -525,6 +525,21 @@ un solo panel, sin perder resolución ni alineación, y sin comparar dos imágen
   violeta / fondo) — la misma técnica de los marcadores de heterodino.
 - **VALIDADO en el aire** (revisión visual del usuario, agosto 2026). `DIFF_SPAN=30` queda como
   rango bueno; si alguna vez satura en rojo o se ve apagado, es la única perilla a mover.
+
+**Post-v2.1: botón de donación en "Acerca de" (Cafecito).** `_DONATE_URL` en `main_window.py` →
+`https://cafecito.app/gpagliaroli`. **Con la constante vacía el botón no se agrega**: así un
+placeholder no puede viajar en un release hacia una página rota — mantener ese guard si se toca.
+La URL va también en el tooltip porque si `QDesktopServices.openUrl` falla (xdg-open mal
+configurado en algún Linux) el botón no haría nada visible. Test en `test_ui` cubre las dos ramas.
+- Se descartó **PayPal**: la forma `donate/?business=` con email expondría el correo en un repo
+  público (usar el ID de comerciante si alguna vez se vuelve), y sobre todo las restricciones
+  históricas de PayPal Argentina para **recibir**. Cafecito cobra ~5% local y ~4,8% + USD 0,35 en
+  pagos del exterior (opt-in desde el panel, ya habilitado), liquidando en pesos al oficial.
+- El "Acerca de" **no estaba documentado en ningún manual**; se aprovechó para describirlo entero
+  (versión, build id, autor, repo) además del botón. Badge de Cafecito en el README, variante
+  `button_6` (celeste) elegida porque el negro se pierde contra el fondo oscuro de GitHub.
+- **VALIDADO por el usuario**: botón clickeado en la app real y badge del README revisado en las
+  dos temáticas.
 - **Tres presets de fábrica reajustados en la misma tanda** (ver [[project_factory_presets]]):
   `AM Local - RuidoMedio`, `AM SW - Ruido Alto y Fading` y `AM SW - Ruido Medio y Fading`. Además
   del ANF (arriba), el patrón es Intensidad más baja (0.7→0.6 en los tres) compensada con
@@ -1787,6 +1802,13 @@ Backlog v1.7 (acordado con el usuario tras la revisión de código de julio 2026
   conmutable, colormap SDR clásico, splitter arrastrable). **Validado en el aire.**
 
 Pendiente para Fase 2:
+- **`.github/FUNDING.yml` — diferido hasta tener GitHub Sponsors aprobado.** Pondría el botón
+  *Sponsor* en la página del repo. Decisión del usuario: esperar a la habilitación de Sponsors para
+  listar las dos plataformas juntas, en vez de hacerlo ahora sólo con Cafecito. **No proponerlo
+  suelto**; el disparador es que Sponsors quede aprobado (Argentina está entre las regiones
+  soportadas; el trámite pide 2FA, Stripe Connect y W-8BEN, y GitHub no cobra comisión).
+  Si eso pasa, además hay que ver si el "Acerca de" muestra un botón o dos: hoy `_DONATE_URL` es
+  una sola URL y habría que convertirla en una lista de `(etiqueta, url)`.
 - **Agregar el Nivelador de voz al diagrama del pipeline** (`tools/gen_pipeline_diagram.py`, lista
   `STAGES`). Va entre el Squelch y el Filtro de Paso de Banda POST — es la única etapa del pipeline
   real que el diagrama no muestra. Se difirió a propósito en la v2.1: el diagrama lo comparten el
