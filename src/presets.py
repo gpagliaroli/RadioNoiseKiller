@@ -167,11 +167,8 @@ class PresetManager:
                 "post_filter_strength":      dsp.post_filter_strength,
                 "pitch_enhance_enabled":     dsp.pitch_enhance_enabled,
                 "pitch_enhance_strength":    dsp.pitch_enhance_strength,
-                "noise_fading_comp":         dsp.noise_fading_comp,
                 "noise_mcra_window_ms":      dsp.noise_mcra_window_ms,
                 "noise_hf_boost":            dsp.noise_hf_boost,
-                "noise_fading_change_db":    dsp.noise_fading_change_db,
-                "noise_fading_freeze_ms":    dsp.noise_fading_freeze_ms,
                 "voice_leveler_enabled":     dsp.voice_leveler_enabled,
                 "voice_leveler_max_db":      dsp.voice_leveler_max_db,
                 "voice_leveler_gate_voice":  dsp.voice_leveler_gate_voice,
@@ -270,11 +267,8 @@ class PresetManager:
         dsp.post_filter_strength   = float(d.get("post_filter_strength",  ddef.post_filter_strength))
         dsp.pitch_enhance_enabled  = bool(d.get("pitch_enhance_enabled",  ddef.pitch_enhance_enabled))
         dsp.pitch_enhance_strength = float(d.get("pitch_enhance_strength",ddef.pitch_enhance_strength))
-        dsp.noise_fading_comp      = bool(d.get("noise_fading_comp",     ddef.noise_fading_comp))
         dsp.noise_mcra_window_ms = float(d.get("noise_mcra_window_ms", ddef.noise_mcra_window_ms))
         dsp.noise_hf_boost = float(d.get("noise_hf_boost", ddef.noise_hf_boost))
-        dsp.noise_fading_change_db = float(d.get("noise_fading_change_db", ddef.noise_fading_change_db))
-        dsp.noise_fading_freeze_ms = float(d.get("noise_fading_freeze_ms", ddef.noise_fading_freeze_ms))
         dsp.voice_leveler_enabled  = bool(d.get("voice_leveler_enabled",  ddef.voice_leveler_enabled))
         dsp.voice_leveler_max_db   = float(d.get("voice_leveler_max_db",  ddef.voice_leveler_max_db))
         dsp.voice_leveler_gate_voice = bool(d.get("voice_leveler_gate_voice", ddef.voice_leveler_gate_voice))

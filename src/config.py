@@ -86,11 +86,8 @@ class DSPConfig:
     post_filter_strength:   float = 1.0   # agresividad del post-filtro (0=off, 1=moderado, 6=máximo)
     pitch_enhance_enabled:  bool  = False  # refuerzo de armónicos SSB via autocorrelación
     pitch_enhance_strength: float = 0.7    # qué tanto elevar p_speech en bins de armónicos (0-1)
-    noise_fading_comp:      bool  = False  # compensación de fading HF: freeze MCRA + release rápido
     noise_mcra_window_ms:  float = 800.0   # ventana de mínimos MCRA / reactividad del piso (250-800 ms)
     noise_hf_boost:        float = 0.0      # refuerzo del piso en agudos, over-sustracción HF (0-1.5)
-    noise_fading_change_db: float = 5.0    # umbral de detección de fade (1-10 dB)
-    noise_fading_freeze_ms: float = 200.0  # duración del freeze MCRA tras el evento (100-500 ms)
     voice_leveler_enabled:  bool  = False  # AGC de voz post-cancelador gateado por VAD
     voice_leveler_max_db:   float = 12.0   # ganancia máxima del nivelador (0-20 dB)
     voice_leveler_gate_voice: bool = True  # True: adapta solo con voz (VAD). False: continuo (música)
@@ -198,11 +195,8 @@ class AppConfig:
                 "post_filter_strength":   self.dsp.post_filter_strength,
                 "pitch_enhance_enabled":  self.dsp.pitch_enhance_enabled,
                 "pitch_enhance_strength": self.dsp.pitch_enhance_strength,
-                "noise_fading_comp":      self.dsp.noise_fading_comp,
                 "noise_mcra_window_ms":  self.dsp.noise_mcra_window_ms,
                 "noise_hf_boost":        self.dsp.noise_hf_boost,
-                "noise_fading_change_db": self.dsp.noise_fading_change_db,
-                "noise_fading_freeze_ms": self.dsp.noise_fading_freeze_ms,
                 "voice_leveler_enabled":  self.dsp.voice_leveler_enabled,
                 "voice_leveler_max_db":   self.dsp.voice_leveler_max_db,
                 "voice_leveler_gate_voice": self.dsp.voice_leveler_gate_voice,
@@ -314,11 +308,8 @@ class AppConfig:
         self.dsp.post_filter_strength   = float(d.get("post_filter_strength",   self.dsp.post_filter_strength))
         self.dsp.pitch_enhance_enabled  = bool(d.get("pitch_enhance_enabled",  self.dsp.pitch_enhance_enabled))
         self.dsp.pitch_enhance_strength = float(d.get("pitch_enhance_strength", self.dsp.pitch_enhance_strength))
-        self.dsp.noise_fading_comp      = bool(d.get("noise_fading_comp",      self.dsp.noise_fading_comp))
         self.dsp.noise_mcra_window_ms = float(d.get("noise_mcra_window_ms", self.dsp.noise_mcra_window_ms))
         self.dsp.noise_hf_boost = float(d.get("noise_hf_boost", self.dsp.noise_hf_boost))
-        self.dsp.noise_fading_change_db = float(d.get("noise_fading_change_db", self.dsp.noise_fading_change_db))
-        self.dsp.noise_fading_freeze_ms = float(d.get("noise_fading_freeze_ms", self.dsp.noise_fading_freeze_ms))
         self.dsp.voice_leveler_enabled  = bool(d.get("voice_leveler_enabled",  self.dsp.voice_leveler_enabled))
         self.dsp.voice_leveler_max_db   = float(d.get("voice_leveler_max_db",  self.dsp.voice_leveler_max_db))
         self.dsp.voice_leveler_gate_voice = bool(d.get("voice_leveler_gate_voice", self.dsp.voice_leveler_gate_voice))

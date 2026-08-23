@@ -116,7 +116,6 @@ def test_apply_config_covers_all_fields():
     src.dsp.post_filter_strength          = 2.0
     src.dsp.pitch_enhance_enabled         = True
     src.dsp.pitch_enhance_strength        = 0.5
-    src.dsp.noise_fading_comp             = True
     src.gain.input_gain_db                = 3.0
     src.gain.output_gain_db               = -2.0
     src.gain.peak_limit_db                = -6.0

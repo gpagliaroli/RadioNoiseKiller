@@ -30,7 +30,7 @@ The application applies a series of chained processes — the **pipeline** — w
 ### What the application does NOT do
 
 - It does not demodulate the RF signal — it receives already-demodulated audio.
-- It does not correct the level of propagation fading — although **HF fading compensation** (Ch. 7) keeps the noise canceller from drifting during fades.
+- It does not correct the level of propagation fading — that is what the **Voice leveler** (Ch. 7) is for: it evens out the level between rises and dips.
 - It does not improve signals with a very low signal level (S-meter) — it needs some signal to work with.
 
 ### In-app help
@@ -227,7 +227,6 @@ Each checkbox enables or disables one pipeline module independently and in real 
 | &nbsp;&nbsp;&nbsp;↳ **Spectral post-filter** | Canceller sub-module. Removes the "musical noise" (intermittent birdies) the Wiener filter leaves behind. Enable when you notice that artifact. Aggressiveness adjustable in Advanced Canceller. |
 | &nbsp;&nbsp;&nbsp;↳ **Voice pitch enhancement** | Canceller sub-module. For very weak voice signals (AM or SSB): detects the voice's fundamental pitch and protects its harmonics from being suppressed — improves intelligibility. Enable if the voice sounds "ghostly" with the canceller at maximum. Sensitivity adjustable in Advanced Canceller. |
 | &nbsp;&nbsp;&nbsp;↳ **Voice squelch** | Canceller sub-module. Mutes the audio between transmissions with a progressive close (no warble, no noise tail). **Do not use with music.** Voice level and gate indicators in Advanced Canceller. |
-| &nbsp;&nbsp;&nbsp;↳ **HF fading compensation** | Canceller sub-module, Adaptive mode only. Freezes the noise estimator during ionospheric fades (QSB) and speeds up recovery when the signal returns. Sensitivity and duration in Advanced Canceller. |
 | &nbsp;&nbsp;&nbsp;↳ **Voice leveler** | Canceller sub-module. A voice AGC applied *after* noise reduction: keeps the clean voice at a constant level even as band conditions (and the amount of cancellation) vary. Only adapts while voice is detected — noise between transmissions is not re-amplified. |
 | **Bandpass filter (post)** | Almost always on together with pre. Cleans up spectral-processing artifacts. Runs after the canceller and the squelch (this list reflects the pipeline order). Its limits can be made independent from the input (see Ch. 5). |
 | **Voice EQ (presence + body)** | Two parametric bands: presence (clarity, 1–2 kHz) and body (warmth, 150–800 Hz). Enable to shape the voice on weakened or heavily filtered signals. |
@@ -440,31 +439,9 @@ When the radio's squelch cuts the carrier (total silence between transmissions),
 
 This behavior is automatic and requires no adjustment. It triggers when the signal drops more than 13 dB below the estimated floor, which distinguishes a real squelch (carrier cut) from a normal pause between words where band noise remains present.
 
-**HF fading compensation** (Adaptive mode only)
-
-**Enable:** Modules tab → "HF fading compensation" checkbox (canceller sub-module)
-**Calibrate:** Advanced Canceller tab → "Fading sensitivity" and "Freeze duration" sliders
-
-On shortwave with ionospheric fading (QSB), the signal rises and falls several times per minute. Without compensation, this produces two audible problems:
-
-1. During the fade, the adaptive estimator interprets the signal drop as a lower noise floor and re-calibrates downwards. When the signal returns, the floor is out of date and unattenuated noise is heard until the estimator readjusts (~800 ms).
-2. The Wiener gain estimator follows the signal level with a delay: when the signal comes back from a fade, it "arrives late" and clips the start of the voice while dragging noise along.
-
-The compensation attacks both problems:
-
-- **Estimator freeze (voice-smart):** when it detects an abrupt energy change, it freezes the noise floor estimate **only if voice is present** — that is, on a *signal* fade. The pre-fade floor is preserved and applied immediately when the signal returns. **Important:** if the energy change is a **rise of the band noise** (no voice structure), the estimator does **NOT** freeze and keeps following the noise in real time. This prevents the floor from lagging when the noise rises and falls cyclically (see "Floor reactivity" below).
-- **Accelerated release:** during a fading event, the Wiener gain responds to signal rises in ~20–30 ms instead of 100–150 ms. Voice emerging from a fade opens up without perceptible delay.
-
-Two sliders in Advanced Canceller calibrate the detection:
-
-| Control | Range | Default | Description |
-|---------|-------|---------|-------------|
-| **Fading sensitivity** | 1 – 10 dB | 5 dB | Energy change that triggers the freeze (with voice present). Sensitive (1–4 dB): detects mild QSB. Selective (7–10 dB): deep fades only. |
-| **Freeze duration** | 100 – 500 ms | 200 ms | How long the estimator stays frozen after each event. Slow fades need more; a very long value lets the floor go stale if the band noise really did change. |
-
-The indicator in Advanced Canceller shows **FADE** (orange) while the estimator is frozen by a signal fade, and **ok** (gray) otherwise. Since the freeze now only engages with **voice present**, it is normal for FADE to stay almost always at **ok** with music or pure noise — that confirms the estimator is free to follow the noise (exactly what you want). With a voice signal under QSB, FADE lights on each fade.
-
-> **When to enable it:** shortwave listening (SSB or AM DX) with noticeable fading, always in Adaptive mode. It no longer interferes with cyclic noise (it does not freeze on noise rises), so it can be left on alongside Floor reactivity. In Static profile mode it has no effect.
+> **Note — "HF fading compensation" was removed in this version.** It was meant to freeze the estimator during QSB, but measurement showed its detector fired on **syllables**, not on fades: speech energy swings about 17 dB between syllable and gap, the same order as the fade it was looking for. Even with a perfect detector the module recovered only 2.4 dB, and only when the noise faded together with the signal.
+>
+> **Against QSB the tool is the Voice leveler** (Ch. 7), specifically its *Response speed*: lowering it from 1500 to 200 ms halves the level swing the processing adds. See the tip in Ch. 7.
 
 ### Real-time indicators (Advanced Canceller)
 
@@ -493,7 +470,7 @@ The indicator in Advanced Canceller shows **FADE** (orange) while the estimator 
 > 1. **Floor reactivity** at **250–350 ms** — so the floor follows the noise's rise and fall.
 > 2. **HF floor boost** at **50–100%** — for the treble hiss the estimator can't follow on its own.
 > 3. **Voice pitch enhancement** on — protects the voice harmonics from the reactive window.
-> 4. **HF fading compensation** can be left **on**: it is now smart and does not freeze on noise rises (only on voice fades).
+> 4. Against **QSB**, the knob is the Voice leveler's *Response speed* (Ch. 7), not the canceller.
 > 5. If the voice brightness got dull from the HF floor boost, compensate with the **Harmonic exciter** (drive 2–3×) or **Presence EQ** (+4–6 dB at 2 kHz).
 >
 > Watching the **Spectrum** tab, the goal is for the floor line (yellow) to follow the noise's rise and fall instead of lagging behind.
@@ -610,7 +587,7 @@ The difference from the general AGC (Ch. 2) is the **voice-detection gate**: by 
 | Control | Range | Default | Description |
 |---------|-------|---------|-------------|
 | **Max gain** | 0 – 20 dB | +12 dB | Amplification cap for weak voice. Raise it for DX signals far below the target level; lower it if a strong station arriving after a weak one starts off too loud. At 0 dB the module only attenuates (never amplifies). |
-| **Response speed** | 200 – 3000 ms | 1500 ms | How fast the leveler follows level changes (the AGC *release*). **Fast (200–600 ms):** follows fast cyclic fading without leaving volume "dips" when the signal drops. **Smooth (2000–3000 ms):** more stable leveling, less risk of pumping the background noise. |
+| **Response speed** | 200 – 3000 ms | 1500 ms | How fast the leveler follows level changes (the AGC *release*). **Fast (200–600 ms):** follows fast cyclic fading without leaving volume "dips" when the signal drops. **This is the main control against QSB:** measured on a 20 dB fade, lowering it from 1500 to 200 ms halves the level swing the processing adds. The price is more abrupt gain steps; if you hear them, lower *Maximum gain* rather than slowing the speed back down. **Smooth (2000–3000 ms):** more stable leveling, less risk of pumping the background noise. |
 | **Level continuously (music)** | checkbox | off | *(The checkbox lives on the **Main** tab → "Control" group, below the AGC selector — you change it depending on what you are listening to, so it stays in sight.)* Disables the voice-detection gate: the leveler adapts **at all times**, without waiting for voice. **Enable for music or continuous audio** — where the voice detector does not recognize voice structure and, with the gate, the leveler would stay frozen. For voice on noisy bands leave it **off** (avoids re-amplifying noise in the gaps). |
 
 > **When to enable it:** long sessions with stations at very different levels or pronounced QSB, especially with the squelch active (level jumps between transmissions are more noticeable when there is no background noise to mask them).
@@ -864,7 +841,6 @@ On the right of the same row, the **"🔇 Mute"** button silences the speaker ou
 | ↳ Perceptual spectral floor | ⬜ Optional | Enable if the voice sounds cold or hollow |
 | ↳ Spectral post-filter | ⬜ Optional | Enable if residual intermittent birdies are heard |
 | ↳ Voice pitch enhancement | ⬜ Optional | For very weak SSB DX signals — improves intelligibility |
-| HF fading compensation | ⬜ Optional | Enable with noticeable QSB (Adaptive mode only) |
 | ↳ Voice leveler | ⬜ Optional | Enable with stations at uneven levels or strong QSB |
 | Squelch | ✅ On | Threshold 15%, hold 300 ms |
 | Voice EQ | ✅ On | Presence +4 dB at 2000 Hz; body +3 dB at 350 Hz if the voice sounds thin |
@@ -883,7 +859,6 @@ On the right of the same row, the **"🔇 Mute"** button silences the speaker ou
 | ↳ Perceptual spectral floor | ⬜ Optional | Enable if the voice sounds cold or hollow |
 | ↳ Spectral post-filter | ⬜ Optional | Enable if residual birdies remain |
 | ↳ Voice pitch enhancement | ⬜ Optional | Also helps on AM: demodulation preserves the voice harmonics |
-| HF fading compensation | ⬜ Optional | Shortwave with QSB (Adaptive mode). No longer false-triggers on music/noise: it only freezes on voice fades |
 | ↳ Voice leveler | ⬜ Optional | For music **tick "Level continuously"** (without it the voice gate freezes the gain); useful to even out cyclic fading |
 | Squelch | ❌ Do not use | Produces pumping with music |
 | Voice EQ | ⬜ Optional | Presence if the voice sounds dull; body if it sounds thin |

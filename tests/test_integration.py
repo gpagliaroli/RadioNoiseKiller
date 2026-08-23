@@ -77,7 +77,6 @@ d.noise_mode                = "mcra"
 d.squelch_enabled           = True
 d.squelch_threshold         = 0.30
 d.squelch_hold_ms           = 300.0
-d.noise_fading_comp         = True
 d.post_filter_enabled       = True
 d.perceptual_floor_enabled  = True
 d.pitch_enhance_enabled     = True

@@ -101,11 +101,8 @@ class ProcessingPipeline:
         self._noise_profiler.set_post_filter_strength(config.dsp.post_filter_strength)
         self._noise_profiler.set_pitch_enabled(config.dsp.pitch_enhance_enabled)
         self._noise_profiler.set_pitch_strength(config.dsp.pitch_enhance_strength)
-        self._noise_profiler.set_fading_comp(config.dsp.noise_fading_comp)
         self._noise_profiler.set_mcra_window_ms(config.dsp.noise_mcra_window_ms)
         self._noise_profiler.set_hf_boost(config.dsp.noise_hf_boost)
-        self._noise_profiler.set_fading_change_db(config.dsp.noise_fading_change_db)
-        self._noise_profiler.set_fading_freeze_ms(config.dsp.noise_fading_freeze_ms)
         self._noise_profiler.set_mode(config.dsp.noise_mode)
         self._noise_profiler.set_alpha(config.dsp.noise_alpha)
         self._noise_profiler.set_floor(config.dsp.noise_floor)
@@ -193,7 +190,7 @@ class ProcessingPipeline:
 
     def set_voice_leveler_release_ms(self, ms: float) -> None:
         """Velocidad de respuesta del nivelador (release del AGC). Más rápido
-        (menos ms) sigue mejor el fading cíclico; más lento nivela más suave.
+        (menos ms) sigue mejor el QSB ciclico y rapido; mas lento nivela mas suave.
         Clamp == rango del slider (200-3000 ms); el AGC clampea 100-8000."""
         ms = float(np.clip(ms, 200.0, 3000.0))
         self._config.dsp.voice_leveler_release_ms = ms
@@ -389,11 +386,8 @@ class ProcessingPipeline:
 
         self.set_pitch_enhance_enabled(dsp.pitch_enhance_enabled)
         self.set_pitch_enhance_strength(dsp.pitch_enhance_strength)
-        self.set_fading_comp(dsp.noise_fading_comp)
         self.set_mcra_window_ms(dsp.noise_mcra_window_ms)
         self.set_hf_boost(dsp.noise_hf_boost)
-        self.set_fading_change_db(dsp.noise_fading_change_db)
-        self.set_fading_freeze_ms(dsp.noise_fading_freeze_ms)
         self.set_voice_leveler_enabled(dsp.voice_leveler_enabled)
         self.set_voice_leveler_max_db(dsp.voice_leveler_max_db)
         self.set_voice_leveler_gate_voice(dsp.voice_leveler_gate_voice)
@@ -530,10 +524,6 @@ class ProcessingPipeline:
         self._config.dsp.post_filter_strength = float(v)
         self._noise_profiler.set_post_filter_strength(float(v))
 
-    def set_fading_comp(self, v: bool) -> None:
-        self._config.dsp.noise_fading_comp = bool(v)
-        self._noise_profiler.set_fading_comp(bool(v))
-
     def set_mcra_window_ms(self, v: float) -> None:
         self._config.dsp.noise_mcra_window_ms = float(v)
         self._noise_profiler.set_mcra_window_ms(float(v))
@@ -541,26 +531,6 @@ class ProcessingPipeline:
     def set_hf_boost(self, v: float) -> None:
         self._config.dsp.noise_hf_boost = float(v)
         self._noise_profiler.set_hf_boost(float(v))
-
-    def set_fading_change_db(self, v: float) -> None:
-        self._config.dsp.noise_fading_change_db = float(v)
-        self._noise_profiler.set_fading_change_db(float(v))
-
-    def set_fading_freeze_ms(self, v: float) -> None:
-        self._config.dsp.noise_fading_freeze_ms = float(v)
-        self._noise_profiler.set_fading_freeze_ms(float(v))
-
-    @property
-    def fading_comp_enabled(self) -> bool:
-        return self._config.dsp.noise_fading_comp
-
-    @property
-    def fading_active(self) -> bool:
-        return self._noise_profiler.fading_active
-
-    def pop_fading_active(self) -> bool:
-        """Indicador FADE con latch: True si hubo freeze desde la última lectura."""
-        return self._noise_profiler.pop_fading_active()
 
     @property
     def pitch_f0(self) -> "float | None":
@@ -796,7 +766,7 @@ class ProcessingPipeline:
                 f"noise_enabled={self._noise_enabled} learning={p.is_learning} "
                 f"frames={p._mcra_frames} warmup={p._mcra_warmup} M={p._mcra_M} "
                 f"quar={len(p._mcra_quar)} voice_hold={p._mcra_voice_hold} "
-                f"fading={p._fading_active} ld={'None' if p._mcra_ld is None else 'ok'} "
+                f"ld={'None' if p._mcra_ld is None else 'ok'} "
                 f"hop={p._hop} block_cfg={self._config.audio.block_size} "
                 f"db_in={self._db_in:.1f} errores={self._dsp_errors}")
 

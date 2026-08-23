@@ -112,7 +112,6 @@ CATALOG = {
     "Squelch de voz  (con música no utilizar!)": "Voice squelch  (do not use with music!)",
     "Silencia la salida cuando no hay voz detectada. Requiere perfil de ruido aprendido.":
         "Mutes the output when no voice is detected. Requires a learned noise profile.",
-    "Compensación fading HF  (onda corta con QSB)": "HF fading compensation  (shortwave QSB)",
     "Congela el estimador de ruido durante fades ionosféricos y acelera\n"
     "la recuperación al volver la señal. Solo tiene efecto en modo Adaptativo (MCRA).\n"
     "Sensibilidad y duración del freeze configurables en Avanzada Cancelador.":
@@ -460,19 +459,10 @@ CATALOG = {
         "  ↳ Noise tracking window (Adaptive only). Reactive (short) = the floor follows fast rises of cyclic noise, less swaying; stable (long) = better with steady noise. With reactive values, keep Voice pitch reinforcement enabled.",
     "  ↳ Ataque del onset de voz. Rápido = consonantes más nítidas. Suave = transiciones sin artefactos.":
         "  ↳ Voice onset attack. Fast = crisper consonants. Soft = artifact-free transitions.",
-    "Compensación fading HF:": "HF fading compensation:",
     "  ↳ Activar en Módulos Activos (sub-módulo del cancelador). Solo modo Adaptativo.":
         "  ↳ Enable in Active Modules (canceller sub-module). Adaptive mode only.",
-    "Sensibilidad fading:": "Fading sensitivity:",
     "sensible": "sensitive",
     "selectivo": "selective",
-    "  ↳ Cambio de energía que dispara el freeze. Sensible = detecta QSB suave (puede disparar con la voz). Selectivo = solo fades profundos.":
-        "  ↳ Energy change that triggers the freeze. Sensitive = detects mild QSB (may trigger on voice). Selective = deep fades only.",
-    "Duración del freeze:": "Freeze duration:",
-    "corto": "short",
-    "largo": "long",
-    "  ↳ Tiempo que MCRA queda congelado tras cada evento. Fades lentos necesitan más; muy largo desactualiza el piso.":
-        "  ↳ How long MCRA stays frozen after each event. Slow fades need more; too long lets the floor go stale.",
     "Squelch de voz  (activar en Módulos Activos)": "Voice squelch  (enable in Active Modules)",
     "Nivel de voz:": "Voice level:",
     "Gate:": "Gate:",
@@ -535,8 +525,10 @@ CATALOG = {
     "Protección de armónicos:": "Harmonic protection:",
     "  ↳ Cuánto eleva la probabilidad de voz en bins de armónicos. 70%=recomendado.":
         "  ↳ How much it raises voice probability on harmonic bins. 70%=recommended.",
-    "Nivelador de voz  (activar en Módulos Activos)":
-        "Voice leveler  (enable in Active Modules)",
+    "Nivelador de voz — después del cancelador  (activar en Módulos Activos)":
+        "Voice leveler — after the canceller  (enable in Active Modules)",
+    "  ↳ Estos dos controles son SOLO de este nivelador. El AGC de entrada es otro módulo y se ajusta en la pestaña Principal.":
+        "  ↳ These two controls affect ONLY this leveler. The input AGC is a separate module, adjusted on the Main tab.",
     "  ↳ Tope de compensación para voz débil. Fuerte = iguala más las señales, pero levanta también el ruido que acompaña a la voz débil.":
         "  ↳ Compensation cap for weak voice. Strong = evens out signals more, but also raises the noise riding along with the weak voice.",
 

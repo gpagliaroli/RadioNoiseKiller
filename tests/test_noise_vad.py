@@ -1,11 +1,11 @@
 """
-test_noise_vad — VAD del squelch, cuarentena MCRA y fading comp del NoiseProfiler.
+test_noise_vad — VAD del squelch y cuarentena MCRA del NoiseProfiler.
 
 Cubre los comportamientos v1.3 que no verifican los otros tests:
   - VAD con confirmacion espectral: ruido fluctuante no dispara el gate,
     voz armonica si, el release del AGC no reabre.
-  - Cuarentena MCRA look-behind: fades e impulsos no contaminan lambda_d.
-  - Fading comp: clamps de los setters y recalculo de frames al cambiar hop.
+  - Cuarentena MCRA look-behind: los impulsos no contaminan lambda_d.
+  - Ventana MCRA: clamps de los setters y recalculo de M al cambiar hop.
 
 IMPORTANTE: validar detectores con ruido FLUCTUANTE y voz CON ENVOLVENTE.
 El ruido gaussiano estacionario y los tonos puros dan falsos OK (paso dos veces).
@@ -47,10 +47,9 @@ def fluct_noise(n_frames, base=0.01):
     return (x * env).astype(np.float32).reshape(n_frames, HOP)
 
 
-def make_profiler(fading=False):
+def make_profiler():
     p = NoiseProfiler(HOP)
     p.set_mode("mcra")
-    p.set_fading_comp(fading)
     return p
 
 
@@ -136,46 +135,6 @@ def ld_mean(p):
 
 steady = (rng.standard_normal(600 * HOP).reshape(600, HOP) * 0.01).astype(np.float32)
 
-# 5. Fading VAD-smart: el freeze dispara solo con VOZ (desvanecimiento de señal),
-#    NO ante un cambio de ruido de banda ancha (fix del vaivén con ruido ciclico).
-# 5a. Cambio de RUIDO sin voz: comp ON no congela -> sigue el ruido como comp OFF.
-p_on, p_off = make_profiler(True), make_profiler(False)
-for i in range(300):
-    p_on.process(steady[i]); p_off.process(steady[i])
-ld_pre_on, ld_pre_off = ld_mean(p_on), ld_mean(p_off)
-faded = (steady[300:315] * 0.2).astype(np.float32)       # -14 dB de ruido puro (sin voz)
-froze = False
-for i in range(15):
-    p_on.process(faded[i]); p_off.process(faded[i])
-    froze = froze or p_on.fading_active
-check("cambio de ruido sin voz: comp ON NO congela (vp bajo)", not froze)
-drift_on  = abs(10 * np.log10(ld_mean(p_on)  / ld_pre_on))
-drift_off = abs(10 * np.log10(ld_mean(p_off) / ld_pre_off))
-check("cambio de ruido sin voz: comp ON sigue el ruido como OFF (%.2f ~ %.2f dB)"
-      % (drift_on, drift_off), abs(drift_on - drift_off) < 0.5)
-
-# 5b. Desvanecimiento con VOZ presente: comp ON SI congela (protege el estimador).
-p_v = make_profiler(True)
-for i in range(250):
-    p_v.set_agc_gain(1.0); p_v.process(nz[i])
-for i in range(40):                                      # voz clara -> vp alto
-    p_v.set_agc_gain(1.0); p_v.process(vx[i] + nz[300 + i])
-vp_before = p_v.voice_prob_sq
-froze_v = False
-for i in range(15):                                      # fade -14 dB de voz+ruido
-    fs = ((vx[40 + i] + nz[340 + i]) * 0.2).astype(np.float32)
-    p_v.set_agc_gain(1.0); p_v.process(fs)
-    froze_v = froze_v or p_v.fading_active
-check("voz presente (vp=%.2f) + fade: comp ON SI congela" % vp_before, froze_v)
-
-# Latch del indicador FADE: si el freeze termina entre dos polls de la UI (freeze
-# ~200ms vs poll 500ms), pop_fading_active igual lo reporta una vez (y se resetea).
-p_l = make_profiler(True)
-p_l._fading_active = True; p_l._fading_latch = True    # hubo freeze...
-p_l._fading_active = False                             # ...que ya termino
-check("latch FADE: pop=True tras freeze aunque fading_active=False", p_l.pop_fading_active() is True)
-check("latch FADE: segunda lectura se resetea a False", p_l.pop_fading_active() is False)
-
 # 6. Impulso aislado (+20 dB, 1 frame) no contamina
 #
 # El check es la MEDIA sobre varias semillas, no una sola corrida. Antes usaba el
@@ -193,7 +152,7 @@ def drift_por_impulso(seed):
     x = r.standard_normal(400 * HOP) * 0.01
     env = np.repeat(10 ** (r.uniform(-6, 6, size=41) / 20.0), 10 * HOP)[:400 * HOP]
     st = (x * env).astype(np.float32).reshape(400, HOP)
-    p = make_profiler(True)
+    p = make_profiler()
     for i in range(300):
         p.process(st[i])
     ld_pre = ld_mean(p)
@@ -208,7 +167,7 @@ check("impulso +20dB aislado: drift medio de lambda_d < 0.35 dB (%.3f)" % drift_
       drift_imp < 0.35)
 
 # 7. La adaptacion normal sigue: subida lenta de +6 dB debe seguirse
-p6 = make_profiler(True)
+p6 = make_profiler()
 for i in range(300):
     p6.process(steady[i])
 ld_pre = ld_mean(p6)
@@ -221,20 +180,12 @@ rise = 10 * np.log10(ld_mean(p6) / ld_pre)
 check("subida lenta +6dB: lambda_d la sigue (+4 a +8 dB, %.1f)" % rise, 4.0 < rise < 8.0)
 
 # ---------------------------------------------------------------------------
-print("\n=== Fading comp: clamps y hop (invariantes 1 y 9) ===")
+print("\n=== Ventana MCRA: clamps y hop (invariantes 1 y 9) ===")
 
 p7 = NoiseProfiler(480)
-p7.set_fading_change_db(0.5);  check("clamp sensibilidad lo (1.0)",  p7._fading_change_db == 1.0)
-p7.set_fading_change_db(99.0); check("clamp sensibilidad hi (10.0)", p7._fading_change_db == 10.0)
-p7.set_fading_freeze_ms(50);   check("clamp freeze lo (100)",  p7._fading_freeze_ms == 100.0)
-p7.set_fading_freeze_ms(9999); check("clamp freeze hi (500)",  p7._fading_freeze_ms == 500.0)
-p7.set_fading_freeze_ms(200)
-check("freeze 200ms @ hop 480 = 20 frames", p7._fading_freeze_frames == 20)
 p7.reset(960)
-check("reset(960) recalcula frames (10)", p7._fading_freeze_frames == 10)
 check("reset limpia cuarentena", len(p7._mcra_quar) == 0)
 p7.reset(240)
-check("reset(240) recalcula frames (40)", p7._fading_freeze_frames == 40)
 
 # Reactividad del piso (ventana MCRA): clamp e invariante 9 (recalculo por hop).
 # p7 esta en hop 240 -> hop_ms=5, B=4 -> M = window_ms / 20
@@ -360,23 +311,6 @@ for i in range(30):
 p9.reset(240)
 check("reset limpia _p_speech_prev (sin shape mismatch)", p9._p_speech_prev is None)
 p9.process((rng.standard_normal(240) * 0.02).astype(np.float32))  # no debe crashear
-
-# 8. Sin eventos de fading, el checkbox NO debe alterar el procesamiento.
-#    (Bug real: el release acelerado beta=0.45 aplicaba siempre con el checkbox
-#    activo -> gorgojeo extra con mucho ruido y sin fading. Reportado en 40m.)
-mild = rng.standard_normal(500 * HOP) * 0.01
-env_mild = np.repeat(10 ** (rng.uniform(-1.5, 1.5, size=51) / 20.0), 10 * HOP)[: 500 * HOP]
-mild = (mild * env_mild).astype(np.float32).reshape(500, HOP)   # +-3dB < umbral de 5dB
-pa, pb = make_profiler(True), make_profiler(False)
-out_a, out_b = [], []
-fade_seen = False
-for i in range(500):
-    out_a.append(pa.process(mild[i]))
-    out_b.append(pb.process(mild[i]))
-    fade_seen = fade_seen or pa.fading_active
-diff = float(np.max(np.abs(np.concatenate(out_a) - np.concatenate(out_b))))
-check("ruido suave: ningun evento de fading disparado", not fade_seen)
-check("sin eventos: comp ON == comp OFF, salida identica (dif %.1e)" % diff, diff == 0.0)
 
 # ---------------------------------------------------------------------------
 print()

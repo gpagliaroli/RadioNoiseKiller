@@ -214,18 +214,6 @@ SLIDER_TIPS = {
         "corto y se cuela el siseo. Es progresivo: cuanto más alta la frecuencia,\n"
         "más refuerzo. Cuesta algo de brillo — compensá con Excitador o Presencia."
     ),
-    "_s_fading_change": (
-        "Cuánto tiene que cambiar la energía para dar un desvanecimiento por\n"
-        "detectado. Sensible (1–4 dB) dispara con QSB suave; selectivo sólo con\n"
-        "fades marcados. Sólo cuenta si además hay voz presente, así que una\n"
-        "subida de ruido de banda no lo dispara."
-    ),
-    "_s_fading_freeze": (
-        "Cuánto tiempo queda congelado el estimador de ruido después de detectar\n"
-        "un desvanecimiento, para que no aprenda el bajón como si fuera el piso.\n"
-        "Más largo protege mejor en fades lentos; más corto vuelve antes a seguir\n"
-        "el ruido real."
-    ),
     "_s_squelch_threshold": (
         "Cuánta certeza de que hay voz hace falta para abrir el gate y dejar pasar\n"
         "el audio. Sensible abre fácil (y deja pasar ruido); selectivo filtra mejor\n"

@@ -30,7 +30,7 @@ La aplicación aplica una serie de procesos en cadena — el **pipeline** — do
 ### Lo que la aplicación NO hace
 
 - No demodula la señal de RF — recibe audio ya demodulado.
-- No corrige el nivel de los desvanecimientos (fading) de propagación — aunque la **Compensación fading HF** (Cap. 7) evita que el cancelador de ruido se desajuste durante los fades.
+- No corrige el nivel de los desvanecimientos (fading) de propagación — para eso está el **Nivelador de voz** (Cap. 7), que empareja el nivel entre subidas y bajadas.
 - No mejora señales con nivel de señal (S-meter) muy bajo — necesita algo de señal para trabajar.
 
 ### Ayuda dentro de la aplicación
@@ -227,7 +227,6 @@ Cada casilla de verificación activa o desactiva un módulo del pipeline de form
 | &nbsp;&nbsp;&nbsp;↳ **Post-filtro espectral** | Sub-módulo del cancelador. Elimina el "ruido musical" (pitidos intermitentes) que el Wiener deja como residuo. Activar cuando se note ese artefacto. Agresividad configurable en Avanzada Cancelador. |
 | &nbsp;&nbsp;&nbsp;↳ **Refuerzo de pitch de voz** | Sub-módulo del cancelador. Para señales de voz muy débiles (AM o SSB): detecta el tono fundamental de la voz y protege sus armónicos de ser suprimidos — mejora la inteligibilidad. Activar si la voz suena "fantasmal" con el cancelador al máximo. Sensibilidad configurable en Avanzada Cancelador. |
 | &nbsp;&nbsp;&nbsp;↳ **Squelch de voz** | Sub-módulo del cancelador. Silencia el audio entre transmisiones con cierre progresivo (sin gorgojeo ni cola de ruido). **No usar con música.** Indicador de nivel de voz y estado del gate en Avanzada Cancelador. |
-| &nbsp;&nbsp;&nbsp;↳ **Compensación fading HF** | Sub-módulo del cancelador, solo modo Adaptativo. Congela el estimador de ruido durante fades ionosféricos (QSB) y acelera la recuperación al volver la señal. Sensibilidad y duración en Avanzada Cancelador. |
 | &nbsp;&nbsp;&nbsp;↳ **Nivelador de voz** | Sub-módulo del cancelador. AGC de voz aplicado *después* de la reducción de ruido: mantiene la voz limpia a nivel constante aunque las condiciones de la banda (y la cantidad de cancelación) varíen. Solo adapta cuando detecta voz — el ruido entre transmisiones no se re-amplifica. |
 | **Filtro de paso de banda (post)** | Casi siempre activo junto con el pre. Limpia artefactos del procesamiento espectral. Corre después del cancelador y el squelch (el orden de esta lista refleja el pipeline). Sus límites pueden independizarse de la entrada (ver Cap. 5). |
 | **EQ Voz (presencia + cuerpo)** | Dos bandas paramétricas: presencia (claridad, 1–2 kHz) y cuerpo (calidez, 150–800 Hz). Activar para modelar la voz con señales debilitadas o muy filtradas. |
@@ -442,31 +441,9 @@ Cuando el squelch de la radio corta la portadora (silencio total entre transmisi
 
 Este comportamiento es automático y no requiere ningún ajuste. Se activa cuando la señal cae más de 13 dB por debajo del piso estimado, lo que distingue un squelch real (portadora cortada) de una pausa normal entre palabras donde el ruido de banda sigue presente.
 
-**Compensación de fading HF** (solo modo Adaptativo)
-
-**Activar:** Pestaña Módulos → casilla "Compensación fading HF" (sub-módulo del cancelador)
-**Calibrar:** Pestaña Avanzada Cancelador → sliders "Sensibilidad fading" y "Duración del freeze"
-
-En onda corta con desvanecimiento ionosférico (QSB), la señal sube y baja de nivel varias veces por minuto. Sin compensación, esto produce dos problemas audibles:
-
-1. Durante el fade, el estimador adaptativo interpreta la caída de señal como una bajada del piso de ruido y se re-calibra hacia abajo. Al volver la señal, el piso queda desfasado y se escucha ruido sin atenuar hasta que el estimador se reajusta (~800 ms).
-2. El estimador de ganancia del Wiener sigue al nivel de señal con retraso: cuando la señal vuelve del fade, "llega tarde" y recorta el inicio de la voz arrastrando ruido.
-
-La compensación ataca ambos problemas:
-
-- **Congelamiento del estimador (inteligente por voz):** cuando detecta un cambio brusco de energía, congela el estimado de piso de ruido **solo si hay voz presente** — es decir, ante un desvanecimiento de la *señal*. El piso pre-fade se preserva y al volver la señal se aplica de inmediato. **Importante:** si el cambio de energía es una **subida del ruido de banda** (sin estructura de voz), el estimador **NO** congela y sigue el ruido en tiempo real. Esto evita que, ante ruido que sube y baja cíclicamente, el piso quede desfasado (ver más abajo "Reactividad del piso").
-- **Release acelerado:** durante un evento de fading, la ganancia del Wiener responde a subidas de señal en ~20–30 ms en lugar de 100–150 ms. La voz que emerge del fade se abre sin retraso perceptible.
-
-Dos sliders en Avanzada Cancelador permiten calibrar la detección:
-
-| Control | Rango | Default | Descripción |
-|---------|-------|---------|-------------|
-| **Sensibilidad fading** | 1 – 10 dB | 5 dB | Cambio de energía que dispara el congelamiento (con voz presente). Sensible (1–4 dB): detecta QSB suave. Selectivo (7–10 dB): solo fades profundos. |
-| **Duración del freeze** | 100 – 500 ms | 200 ms | Cuánto tiempo queda congelado el estimador tras cada evento. Fades lentos necesitan más; un valor muy largo desactualiza el piso si el ruido de banda cambió de verdad. |
-
-El indicador en Avanzada Cancelador muestra **FADE** (naranja) mientras el estimador está congelado por un desvanecimiento de señal, y **ok** (gris) cuando no. Como ahora el freeze solo engancha con **voz presente**, es normal que con música o ruido puro el FADE quede casi siempre en **ok** — eso confirma que el estimador está libre para seguir el ruido (que es justo lo que se busca). Con una señal de voz con QSB, en cambio, el FADE enciende en cada desvanecimiento.
-
-> **Cuándo activarla:** escucha de onda corta (SSB o AM DX) con fading perceptible, siempre en modo Adaptativo. Ya no molesta con ruido cíclico (no congela ante subidas de ruido), así que se puede dejar activa junto con la Reactividad del piso. En modo Perfil estático no tiene efecto.
+> **Nota — la "Compensación de fading HF" se eliminó en esta versión.** Estaba pensada para congelar el estimador durante el QSB, pero al medirla resultó que su detector disparaba con las **sílabas** y no con los desvanecimientos: la energía de la voz oscila unos 17 dB entre sílaba y hueco, el mismo orden que el fade que buscaba. Con un detector perfecto el módulo apenas recuperaba 2,4 dB, y sólo cuando el ruido se desvanecía junto con la señal.
+>
+> **Contra el QSB la herramienta es el Nivelador de voz** (Cap. 7), en particular su *Velocidad de respuesta*: bajarla de 1500 a 200 ms reduce a la mitad el vaivén de nivel que agrega el procesado. Ver el consejo del Cap. 7.
 
 ### Indicadores en tiempo real (Avanzada Cancelador)
 
@@ -495,7 +472,7 @@ El indicador en Avanzada Cancelador muestra **FADE** (naranja) mientras el estim
 > 1. **Reactividad del piso** en **250–350 ms** — para que el piso siga el sube-y-baja del ruido.
 > 2. **Refuerzo en agudos** en **50–100%** — para el siseo de los agudos, que el estimador no alcanza a seguir por sí solo.
 > 3. **Refuerzo de pitch de voz** activado — protege los armónicos de la voz de la ventana reactiva.
-> 4. **Compensación fading HF** se puede dejar **activa**: ahora es inteligente y no congela ante las subidas de ruido (solo ante desvanecimientos de la voz).
+> 4. Contra el **QSB**, la perilla es la *Velocidad de respuesta* del Nivelador de voz (Cap. 7), no el cancelador.
 > 5. Si el brillo de la voz quedó opaco por el Refuerzo en agudos, compensar con **Excitador armónico** (drive 2–3×) o **EQ de presencia** (+4–6 dB en 2 kHz).
 >
 > Mirando la pestaña **Espectro**, el objetivo es que la línea del piso (amarilla) siga el sube-y-baja del ruido en vez de quedar atrás.
@@ -612,7 +589,7 @@ La diferencia con el AGC general (Cap. 2) es el **gate por detección de voz**: 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
 | **Ganancia máxima** | 0 – 20 dB | +12 dB | Tope de amplificación para voz débil. Subir para señales DX muy por debajo del nivel objetivo; bajar si al aparecer una estación fuerte tras una débil el arranque suena excesivo. Con 0 dB el módulo solo atenúa (nunca amplifica). |
-| **Velocidad de respuesta** | 200 – 3000 ms | 1500 ms | Qué tan rápido sigue el nivelador los cambios de nivel (el *release* del AGC). **Rápido (200–600 ms):** sigue un fading cíclico y rápido, sin dejar "pozos" de volumen al bajar la señal. **Suave (2000–3000 ms):** nivelado más estable, menos riesgo de bombear el ruido de fondo. |
+| **Velocidad de respuesta** | 200 – 3000 ms | 1500 ms | Qué tan rápido sigue el nivelador los cambios de nivel (el *release* del AGC). **Rápido (200–600 ms):** sigue un fading cíclico y rápido, sin dejar "pozos" de volumen al bajar la señal. **Es el control principal contra el QSB:** medido con un desvanecimiento de 20 dB, bajarlo de 1500 a 200 ms reduce a la mitad el vaivén de nivel que agrega el procesado. El precio es que la ganancia da saltos más marcados; si se notan, bajar la *Ganancia máxima* en vez de frenar la velocidad. **Suave (2000–3000 ms):** nivelado más estable, menos riesgo de bombear el ruido de fondo. |
 | **Nivelar en continuo (música)** | casilla | off | *(La casilla está en la pestaña **Principal** → grupo "Control", debajo del selector de AGC — se cambia según el material que se escucha, así que va a la vista.)* Desactiva el gate por detección de voz: el nivelador adapta **en todo momento**, sin esperar voz. **Activar para música o audio continuo** — donde el detector de voz no reconoce estructura de voz y, con el gate, el nivelador quedaría congelado. Para voz en banda ruidosa dejar **off** (evita re-amplificar el ruido en las pausas). |
 
 > **Cuándo activarlo:** sesiones largas con estaciones de niveles dispares o QSB pronunciado, especialmente con squelch activo (los saltos de nivel entre transmisiones se notan más al no haber ruido de fondo que los enmascare).
@@ -866,7 +843,6 @@ A la derecha de la misma fila, el botón **"🔇 Mute"** silencia la salida a lo
 | ↳ Piso espectral perceptual | ⬜ Opcional | Activar si la voz suena fría o hueca |
 | ↳ Post-filtro espectral | ⬜ Opcional | Activar si se escuchan pitidos intermitentes residuales |
 | ↳ Refuerzo de pitch de voz | ⬜ Opcional | Para señales SSB DX muy débiles — mejora la inteligibilidad |
-| Compensación fading HF | ⬜ Opcional | Activar con QSB perceptible (solo modo Adaptativo) |
 | ↳ Nivelador de voz | ⬜ Opcional | Activar con estaciones de niveles dispares o QSB fuerte |
 | Squelch | ✅ Activo | Umbral 15%, retención 300 ms |
 | EQ Voz | ✅ Activo | Presencia +4 dB a 2000 Hz; cuerpo +3 dB a 350 Hz si la voz suena delgada |
@@ -885,7 +861,6 @@ A la derecha de la misma fila, el botón **"🔇 Mute"** silencia la salida a lo
 | ↳ Piso espectral perceptual | ⬜ Opcional | Activar si la voz suena fría o hueca |
 | ↳ Post-filtro espectral | ⬜ Opcional | Activar si quedan pitidos residuales |
 | ↳ Refuerzo de pitch de voz | ⬜ Opcional | También ayuda en AM: la demodulación preserva los armónicos de la voz |
-| Compensación fading HF | ⬜ Opcional | Onda corta con QSB (modo Adaptativo). Ya no dispara en falso con música/ruido: solo congela ante desvanecimientos de voz |
 | ↳ Nivelador de voz | ⬜ Opcional | Para música **marcá "Nivelar en continuo"** (sin eso el gate de voz congela la ganancia); útil para emparejar el fading cíclico |
 | Squelch | ❌ No usar | Produce bombeo con música |
 | EQ Voz | ⬜ Opcional | Presencia si la voz suena apagada; cuerpo si suena delgada |

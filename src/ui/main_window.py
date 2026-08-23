@@ -486,12 +486,6 @@ class MainWindow(QMainWindow):
             tr("Squelch de voz  (con música no utilizar!)"),
             tr("Silencia la salida cuando no hay voz detectada. Requiere perfil de ruido aprendido."),
         )
-        self._chk_fading_comp = _chk_sub(
-            tr("Compensación fading HF  (onda corta con QSB)"),
-            tr("Congela el estimador de ruido durante fades ionosféricos y acelera\n"
-            "la recuperación al volver la señal. Solo tiene efecto en modo Adaptativo (MCRA).\n"
-            "Sensibilidad y duración del freeze configurables en Avanzada Cancelador."),
-        )
         self._chk_voice_leveler = _chk_sub(
             tr("Nivelador de voz  (compensa condiciones de banda)"),
             tr("AGC de voz después del cancelador: mantiene la voz limpia a nivel\n"
@@ -535,7 +529,6 @@ class MainWindow(QMainWindow):
         self._chk_pitch_enhance.toggled.connect(lambda v: self._on_module_toggled("pitch_enhance_enabled", self._pipeline.set_pitch_enhance_enabled, v))
         self._chk_presence.toggled.connect(lambda v: self._on_module_toggled("presence_enabled", self._pipeline.set_presence_enabled, v))
         self._chk_squelch.toggled.connect(lambda v: self._on_module_toggled("squelch_enabled", self._pipeline.set_squelch_enabled, v))
-        self._chk_fading_comp.toggled.connect(lambda v: self._on_module_toggled("noise_fading_comp", self._pipeline.set_fading_comp, v))
         self._chk_voice_leveler.toggled.connect(lambda v: self._on_module_toggled("voice_leveler_enabled", self._pipeline.set_voice_leveler_enabled, v))
         self._chk_exciter.toggled.connect(lambda v: self._on_module_toggled("exciter_enabled", self._pipeline.set_exciter_enabled, v))
         self._chk_bass.toggled.connect(lambda v: self._on_module_toggled("bass_enabled", self._pipeline.set_bass_enabled, v))
@@ -1052,7 +1045,6 @@ class MainWindow(QMainWindow):
             (self._chk_pitch_enhance, "pitch_enhance_enabled", self._pipeline.set_pitch_enhance_enabled),
             (self._chk_presence,      "presence_enabled",      self._pipeline.set_presence_enabled),
             (self._chk_squelch,  "squelch_enabled",   self._pipeline.set_squelch_enabled),
-            (self._chk_fading_comp, "noise_fading_comp", self._pipeline.set_fading_comp),
             (self._chk_voice_leveler, "voice_leveler_enabled", self._pipeline.set_voice_leveler_enabled),
             (self._chk_exciter,  "exciter_enabled",   self._pipeline.set_exciter_enabled),
             (self._chk_bass,     "bass_enabled",      self._pipeline.set_bass_enabled),
@@ -1122,7 +1114,6 @@ class MainWindow(QMainWindow):
             (self._chk_pitch_enhance,     "pitch_enhance_enabled",     self._pipeline.set_pitch_enhance_enabled),
             (self._chk_presence,          "presence_enabled",          self._pipeline.set_presence_enabled),
             (self._chk_squelch,           "squelch_enabled",           self._pipeline.set_squelch_enabled),
-            (self._chk_fading_comp,       "noise_fading_comp",         self._pipeline.set_fading_comp),
             (self._chk_voice_leveler,     "voice_leveler_enabled",     self._pipeline.set_voice_leveler_enabled),
             (self._chk_exciter,           "exciter_enabled",           self._pipeline.set_exciter_enabled),
             (self._chk_bass,              "bass_enabled",              self._pipeline.set_bass_enabled),

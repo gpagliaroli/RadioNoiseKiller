@@ -38,7 +38,6 @@ panorama general y las notas para quien quiera tocar el código.
 - **Supresor de impulsos** — dos niveles en cascada (10 ms y 0,67 ms) para QRN atmosférico,
   detectados por contraste contra el audio vecino (no contra el piso), así la voz no dispara
 - **ANF** — filtro de muesca espectral adaptativo para heterodinos, portadoras y zumbidos
-- **Compensación de fading HF** — congela el estimador durante el QSB para que no se desajuste
 - **Squelch de voz** — silencia entre transmisiones, con cierre progresivo (sin cola de squelch)
 
 **Nivel y timbre**

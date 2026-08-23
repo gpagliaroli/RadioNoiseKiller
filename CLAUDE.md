@@ -184,7 +184,11 @@ del todo. Fórmula: `gain_post[k] = gain[k]^(1 + strength·(1 − p_speech[k]))`
   toda la supresión extra — el slider de agresividad no tiene efecto audible. El `_eff_floor` ya fue
   aplicado antes por OMLSA y no debe re-aplicarse después de una etapa de supresión adicional.
 
-### Compensación de fading HF (noise_fading_comp)
+### Compensación de fading HF (noise_fading_comp) — ELIMINADA post-v2.2
+> Se quitó del código tras medirla (ver el bloque "v2.2 — la compensación de fading
+> detectaba sílabas" más abajo). Lo que sigue describe cómo funcionaba, para que quede
+> el registro de qué se probó y por qué no alcanzó. **No reimplementarlo por el camino
+> de detectar el fade por energía de frame.**
 Para onda corta con QSB. Dos mecanismos, ambos activos solo con el checkbox habilitado
 (sub-módulo del cancelador en Módulos Activos, pestaña Principal — v1.3):
 - **Freeze MCRA:** si la energía del frame cambia ≥ umbral respecto al EMA (slider "Sensibilidad
@@ -227,10 +231,11 @@ Bugs reales encontrados en revisión — cada uno es un patrón que puede reapar
    truthy). Escribir `is_running()`.
 5. **Los indicadores de `_update_stats()` deben actualizarse siempre**, no detrás de un early-return
    condicional (quedan con valores viejos, p. ej. tras "Borrar perfil"). Usar if/else, no return.
-6. **Features condicionadas a un modo deben chequear el modo en TODOS sus efectos.** El
-   `beta_release` de fading comp aplicaba en modo static aunque la detección solo corre en MCRA.
-   Además, al salir del modo (set_mode) resetear el estado del feature (`_fading_active` quedaba
-   pegado en True).
+6. **Features condicionadas a un modo deben chequear el modo en TODOS sus efectos.** El caso que
+   lo enseñó fue la compensación de fading (ya eliminada): su `beta_release` aplicaba en modo
+   static aunque la detección sólo corría en MCRA, y al salir del modo el flag de estado quedaba
+   pegado en True. La regla sigue valiendo para cualquier feature con estado propio: si depende
+   de un modo, chequearlo en todos sus efectos y resetear el estado al salir.
 7. **Race aceptada:** `pop_blanker_hits` (lectura+reset no atómico) se deja sin lock a propósito —
    proteger un contador de diagnóstico no justifica contención en el hilo de audio. No "arreglarlo".
 8. **`default=` de SliderRow es el valor de fábrica, no el de la config.** El parámetro `default`
@@ -275,6 +280,46 @@ excitador). Los presets de 1.9.x cargan sin error pero no suenan igual — los 8
 reajustaron en el aire. Todo el contenido de abajo se validó escuchando en la radio, con varias
 iteraciones de ida y vuelta (ver los "reportado en el aire" de cada ítem: casi todos los fixes de
 esta versión salieron de una escucha que contradijo una medición sintética).
+
+**v2.2 — la compensación de fading detectaba sílabas, no fades. ELIMINADA.** El usuario reportó que
+con sensibilidad en 10 dB (el máximo) el indicador FADE estaba encendido casi todo el tiempo, y
+preguntó si había que ampliar el rango del control o si medía mal. Medía mal.
+- **El detector comparaba la energía del frame contra un EMA de 40 ms** (`_FADING_EMA_ALPHA=0.80`).
+  La voz sola, sin una pizca de fading, oscila **16,7 dB pico a pico** entre sílaba y hueco — el
+  mismo orden que el fade de 20 dB que buscaba. Medido con voz y CERO fading: dispara **~2 veces
+  por segundo** a cualquier umbral entre 1 y 8 dB (1/s en 10), o sea el indicador encendido el
+  50-100 % del tiempo. Los 2/s coinciden con el ritmo de las palabras: dispara al arrancar y al
+  terminar cada una.
+- **Ampliar el rango no servía:** a 10 dB seguía disparando y, sobre todo, **seguía sin
+  discriminar** — con QSB real la tasa era igual o MÁS BAJA que sin fading.
+- **Y el techo del feature era chico aunque el detector fuera perfecto.** Con un **oráculo** que
+  sabía exactamente cuándo había fade (misma técnica que descartó la criba armónica): −2,4 dB de
+  altibajo a cambio de −1,0 dB de voz, y **sólo con ruido atmosférico** (que se desvanece junto con
+  la señal). Con **ruido local** —que no se desvanece— el oráculo no cambiaba **nada** (+0,0 dB).
+  Ese es el resultado que cerró la discusión: el problema no era el detector.
+- **Lo que SÍ sirve contra el QSB es la Velocidad de respuesta del nivelador de voz.** Medido con
+  un desvanecimiento de 20 dB: bajarla de 1500 a 200 ms lleva el vaivén extra de 12,2 a 6,9 dB pp.
+  Un release lento va a destiempo —aplica la ganancia de hace un segundo al nivel de ahora— y
+  **expande** el fade en vez de compensarlo. **Validado en el aire.**
+- Trade documentado en el manual: el recorrido de ganancia del nivelador es a la vez lo que compensa
+  el QSB y lo que produce saltos bruscos (6 dB/200 ms → 8,8 dB pp de altibajo pero 2,5 dB/300 ms de
+  salto; 3 dB/200 ms → 10,7 y 0,8). Si molestan los saltos, bajar la **Ganancia máxima**, no frenar
+  la velocidad.
+- **Dos trampas de medición propias, ambas detectadas por el patrón "todas las variantes dan lo
+  mismo" o "la dispersión se come la diferencia":**
+  1. El primer oráculo daba resultados **idénticos** en sus cuatro variantes: `process()` recalcula
+     `_fading_active` internamente y pisaba lo que el banco seteaba antes de llamar. Había que
+     forzar `_mcra_freeze_count` (la variable de la que deriva) y dejar el umbral inalcanzable.
+  2. Las primeras conclusiones sobre el nivelador salieron de correr el **pipeline completo**, y
+     ahí la misma configuración daba 9,9 y 27,7 dB según la semilla — la dispersión tapaba todo.
+     Es la trampa que CLAUDE.md ya documentaba (*"el hilo procesador avanza distinto en cada
+     corrida"*). Rehecho con una cadena **síncrona** (profiler + AGC del nivelador, sin hilo), la
+     dispersión bajó a 1-3 dB y **el signo del resultado se dio vuelta**. Para medir el efecto de
+     algo sobre el audio, no usar el pipeline con su hilo: replicar la cadena en sincrónico.
+- Se fueron: `noise_fading_comp/_change_db/_freeze_ms` de DSPConfig y presets, el checkbox de
+  Módulos, los dos sliders y el indicador FADE de Avanzada Cancelador, `pop_fading_active`, el
+  latch, `_FADING_*`, `_mcra_freeze_count` (quedó muerto) y 8 claves de i18n. Presets viejos con las
+  claves muertas cargan sin "(modificado)" — tercera vez que paga la normalización por `snapshot()`.
 
 **Post-v2.2: eliminada la Corrección de tono SSB (FrequencyShifter).** Decisión del usuario, que la
 había pedido en su momento: *"no es utilizado"*. Un control que nadie usa igual hay que mantenerlo,

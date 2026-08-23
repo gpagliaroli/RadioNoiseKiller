@@ -154,7 +154,7 @@ class AdvancedAudioTab(QWidget):
         return group
 
     def _build_leveler_group(self) -> QGroupBox:
-        group = QGroupBox(tr("Nivelador de voz  (activar en Módulos Activos)"))
+        group = QGroupBox(tr("Nivelador de voz — después del cancelador  (activar en Módulos Activos)"))
         layout = QVBoxLayout(group)
 
         act_row = QHBoxLayout()
@@ -192,6 +192,7 @@ class AdvancedAudioTab(QWidget):
         self._s_leveler_release.valueChanged.connect(self._pipeline.set_voice_leveler_release_ms)
         layout.addWidget(self._s_leveler_release)
         layout.addWidget(_note(tr("  ↳ Qué tan rápido sigue el nivelador los cambios de nivel. Rápido = sigue el fading cíclico y rápido; suave = más estable, menos bombeo.")))
+        layout.addWidget(_note(tr("  ↳ Estos dos controles son SOLO de este nivelador. El AGC de entrada es otro módulo y se ajusta en la pestaña Principal.")))
 
         return group
 
@@ -690,8 +691,6 @@ class AdvancedCancellerTab(QWidget):
         for s in (self._s_noise_floor, self._s_noise_smooth, self._s_noise_attack,
                   self._s_mcra_window, self._s_hf_boost):
             s.set_enabled(noise)
-        for s in (self._s_fading_change, self._s_fading_freeze):
-            s.set_enabled(noise and dsp.noise_fading_comp)
         for s in (self._s_squelch_threshold, self._s_squelch_hold):
             s.set_enabled(noise and dsp.squelch_enabled)
         for s in (self._s_pf_boost, self._s_pf_center,
@@ -800,42 +799,6 @@ class AdvancedCancellerTab(QWidget):
         layout.addWidget(self._s_hf_boost)
         layout.addWidget(_note(tr("  ↳ Sube el piso de ruido por encima de ~2.5 kHz (donde la energía del ruido es baja y el estimador reacciona tarde). Suprime mejor el siseo de agudos que se cuela con el fading, a costa de algo de brillo de la voz — combinar con Excitador/Presencia para reponerlo.")))
 
-        fading_row = QHBoxLayout()
-        fading_row.addWidget(QLabel(tr("Compensación fading HF:")))
-        self._lbl_fading = QLabel("—")
-        self._lbl_fading.setStyleSheet("color: #888;")
-        fading_row.addWidget(self._lbl_fading)
-        fading_row.addStretch()
-        layout.addLayout(fading_row)
-        layout.addWidget(_note(tr("  ↳ Activar en Módulos Activos (sub-módulo del cancelador). Solo modo Adaptativo.")))
-
-        self._s_fading_change = SliderRow(
-            tr("Sensibilidad fading:"),
-            min_val=1.0, max_val=10.0,
-            default=_DSP_DEF.noise_fading_change_db,
-            step=0.5, unit="dB", fmt="{:.1f}",
-        )
-        self._s_fading_change._update_label = lambda v: self._s_fading_change._val_lbl.setText(
-            f"{v:.1f} dB  ({tr('sensible') if v < 4 else tr('normal') if v < 7 else tr('selectivo')})"
-        )
-        self._s_fading_change._val_lbl.setFixedWidth(110)
-        self._s_fading_change.valueChanged.connect(self._pipeline.set_fading_change_db)
-        layout.addWidget(self._s_fading_change)
-        layout.addWidget(_note(tr("  ↳ Cambio de energía que dispara el freeze. Sensible = detecta QSB suave (puede disparar con la voz). Selectivo = solo fades profundos.")))
-
-        self._s_fading_freeze = SliderRow(
-            tr("Duración del freeze:"),
-            min_val=100.0, max_val=500.0,
-            default=_DSP_DEF.noise_fading_freeze_ms,
-            step=25.0, unit="ms", fmt="{:.0f}",
-        )
-        self._s_fading_freeze._update_label = lambda v: self._s_fading_freeze._val_lbl.setText(
-            f"{v:.0f} ms  ({tr('corto') if v < 175 else tr('normal') if v < 325 else tr('largo')})"
-        )
-        self._s_fading_freeze._val_lbl.setFixedWidth(110)
-        self._s_fading_freeze.valueChanged.connect(self._pipeline.set_fading_freeze_ms)
-        layout.addWidget(self._s_fading_freeze)
-        layout.addWidget(_note(tr("  ↳ Tiempo que MCRA queda congelado tras cada evento. Fades lentos necesitan más; muy largo desactualiza el piso.")))
         return group
 
     def _build_squelch_group(self) -> QGroupBox:
@@ -1044,19 +1007,6 @@ class AdvancedCancellerTab(QWidget):
             color_vp = "#4fc3f7" if vp > 0.5 else "#fff176" if vp > 0.15 else "#888"
             self._lbl_noise_vp.setStyleSheet(f"color: {color_vp}; font-weight: bold;")
 
-        # Fading compensation indicator — pop con latch: enciende FADE si hubo freeze
-        # desde el último poll (el freeze de ~200ms se perdía entre polls de 500ms).
-        if self._config.dsp.noise_fading_comp and self._pipeline.is_running():
-            if self._pipeline.pop_fading_active():
-                self._lbl_fading.setText(tr("FADE"))
-                self._lbl_fading.setStyleSheet("color: #ffb74d; font-weight: bold;")
-            else:
-                self._lbl_fading.setText(tr("ok"))
-                self._lbl_fading.setStyleSheet("color: #888;")
-        else:
-            self._lbl_fading.setText("—")
-            self._lbl_fading.setStyleSheet("color: #888;")
-
         # Piso espectral perceptual
         pf_enabled = self._config.dsp.perceptual_floor_enabled
         if pf_enabled:
@@ -1101,8 +1051,6 @@ class AdvancedCancellerTab(QWidget):
         self._s_noise_attack.set_value(cfg.noise_attack)
         self._s_mcra_window.set_value(cfg.noise_mcra_window_ms)
         self._s_hf_boost.set_value(cfg.noise_hf_boost * 100.0)
-        self._s_fading_change.set_value(cfg.noise_fading_change_db)
-        self._s_fading_freeze.set_value(cfg.noise_fading_freeze_ms)
         self._s_squelch_threshold.set_value(cfg.squelch_threshold)
         self._s_squelch_hold.set_value(cfg.squelch_hold_ms)
         self._s_pf_boost.set_value(cfg.perceptual_floor_boost)
@@ -1126,8 +1074,6 @@ class AdvancedCancellerTab(QWidget):
         self._pipeline.set_noise_floor(defaults.noise_floor)
         self._pipeline.set_noise_smooth(defaults.noise_smooth)
         self._pipeline.set_noise_attack(defaults.noise_attack)
-        self._pipeline.set_fading_change_db(defaults.noise_fading_change_db)
-        self._pipeline.set_fading_freeze_ms(defaults.noise_fading_freeze_ms)
         self._pipeline.set_squelch_threshold(defaults.squelch_threshold)
         self._pipeline.set_squelch_hold_ms(defaults.squelch_hold_ms)
         self._pipeline.set_pf_boost(defaults.perceptual_floor_boost)

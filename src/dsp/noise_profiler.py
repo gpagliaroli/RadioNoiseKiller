@@ -133,8 +133,8 @@ class NoiseProfiler:
     # con saltos de ruido de hasta +20 dB, contra 0.80 de media con voz a cualquier
     # S/N (98% de los frames por encima del umbral).
     # Hold: los tramos sordos de la voz (fricativas) no son periódicos y sin él
-    # dejarían de proteger. Durante el warmup no aplica (igual que el freeze de
-    # fading): si no, con voz continua el warmup no terminaría nunca.
+    # dejarían de proteger. Durante el warmup no aplica: si no, con voz continua
+    # el warmup no terminaría nunca.
     #
     # Bajado de 300 a 200 ms: con huecos de palabra normales (~400 ms) el hold se
     # comía casi todo el hueco y el estimador se quedaba sin frames para ponerse al
@@ -158,16 +158,17 @@ class NoiseProfiler:
     _MCRA_PITCH_THR:     float = 0.30   # confianza de autocorrelación para congelar
     _MCRA_VOICE_HOLD_MS: float = 200.0  # retención tras el último frame periódico
 
-    # Compensación de fading HF
-    # Detecta cambios bruscos de energía (fading ionosférico) y congela MCRA para que el
-    # piso de ruido no siga al nivel de señal. También acelera el release del estimador DD.
-    # Umbral de detección y duración del freeze son ajustables por slider (ver setters);
-    # estos dos quedan fijos:
-    _FADING_EMA_ALPHA:    float = 0.80  # suavizado de energía para detección (TC≈4 frames)
-    _FADING_BETA_RELEASE: float = 0.45  # beta DD en modo fading (release más rápido que 0.80)
-    _FADING_VP_THR:       float = 0.40  # vp mínimo para congelar: distingue desvanecimiento de
-                                        # señal (voz presente → congela) de subida de ruido de
-                                        # banda ancha (vp bajo → NO congela, deja seguir el ruido)
+    # NOTA: acá vivía la "Compensación de fading HF" (freeze de MCRA + release DD
+    # acelerado ante cambios bruscos de energía). Se eliminó tras medirla — el
+    # detector comparaba la energía del frame contra un EMA de 40 ms, y la voz sola
+    # oscila 16,7 dB pico a pico entre sílaba y hueco, así que disparaba ~2 veces
+    # por segundo SIN NADA de fading y no discriminaba QSB real. Con un detector
+    # ORÁCULO (que sabía exactamente cuándo había fade) el techo del feature era
+    # −2,4 dB de altibajo a cambio de −1,0 dB de voz, y sólo con ruido atmosférico:
+    # con ruido local, cero. No reintentarlo por el camino de "detectar el fade por
+    # energía": el problema no es el detector sino que congelar λ_d compra muy poco.
+    # Lo que SÍ mueve la aguja contra el QSB es la Velocidad de respuesta del
+    # nivelador de voz (medido: 12,2 → 6,9 dB de altibajo bajando de 1500 a 200 ms).
     _PS_SMOOTH:           float = 0.6   # suavizado temporal de p_speech por bin (anti-gorgojeo):
                                         # estabiliza la clasificación voz/ruido, fuente del ruido
                                         # musical residual. EMA ~2-3 frames, sin retraso audible.
@@ -282,11 +283,6 @@ class NoiseProfiler:
         self._hf_boost:       float      = 0.0
         self._hf_boost_curve: np.ndarray = self._build_hf_boost_curve()
 
-        # Compensación de fading HF
-        self._fading_comp:         bool  = False
-        self._fading_change_db:    float = 5.0   # umbral de detección (slider, 1-10 dB)
-        self._fading_freeze_ms:    float = 200.0 # duración del freeze (slider, 100-500 ms)
-        self._fading_freeze_frames: int  = self._calc_fading_freeze_frames()
         # Ventana de ataque de p_speech (flanco del VAD rápido) — ver _PS_ATTACK_VP_SQ
         self._atk_window: int   = 0
         self._prev_vp_sq: float = 0.0
@@ -295,10 +291,6 @@ class NoiseProfiler:
         self._mcra_voice_hold:        int = 0
         self._mcra_voice_hold_frames: int = self._calc_voice_hold_frames()
 
-        self._fading_energy_ema:   float | None = None  # EMA de energía de frame
-        self._mcra_freeze_count:   int   = 0    # frames restantes de congelado MCRA
-        self._fading_active:       bool  = False # True mientras hay evento de fading
-        self._fading_latch:        bool  = False # latch para la UI: True si hubo freeze
                                                  # desde la última lectura (el freeze de
                                                  # ~200ms se pierde entre polls de 500ms)
 
@@ -356,9 +348,6 @@ class NoiseProfiler:
         self._voice_prob_sq  = 0.0
         self._spec_conf      = 0.0
         self._snr_db         = 0.0
-        self._fading_energy_ema = None
-        self._mcra_freeze_count = 0
-        self._fading_active     = False
         if mode == "mcra":
             self._reset_mcra()
 
@@ -394,9 +383,8 @@ class NoiseProfiler:
             # tras cambiar el tamaño de bloque (invariante 9)
             self._floor_curve = self._build_floor_curve()
             self._hf_boost_curve = self._build_hf_boost_curve()
-            # El freeze de fading, el hold del freeze por voz y la ventana MCRA se
-            # expresan en frames — dependen del hop
-            self._fading_freeze_frames = self._calc_fading_freeze_frames()
+            # El hold del freeze por voz y la ventana MCRA se expresan en frames
+            # — dependen del hop
             self._mcra_voice_hold_frames = self._calc_voice_hold_frames()
             self._mcra_M = self._calc_mcra_M()
         # Las curvas por-bin se rearman TAMBIÉN cuando su tamaño no coincide con
@@ -430,13 +418,9 @@ class NoiseProfiler:
         self._pf_extra_db        = 0.0
         self._pitch_cache        = None
         self._pitch_countdown    = 0
-        self._fading_energy_ema  = None
-        self._mcra_freeze_count  = 0
         self._mcra_voice_hold    = 0
         self._atk_window         = 0
         self._prev_vp_sq         = 0.0
-        self._fading_active      = False
-        self._fading_latch       = False
         if self._mode == "mcra":
             self._reset_mcra()
 
@@ -535,18 +519,6 @@ class NoiseProfiler:
         self._pf_rolloff_depth = float(np.clip(v, 0.0, 0.95))   # == max del slider (invariante 1)
         self._floor_curve = self._build_floor_curve()
 
-    def set_fading_comp(self, v: bool) -> None:
-        self._fading_comp = bool(v)
-        if not v:
-            self._fading_energy_ema = None
-            self._mcra_freeze_count = 0
-            self._fading_active     = False
-
-    def _calc_fading_freeze_frames(self) -> int:
-        """Frames de freeze según la duración en ms y el hop actual (48 kHz)."""
-        hop_ms = self._hop / 48.0
-        return max(1, round(self._fading_freeze_ms / hop_ms))
-
     def _calc_voice_hold_frames(self) -> int:
         """Frames de retención del freeze por voz (depende del hop — invariante 9)."""
         hop_ms = self._hop / 48.0
@@ -628,15 +600,6 @@ class NoiseProfiler:
         de antena: sin esto, el release del AGC tras la voz amplifica el ruido
         de banda y el VAD lo confunde con voz (el gate de squelch no cierra)."""
         self._agc_gain = max(float(g), 1e-6)
-
-    def set_fading_change_db(self, v: float) -> None:
-        # Mínimo 1 dB: con 0 el detector (change_db >= umbral, change_db es |Δ| ≥ 0)
-        # dispararía en todos los frames → freeze permanente → MCRA nunca actualiza.
-        self._fading_change_db = float(np.clip(v, 1.0, 10.0))
-
-    def set_fading_freeze_ms(self, v: float) -> None:
-        self._fading_freeze_ms = float(np.clip(v, 100.0, 500.0))
-        self._fading_freeze_frames = self._calc_fading_freeze_frames()
 
     def set_post_filter_enabled(self, v: bool) -> None:
         self._post_filter_enabled = bool(v)
@@ -760,10 +723,10 @@ class NoiseProfiler:
         Retorna noise_mag (None durante warmup inicial)."""
         power = (np.abs(spec) ** 2 + 1e-12).astype(np.float64)
         voiced = self._mcra_voice_hold > 0
-        self._mcra_quar.append([power, self._fading_active or voiced])
+        self._mcra_quar.append([power, voiced])
         if voiced:
             # El onset ya encolado tampoco debe contaminar: el vp llega 1-2 frames
-            # tarde (mismo motivo que el marcado retroactivo del fading).
+            # tarde (el vp llega con lag por el OLA).
             for item in self._mcra_quar:
                 item[1] = True
         if len(self._mcra_quar) <= self._MCRA_QUAR_FRAMES:
@@ -798,9 +761,6 @@ class NoiseProfiler:
             if self._mcra_frames >= self._mcra_warmup:
                 return np.sqrt(self._mcra_ld).astype(np.float32)
             return None
-
-        # (El freeze de fading vive en _mcra_feed: los frames encolados durante un
-        #  evento — o retroactivamente marcados al detectarlo — no llegan acá.)
 
         # 1. Suavizado de potencia espectral
         self._mcra_Sf = (self._MCRA_ALPHA_S * self._mcra_Sf
@@ -888,39 +848,6 @@ class NoiseProfiler:
             self._n_frames += 1
 
         # Obtener noise_mag según el modo
-        # --- Detección de fading HF (antes de MCRA para que el freeze ya esté activo) ---
-        if self._fading_comp and self._mode == "mcra":
-            frame_e = float(np.mean(np.abs(spec) ** 2))
-            if self._fading_energy_ema is None:
-                self._fading_energy_ema = frame_e
-                self._fading_active = False
-            else:
-                ema = self._fading_energy_ema
-                if ema > 1e-15:
-                    change_db = abs(10.0 * np.log10(max(frame_e, 1e-15) / ema))
-                    # VAD-smart: solo congelar si hay VOZ presente (desvanecimiento de
-                    # señal). Una subida/bajada del ruido de banda ancha da vp bajo →
-                    # NO congelar, para que el estimador SIGA el ruido en vez de quedar
-                    # desfasado (antes congelaba en cada subida de ruido → vaivén).
-                    # Usa el vp del frame anterior (la presencia de voz no cambia frame
-                    # a frame; el freeze ya trabaja con lag y la cuarentena cubre el onset).
-                    if (change_db >= self._fading_change_db
-                            and self._voice_prob >= self._FADING_VP_THR):
-                        self._mcra_freeze_count = self._fading_freeze_frames
-                        # Marcado retroactivo: el onset del fade ya está en la
-                        # cuarentena (la detección lo ve 1-2 frames tarde por el
-                        # OLA) — que esos frames no actualicen λ_d
-                        for item in self._mcra_quar:
-                            item[1] = True
-                if self._mcra_freeze_count > 0:
-                    self._mcra_freeze_count -= 1
-                    self._fading_active = True
-                    self._fading_latch  = True   # visible para la UI aunque el poll llegue tarde
-                else:
-                    self._fading_active = False
-                self._fading_energy_ema = (self._FADING_EMA_ALPHA * ema
-                                           + (1.0 - self._FADING_EMA_ALPHA) * frame_e)
-
         if self._mode == "mcra":
             noise_mag = self._mcra_feed(spec)
         else:
@@ -1051,15 +978,6 @@ class NoiseProfiler:
             beta_r        = np.float32(self._beta)
             vp            = np.float32(self._voice_prob)
             beta_fast_eff = np.float32(beta_r * (1.0 - vp) + self._beta_fast * vp)
-            # Release acelerado SOLO durante un evento de fading activo (la
-            # recuperación dispara su propia ventana, así que "la voz que vuelve
-            # del fade" queda cubierta). Antes aplicaba siempre con el checkbox
-            # activo: con mucho ruido y sin fading, los falsos positivos del
-            # detector de bins subían con β=0.45 → gorgojeo extra audible.
-            beta_release  = (np.float32(self._FADING_BETA_RELEASE)
-                             if (self._fading_comp and self._mode == "mcra"
-                                 and self._fading_active)
-                             else beta_fast_eff)
 
             # --- DD SNR a priori ---
             if self._gain_prev is None:
@@ -1067,7 +985,7 @@ class NoiseProfiler:
             else:
                 rising   = snr_post > self._snr_post_prev
                 use_fast = rising & voice_bin
-                beta_eff = np.where(use_fast, beta_release, beta_r)
+                beta_eff = np.where(use_fast, beta_fast_eff, beta_r)
                 snr_prior = ((1.0 - beta_eff) * inst
                              + beta_eff * self._gain_prev ** 2 * self._snr_post_prev)
 
@@ -1255,21 +1173,6 @@ class NoiseProfiler:
     def pf_extra_db(self) -> float:
         """Reducción extra (dB, ≤0) aplicada por el post-filtro en bins de ruido."""
         return self._pf_extra_db
-
-    @property
-    def fading_active(self) -> bool:
-        """True si hay un evento de fading activo (MCRA congelado por cambio brusco de energía)."""
-        return self._fading_active
-
-    def pop_fading_active(self) -> bool:
-        """Para el indicador FADE de la UI: True si hubo freeze desde la última
-        lectura (lee+resetea el latch). Sin esto, un freeze de ~200ms se pierde
-        entre polls de 500ms y el indicador parpadea o no aparece. Read+reset sin
-        lock a propósito (invariante 7: no vale contención en el hilo de audio por
-        un indicador de diagnóstico)."""
-        v = self._fading_latch or self._fading_active
-        self._fading_latch = False
-        return v
 
     @property
     def pitch_f0(self) -> "float | None":
