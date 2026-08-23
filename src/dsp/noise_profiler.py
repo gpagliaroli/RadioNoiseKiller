@@ -1,3 +1,4 @@
+import math
 from collections import deque
 
 import numpy as np
@@ -61,7 +62,52 @@ class NoiseProfiler:
     # Parámetros MCRA
     _MCRA_ALPHA_S:       float = 0.9    # suavizado espectral
     _MCRA_ALPHA_D0:      float = 0.85   # velocidad de actualización del ruido (sin habla)
-    _MCRA_DELTA:         float = 1.67   # umbral ratio S_f/S_min para detectar habla
+    # Umbral del ratio S_f/S_min para declarar habla en un bin. NO es constante:
+    # se escala con la ventana de mínimos (ver la property `_mcra_delta`).
+    #
+    # Era fijo en 1.67 y eso resultó ser un defecto silencioso. El mínimo de una
+    # ventana SUBESTIMA la media, y tanto más cuanto más larga sea la ventana, así
+    # que el ratio en RUIDO PURO ya vale bastante más que 1. Medido, sin una sola
+    # muestra de voz presente:
+    #
+    #     ventana   ratio medio en ruido puro   bins marcados como habla (δ=1.67)
+    #      250 ms            1.40                          19.8 %
+    #      400 ms            1.50                          28.0 %
+    #      600 ms            1.60                          37.1 %
+    #      800 ms            1.65                          41.2 %   <- default
+    #
+    # O sea que en el default el umbral quedaba prácticamente SOBRE la media de la
+    # distribución del ruido: 41 % de los bins se declaraban habla sin que hubiera
+    # nadie hablando, y esos bins no actualizan λ_d. Peor: la tasa dependía de
+    # dónde estuviera el slider de "Reactividad del piso", que se documenta como un
+    # control de velocidad — tenía un segundo efecto que nadie decidió.
+    #
+    # Ahora el umbral se para un margen fijo POR ENCIMA del ratio esperado para la
+    # ventana en uso, así la tasa de falsos positivos es la misma la muevas donde
+    # la muevas (~5 %). El ratio esperado se modela con un ajuste lineal en ln(D)
+    # sobre la tabla de arriba (D = B*M frames); depende de _MCRA_ALPHA_S, así que
+    # si ese cambia hay que volver a medir. El guard que importa no es la fórmula
+    # sino el test que barre la ventana y exige la tasa dentro de una banda.
+    # El margen se eligió midiendo, no por gusto. Barrido con el hold ya en 200 ms,
+    # con un cambio real de +10 dB de ruido durante la transmisión:
+    #
+    #   margen  δ@800  falsos 250ms/800ms   ruido huecos   voz    impulso +20 dB
+    #    (fijo)  1.67      20.1 % / 42.9 %     -35.7 dB   -2.82 dB    0.040 dB
+    #     1.15   1.90      24.0 % / 26.9 %     -36.2 dB   -3.08 dB    0.028 dB
+    #     1.25   2.06      16.2 % / 18.5 %     -36.4 dB   -3.14 dB    0.032 dB  <- elegido
+    #     1.35   2.23      10.7 % / 12.4 %     -36.5 dB   -3.23 dB    0.050 dB
+    #     1.50   2.47       5.7 % /  6.5 %     -36.6 dB   -3.35 dB    0.125 dB
+    #
+    # 1.25 se queda con el 93 % de la mejora de ruido pagando 0.21 dB MENOS de voz
+    # que 1.50, y conserva la inmunidad a impulsos (0.032, mejor que el 0.040 del
+    # umbral fijo). Bajar más los falsos positivos es tentador pero se paga en voz
+    # y en que un impulso aislado empiece a entrar a λ_d: a margen 1.50 la deriva
+    # se triplica. **El objetivo del cambio no era minimizar los falsos positivos
+    # sino que dejaran de depender del slider** — eso ya se cumple en 1.25 (16 vs
+    # 18 %, contra 20 vs 43 % del umbral fijo).
+    _MCRA_DELTA_A:       float = 0.738  # ordenada del ajuste ratio ≈ a + b·ln(D)
+    _MCRA_DELTA_B:       float = 0.208  # pendiente
+    _MCRA_DELTA_MARGIN:  float = 1.25   # cuánto por encima del ruido se para el umbral
     _MCRA_B:             int   = 4      # número de subtramas
     _MCRA_M:             int   = 20     # frames por subtrama → ventana total = B×M = 80 frames ≈ 800ms
     _MCRA_SQUELCH_RATIO: float = 0.05  # congelar si potencia_frame < 5% del piso estimado (-13 dB)
@@ -86,13 +132,31 @@ class NoiseProfiler:
     # sobre la forma de onda cruda, así que no puede realimentarse: medido máx 0.09
     # con saltos de ruido de hasta +20 dB, contra 0.80 de media con voz a cualquier
     # S/N (98% de los frames por encima del umbral).
-    # Hold de 300 ms: los tramos sordos de la voz (fricativas) no son periódicos y
-    # sin el hold dejarían de proteger. Durante el warmup no aplica (igual que el
-    # freeze de fading): si no, con voz continua el warmup no terminaría nunca.
+    # Hold: los tramos sordos de la voz (fricativas) no son periódicos y sin él
+    # dejarían de proteger. Durante el warmup no aplica (igual que el freeze de
+    # fading): si no, con voz continua el warmup no terminaría nunca.
+    #
+    # Bajado de 300 a 200 ms: con huecos de palabra normales (~400 ms) el hold se
+    # comía casi todo el hueco y el estimador se quedaba sin frames para ponerse al
+    # día. Medido con habla realista (sonoro + fricativa) y un cambio REAL de +10 dB
+    # en el ruido de banda durante la transmisión, midiendo el ruido que se cuela
+    # EN LOS HUECOS (no en toda la salida — el RMS total lo domina la voz):
+    #
+    #     hold    frames que alimentan   ruido en los huecos   deriva de λ_d
+    #     300 ms          25 %                 -33.2 dB           -0.37 dB
+    #     200 ms          34 %                 -35.4 dB           -0.16 dB   <- ahora
+    #     150 ms          39 %                 -35.7 dB           +0.16 dB
+    #     100 ms          44 %                 -35.9 dB           +1.22 dB
+    #     (techo alcanzable, sin voz:           -36.6 dB)
+    #
+    # 200 ms gana 2.2 dB sin costo de contaminación. Por debajo de 150 ms la deriva
+    # se dispara (la fricativa entra a λ_d como si fuera ruido): el hold NO sobra,
+    # sólo estaba sobredimensionado. **No bajarlo más** sin repetir la medición de
+    # la columna de la derecha, que es la que se rompe primero.
     # El warmup dura una VENTANA COMPLETA de mínimos (ver _mcra_warmup): con una
     # sola subtrama el estimador se daba por listo con 2 frames de voz.
     _MCRA_PITCH_THR:     float = 0.30   # confianza de autocorrelación para congelar
-    _MCRA_VOICE_HOLD_MS: float = 300.0  # retención tras el último frame periódico
+    _MCRA_VOICE_HOLD_MS: float = 200.0  # retención tras el último frame periódico
 
     # Compensación de fading HF
     # Detecta cambios bruscos de energía (fading ionosférico) y congela MCRA para que el
@@ -528,6 +592,22 @@ class NoiseProfiler:
         """
         return self._MCRA_B * self._mcra_M
 
+    @property
+    def _mcra_delta(self) -> float:
+        """Umbral S_f/S_min para declarar habla, escalado por la ventana en uso
+        (ver la tabla en _MCRA_DELTA_A). Se para `_MCRA_DELTA_MARGIN` por encima
+        del ratio que el RUIDO PURO produce con esa ventana, así la tasa de falsos
+        positivos no cambia al mover el slider de Reactividad.
+
+        Es property y no un valor cacheado por el mismo motivo que `_mcra_warmup`:
+        derivar de `_mcra_M` en el momento de usarlo hace imposible que los dos
+        queden desincronizados cuando cambia la ventana o el tamaño de bloque.
+        El ln() por frame es despreciable (~50 ns) al lado del resto del bloque.
+        """
+        d = self._MCRA_B * self._mcra_M
+        esperado = self._MCRA_DELTA_A + self._MCRA_DELTA_B * math.log(max(d, 2))
+        return self._MCRA_DELTA_MARGIN * esperado
+
     def _calc_mcra_M(self) -> int:
         """Frames por subtrama según la ventana en ms y el hop (48 kHz). La ventana
         total de seguimiento de mínimos es B×M frames; M más chico = ventana más
@@ -748,7 +828,7 @@ class NoiseProfiler:
 
         # 4. Indicador de presencia de habla por bin
         ratio = self._mcra_Sf / (S_min + 1e-12)
-        I_min = (ratio > self._MCRA_DELTA).astype(np.float64)
+        I_min = (ratio > self._mcra_delta).astype(np.float64)
 
         # 5. α_d adaptativo: actualiza lento cuando hay habla, rápido en silencio
         alpha_d = self._MCRA_ALPHA_D0 + (1.0 - self._MCRA_ALPHA_D0) * I_min

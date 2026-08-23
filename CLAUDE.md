@@ -277,6 +277,53 @@ reajustaron en el aire. Todo el contenido de abajo se validó escuchando en la r
 iteraciones de ida y vuelta (ver los "reportado en el aire" de cada ítem: casi todos los fixes de
 esta versión salieron de una escucha que contradijo una medición sintética).
 
+**Post-v2.2: revisión del MCRA — el hold del freeze y el umbral δ.** Revisión pedida por el usuario
+("ver si hay algo que se pueda mejorar"), hecha instrumentando el estimador real con señales
+sintéticas. Dos cambios, **ambos VALIDADOS en el aire** (agosto 2026): el usuario confirmó el
+comportamiento que predecía la medición — menos fondo entre las palabras cuando el ruido de banda
+se mueve durante una transmisión larga, sin pérdida audible de voz.
+- **`_MCRA_VOICE_HOLD_MS` 300 → 200 ms.** Con huecos de palabra normales (~400 ms) el hold se comía
+  casi todo el hueco y el estimador se quedaba sin frames para ponerse al día durante una
+  transmisión larga. Los números y el barrido completo están en el comentario de la constante.
+  **Es el cambio eficiente de los dos: 2,3 dB menos de ruido por 0,12 dB de voz (19:1).**
+- **δ (`_MCRA_DELTA`) deja de ser constante y escala con la ventana** (property `_mcra_delta`). Era
+  1.67 fijo, pero el ratio S_f/S_min **con ruido puro** vale 1,40 a 250 ms y 1,65 a 800 ms — o sea
+  que en el default el umbral estaba prácticamente SOBRE la media del ruido y el 41 % de los bins se
+  declaraba habla sin que nadie hablara. Peor: **el slider "Reactividad del piso" movía en silencio
+  la tasa de falsos positivos entre 20 % y 43 %**, un segundo efecto que nadie decidió. Ahora es
+  ~16-18 % constante. Property y no valor cacheado, por el mismo motivo que `_mcra_warmup`.
+- **Resultado combinado**, con un cambio REAL de +10 dB de ruido durante la transmisión: ruido
+  colado en los huecos **−33,4 → −36,4 dB** (el techo alcanzable es −36,6), voz conservada
+  **−2,69 → −3,14 dB**. O sea **3,0 dB de ruido por 0,45 dB de voz**. Sin cambio de ruido el costo
+  de voz cae a 0,10 dB. CPU sin cambio (172,9 vs 175,4 µs/frame, medido en el mismo proceso —
+  medirlo en procesos distintos daba +14 µs de pura varianza).
+- **El costo de voz NO es un defecto**: λ_d ahora sí sigue la subida de ruido, así que el Wiener
+  resta más y algo de voz se va con eso. Antes conservaba más voz sólo porque subestimaba el ruido.
+- **El margen de δ se eligió por barrido, y el óptimo no fue el primero que probé.** Con margen 1.50
+  la mejora de ruido era 0,2 dB mayor pero costaba 0,21 dB más de voz **y triplicaba la deriva de
+  λ_d ante un impulso aislado** (0,032 → 0,125 dB). 1.25 se queda con el 93 % del beneficio sin esa
+  regresión. Regla: el objetivo era que los falsos positivos dejaran de depender del slider, no
+  minimizarlos — pasarse de rosca se paga en voz y en inmunidad a impulsos.
+- **DESCARTADO por medición: dejar que los frames con voz alimenten λ_d con un α lento** (~2 s) en
+  los bins marcados como ruido, en vez de descartarlos. Da −1,6 dB (peor que el −0,7 de base) y sólo
+  1,8 dB en los huecos. **Falla estructuralmente**: el gate `S_f/S_min` no distingue "subió el
+  ruido" de "hay voz" — durante el salto S_min va atrasado, el ratio sube y los bins quedan marcados
+  como habla justo cuando querías que actualizaran. Es la misma trampa del freeze por vp. No
+  reintentarlo por ese camino.
+- **Trampa de medición propia, anotada**: la primera pasada usó una voz **puramente periódica y sin
+  pausas** y reportó 0-10 % de frames alimentando y λ_d sin seguir nada. Con voz realista (con
+  fricativas, que rompen la periodicidad) el mismo escenario da 25 % y sigue el salto. El problema
+  era **un tercio** de lo medido. Es la regla de "validar con voz con envolvente" vista al revés:
+  una señal demasiado limpia da un falso MAL resultado, no sólo un falso OK.
+- **Test flaky descubierto de paso.** `impulso +20dB aislado: drift < 0.2 dB` usaba **una sola
+  semilla** de ruido fluctuante: sobre 12 semillas la deriva va de 0,02 a 0,47 dB y **3 de esas 12
+  ya violaban el límite antes de tocar nada**. Pasaba por lotería. Ahora promedia 8 semillas
+  (~0,18 dB estable, límite 0,35). Guard nuevo además: que la tasa de falsos positivos de I_min con
+  ruido puro **no difiera más de 8 puntos entre los extremos del slider** — si alguien vuelve a fijar
+  δ, ese check se rompe.
+- El indicador S/N pasa de ~7,0 a **6,4 dB** con voz: λ_d está menos sesgado, así que el indicador
+  es más preciso (el sobreestimado de ~1,5 dB documentado se achica). No mueve las bandas del manual.
+
 **v2.2 publicada (agosto 2026)** — release en GitHub con distribuibles Windows y Linux. Versión de
 app 2.2.0, manuales `MANUAL_RadioNoiseKiller_v2.2.pdf` (ES, 41 págs) y `..._v2.2_EN.pdf` (EN, 40
 págs). Título "v2.2 by LU6APA". **Salto de menor**: no cambia el significado de ningún control, pero
