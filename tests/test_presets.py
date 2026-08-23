@@ -107,7 +107,6 @@ def test_apply_config_covers_all_fields():
     src.dsp.presence_q                    = 1.0
     src.dsp.body_freq                     = 400.0
     src.dsp.body_db                       = 4.0
-    src.dsp.pitch_shift_hz                = 100.0
     src.dsp.perceptual_floor_enabled      = True
     src.dsp.perceptual_floor_boost        = 1.0
     src.dsp.perceptual_floor_center       = 400.0

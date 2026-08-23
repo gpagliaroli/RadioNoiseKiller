@@ -54,7 +54,6 @@ panorama general y las notas para quien quiera tocar el código.
   control de carácter par/impar y gate por detección de voz
 - **Recuperar graves** — reconstruye el fundamental **derivándolo de los armónicos** que sobrevivieron
   al filtro del receptor, sin sintetizar nada
-- **Corrección de tono** — para BFO desajustado en SSB
 
 **Interfaz y operación**
 
@@ -166,7 +165,6 @@ src/
 │   ├── exciter.py        # AuralExciter: armónicos con carácter par/impar y gate por VAD
 │   ├── bass.py           # BassRestorer: fundamental derivado de los armónicos
 │   ├── blanker.py        # ImpulseBlanker: impulsos por contraste local en el tiempo
-│   ├── freq_shift.py     # FrequencyShifter: corrección de tono SSB
 │   ├── gain.py           # GainLimiter: limitador de picos con rodilla suave
 │   └── level.py          # LevelMeter: RMS con decaimiento
 └── ui/

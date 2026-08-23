@@ -321,24 +321,6 @@ class AdvancedAudioTab(QWidget):
         layout.addWidget(self._s_presence_q)
         layout.addWidget(_note(tr("  ↳ Q bajo = boost ancho (más cálido), Q alto = pico angosto (más nasal).")))
 
-        sep = QFrame()
-        sep.setFrameShape(QFrame.Shape.HLine)
-        sep.setStyleSheet("color: #444;")
-        layout.addWidget(sep)
-
-        self._s_pitch = SliderRow(
-            tr("Corrección de tono SSB:"),
-            min_val=-500, max_val=500,
-            default=int(_DSP_DEF.pitch_shift_hz),
-            step=10, unit="Hz", fmt="{:+.0f}",
-        )
-        self._s_pitch._update_label = lambda v: self._s_pitch._val_lbl.setText(
-            f"{v:+.0f} Hz  ({tr('neutro') if abs(v) < 5 else tr('agudo') if v > 0 else tr('grave')})"
-        )
-        self._s_pitch._val_lbl.setFixedWidth(110)
-        self._s_pitch.valueChanged.connect(self._pipeline.set_pitch_shift)
-        layout.addWidget(self._s_pitch)
-        layout.addWidget(_note(tr("  ↳ Corrige offset de BFO en SSB. +100 Hz si la voz suena grave, -100 Hz si suena aguda.")))
         return group
 
     def _build_exciter_group(self) -> QGroupBox:
@@ -430,7 +412,6 @@ class AdvancedAudioTab(QWidget):
         self._s_presence_q.set_value(cfg.presence_q)
         self._s_body_freq.set_value(cfg.body_freq)
         self._s_body.set_value(cfg.body_db)
-        self._s_pitch.set_value(cfg.pitch_shift_hz)
         self._s_exciter_drive.set_value(cfg.exciter_drive)
         self._s_exciter_mix.set_value(cfg.exciter_mix)
         self._s_exciter_char.set_value(cfg.exciter_character)
@@ -446,7 +427,6 @@ class AdvancedAudioTab(QWidget):
         self._config.dsp.presence_q      = defaults.presence_q
         self._config.dsp.body_freq       = defaults.body_freq
         self._config.dsp.body_db         = defaults.body_db
-        self._config.dsp.pitch_shift_hz  = defaults.pitch_shift_hz
         self._pipeline.set_filter_order(defaults.filter_order)
         for mode, (lo, hi) in defaults.bandpass_limits.items():
             self._pipeline.set_bandpass_limits(mode, lo, hi)
@@ -455,7 +435,6 @@ class AdvancedAudioTab(QWidget):
         self._pipeline.set_presence_q(defaults.presence_q)
         self._pipeline.set_body_freq(defaults.body_freq)
         self._pipeline.set_body_db(defaults.body_db)
-        self._pipeline.set_pitch_shift(defaults.pitch_shift_hz)
         self._config.dsp.exciter_drive = defaults.exciter_drive
         self._config.dsp.exciter_mix   = defaults.exciter_mix
         self._pipeline.set_exciter_drive(defaults.exciter_drive)

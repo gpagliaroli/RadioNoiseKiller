@@ -361,11 +361,6 @@ CATALOG = {
     "Ancho de presencia (Q):": "Presence width (Q):",
     "  ↳ Q bajo = boost ancho (más cálido), Q alto = pico angosto (más nasal).":
         "  ↳ Low Q = wide boost (warmer), high Q = narrow peak (more nasal).",
-    "Corrección de tono SSB:": "SSB pitch correction:",
-    "neutro": "neutral",
-    "agudo": "high",
-    "  ↳ Corrige offset de BFO en SSB. +100 Hz si la voz suena grave, -100 Hz si suena aguda.":
-        "  ↳ Corrects SSB BFO offset. +100 Hz if the voice sounds low, -100 Hz if it sounds high.",
     "Excitador armónico  (se aplica en tiempo real)": "Harmonic exciter  (applied in real time)",
     "Drive:": "Drive:",
     "suave": "soft",

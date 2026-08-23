@@ -158,7 +158,6 @@ class PresetManager:
                 "presence_q":                dsp.presence_q,
                 "body_freq":                 dsp.body_freq,
                 "body_db":                   dsp.body_db,
-                "pitch_shift_hz":            dsp.pitch_shift_hz,
                 "perceptual_floor_enabled":       dsp.perceptual_floor_enabled,
                 "perceptual_floor_boost":         dsp.perceptual_floor_boost,
                 "perceptual_floor_center":        dsp.perceptual_floor_center,
@@ -262,7 +261,6 @@ class PresetManager:
         dsp.presence_q         = float(d.get("presence_q",        ddef.presence_q))
         dsp.body_freq          = float(d.get("body_freq",         ddef.body_freq))
         dsp.body_db            = float(d.get("body_db",           ddef.body_db))
-        dsp.pitch_shift_hz     = float(d.get("pitch_shift_hz",    ddef.pitch_shift_hz))
         dsp.perceptual_floor_enabled       = bool(d.get("perceptual_floor_enabled",       ddef.perceptual_floor_enabled))
         dsp.perceptual_floor_boost         = float(d.get("perceptual_floor_boost",        ddef.perceptual_floor_boost))
         dsp.perceptual_floor_center        = float(d.get("perceptual_floor_center",       ddef.perceptual_floor_center))

@@ -135,11 +135,6 @@ SLIDER_TIPS = {
         "ancho suena más natural pero mueve más banda.\n"
         "Empezá ancho y angostá sólo si buscás algo puntual."
     ),
-    "_s_pitch": (
-        "Corrige el tono cuando el BFO de la radio está corrido y las voces suenan\n"
-        "de pato o de ultratumba. Movelo hasta que suene natural.\n"
-        "En 0 Hz no hace nada; en AM dejalo en 0."
-    ),
     "_s_exciter_drive": (
         "Cuánta saturación se usa para fabricar los armónicos que la radio perdió.\n"
         "Suave (1–3) es sutil; agresivo (6–10) genera armónicos de orden más alto y\n"

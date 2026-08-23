@@ -64,7 +64,6 @@ src/
 │   ├── anf.py           # AdaptiveNotchFilter (cancela heterodinos/tonos)
 │   ├── exciter.py       # AuralExciter (armónicos tanh)
 │   ├── filters.py       # BandpassFilter + PresenceFilter (Butterworth IIR, stateful)
-│   ├── freq_shift.py    # FrequencyShifter (corrección de pitch SSB)
 │   ├── gain.py          # GainLimiter (peak follower, ataque instantáneo, expone last_reduction_db)
 │   ├── level.py         # LevelMeter (RMS con decaimiento)
 │   └── noise_profiler.py # NoiseProfiler (Log-MMSE DD + MCRA adaptativo + pitch enhance SSB)
@@ -276,6 +275,27 @@ excitador). Los presets de 1.9.x cargan sin error pero no suenan igual — los 8
 reajustaron en el aire. Todo el contenido de abajo se validó escuchando en la radio, con varias
 iteraciones de ida y vuelta (ver los "reportado en el aire" de cada ítem: casi todos los fixes de
 esta versión salieron de una escucha que contradijo una medición sintética).
+
+**Post-v2.2: eliminada la Corrección de tono SSB (FrequencyShifter).** Decisión del usuario, que la
+había pedido en su momento: *"no es utilizado"*. Un control que nadie usa igual hay que mantenerlo,
+traducirlo y que no se rompa. Se fueron `src/dsp/freq_shift.py`, `DSPConfig.pitch_shift_hz`, el
+setter del pipeline, la etapa del `process()`, el slider de Avanzada Audio con su nota y su tooltip,
+y 4 claves de i18n (`neutro`, `agudo`, la etiqueta y la nota). El separador que lo dividía del EQ de
+voz también, que sin él quedaba colgado.
+- **Migración: no hace falta ninguna.** `settings.json` y los presets viejos siguen trayendo
+  `pitch_shift_hz` y se ignora sola — `from_dict` usa `.get(clave, default)` y la clave ya no se
+  pide. Verificado que los 7 presets de fábrica cargan con `matches()==True`, o sea sin
+  "(modificado)" espurio: es la **segunda vez que la normalización por `snapshot()` (v1.8) paga**, y
+  la primera para un campo ELIMINADO, que era justo el caso que la motivó. Los presets no se
+  regeneraron a propósito: la clave muerta es inofensiva y no vale reescribir archivos afinados en
+  el aire por cosmética.
+- `grave` NO se pudo borrar del catálogo aunque este slider lo usaba: lo comparten el centro del EQ
+  de cuerpo y el del piso perceptual. Sí se fueron `neutro` y `agudo`, que eran exclusivos.
+- Aprovechando, se completó el **docstring del pipeline**, que listaba una cadena de 2020 (le
+  faltaban squelch, nivelador, excitador y graves) y ahora apunta al diagrama canónico. Mismo
+  problema que motivó sacar el ASCII del README: dos fuentes de verdad se desincronizan.
+- El control **no estaba documentado en ningún manual** — se descubrió al buscarlo para sacarlo. Así
+  que no hubo nada que quitar de los PDFs, sólo el bullet del README.
 
 **Post-v2.2: revisión del MCRA — el hold del freeze y el umbral δ.** Revisión pedida por el usuario
 ("ver si hay algo que se pueda mejorar"), hecha instrumentando el estimador real con señales

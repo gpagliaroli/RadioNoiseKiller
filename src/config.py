@@ -77,7 +77,6 @@ class DSPConfig:
     presence_q:      float = 0.7    # Q del pico de presencia
     body_freq:       float = 350.0  # Hz, centro del pico de cuerpo de voz (150-800)
     body_db:         float = 0.0    # dB, ganancia del pico de cuerpo (0 = passthrough)
-    pitch_shift_hz:  float = 0.0    # Hz, corrección de tono SSB (-500 a +500)
     perceptual_floor_enabled:       bool  = False  # piso espectral variable por curva de enmascaramiento auditivo
     perceptual_floor_boost:         float = 0.75   # amplitud del boost vocal (0–1.5)
     perceptual_floor_center:        float = 500.0  # Hz, centro del pico de boost
@@ -190,7 +189,6 @@ class AppConfig:
                 "body_db":        self.dsp.body_db,
                 "presence_db":    self.dsp.presence_db,
                 "presence_q":     self.dsp.presence_q,
-                "pitch_shift_hz": self.dsp.pitch_shift_hz,
                 "perceptual_floor_enabled":        self.dsp.perceptual_floor_enabled,
                 "perceptual_floor_boost":          self.dsp.perceptual_floor_boost,
                 "perceptual_floor_center":         self.dsp.perceptual_floor_center,
@@ -307,7 +305,6 @@ class AppConfig:
         self.dsp.presence_q     = d.get("presence_q",     self.dsp.presence_q)
         self.dsp.body_freq      = float(d.get("body_freq", self.dsp.body_freq))
         self.dsp.body_db        = float(d.get("body_db",   self.dsp.body_db))
-        self.dsp.pitch_shift_hz = d.get("pitch_shift_hz", self.dsp.pitch_shift_hz)
         self.dsp.perceptual_floor_enabled       = bool(d.get("perceptual_floor_enabled",       self.dsp.perceptual_floor_enabled))
         self.dsp.perceptual_floor_boost         = float(d.get("perceptual_floor_boost",         self.dsp.perceptual_floor_boost))
         self.dsp.perceptual_floor_center        = float(d.get("perceptual_floor_center",        self.dsp.perceptual_floor_center))

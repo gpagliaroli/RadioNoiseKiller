@@ -26,7 +26,6 @@ from dsp.anf import AdaptiveNotchFilter
 from dsp.bass import BassRestorer
 from dsp.exciter import AuralExciter
 from dsp.filters import BandpassFilter, PresenceFilter
-from dsp.freq_shift import FrequencyShifter
 from dsp.gain import GainLimiter
 from dsp.level import LevelMeter
 from dsp.noise_profiler import NoiseProfiler
@@ -105,10 +104,6 @@ def modulos():
     br = BassRestorer(SR)
     br.set_enabled(True)
     yield bench("Recuperar graves", br.process)
-
-    fs = FrequencyShifter(SR)
-    fs.set_shift_hz(100.0)
-    yield bench("Corrimiento de frecuencia", fs.process)
 
     gl = GainLimiter(0.0, -1.0)
     yield bench("Limitador de picos", lambda f: gl.process(f, SR))

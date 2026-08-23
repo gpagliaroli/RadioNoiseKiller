@@ -13,7 +13,6 @@ from dsp.blanker import ImpulseBlanker
 from dsp.bass import BassRestorer
 from dsp.exciter import AuralExciter
 from dsp.filters import BandpassFilter, PresenceFilter
-from dsp.freq_shift import FrequencyShifter
 from dsp.gain import GainLimiter
 from dsp.level import LevelMeter
 from dsp.noise_profiler import NoiseProfiler
@@ -22,10 +21,15 @@ from dsp.noise_profiler import NoiseProfiler
 class ProcessingPipeline:
     """
     Orquesta el flujo DSP en tiempo real:
-    AudioStream callback → blanker → AGC → BandpassFilter
-                        → ANF → NoiseProfiler
-                        → BandpassFilter out → Presencia → FrequencyShifter
-                        → GainLimiter → salida
+    AudioStream callback → blanker → AGC → BandpassFilter pre
+                        → ANF → NoiseProfiler → Squelch → Nivelador de voz
+                        → BandpassFilter out → EQ (presencia + cuerpo)
+                        → Excitador → Recuperar graves
+                        → GainLimiter (aplica la ganancia de salida) → salida
+
+    El diagrama canónico —el que ven el README y los manuales— es
+    `Images/pipeline_diagram.png`, generado por `tools/gen_pipeline_diagram.py`.
+    Si se agrega o quita una etapa hay que tocar los dos.
 
     El DSP corre en un thread separado para no bloquear el callback de audio.
     _in_queue:  callback  →  processor thread  (chunks de block_size muestras)
@@ -132,8 +136,6 @@ class ProcessingPipeline:
         self._body = PresenceFilter(config.audio.sample_rate, freq_hz=350.0, q=0.9)
         self._body.set_freq(config.dsp.body_freq)
         self._body.set_gain_db(config.dsp.body_db)
-        self._freq_shifter = FrequencyShifter(config.audio.sample_rate)
-        self._freq_shifter.set_shift_hz(config.dsp.pitch_shift_hz)
         self._limiter = GainLimiter(
             gain_db=config.gain.output_gain_db,
             limit_db=config.gain.peak_limit_db,
@@ -239,10 +241,6 @@ class ProcessingPipeline:
         self._config.dsp.body_db = float(db)
         with self._lock:
             self._body.set_gain_db(db)
-
-    def set_pitch_shift(self, hz: float) -> None:
-        self._config.dsp.pitch_shift_hz = float(hz)
-        self._freq_shifter.set_shift_hz(hz)
 
     @property
     def agc_gain_db(self) -> float:
@@ -379,7 +377,6 @@ class ProcessingPipeline:
         self.set_body_freq(dsp.body_freq)
         self.set_body_db(dsp.body_db)
 
-        self.set_pitch_shift(dsp.pitch_shift_hz)
 
         self.set_perceptual_floor_enabled(dsp.perceptual_floor_enabled)
         self.set_pf_boost(dsp.perceptual_floor_boost)
@@ -881,7 +878,6 @@ class ProcessingPipeline:
             self._bandpass_out.reset()
             self._presence.reset()
             self._body.reset()
-            self._freq_shifter.reset()
             self._anf.reset()
             self._blanker.reset()
             self._noise_profiler.reset(self._config.audio.block_size)
@@ -1191,7 +1187,6 @@ class ProcessingPipeline:
                         mixed = self._bass.process(mixed)
                     out_frame = self._limiter.process(mixed, self._config.audio.sample_rate)
 
-                out_frame = self._freq_shifter.process(out_frame)
                 self._spec_post_frames.append(out_frame.copy())
 
                 if self._recorder.recording:
