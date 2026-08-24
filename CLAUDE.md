@@ -312,11 +312,40 @@ del usuario** (entrada + procesado sincronizados) después de que tres bancos si
   mismo"* o *"la dispersión se come la diferencia"*. Lo que destrabó el diagnóstico fue medir sobre
   la **grabación real del usuario**, que es para lo que existe el grabador con canal crudo. Con un
   síntoma que sólo aparece en el aire, grabar sale más barato que inventar la señal.
-- **Sin reproducir:** *"si desintonizo la radio y vuelvo a sintonizar, el piso de ruido nunca vuelve
-  a la misma forma"*. Tres chequeos negativos: MCRA recupera la forma en ~1 s (error 1,59 dB contra
-  1,60 del control), el tope del AGC recupera al instante (con y sin el freno nuevo), y la curva
-  amarilla se refresca cada 500 ms en Adaptativo. El desintonizado sintético es mal modelo — falta
-  una grabación de la secuencia completa en una sola toma. **Pendiente.**
+**Post-v2.2 — EN CURSO: MCRA tarda ~15 s en recuperarse de un cambio grande de sintonía.**
+Reportado: *"si desintonizo la radio y la vuelvo a sintonizar, el piso de ruido nunca vuelve a la
+misma forma que la primera vez"*. **Reproducido y medido** sobre una grabación real con la secuencia
+completa (sintonizado → desintonizado → sintonizado en una sola toma).
+- **Primero medí mal:** comparé λ_d en instantes sueltos y concluí que no volvía nunca. λ_d fluctúa
+  frame a frame y caí en snapshots desafortunados. Promediando ventanas de 5 s y con control (dos
+  mitades del mismo tramo sintonizado: 1,30 dB de diferencia de forma), el cuadro real es:
+  desintonizado 7,50 dB de forma y +12,1 de nivel; **+12 a +17 s después de volver, 1,19 dB y
+  +1,1 dB — o sea recuperado.** Vuelve, pero tarda.
+- **El contraste que explica el reporte del usuario:** al **detener y activar** el estimador se
+  arma en <1 s porque el warmup está **exento del freeze por voz**. Al desintonizar y volver no hay
+  warmup, y con voz presente el freeze bloquea el **~80 % de los frames** (medido: sólo alimentan el
+  19 %). Las dos pruebas no son comparables, y esa es la observación correcta que había detrás.
+- **Consecuencia real:** durante esos 12-17 s λ_d queda hasta **+8 dB demasiado alto** → el
+  cancelador resta de más → suena a distorsión. Encaja con el otro síntoma reportado.
+- **Detector de estimado obsoleto — MEDIDO, pendiente de implementar.** Señal: la mediana móvil (2 s)
+  de `potencia_del_frame / λ_d`. En régimen sano el piso queda bien por debajo de la potencia total;
+  con el estimado viejo y alto ese margen se cierra. Medido sobre la grabación real: **d' = 2,18**, y
+  con umbral **+1 dB detecta el 54 % del período obsoleto con 0 % de falsos positivos** en 10 s de
+  operación normal. No hace falta detectar todos los frames: con destrabar la mitad del tiempo alcanza
+  para re-converger.
+- **DISEÑO: re-entrar en warmup, NO levantar el freeze.** Es el punto que hace viable la idea. Si el
+  detector se equivoca y levanta el freeze, **entra voz a λ_d** — el bug que el freeze existe para
+  evitar, que costó varias sesiones diagnosticar. Si en cambio resetea el estado MCRA para que
+  reconstruya como en un arranque limpio, el modo de falla es ~0,4 s sin supresión: molesto pero
+  inocuo. **Regla: cuando un detector nuevo puede equivocarse, elegir la acción cuyo fallo sea
+  benigno, aunque detecte lo mismo.** Además reusa un camino ya probado en vez de inventar uno.
+- **Bloqueado a propósito por falta de evidencia:** el 0 % de falsos positivos está medido sobre
+  **10 s de UNA grabación con UN tipo de perturbación**. Antes de implementar hacen falta 2-3
+  grabaciones de escucha normal (sin desintonizar, incluyendo música y señales fuertes) para
+  confirmar que no dispara en falso. El usuario está juntando ese material.
+- Otros dos chequeos, negativos: el tope del AGC recupera al instante (con y sin el freno nuevo, o
+  sea **no es culpa del cambio del techo**), y la curva amarilla del espectro se refresca cada 500 ms
+  en Adaptativo (no es un problema de display).
 
 **Post-v2.2: Frecuencia de presencia hasta 3 kHz.** Pedido del usuario: *"en AM tiene sentido ir
 más cerca de los 2,5 kHz"*. Slider 1000–2000 → **1000–3000 Hz**.
