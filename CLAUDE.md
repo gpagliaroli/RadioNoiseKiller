@@ -281,6 +281,43 @@ reajustaron en el aire. Todo el contenido de abajo se validó escuchando en la r
 iteraciones de ida y vuelta (ver los "reportado en el aire" de cada ítem: casi todos los fixes de
 esta versión salieron de una escucha que contradijo una medición sintética).
 
+**Post-v2.2: el post-filtro retiraba su profundidad de golpe y eso crujía.** Reportado en el aire:
+*"cuando una voz pasa de un nivel bajo a una pronunciación más fuerte produce una distorsión"*, y
+por separado un ruido cíclico que hacía subir el volumen. **Diagnosticado sobre una grabación real
+del usuario** (entrada + procesado sincronizados) después de que tres bancos sintéticos fallaran.
+- **Mecanismo:** el post-filtro resta una profundidad fija ponderada por `(1 − p_speech)` — a fuerza
+  6 son ~27 dB. Durante la pausa hunde el fondo; cuando arranca la palabra `p_speech` salta a 1 y
+  esos 27 dB **desaparecen en un solo frame**. Medido sobre el audio real: escalón de ganancia de
+  **+9,8 dB en 10 ms** en el 10 % peor de los arranques. Eso es lo que se oye.
+- Interacción de diseño: la v2.0 hizo a propósito que `p_speech` **no se suavice** en los arranques
+  (para que la voz no sonara "limitada"). Ese fix hace que `p_speech` salte, y el post-filtro
+  convierte ese salto en un escalón de 27 dB. Dos features correctas que juntas hacen daño.
+- **Fix:** el factor del post-filtro puede **hundirse al instante** pero sólo **retirarse
+  `_POST_RELEASE_DB = 12` dB por frame**. Escalón **+9,8 → +2,1 dB**, supresión en huecos **mejora**
+  0,7 dB, ataque de la palabra cuesta 1,6 dB.
+- **El valor salió de un barrido y el óptimo no es el que más baja el escalón:** frenando más el
+  escalón sigue cayendo (a 3 dB/frame da −2,1) pero el arranque de la palabra sale **12 dB más
+  atenuado** — exactamente la "voz limitada" de la v2.0. La tabla completa está en el comentario de
+  la constante. **No bajarlo sin mirar la columna del ataque.**
+- **Bajar el slider NO era la solución**, aunque el escalón dependa de él: el usuario comparó los
+  renders y prefirió post 6 y 3 sobre post 0 — *"el resto se escucha más ruido de fondo"*. Por eso
+  el arreglo tenía que conservar la profundidad de régimen.
+- **Cuatro hipótesis mías descartadas por medición antes de dar con ésta** (valen para no
+  repetirlas): (1) el nivelador acumulando ganancia — medido, con voz floja el VAD da vp=0,18 y el
+  nivelador queda **congelado justo cuando la voz es floja**; (2) frenar la CAÍDA de la ganancia —
+  sin efecto, porque el escalón es hacia ARRIBA y yo limitaba hacia abajo; (3) `beta_fast` y la
+  ventana de ataque de `p_speech` — sin efecto; (4) el excitador — sin efecto (con y sin, idéntico).
+  Y el bloque más grande **empeora** (rugosidad 6,3 → 12,6 dB).
+- **Método:** los tres bancos sintéticos fallaron con la misma firma — *"todas las variantes dan lo
+  mismo"* o *"la dispersión se come la diferencia"*. Lo que destrabó el diagnóstico fue medir sobre
+  la **grabación real del usuario**, que es para lo que existe el grabador con canal crudo. Con un
+  síntoma que sólo aparece en el aire, grabar sale más barato que inventar la señal.
+- **Sin reproducir:** *"si desintonizo la radio y vuelvo a sintonizar, el piso de ruido nunca vuelve
+  a la misma forma"*. Tres chequeos negativos: MCRA recupera la forma en ~1 s (error 1,59 dB contra
+  1,60 del control), el tope del AGC recupera al instante (con y sin el freno nuevo), y la curva
+  amarilla se refresca cada 500 ms en Adaptativo. El desintonizado sintético es mal modelo — falta
+  una grabación de la secuencia completa en una sola toma. **Pendiente.**
+
 **Post-v2.2: Frecuencia de presencia hasta 3 kHz.** Pedido del usuario: *"en AM tiene sentido ir
 más cerca de los 2,5 kHz"*. Slider 1000–2000 → **1000–3000 Hz**.
 - **El invariante 1 NO aplicaba acá y conviene saber por qué:** el clamp de `PresenceFilter.set_freq`

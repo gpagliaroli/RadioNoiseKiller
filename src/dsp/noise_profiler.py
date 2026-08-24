@@ -169,6 +169,23 @@ class NoiseProfiler:
     # energía": el problema no es el detector sino que congelar λ_d compra muy poco.
     # Lo que SÍ mueve la aguja contra el QSB es la Velocidad de respuesta del
     # nivelador de voz (medido: 12,2 → 6,9 dB de altibajo bajando de 1500 a 200 ms).
+    # Cuánto puede RETIRARSE la profundidad extra del post-filtro por frame, en dB.
+    # Hundirse no tiene freno: suprimir sigue siendo instantáneo.
+    #
+    # Medido sobre una grabación real del usuario, con post-filtro en 6:
+    #
+    #   retirada   escalón en el arranque   supresión en huecos   ataque de la palabra
+    #   sin freno         +9.8 dB                -23.0 dB              -10.9 dB
+    #    12 dB/fr         +2.1 dB                -23.7 dB              -12.5 dB   <- elegido
+    #     6 dB/fr         -0.6 dB                -24.8 dB              -16.7 dB
+    #     3 dB/fr         -2.1 dB                -26.8 dB              -22.9 dB
+    #     1 dB/fr         -2.3 dB                -31.5 dB              -27.9 dB
+    #
+    # 12 dB/frame quita 7,7 de los 9,8 dB del escalón pagando 1,6 dB de ataque.
+    # **No bajarlo más sin mirar la última columna**: frenar de más ahoga el
+    # arranque de la palabra, que es exactamente la 'voz limitada' que arregló
+    # la v2.0. A 3 dB/frame el arranque sale 12 dB más atenuado.
+    _POST_RELEASE_DB:    float = 12.0
     _PS_SMOOTH:           float = 0.6   # suavizado temporal de p_speech por bin (anti-gorgojeo):
                                         # estabiliza la clasificación voz/ruido, fuente del ruido
                                         # musical residual. EMA ~2-3 frames, sin retraso audible.
@@ -252,6 +269,7 @@ class NoiseProfiler:
         self._snr_post_prev: np.ndarray | None = None
         self._p_speech_prev: np.ndarray | None = None
         self._gain_out_prev: np.ndarray | None = None   # EMA anti-gorgojeo (por bin)
+        self._post_factor_prev: np.ndarray | None = None  # factor del post-filtro (por bin)
 
         # VAD frame-level
         self._voice_prob:    float = 0.0   # suavizado lento (OMLSA)
@@ -406,6 +424,7 @@ class NoiseProfiler:
         self._snr_post_prev   = None
         self._p_speech_prev   = None
         self._gain_out_prev   = None      # por-bin: se rearma solo (invariante 9)
+        self._post_factor_prev = None     # idem
         self._voice_prob         = 0.0
         self._voice_prob_sq      = 0.0
         self._spec_conf          = 0.0
@@ -450,6 +469,7 @@ class NoiseProfiler:
             self._snr_post_prev = None
             self._p_speech_prev = None
             self._gain_out_prev = None
+            self._post_factor_prev = None
             self._voice_prob    = 0.0
             self._voice_prob_sq = 0.0
             self._spec_conf     = 0.0
@@ -563,6 +583,13 @@ class NoiseProfiler:
         suficiente para juntar una ventana entera.
         """
         return self._MCRA_B * self._mcra_M
+
+    @property
+    def _post_release_step(self) -> float:
+        """Factor maximo por el que el post-filtro puede subir (retirar
+        profundidad) de un frame al otro. Derivado al usarlo para que no pueda
+        quedar desincronizado de _POST_RELEASE_DB."""
+        return 10.0 ** (self._POST_RELEASE_DB / 20.0)
 
     @property
     def _mcra_delta(self) -> float:
@@ -1093,7 +1120,29 @@ class NoiseProfiler:
             # ruido; antes hacía falta 0.7 para llegar a -27.7 dB.
             if _post_extra is not None:
                 p_noise  = np.float32(1.0) - p_speech
-                gain_out = np.maximum(gain_out * (_post_extra ** p_noise),
+                factor   = (_post_extra ** p_noise).astype(np.float32)
+                # --- Retirada frenada de la profundidad extra ---
+                # El factor puede HUNDIRSE al instante (suprimir enseguida) pero
+                # sólo puede VOLVER a 1 a `_POST_RELEASE_DB` por frame. Sin esto,
+                # cuando p_speech salta de 0 a 1 en el arranque de una palabra los
+                # ~27 dB extra (a fuerza 6) desaparecen en un solo frame: medido
+                # sobre una grabación real, un escalón de ganancia de +7,4 dB en
+                # 10 ms en el 10 % peor de los arranques. Eso es lo que se escucha
+                # como un crujido al pasar de voz floja a voz fuerte.
+                # Bajar el slider lo arregla pero cuesta supresión, que es
+                # justamente lo que el usuario NO quiere perder — de ahí el freno,
+                # que conserva la profundidad de régimen y sólo suaviza la salida.
+                if (self._post_factor_prev is not None
+                        and self._post_factor_prev.shape == factor.shape):
+                    # El factor nunca puede pasar de 1 (el post-filtro sólo resta),
+                    # así que el tope se acota ahí: sin eso, un _POST_RELEASE_DB
+                    # grande desborda el float32 al multiplicar.
+                    tope = np.minimum(
+                        self._post_factor_prev * self._post_release_step,
+                        np.float32(1.0))
+                    factor = np.minimum(factor, tope).astype(np.float32)
+                self._post_factor_prev = factor
+                gain_out = np.maximum(gain_out * factor,
                                       np.float32(self._POST_MIN_GAIN)).astype(np.float32)
                 # Indicador "Reducción extra": dB bajo el piso normal en bins de ruido
                 noise_mask = p_speech < 0.3

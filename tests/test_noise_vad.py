@@ -397,6 +397,40 @@ try:
 except Exception as e:
     check("reset(hop) rearma el estado por-bin del anti-gorgojeo: %s" % e, False)
 
+# 12b. La profundidad extra del post-filtro se RETIRA frenada, pero se aplica al
+# instante. Sin el freno, cuando p_speech salta de 0 a 1 en el arranque de una
+# palabra los ~27 dB extra (fuerza 6) desaparecen en un frame: medido sobre una
+# grabacion real, +9.8 dB de escalon de ganancia en 10 ms, que se escucha como un
+# crujido. El guard va sobre el FACTOR interno y no sobre la salida porque es la
+# cantidad que el freno limita; medir la salida mezcla el resto de la cadena.
+_pf = NoiseProfiler(HOP)
+_pf.set_mode("mcra"); _pf.set_enabled(True)
+_pf.set_post_filter_enabled(True); _pf.set_post_filter_strength(6.0)
+for _i in range(220):                       # regimen con ruido: el factor se hunde
+    _pf.process(fluct_noise(1)[0])
+_hundido = float(np.min(_pf._post_factor_prev))
+check("el post-filtro hunde el factor con ruido (%.4f)" % _hundido, _hundido < 0.5)
+
+_paso = _pf._post_release_step
+_antes = _pf._post_factor_prev.copy()
+_pf.process(voice_sig(1, level=3.0)[0])     # golpe de voz: p_speech se dispara
+_subida_db = 20 * np.log10(
+    float(np.max(_pf._post_factor_prev / np.maximum(_antes, 1e-9))))
+check("la profundidad extra no se retira mas rapido que el freno "
+      "(%.1f dB <= %.1f)" % (_subida_db, NoiseProfiler._POST_RELEASE_DB),
+      _subida_db <= NoiseProfiler._POST_RELEASE_DB + 0.5)
+check("el factor del post-filtro nunca pasa de 1 (%.4f)"
+      % float(np.max(_pf._post_factor_prev)),
+      float(np.max(_pf._post_factor_prev)) <= 1.0 + 1e-6)
+
+# Invariante 9: el estado por-bin del post-filtro se rearma al cambiar el hop.
+_pf.reset(240)
+try:
+    _pf.process(np.zeros(240, dtype=np.float32))
+    check("reset(hop) rearma el estado por-bin del post-filtro", True)
+except Exception as e:
+    check("reset(hop) rearma el estado por-bin del post-filtro: %s" % e, False)
+
 # ---------------------------------------------------------------------------
 print()
 print("=== Freeze de MCRA por voz (periodicidad) ===")
