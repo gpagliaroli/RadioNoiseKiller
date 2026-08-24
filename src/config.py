@@ -58,7 +58,15 @@ class DSPConfig:
     blanker_mini:    float = 8.0   # umbral mini-frame 0.67ms (× piso de ruido). 3=agresivo, 15=suave
     noise_mode:   str   = "static"  # "static" = perfil manual | "mcra" = adaptativo continuo
     noise_alpha:  float = 0.7   # reducción Wiener en bins de ruido puro (0=off, 0.7=70%, 1.0=máximo)
-    noise_floor:  float = 0.1   # ganancia mínima por bin (≥0.05 para evitar gorgojeo con floor bajo)
+    # Ganancia mínima por bin (≥0.05 para evitar gorgojeo con floor bajo).
+    # Subido de 0.10 a 0.15 post-v2.2: el piso limita cuánto puede caer la ganancia
+    # del Wiener, y con QSB esa caída es lo que hace que la salida baje MÁS que la
+    # entrada (el cancelador expande el fade). Medido: en banda estable pasar de
+    # 0.10 a 0.15 cuesta 1.7 dB de supresión de ruido; con fading reduce el vaivén
+    # de nivel. Se eligió 0.15 y no 0.20 porque a 0.20 el costo en banda estable
+    # sube a 3.1 dB, que es mucho para quien no tiene fading. 0.15 además ya es el
+    # valor de 3 de los 7 presets de fábrica.
+    noise_floor:  float = 0.15
     noise_smooth:    float = 0.96   # Anti-gorgojeo: β DD + suavizado p_speech (útil 96-98%; ver noise_profiler)
     noise_attack:    float = 0.80   # beta_fast DD asimétrico: bajo=ataque rápido en bins de voz (0.50-0.92)
     squelch_enabled:   bool  = False

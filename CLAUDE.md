@@ -281,6 +281,67 @@ reajustaron en el aire. Todo el contenido de abajo se validó escuchando en la r
 iteraciones de ida y vuelta (ver los "reportado en el aire" de cada ítem: casi todos los fixes de
 esta versión salieron de una escucha que contradijo una medición sintética).
 
+**Post-v2.2: el techo de ruido del AGC causaba subidones al volver de un QSB.** Reportado en el
+aire, con el diagnóstico ya hecho por el usuario: *"sigue molestando las subidas repentinas... el
+culpable es el Techo de ruido, reacciona demasiado lento y deja una ganancia mayor"*. **Correcto**, y
+la medición lo confirmó exactamente.
+- **Mecanismo:** el seguidor del piso es un **mínimo deslizante de 4 s**. Durante el fade baja al
+  instante (el mínimo sigue hacia abajo enseguida), pero para volver a subir tiene que esperar a que
+  las subtramas viejas salgan de la ventana. Mientras tanto el tope (`techo − piso`) queda abierto de
+  más, el AGC amplifica, y al volver la señal esa ganancia acumulada se descarga de golpe. Medido a
+  1 s de recuperada la señal, el piso medido **seguía 20 dB por debajo del real**.
+- **Dato que explica la percepción:** el pico absoluto es **el mismo** con el techo activado o
+  desactivado (−16,8 dB en ambos). Lo que cambia es que el techo mantiene el nivel normal 4 dB más
+  abajo, así que el mismo pico se siente como un salto mucho mayor. Por eso al desactivarlo mejoraba.
+- **Fix: el tope se cierra al instante pero se abre frenado** a `_IN_NOISE_OPEN_DB_S = 0.5` dB/s.
+  Sobrepico **+8,9 → +4,0 dB**, que es **mejor que desactivar el techo** (+4,9), conservando su
+  beneficio (el nivel normal no se mueve). La ganancia del AGC dentro del fade pasa de +12,8 a
+  +1,8 dB: ya no hay nada acumulado que descargar.
+- **Exención de arranque (imprescindible):** el freno NO aplica hasta que el seguidor llenó su
+  ventana una vez (`_in_subs_done >= _IN_NOISE_NSUB`). Al arrancar, el seguidor parte del nivel
+  instantáneo —con voz, muy alto— y el tope tiene que poder saltar a su valor real. Sin la exención,
+  medido, tardaba **25 s** en converger.
+- **Se evaluó exponerlo como slider y se descartó, con criterio explícito.** El eje no tiene dos
+  extremos defendibles: más lento es siempre mejor para el síntoma (0,5 → +4,0; 1,0 → +5,8; 2,0 →
+  +8,1) y lo único que se paga es tardar en aprovechar una banda más limpia — ante una bajada REAL y
+  permanente del piso de 12 dB, el tope se abre en 11 s en vez de 0,8, y en el ínterin sólo amplifica
+  un poco menos, sin nada audible. **Regla: un control donde una punta es siempre peor no es una
+  decisión del operador, es una constante mal puesta.** Si algún día hay que moverlo según la banda o
+  la hora, ahí sí merece slider.
+- **VALIDADO en el aire:** *"lo activé y probé, ha mejorado, ya no hay subidones repentinos"*. El
+  usuario volvió a activar el Techo, que tenía apagado justamente por este problema.
+- **Lo que quedó después NO era el techo: el cancelador EXPANDE el fade.** Medido con un QSB de
+  20,3 dB de entrada: la salida **sin** cancelador oscila 17,5 dB (el AGC hasta comprime un poco);
+  **con** cancelador, 28,9 dB. Son ~11 dB que agrega el propio Wiener — al bajar la señal cae el
+  S/N, cae la ganancia, y la salida cae más que la entrada. Ni el techo ni el nivelador tenían que
+  ver (verificado: el freno del techo aporta 0,4 dB de esos 11).
+- **La perilla contra eso es el Piso espectral, y hacia ARRIBA.** El piso limita cuánto puede caer
+  la ganancia, o sea cuánto puede expandir. Medido en la cadena completa: 0,10 → 0,20 lleva el
+  vaivén de 28,9 a 24,7 dB sin tocar la brusquedad; sumarle Intensidad 0,55 llega a 22,7 (contra
+  20,3 de la entrada, o sea que deja de expandir). Subir el nivelador también baja el swing pero
+  **triplica los saltos** (2,2 → 5,7 dB/300 ms) — no es el camino.
+- **Se corrigió una nota que decía exactamente lo contrario.** El tooltip del Piso espectral y ambos
+  manuales afirmaban que *"un piso alto transmite más el swing del fading"*, o sea bajalo. Medido,
+  es al revés, y se verificó separando voz y ruido: los DOS bajan al subir el piso (voz 27,2→24,6;
+  ruido 33,0→23,9 de piso 0,05 a 0,30). La nota venía de la sesión de música con QSB de la v1.8.2 y
+  quedó sin re-verificar. Corregido en tooltip, clave EN y los dos manuales, dejando dicho que hasta
+  la v2.2 decía lo contrario. **Vale como patrón: una nota de operación que nunca se midió puede
+  sobrevivir versiones enteras mandando al usuario para el lado equivocado.**
+- **Default de `noise_floor` 0.10 → 0.15.** El costo de subirlo se paga en banda ESTABLE, donde no
+  hay fading que compensar: medido, 0,10→0,15 cuesta 1,7 dB de supresión de ruido y 0,10→0,20 cuesta
+  3,1 dB. Se eligió 0,15 y no 0,20 —que era lo que pedía el usuario— porque 3 dB de la función
+  titular de la app es mucho para quien no tiene QSB, y porque 0,15 ya es el valor de 3 de los 7
+  presets de fábrica. **El default es casi inerte de todos modos**: los 7 presets especifican su
+  propio piso, así que sólo afecta a una instalación nueva antes de cargar un preset y al
+  "Restaurar por defecto".
+- **Discrepancia de magnitud anotada:** el beneficio del piso mide 4,2 dB en la cadena completa y
+  1,0 dB en el cancelador solo. La dirección es la misma; la magnitud depende de qué más haya
+  después. Al citar una de las dos cifras, decir cuál es.
+- Tests en `test_pipeline`: el tope no se abre más rápido que el freno, el freno no limita el cierre
+  (probado sobre el freno y no sobre el seguidor — el mínimo de 4 s no sube con unos frames de ruido,
+  y eso es correcto), y el arranque no queda frenado (con un assert que verifica que la ventana
+  todavía NO está llena, para que el test pruebe lo que dice).
+
 **v2.2 — la compensación de fading detectaba sílabas, no fades. ELIMINADA.** El usuario reportó que
 con sensibilidad en 10 dB (el máximo) el indicador FADE estaba encendido casi todo el tiempo, y
 preguntó si había que ampliar el rango del control o si medía mal. Medía mal.

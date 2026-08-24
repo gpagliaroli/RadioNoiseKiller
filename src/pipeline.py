@@ -970,6 +970,37 @@ class ProcessingPipeline:
     _IN_NOISE_SUB_MS:  float = 1000.0  # duración de cada subtrama
     _IN_NOISE_NSUB:    int   = 4       # subtramas → ventana total ~4 s
 
+    # Velocidad máxima a la que el TOPE del AGC puede ABRIRSE. Cerrarse no tiene
+    # freno: si el ruido sube, el tope aprieta en el acto.
+    #
+    # Reportado en el aire: *"sigue molestando las subidas repentinas... el culpable
+    # es el Techo de ruido, reacciona demasiado lento y deja una ganancia mayor"*.
+    # El diagnóstico era correcto. El seguidor del piso es un mínimo deslizante de
+    # 4 s: durante un QSB baja al instante, pero para volver a subir tiene que
+    # esperar a que las subtramas viejas salgan de la ventana. Mientras tanto el
+    # tope (`techo − piso`) queda abierto de más y el AGC amplifica; cuando la
+    # señal vuelve de golpe, esa ganancia acumulada se descarga en un subidón.
+    # Medido con un fade de 20 dB que vuelve en 0,3 s, techo −45 dBFS:
+    #
+    #     apertura      sobrepico al volver    ganancia del AGC dentro del fade
+    #     (techo OFF)         +4.9 dB                  +19.8 dB
+    #     sin freno           +8.9 dB                  +12.8 dB   <- era esto
+    #     2.0 dB/s            +8.1 dB                   +7.5 dB
+    #     1.0 dB/s            +5.8 dB                   +3.6 dB
+    #     0.5 dB/s            +4.0 dB                   +1.8 dB   <- elegido
+    #
+    # Con 0,5 dB/s el sobrepico queda MEJOR que desactivando el techo, y el techo
+    # sigue haciendo su trabajo (el nivel normal no cambia).
+    #
+    # **Por qué es una constante y no un slider:** el eje no tiene dos extremos
+    # defendibles. Más lento es siempre mejor para el síntoma, y lo único que se
+    # paga es tardar en aprovechar una banda más limpia — medido, ante una bajada
+    # REAL y permanente del piso de 12 dB el tope se abre en 11 s en vez de 0,8 s,
+    # y en el ínterin sólo amplifica un poco menos (no se escucha nada raro). Un
+    # control donde una punta es siempre peor no es una decisión del operador.
+    # Si algún día hay que moverlo según la banda o la hora, ahí sí merece slider.
+    _IN_NOISE_OPEN_DB_S: float = 0.5
+
     def _reset_input_noise(self) -> None:
         hop_ms = (self._config.audio.block_size
                   / self._config.audio.sample_rate * 1000.0)
@@ -980,6 +1011,14 @@ class ProcessingPipeline:
         self._in_cur_min = float("inf")
         self._in_sub_count = 0
         self._in_noise_min = 1.0
+        # Freno de apertura del tope (ver _IN_NOISE_OPEN_DB_S). `_in_subs_done`
+        # cuenta subtramas cerradas: el freno NO aplica hasta que la ventana se
+        # llenó una vez, porque al arrancar el seguidor todavía no encontró el
+        # piso real (parte del nivel instantáneo, que con voz está muy alto) y
+        # el tope tiene que poder abrirse de golpe hasta su valor verdadero.
+        # Sin esa exención, medido, tardaba 25 s en llegar donde debía.
+        self._in_subs_done = 0
+        self._in_cap_db: "float | None" = None
 
     def _track_input_noise(self, chunk: np.ndarray) -> None:
         rms = float(np.sqrt(np.mean(chunk.astype(np.float64) ** 2)) + 1e-12)
@@ -996,9 +1035,27 @@ class ProcessingPipeline:
             self._in_ring_idx = (self._in_ring_idx + 1) % self._IN_NOISE_NSUB
             self._in_cur_min = self._in_noise_ema
             self._in_sub_count = 0
+            self._in_subs_done += 1
 
         mn = min(min(self._in_ring), self._in_cur_min)
         self._in_noise_min = mn if mn != float("inf") else self._in_noise_ema
+
+    def _agc_gain_cap_db(self) -> float:
+        """Tope de ganancia del AGC en dB, con la apertura frenada.
+
+        Cerrar es instantáneo (si el ruido sube, el tope aprieta ya). Abrir está
+        limitado a _IN_NOISE_OPEN_DB_S dB/s: si no, durante un QSB el piso medido
+        se desploma, el tope se abre, el AGC acumula ganancia y al volver la señal
+        eso sale como un subidón. Ver la tabla en _IN_NOISE_OPEN_DB_S."""
+        objetivo = max(0.0, self._agc_noise_ceiling_db
+                       - 20.0 * float(np.log10(self._in_noise_min)))
+        # Hasta llenar la ventana el seguidor todavía no vio el piso real
+        ventana_llena = self._in_subs_done >= self._IN_NOISE_NSUB
+        if self._in_cap_db is not None and ventana_llena:
+            hop_s = self._config.audio.block_size / self._config.audio.sample_rate
+            objetivo = min(objetivo, self._in_cap_db + self._IN_NOISE_OPEN_DB_S * hop_s)
+        self._in_cap_db = objetivo
+        return objetivo
 
     def _drain_queues(self) -> None:
         for q in (self._in_queue, self._out_queue):
@@ -1037,11 +1094,10 @@ class ProcessingPipeline:
                 # realimentaría (la lección del freeze de MCRA). Ver _track_input_noise.
                 self._track_input_noise(chunk)
                 if self._agc_noise_ceiling_enabled and self._in_noise_min > 1e-9:
-                    noise_db = 20.0 * float(np.log10(self._in_noise_min))
-                    self._agc.set_max_gain_limit(
-                        max(0.0, self._agc_noise_ceiling_db - noise_db))
+                    self._agc.set_max_gain_limit(self._agc_gain_cap_db())
                 else:
                     self._agc.set_max_gain_limit(None)
+                    self._in_cap_db = None   # al reactivarlo, arranca sin freno
 
                 # Durante el aprendizaje del perfil: AGC congelado (si no, sube
                 # la ganancia sobre el ruido y el perfil captura un barrido de

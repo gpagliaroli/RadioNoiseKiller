@@ -792,13 +792,17 @@ CATALOG = {
     "Ganancia mínima que puede tomar un bin: cuánto ruido se deja pasar en los\n"
     "que el detector marca como ruido. 0.10 = nunca se le quita más del 90 %\n"
     "de la energía. Más bajo = más silencio, pero más riesgo de gorgojeo y de\n"
-    "que suene 'muerto'. 0.10–0.15 es lo habitual; no bajar de 0.05.\n"
-    "Un piso alto también transmite más el swing del fading.":
+    "que suene 'muerto'. 0.12–0.20 es la zona útil; no bajar de 0.05.\n"
+    "Con QSB, SUBIRLO reduce cuánto se nota el fading: el cancelador deja\n"
+    "de variar tanto su ganancia con la señal (medido: de 0.10 a 0.20, el\n"
+    "vaivén de nivel baja 4 dB). Se paga con menos supresión de ruido.":
         "Minimum gain a bin can take: how much noise is let through in the ones\n"
         "the detector flags as noise. 0.10 = no bin ever loses more than 90 % of\n"
         "its energy. Lower = more silence, but more risk of warbling and of\n"
-        "sounding 'dead'. 0.10-0.15 is usual; do not go below 0.05.\n"
-        "A high floor also passes more of the fading swing.",
+        "sounding 'dead'. 0.12-0.20 is the useful range; do not go below 0.05.\n"
+        "With QSB, RAISING it reduces how much the fading shows: the canceller\n"
+        "stops varying its gain so much with the signal (measured: 0.10 to 0.20\n"
+        "cuts the level swing by 4 dB). The cost is less noise suppression.",
     "Estabiliza la clasificación voz/ruido entre frames, que es de donde sale\n"
     "el ruido musical. Hacia suave = fondo más parejo y sin gorgojeo; hacia\n"
     "reactivo el cancelador responde antes. La zona útil es 96–98%.":

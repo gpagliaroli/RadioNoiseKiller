@@ -327,6 +327,62 @@ assert abs(_piso - _RUIDO_DB) < 4.0, \
 assert _piso < _VOZ_DB - 12.0, "el piso esta contaminado por la voz"
 print("Piso de ruido de entrada: OK")
 
+# --- El tope del AGC se cierra al instante pero se abre frenado -------------
+# Reportado en el aire: subidones al volver la señal de un QSB. El seguidor del
+# piso es un minimo de 4 s: durante el fade se desploma, el tope (techo - piso)
+# se abre, el AGC acumula ganancia, y al volver la señal eso se descarga de
+# golpe. El freno de apertura lo corta (medido: sobrepico +8.9 -> +4.0 dB).
+_cap_cfg = AppConfig()
+_cap_cfg.dsp.agc_noise_ceiling_enabled = True
+_cap_cfg.dsp.agc_noise_ceiling_db = -25.0
+_cap_cfg.dsp.agc_preset = "off"
+_cp = ProcessingPipeline(_cap_cfg)
+
+# 1) Con la ventana ya llena, una caida brusca del piso NO debe abrir el tope
+#    de golpe: como mucho _IN_NOISE_OPEN_DB_S dB por segundo.
+_ruido_alto = (np.random.default_rng(9).standard_normal(1400 * hop)
+               * 10 ** (-30.0 / 20)).astype(np.float32)
+for _i in range(1400):                       # llenar la ventana (4 s) y de sobra
+    _cp._track_input_noise(_ruido_alto[_i * hop:(_i + 1) * hop])
+    _cp._agc_gain_cap_db()
+_cap_antes = _cp._agc_gain_cap_db()
+_silencio = np.full(hop, 1e-5, dtype=np.float32)   # el piso se desploma
+for _i in range(100):                        # 1 segundo
+    _cp._track_input_noise(_silencio)
+    _cap_1s = _cp._agc_gain_cap_db()
+_subio = _cap_1s - _cap_antes
+_tope_teorico = ProcessingPipeline._IN_NOISE_OPEN_DB_S * 1.05   # 1 s + margen
+print(f"Tope del AGC tras 1 s de piso desplomado: subio {_subio:.2f} dB "
+      f"(maximo permitido {_tope_teorico:.2f})")
+assert _subio <= _tope_teorico, \
+    f"el tope se abrio {_subio:.2f} dB en 1 s, sin respetar el freno"
+
+# 2) Cerrarse NO tiene freno. Se prueba sobre el FRENO, no sobre el seguidor:
+#    el seguidor es un minimo de 4 s, asi que unos frames de ruido fuerte no le
+#    suben el piso — eso es del seguidor y es correcto. Lo que se verifica aca es
+#    que el freno deja bajar el tope de un frame al otro sin limitarlo.
+_cp._in_noise_min = 10 ** (-10.0 / 20)       # piso alto -> el tope deberia cerrarse
+_cap_cierre = _cp._agc_gain_cap_db()
+assert _cap_cierre <= _cap_antes - 5.0, \
+    (f"el freno esta limitando el CIERRE: el tope paso de {_cap_antes:.2f} a "
+     f"{_cap_cierre:.2f} dB en un frame, deberia haber caido mucho mas")
+print("Tope del AGC: cierra al instante, abre frenado  OK")
+
+# 3) Al ARRANCAR el freno no aplica: el seguidor todavia no vio el piso real
+#    (parte del nivel instantaneo) y el tope tiene que poder saltar a su valor.
+#    Sin esta exencion, medido, tardaba 25 s en converger.
+_cp2 = ProcessingPipeline(_cap_cfg)
+_cap0 = _cp2._agc_gain_cap_db()
+for _i in range(150):                        # 1.5 s: la ventana AUN no se lleno
+    _cp2._track_input_noise(_ruido_alto[_i * hop:(_i + 1) * hop])
+    _cap_arranque = _cp2._agc_gain_cap_db()
+assert _cp2._in_subs_done < ProcessingPipeline._IN_NOISE_NSUB, \
+    "la ventana no deberia estar llena a 1.5 s (el test no prueba lo que dice)"
+assert abs(_cap_arranque - _cap_antes) < 1.0, \
+    (f"el arranque quedo frenado: tope {_cap_arranque:.1f} dB a 1.5 s, "
+     f"deberia estar cerca de {_cap_antes:.1f}")
+print("Tope del AGC: el arranque no queda frenado    OK")
+
 # ---------------------------------------------------------------------- #
 # Diagnostico del hilo procesador (invariante 9)                           #
 # ---------------------------------------------------------------------- #
