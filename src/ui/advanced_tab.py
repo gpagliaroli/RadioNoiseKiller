@@ -287,12 +287,12 @@ class AdvancedAudioTab(QWidget):
 
         self._s_presence_freq = SliderRow(
             tr("Frecuencia de presencia:"),
-            min_val=1000, max_val=2000,
+            min_val=1000, max_val=3000,
             default=int(_DSP_DEF.presence_freq),
             step=25, unit="Hz", fmt="{:.0f}",
         )
         self._s_presence_freq._update_label = lambda v: self._s_presence_freq._val_lbl.setText(
-            f"{v:.0f} Hz  ({tr('media-baja') if v < 1300 else tr('media') if v < 1700 else tr('presencia')})"
+            f"{v:.0f} Hz  ({tr('media-baja') if v < 1300 else tr('media') if v < 1700 else tr('presencia') if v < 2200 else tr('brillo')})"
         )
         self._s_presence_freq._val_lbl.setFixedWidth(140)
         self._s_presence_freq.valueChanged.connect(self._pipeline.set_presence_freq)

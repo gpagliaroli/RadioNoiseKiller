@@ -124,7 +124,9 @@ SLIDER_TIPS = {
     "_s_presence_freq": (
         "Dónde se aplica el realce de presencia. 1500–2000 Hz es la zona de las\n"
         "consonantes, que es lo que hace entender las palabras.\n"
-        "Más abajo suena nasal, más arriba sisea."
+        "Más abajo suena nasal, más arriba sisea.\n"
+        "Por encima de 2500 Hz sólo sirve en AM, donde el pasabanda llega a\n"
+        "4–5 kHz: en SSB la banda termina antes y el filtro se come el realce."
     ),
     "_s_presence": (
         "Cuánto se realza la presencia. +3 a +6 dB despabila una voz apagada.\n"

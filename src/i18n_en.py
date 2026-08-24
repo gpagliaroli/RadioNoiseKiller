@@ -354,6 +354,7 @@ CATALOG = {
     "media-baja": "low-mid",
     "media": "mid",
     "presencia": "presence",
+    "brillo": "brightness",
     "Presencia (ganancia):": "Presence (gain):",
     "  ↳ Frecuencia + ganancia del pico vocal. 0 dB=neutro, +4–6 dB=voz de radio.":
         "  ↳ Frequency + gain of the vocal peak. 0 dB=neutral, +4–6 dB=radio voice.",
@@ -707,10 +708,14 @@ CATALOG = {
         "to boom and masks clarity. At 0 dB it does nothing.",
     "Dónde se aplica el realce de presencia. 1500–2000 Hz es la zona de las\n"
     "consonantes, que es lo que hace entender las palabras.\n"
-    "Más abajo suena nasal, más arriba sisea.":
+    "Más abajo suena nasal, más arriba sisea.\n"
+    "Por encima de 2500 Hz sólo sirve en AM, donde el pasabanda llega a\n"
+    "4–5 kHz: en SSB la banda termina antes y el filtro se come el realce.":
         "Where the presence boost is applied. 1500-2000 Hz is the consonant range,\n"
         "which is what makes words understandable.\n"
-        "Lower sounds nasal, higher hisses.",
+        "Lower sounds nasal, higher hisses.\n"
+        "Above 2500 Hz it only helps on AM, where the bandpass reaches 4-5 kHz:\n"
+        "on SSB the band ends sooner and the filter eats the boost.",
     "Cuánto se realza la presencia. +3 a +6 dB despabila una voz apagada.\n"
     "Ojo: también levanta el siseo que dejó el cancelador. En 0 dB no hace nada.":
         "How much presence is boosted. +3 to +6 dB wakes up a dull voice.\n"

@@ -281,6 +281,19 @@ reajustaron en el aire. Todo el contenido de abajo se validó escuchando en la r
 iteraciones de ida y vuelta (ver los "reportado en el aire" de cada ítem: casi todos los fixes de
 esta versión salieron de una escucha que contradijo una medición sintética).
 
+**Post-v2.2: Frecuencia de presencia hasta 3 kHz.** Pedido del usuario: *"en AM tiene sentido ir
+más cerca de los 2,5 kHz"*. Slider 1000–2000 → **1000–3000 Hz**.
+- **El invariante 1 NO aplicaba acá y conviene saber por qué:** el clamp de `PresenceFilter.set_freq`
+  ya era 100–8000 Hz, o sea MÁS ancho que el slider. Ese es el lado seguro del invariante (igual que
+  `voice_leveler_max_db`, cuyo clamp interno del AGC es 0–60 contra 0–20 del slider): el problema es
+  un clamp más ANGOSTO que el slider, que recorta en silencio. Verificado midiendo la respuesta del
+  filtro: pedido 3000 Hz → pico real 3000 Hz, +6,0 dB.
+- La etiqueta del slider sumó un tramo: arriba de 2200 Hz muestra **brillo** (antes se quedaba en
+  "presencia" hasta el final del recorrido). Clave i18n nueva.
+- **Sólo tiene sentido en AM**, y eso se documentó en el tooltip y en los dos manuales: el pasabanda
+  de AM llega a 4–5 kHz, pero en SSB la banda termina cerca de 2,7–3 kHz y el filtro de salida se
+  come el realce. Sin esa nota, alguien en SSB subiría el control a 3 kHz y no escucharía nada.
+
 **Post-v2.2: el techo de ruido del AGC causaba subidones al volver de un QSB.** Reportado en el
 aire, con el diagnóstico ya hecho por el usuario: *"sigue molestando las subidas repentinas... el
 culpable es el Techo de ruido, reacciona demasiado lento y deja una ganancia mayor"*. **Correcto**, y

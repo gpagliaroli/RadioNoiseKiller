@@ -80,7 +80,7 @@ class DSPConfig:
     exciter_character: float = 0.0   # 0 = armónicos impares (hueco), 1 = pares (cálido)
     bass_enabled:      bool  = False # recupera el fundamental que cortó el filtro de la radio
     bass_amount:       float = 0.35  # nivel del fundamental restaurado (0–1; 1 ≈ natural)
-    presence_freq:   float = 2000.0 # Hz, centro del pico de presencia (1000-2000)
+    presence_freq:   float = 2000.0 # Hz, centro del pico de presencia (1000-3000)
     presence_db:     float = 0.0    # dB, ganancia del pico de presencia
     presence_q:      float = 0.7    # Q del pico de presencia
     body_freq:       float = 350.0  # Hz, centro del pico de cuerpo de voz (150-800)

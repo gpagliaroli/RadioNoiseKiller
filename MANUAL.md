@@ -665,7 +665,7 @@ Ambas bandas pueden usarse a la vez: cuerpo +4 dB y presencia +4 dB producen una
 |---------|-------|---------|-------------|
 | **Frecuencia de cuerpo** | 150 – 800 Hz | 350 Hz | Centro del pico de cuerpo. 250–400 Hz para voz masculina, 400–600 Hz para voz femenina. El ancho es fijo (Q 0,9 — aproximadamente una octava). |
 | **Cuerpo (ganancia)** | -3 dB a +10 dB | 0 dB | Cuánto se refuerza el cuerpo de la voz. +3 a +5 dB es la zona útil; más de +6 dB puede sonar "tubular". También admite valores negativos para atenuar un exceso de graves. |
-| **Frecuencia de presencia** | 1000 – 2000 Hz | 2000 Hz | Centro del pico de realce. 2000 Hz enfatiza consonantes (s, t, f). 1000–1500 Hz refuerza la zona media. |
+| **Frecuencia de presencia** | 1000 – 3000 Hz | 2000 Hz | Centro del pico de realce. 2000 Hz enfatiza consonantes (s, t, f). 1000–1500 Hz refuerza la zona media. **2500–3000 Hz sólo tiene sentido en AM**, donde el pasabanda llega a 4–5 kHz: en SSB la banda termina cerca de 2,7–3 kHz y el filtro de salida se come el realce. |
 | **Presencia (ganancia)** | -3 dB a +10 dB | 0 dB | Cuánto se amplifica la frecuencia central. Comenzar con +3 a +6 dB y ajustar por preferencia. |
 | **Q (selectividad)** | 0,2 – 2,0 | 0,7 | Anchura del pico de presencia. Q bajo (0,2–0,4) = pico ancho, afecta una banda amplia. Q alto (1,5–2,0) = pico angosto, muy selectivo. Para voz de radio, Q entre 0,5 y 1,0 es lo habitual. |
 

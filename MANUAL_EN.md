@@ -663,7 +663,7 @@ Both bands can be used at once: body +4 dB and presence +4 dB produce a fuller, 
 |---------|-------|---------|-------------|
 | **Body frequency** | 150 – 800 Hz | 350 Hz | Center of the body peak. 250–400 Hz for male voices, 400–600 Hz for female voices. The width is fixed (Q 0.9 — roughly one octave). |
 | **Body (gain)** | -3 dB to +10 dB | 0 dB | How much the voice body is boosted. +3 to +5 dB is the useful zone; beyond +6 dB it can sound "tubby". Negative values are also allowed to tame excessive lows. |
-| **Presence frequency** | 1000 – 2000 Hz | 2000 Hz | Center of the boost peak. 2000 Hz emphasizes consonants (s, t, f). 1000–1500 Hz reinforces the midrange. |
+| **Presence frequency** | 1000 – 3000 Hz | 2000 Hz | Center of the boost peak. 2000 Hz emphasizes consonants (s, t, f). 1000–1500 Hz reinforces the midrange. **2500–3000 Hz only makes sense on AM**, where the bandpass reaches 4–5 kHz: on SSB the band ends around 2.7–3 kHz and the output filter eats the boost. |
 | **Presence (gain)** | -3 dB to +10 dB | 0 dB | How much the center frequency is amplified. Start with +3 to +6 dB and adjust to taste. |
 | **Q (selectivity)** | 0.2 – 2.0 | 0.7 | Width of the presence peak. Low Q (0.2–0.4) = wide peak, affects a broad band. High Q (1.5–2.0) = narrow, very selective peak. For radio voice, Q between 0.5 and 1.0 is typical. |
 
