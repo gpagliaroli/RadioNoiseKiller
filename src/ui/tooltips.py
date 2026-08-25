@@ -207,6 +207,14 @@ SLIDER_TIPS = {
         "Rápido conserva mejor el ataque de cada palabra; suave reduce artefactos.\n"
         "Si la voz suena recortada al arrancar, hacelo más rápido."
     ),
+    "_s_noise_fall": (
+        "Cuán rápido puede BAJAR el piso de ruido estimado. Subir es siempre libre.\n"
+        "Cuando el ruido de banda sube de golpe, la salida salta porque el piso llegó\n"
+        "tarde; si el piso no se hundió en los ratos flojos, tiene menos que recuperar.\n"
+        "Fuerte deja el fondo más parejo pero cuesta un poco de voz, y tarda más en\n"
+        "aprovechar una banda que se limpió de verdad. Sin freno = como hasta la v2.2.\n"
+        "Solo tiene efecto en modo Adaptativo."
+    ),
     "_s_mcra_window": (
         "Cada cuánto puede reaccionar el estimador a cambios del ruido (sólo en\n"
         "modo Adaptativo). Corto sigue el ruido cíclico típico de onda corta;\n"

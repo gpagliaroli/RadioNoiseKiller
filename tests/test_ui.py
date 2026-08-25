@@ -981,6 +981,43 @@ def test_read_ui_scale_tolerante():
     print("read_ui_scale tolerante a settings roto    OK")
 
 
+def test_noise_fall_slider():
+    """El slider del freno de caida del piso llega al DSP y respeta su gating.
+
+    El clamp del setter tiene que coincidir con el rango del slider (invariante 1):
+    aca se comprueba desde la UI, moviendo el slider a sus dos extremos y leyendo lo
+    que quedo en el profiler.
+    """
+    w = MainWindow()
+    tab = w._adv_canceller_tab
+    row = tab._s_noise_fall
+    prof = w._pipeline._noise_profiler
+
+    # Parte de un valor distinto del que se va a probar: QSlider.setValue() no emite
+    # valueChanged si el valor no cambia, y el test pasaria sin ejercitar el handler
+    # (invariante 11).
+    row.set_value(12.0)
+    row.set_value(4.0, emit=True)
+    _app.processEvents()
+    assert abs(prof._fall_db_s - 4.0) < 0.01, prof._fall_db_s
+    assert abs(w._config.dsp.noise_fall_db_s - 4.0) < 0.01
+
+    row.set_value(30.0, emit=True)
+    _app.processEvents()
+    assert abs(prof._fall_db_s - 30.0) < 0.01, prof._fall_db_s
+
+    # Gating: es un control del cancelador, no debe quedar vivo sin el.
+    w._config.dsp.noise_enabled = False
+    tab.refresh_enabled_states()
+    assert not row._slider.isEnabled(), "el slider queda activo sin el cancelador"
+    w._config.dsp.noise_enabled = True
+    tab.refresh_enabled_states()
+    assert row._slider.isEnabled()
+
+    w.close()
+    print("slider del freno de caida del piso            OK")
+
+
 def test_all_sliders_have_tooltip():
     """Todo SliderRow de la app tiene texto de ayuda, y llega a los HIJOS.
 
@@ -1066,6 +1103,7 @@ if __name__ == "__main__":
     test_waterfall_toggle_and_source()
     test_waterfall_diff_mode()
     test_incompatible_devices_disable_activate()
+    test_noise_fall_slider()
     test_all_sliders_have_tooltip()
     test_dsp_error_is_visible()
     test_mcra_stall_reason()

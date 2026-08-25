@@ -456,6 +456,26 @@ CATALOG = {
     "Refuerzo en agudos:": "HF floor boost:",
     "  ↳ Sube el piso de ruido por encima de ~2.5 kHz (donde la energía del ruido es baja y el estimador reacciona tarde). Suprime mejor el siseo de agudos que se cuela con el fading, a costa de algo de brillo de la voz — combinar con Excitador/Presencia para reponerlo.":
         "  ↳ Raises the noise floor above ~2.5 kHz (where noise energy is low and the estimator reacts late). Suppresses the HF hiss that leaks through with fading better, at the cost of some voice brightness — combine with Exciter/Presence to restore it.",
+    "Freno de bajada:": "Fall brake:",
+    "sin freno": "no brake",
+    "  ↳ Limita cuán rápido puede BAJAR el piso estimado; subir siempre es libre (solo Adaptativo). Cuando el ruido de banda sube, la salida salta porque el piso llegó tarde: si no se hundió durante los ratos flojos, tiene menos que recuperar. Fuerte = el fondo queda más parejo, a costa de algo de voz y de tardar más en aprovechar una banda que se limpia.":
+        "  ↳ Limits how fast the estimated floor can go DOWN; going up is always free "
+        "(Adaptive only). When band noise rises the output jumps because the floor arrived "
+        "late: if it did not sink during the quiet stretches, it has less to catch up. Strong = "
+        "a more even background, at the cost of a little voice and of taking longer to take "
+        "advantage of a band that clears up.",
+    "Cuán rápido puede BAJAR el piso de ruido estimado. Subir es siempre libre.\n"
+    "Cuando el ruido de banda sube de golpe, la salida salta porque el piso llegó\n"
+    "tarde; si el piso no se hundió en los ratos flojos, tiene menos que recuperar.\n"
+    "Fuerte deja el fondo más parejo pero cuesta un poco de voz, y tarda más en\n"
+    "aprovechar una banda que se limpió de verdad. Sin freno = como hasta la v2.2.\n"
+    "Solo tiene efecto en modo Adaptativo.":
+        "How fast the estimated noise floor may go DOWN. Going up is always free.\n"
+        "When band noise jumps up, the output jumps because the floor arrived late;\n"
+        "if the floor did not sink during the quiet stretches, it has less to catch up.\n"
+        "Strong leaves a more even background but costs a little voice, and takes longer\n"
+        "to exploit a band that has really cleared. No brake = same as up to v2.2.\n"
+        "Only has an effect in Adaptive mode.",
     "  ↳ Ventana de seguimiento del ruido (solo Adaptativo). Reactivo (corto) = el piso sigue subidas rápidas de ruido cíclico, menos vaivén; estable (largo) = mejor con ruido parejo. Con valores reactivos, tener activo el Refuerzo de pitch de voz.":
         "  ↳ Noise tracking window (Adaptive only). Reactive (short) = the floor follows fast rises of cyclic noise, less swaying; stable (long) = better with steady noise. With reactive values, keep Voice pitch reinforcement enabled.",
     "  ↳ Ataque del onset de voz. Rápido = consonantes más nítidas. Suave = transiciones sin artefactos.":
@@ -889,10 +909,15 @@ CATALOG = {
         "because of the available bandwidth.",
     "Cuánto se protegen del cancelador los armónicos de la voz detectada.\n"
     "Fuerte rescata mejor una voz enterrada en ruido; si el tono se detecta mal,\n"
-    "puede terminar protegiendo bins que eran ruido.":
+    "puede terminar protegiendo bins que eran ruido.\n"
+    "Necesita resolución para separar armónicos: con bloque 240–480 y voz grave\n"
+    "no discrimina y sale caro en supresión. Para este módulo, bloque 960 o 1920.":
         "How much the harmonics of the detected voice are protected from the\n"
         "canceller. Strong rescues a voice buried in noise better; if pitch detection\n"
-        "goes wrong, it may end up protecting bins that were noise.",
+        "goes wrong, it may end up protecting bins that were noise.\n"
+        "It needs resolution to tell harmonics apart: with block 240–480 and a\n"
+        "low-pitched voice it does not discriminate and costs suppression. For this\n"
+        "module, use block 960 or 1920.",
 
     # --- Escala de la interfaz ---
     "Tamaño de la interfaz: agranda todos los textos y controles a la vez\n"

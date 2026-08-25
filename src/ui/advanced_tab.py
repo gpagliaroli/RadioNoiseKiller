@@ -689,7 +689,7 @@ class AdvancedCancellerTab(QWidget):
         dsp   = self._config.dsp
         noise = dsp.noise_enabled
         for s in (self._s_noise_floor, self._s_noise_smooth, self._s_noise_attack,
-                  self._s_mcra_window, self._s_hf_boost):
+                  self._s_mcra_window, self._s_noise_fall, self._s_hf_boost):
             s.set_enabled(noise)
         for s in (self._s_squelch_threshold, self._s_squelch_hold):
             s.set_enabled(noise and dsp.squelch_enabled)
@@ -784,6 +784,20 @@ class AdvancedCancellerTab(QWidget):
         self._s_mcra_window.valueChanged.connect(self._pipeline.set_mcra_window_ms)
         layout.addWidget(self._s_mcra_window)
         layout.addWidget(_note(tr("  ↳ Ventana de seguimiento del ruido (solo Adaptativo). Reactivo (corto) = el piso sigue subidas rápidas de ruido cíclico, menos vaivén; estable (largo) = mejor con ruido parejo. Con valores reactivos, tener activo el Refuerzo de pitch de voz.")))
+
+        self._s_noise_fall = SliderRow(
+            tr("Freno de bajada:"),
+            min_val=2.0, max_val=30.0,
+            default=_DSP_DEF.noise_fall_db_s,
+            step=1.0, unit="dB/s", fmt="{:.0f}",
+        )
+        self._s_noise_fall._update_label = lambda v: self._s_noise_fall._val_lbl.setText(
+            f"{v:.0f} dB/s  ({tr('fuerte') if v < 7 else tr('normal') if v < 16 else tr('sin freno')})"
+        )
+        self._s_noise_fall._val_lbl.setFixedWidth(120)
+        self._s_noise_fall.valueChanged.connect(self._pipeline.set_noise_fall_db_s)
+        layout.addWidget(self._s_noise_fall)
+        layout.addWidget(_note(tr("  ↳ Limita cuán rápido puede BAJAR el piso estimado; subir siempre es libre (solo Adaptativo). Cuando el ruido de banda sube, la salida salta porque el piso llegó tarde: si no se hundió durante los ratos flojos, tiene menos que recuperar. Fuerte = el fondo queda más parejo, a costa de algo de voz y de tardar más en aprovechar una banda que se limpia.")))
 
         self._s_hf_boost = SliderRow(
             tr("Refuerzo en agudos:"),
@@ -1050,6 +1064,7 @@ class AdvancedCancellerTab(QWidget):
         self._s_noise_smooth.set_value(cfg.noise_smooth)
         self._s_noise_attack.set_value(cfg.noise_attack)
         self._s_mcra_window.set_value(cfg.noise_mcra_window_ms)
+        self._s_noise_fall.set_value(cfg.noise_fall_db_s)
         self._s_hf_boost.set_value(cfg.noise_hf_boost * 100.0)
         self._s_squelch_threshold.set_value(cfg.squelch_threshold)
         self._s_squelch_hold.set_value(cfg.squelch_hold_ms)

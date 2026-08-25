@@ -173,7 +173,7 @@ class NoiseProfiler:
     # sola subtrama el estimador se daba por listo con 2 frames de voz.
     _MCRA_PITCH_THR:     float = 0.30   # confianza de autocorrelación para congelar
     _MCRA_VOICE_HOLD_MS: float = 200.0  # retención tras el último frame periódico
-    _MCRA_FALL_DB_S:     float = 10.0   # máxima caída de λ_d (dB/s); subir es libre
+    _MCRA_FALL_DB_S:     float = 10.0   # default de la máxima caída de λ_d (dB/s); subir es libre
 
     # NOTA: acá vivía la "Compensación de fading HF" (freeze de MCRA + release DD
     # acelerado ante cambios bruscos de energía). Se eliminó tras medirla — el
@@ -336,6 +336,7 @@ class NoiseProfiler:
         # Ventana total = B×M frames; M más chico = ventana más corta = el piso reacciona
         # más rápido a subidas de ruido (menos lag → menos vaivén con ruido cíclico).
         self._mcra_window_ms: float = 800.0     # slider 250-800 ms (default = comportamiento previo)
+        self._fall_db_s: float = self._MCRA_FALL_DB_S   # slider 2-30 dB/s
         self._mcra_M:         int   = self._calc_mcra_M()
 
         # Métricas para indicadores UI
@@ -627,7 +628,7 @@ class NoiseProfiler:
         el momento de usarlo hace imposible que quede desincronizado al cambiar el
         tamaño de bloque (invariante 9).
         """
-        return 10.0 ** (-self._MCRA_FALL_DB_S * (self._hop / 48000.0) / 10.0)
+        return 10.0 ** (-self._fall_db_s * (self._hop / 48000.0) / 10.0)
 
     @property
     def _mcra_delta(self) -> float:
@@ -651,6 +652,15 @@ class NoiseProfiler:
         corta = el piso reacciona más rápido a las subidas de ruido."""
         hop_ms = self._hop / 48.0
         return max(1, round(self._mcra_window_ms / (self._MCRA_B * hop_ms)))
+
+    def set_fall_db_s(self, v: float) -> None:
+        """Máxima caída de λ_d en dB/s (subir siempre es libre).
+
+        El clamp es el rango del slider de Avanzada Cancelador (invariante 1).
+        30 dB/s es en la práctica "sin freno": la caída natural de λ_d medida
+        sobre grabaciones reales llega como mucho a ~23 dB/s.
+        """
+        self._fall_db_s = float(np.clip(v, 2.0, 30.0))
 
     def set_mcra_window_ms(self, v: float) -> None:
         """Ventana de seguimiento de mínimos MCRA (Reactividad del piso de ruido).

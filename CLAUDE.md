@@ -313,11 +313,19 @@ bajar más rápido que eso, subir queda libre.
   frenado del frame anterior, así que arrastra todo el sesgo acumulado y el indicador no se movía ni
   un dB. Hace falta la recursión propia. No es exacta (α_d lo sigue calculando el camino frenado):
   el apartamiento queda bajo 1 dB contra los −1,8 de antes.
-- **Constante y no slider, por ahora.** Los dos extremos son defendibles (más lento = mejor síntoma
-  pero más costo de voz y más lentitud ante una banda que se limpia), así que **sí calificaría** para
-  slider según la regla de la v2.1 — a diferencia del freno del techo del AGC, donde una punta era
-  siempre peor. Se deja constante hasta validar de oído; si el usuario quiere moverlo, ahí merece
-  control.
+- **Expuesto como slider "Freno de bajada" (2–30 dB/s, default 10)** en Avanzada Cancelador, a
+  pedido del usuario para comparar valores de oído. Califica según la regla de la v2.1 porque los dos
+  extremos son defendibles — más lento = mejor síntoma pero más costo de voz y más lentitud ante una
+  banda que se limpia —, a diferencia del freno del techo del AGC, donde una punta era siempre peor.
+  **30 dB/s es en la práctica "sin freno"**: la caída natural de λ_d medida sobre las grabaciones
+  llega como mucho a ~23 dB/s, así que el tope del slider sirve de A/B contra el comportamiento
+  previo. `noise_fall_db_s` en DSPConfig, persistido en settings.json y presets; clamp del setter ==
+  rango del slider (invariante 1). **Pendiente decidir si queda como control o vuelve a constante.**
+- **Al pasar de constante a slider, el estado vivo dejó de ser `_MCRA_FALL_DB_S`** (que ahora es sólo
+  el default) y pasó a `_fall_db_s`. Los guards que pisaban la constante de clase **después** de
+  construir el profiler dejaron de tener efecto y comparaban dos corridas idénticas — se veía porque
+  el check "el freno de verdad está actuando" empezó a reportar el mismo número en las dos ramas.
+  Hay que moverlo con `set_fall_db_s()`.
 - Guards nuevos en `test_noise_vad`: que λ_d no caiga más rápido que el freno, **que el freno de
   verdad esté actuando** (sin él cae 14,8 dB/s contra 9,0), que no limite la subida, que valga lo
   mismo en dB/s a cualquier hop (es property, invariante 9) y que no arrastre el indicador de S/N.

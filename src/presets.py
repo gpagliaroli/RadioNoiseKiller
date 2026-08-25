@@ -168,6 +168,7 @@ class PresetManager:
                 "pitch_enhance_enabled":     dsp.pitch_enhance_enabled,
                 "pitch_enhance_strength":    dsp.pitch_enhance_strength,
                 "noise_mcra_window_ms":      dsp.noise_mcra_window_ms,
+                "noise_fall_db_s":           dsp.noise_fall_db_s,
                 "noise_hf_boost":            dsp.noise_hf_boost,
                 "voice_leveler_enabled":     dsp.voice_leveler_enabled,
                 "voice_leveler_max_db":      dsp.voice_leveler_max_db,
@@ -268,6 +269,7 @@ class PresetManager:
         dsp.pitch_enhance_enabled  = bool(d.get("pitch_enhance_enabled",  ddef.pitch_enhance_enabled))
         dsp.pitch_enhance_strength = float(d.get("pitch_enhance_strength",ddef.pitch_enhance_strength))
         dsp.noise_mcra_window_ms = float(d.get("noise_mcra_window_ms", ddef.noise_mcra_window_ms))
+        dsp.noise_fall_db_s = float(d.get("noise_fall_db_s", ddef.noise_fall_db_s))
         dsp.noise_hf_boost = float(d.get("noise_hf_boost", ddef.noise_hf_boost))
         dsp.voice_leveler_enabled  = bool(d.get("voice_leveler_enabled",  ddef.voice_leveler_enabled))
         dsp.voice_leveler_max_db   = float(d.get("voice_leveler_max_db",  ddef.voice_leveler_max_db))
