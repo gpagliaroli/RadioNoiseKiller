@@ -559,6 +559,104 @@ check("el fondo entre palabras no parpadea de mas (%.1f dB)" % _flick, _flick < 
 
 # ---------------------------------------------------------------------------
 print()
+print("=== Freno de caida de lambda_d (asimetrico: baja lento, sube libre) ===")
+
+# El salto de la salida cuando el ruido de banda sube ES la supresion que se pierde
+# mientras lambda_d va atrasado. Si el estimado no se hunde en los ratos flojos, la
+# distancia que tiene que recuperar en la subida es menor. Idea del usuario, medida
+# sobre 5 grabaciones reales: el exceso del piso de salida 1.5 s despues de una
+# subida pasa de +2.5 a +0.6 dB, y NO es "suprimir mas" con otro nombre — a igual
+# supresion, llegar ahi bajando el piso espectral da +2.7 dB en vez de +0.6.
+
+_rngf = np.random.default_rng(11)
+
+
+def _ruido(n, amp, hop=HOP):
+    return [(_rngf.normal(0, amp, hop)).astype(np.float32) for _ in range(n)]
+
+
+def _ld_db(p):
+    return 10 * np.log10(float(np.mean(p._mcra_ld)) + 1e-30)
+
+
+def _corre(fall_db_s, hop=HOP):
+    p = NoiseProfiler(hop)
+    p._MCRA_FALL_DB_S = fall_db_s
+    p.set_mode("mcra")
+    p.set_enabled(True)
+    for f in _ruido(220, 0.02, hop):
+        p.process(f)
+    return p
+
+
+# 1. Una bajada del ruido no puede hundir lambda_d mas rapido que el freno.
+#    La bajada es de 8 dB y no de 20: por debajo de _MCRA_SQUELCH_RATIO se activa
+#    la deteccion de "se fue la portadora", que congela TODO el estado MCRA — con
+#    una bajada grande el test daria verde sin ejercitar el freno.
+def _bajada(fall_db_s, seg=0.5):
+    p = _corre(fall_db_s)
+    a = _ld_db(p)
+    for f in _ruido(int(seg * 48000 / HOP), 0.02 * 10 ** (-8 / 20.0)):
+        p.process(f)
+    return (a - _ld_db(p)) / seg
+
+
+_cae_con, _cae_sin = _bajada(NoiseProfiler._MCRA_FALL_DB_S), _bajada(1e9)
+check("lambda_d no cae mas rapido que el freno (%.1f dB/s vs %.0f)"
+      % (_cae_con, NoiseProfiler._MCRA_FALL_DB_S),
+      _cae_con <= NoiseProfiler._MCRA_FALL_DB_S * 1.15)
+check("y el freno de verdad esta actuando (sin el cae %.1f dB/s)" % _cae_sin,
+      _cae_sin > _cae_con + 2.0)
+
+# 2. Pero el freno NO debe tocar la SUBIDA: es asimetrico a proposito. Se compara
+#    el NIVEL al que llega, no cuanto subio: con freno lambda_d parte de mas arriba
+#    (por eso el salto de la salida es menor), asi que el delta en dB es menor
+#    aunque termine igual. Medir el delta hacia da un falso fallo.
+def _tope(fall_db_s):
+    p = _corre(fall_db_s)
+    for f in _ruido(120, 0.02 * 10 ** (10 / 20.0)):
+        p.process(f)
+    return _ld_db(p)
+
+
+_con, _sin = _tope(NoiseProfiler._MCRA_FALL_DB_S), _tope(1e9)
+check("el freno no limita la subida (llega a %.1f vs %.1f dB sin freno)" % (_con, _sin),
+      _con >= _sin - 0.5)
+
+# 3. El freno se expresa en dB/s, asi que su factor por frame depende del hop
+#    (invariante 9). Es property justamente para que no pueda desincronizarse.
+_r = []
+for _hop in (240, 480, 960):
+    _pp = NoiseProfiler(_hop)
+    _r.append(-10.0 * np.log10(_pp._mcra_fall_floor) / (_hop / 48000.0))
+check("el freno vale lo mismo en dB/s a cualquier hop (%.1f-%.1f)" % (min(_r), max(_r)),
+      max(_r) - min(_r) < 0.1)
+
+# 4. El freno sesga lambda_d hacia arriba a proposito, pero el INDICADOR de S/N
+#    tiene que seguir reportando el piso medido (el manual lo documenta con
+#    bandas). De eso se ocupa la recursion paralela `_mcra_ld_medido`; sin ella el
+#    indicador caia ~1.8 dB y dejaba de discriminar voz de ruido.
+def _snr_con_voz(fall_db_s):
+    p = NoiseProfiler(HOP)
+    p._MCRA_FALL_DB_S = fall_db_s
+    p.set_mode("mcra"); p.set_enabled(True)
+    for f in fluct_noise(300):
+        p.process(f)
+    for f in voice_sig(120):
+        p.process(f)
+    return p.snr_db
+
+
+#    La reconstruccion no es exacta —alpha_d lo sigue calculando el camino frenado,
+#    asi que la recursion paralela puede apartarse hasta ~1 dB— pero el sesgo pasa
+#    de -1.8 dB (dejaba de discriminar voz de ruido en test_integration) a menos de
+#    1 dB, y el indicador ya sobreestima ~1.5 dB por el bias del min-tracking.
+_s_con, _s_sin = _snr_con_voz(NoiseProfiler._MCRA_FALL_DB_S), _snr_con_voz(1e9)
+check("el freno no arrastra el indicador de S/N (%.1f vs %.1f dB)" % (_s_con, _s_sin),
+      abs(_s_con - _s_sin) < 1.0)
+
+# ---------------------------------------------------------------------------
+print()
 print("=== Mascara armonica del refuerzo de pitch ===")
 
 # La mascara tiene que cubrir el pico del armonico (~2 bins de lobulo, cantidad en

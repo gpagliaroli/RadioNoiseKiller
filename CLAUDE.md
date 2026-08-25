@@ -281,6 +281,53 @@ reajustaron en el aire. Todo el contenido de abajo se validó escuchando en la r
 iteraciones de ida y vuelta (ver los "reportado en el aire" de cada ítem: casi todos los fixes de
 esta versión salieron de una escucha que contradijo una medición sintética).
 
+**Post-v2.2: freno de CAÍDA de λ_d — la primera cosa que mueve el salto del fondo.** Idea del
+usuario, después de diez enfoques descartados: *"el piso de ruido cae muy abruptamente y luego de
+esto viene la subida sin poder reaccionar. ¿Se puede pensar en que el piso no tenga cambios tan
+abruptos hacia abajo (pero siga rápido hacia arriba)?"*. `_MCRA_FALL_DB_S = 10.0` dB/s: λ_d no puede
+bajar más rápido que eso, subir queda libre.
+- **La premisa literal es FALSA y conviene dejarlo escrito:** λ_d sube y baja al mismo ritmo (p90 de
+  0,25 dB por frame en ambos sentidos, ratio 1,01). No cae más abrupto de lo que sube. **El freno
+  funciona igual**, por otro motivo: el salto ES la supresión que se pierde mientras λ_d va atrasado,
+  así que si el estimado no se hunde en los ratos flojos, la distancia a recuperar en la subida es
+  menor. Una idea puede ser correcta con el mecanismo equivocado — medir igual.
+- **Medido sobre las 5 grabaciones reales** (exceso del piso de salida 1,5 s después de una subida):
+  libre **+2,5 dB** | 20 dB/s +1,7 | **10 dB/s +0,6** | 5 dB/s −0,3 | 2 dB/s −0,3. Y de yapa la
+  supresión SUBE (19,7 → 20,8 dB) y el escalón de ganancia de banda ancha BAJA (0,70 → 0,62 dB).
+- **EL CONTROL DECISIVO, y es el que separa esto de los diez callejones: NO es "suprimir más".** A
+  igual supresión (~20,8 dB), el freno deja el exceso en **+0,6 dB** con escalón 0,62; llegar a esa
+  misma supresión bajando el piso espectral a 0,09 da **+2,7 dB** y 0,79. Ídem con Intensidad 0,85
+  (+2,5 / 0,77) y post-filtro 5,5 (+3,4 / 1,05). **Todas las perillas que ya existían empeoran el
+  síntoma al suprimir más; ésta lo mejora.** Sin este control no se podía distinguir el mecanismo
+  nuevo de la palanca vieja, que era la conclusión de todo el bloque ABIERTO.
+- **Precio**, en dos partes: **~0,5 dB de voz** (p90 de la salida, −5,9 → −6,4) y tardar más en
+  aprovechar una banda que se limpia de verdad (bajada real de 10 dB: **0,7 → 2,1 s**). En ese rato
+  lo único que pasa es que suprime de más — el lado que el usuario reportó como inofensivo.
+- **El pico inicial casi no se mueve** (+6,9 → +7,0 a 10 dB/s; recién a 2 dB/s baja a +4,8). Lo que
+  el freno arregla es la **persistencia**, no el golpe. Honestidad sobre qué se resolvió.
+- **Efecto colateral que hubo que reparar: el indicador de S/N.** λ_d deja de ser un estimado neutro
+  del piso y pasa a ser uno conservador, así que el indicador leía **1,8 dB menos** y `test_integration`
+  dejaba de discriminar voz de ruido. Se lleva **una recursión paralela sin frenar**
+  (`_mcra_ld_medido`), pasada por la misma curva de refuerzo en agudos. **Primer intento fallido,
+  anotado:** guardar "el λ_d de este frame antes de frenarlo" NO sirve — se calcula a partir del λ_d
+  frenado del frame anterior, así que arrastra todo el sesgo acumulado y el indicador no se movía ni
+  un dB. Hace falta la recursión propia. No es exacta (α_d lo sigue calculando el camino frenado):
+  el apartamiento queda bajo 1 dB contra los −1,8 de antes.
+- **Constante y no slider, por ahora.** Los dos extremos son defendibles (más lento = mejor síntoma
+  pero más costo de voz y más lentitud ante una banda que se limpia), así que **sí calificaría** para
+  slider según la regla de la v2.1 — a diferencia del freno del techo del AGC, donde una punta era
+  siempre peor. Se deja constante hasta validar de oído; si el usuario quiere moverlo, ahí merece
+  control.
+- Guards nuevos en `test_noise_vad`: que λ_d no caiga más rápido que el freno, **que el freno de
+  verdad esté actuando** (sin él cae 14,8 dB/s contra 9,0), que no limite la subida, que valga lo
+  mismo en dB/s a cualquier hop (es property, invariante 9) y que no arrastre el indicador de S/N.
+  **Dos trampas propias en esos guards:** (1) probar la caída con −25 dB daba verde sin ejercitar
+  nada, porque por debajo de `_MCRA_SQUELCH_RATIO` se activa la detección de "se fue la portadora" y
+  congela todo el estado MCRA — hay que usar −8 dB; (2) medir la subida como *delta en dB* daba un
+  falso fallo, porque con freno λ_d **parte de más arriba** (que es el mecanismo) y termina igual o
+  más alto: hay que comparar el NIVEL al que llega, no cuánto subió.
+- **PENDIENTE: validación de oído.** Todo lo de arriba es medición sobre grabaciones.
+
 **Post-v2.2: la máscara del refuerzo de pitch no discriminaba, y su efecto dependía del bloque.**
 Detectado por el usuario de oído: *"el refuerzo de pitch de voz exagera mucho el problema también, al
 deshabilitarlo mejora"*. Tenía razón, y la causa es un defecto de años.

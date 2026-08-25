@@ -173,6 +173,7 @@ class NoiseProfiler:
     # sola subtrama el estimador se daba por listo con 2 frames de voz.
     _MCRA_PITCH_THR:     float = 0.30   # confianza de autocorrelación para congelar
     _MCRA_VOICE_HOLD_MS: float = 200.0  # retención tras el último frame periódico
+    _MCRA_FALL_DB_S:     float = 10.0   # máxima caída de λ_d (dB/s); subir es libre
 
     # NOTA: acá vivía la "Compensación de fading HF" (freeze de MCRA + release DD
     # acelerado ante cambios bruscos de energía). Se eliminó tras medirla — el
@@ -316,6 +317,9 @@ class NoiseProfiler:
         # brillo de la voz. 0 = sin efecto (curva toda en 1.0).
         self._hf_boost:       float      = 0.0
         self._hf_boost_curve: np.ndarray = self._build_hf_boost_curve()
+        # Al cuadrado, para el indicador de S/N (trabaja en potencia). Acompaña
+        # SIEMPRE a la curva: se rearma en los mismos tres sitios (invariante 9).
+        self._hf_boost_curve_sq = (self._hf_boost_curve.astype(np.float64) ** 2)
 
         # Ventana de ataque de p_speech (flanco del VAD rápido) — ver _PS_ATTACK_VP_SQ
         self._atk_window: int   = 0
@@ -354,6 +358,9 @@ class NoiseProfiler:
         # Estado MCRA
         self._mcra_Sf:        np.ndarray | None = None
         self._mcra_ld:        np.ndarray | None = None
+        # λ_d SIN el freno de caída — sólo para el indicador de S/N,
+        # que debe reportar el piso medido y no el conservador.
+        self._mcra_ld_medido: np.ndarray | None = None
         self._mcra_subs:      np.ndarray | None = None  # (B, nb) subframe minimums
         self._mcra_cur_min:   np.ndarray | None = None
         self._mcra_sub_count: int = 0
@@ -388,6 +395,7 @@ class NoiseProfiler:
     def _reset_mcra(self) -> None:
         self._mcra_Sf        = None
         self._mcra_ld        = None
+        self._mcra_ld_medido = None
         self._mcra_subs      = None
         self._mcra_cur_min   = None
         self._mcra_sub_count = 0
@@ -434,6 +442,7 @@ class NoiseProfiler:
             self._floor_curve = self._build_floor_curve()
         if self._hf_boost_curve is None or len(self._hf_boost_curve) != self._nb:
             self._hf_boost_curve = self._build_hf_boost_curve()
+        self._hf_boost_curve_sq = (self._hf_boost_curve.astype(np.float64) ** 2)
         self._ola_prev        = np.zeros(self._hop, dtype=np.float32)
         self._ola_acc         = np.zeros(self._fft_n, dtype=np.float32)
         self._gain_prev       = None
@@ -578,6 +587,7 @@ class NoiseProfiler:
         Clamp == rango del slider (0.0-1.5)."""
         self._hf_boost = float(np.clip(v, 0.0, 1.5))
         self._hf_boost_curve = self._build_hf_boost_curve()
+        self._hf_boost_curve_sq = (self._hf_boost_curve.astype(np.float64) ** 2)
 
     @property
     def _mcra_warmup(self) -> int:
@@ -606,6 +616,18 @@ class NoiseProfiler:
         profundidad) de un frame al otro. Derivado al usarlo para que no pueda
         quedar desincronizado de _POST_RELEASE_DB."""
         return 10.0 ** (self._POST_RELEASE_DB / 20.0)
+
+    @property
+    def _mcra_fall_floor(self) -> float:
+        """Factor mínimo por frame para la caída de λ_d (potencia).
+
+        `_MCRA_FALL_DB_S` está en dB/s sobre el NIVEL, y λ_d es potencia, así que
+        el exponente lleva /10 y no /20. Depende del hop, por eso es property y no
+        un valor cacheado: igual que `_mcra_delta` y `_mcra_warmup`, derivarlo en
+        el momento de usarlo hace imposible que quede desincronizado al cambiar el
+        tamaño de bloque (invariante 9).
+        """
+        return 10.0 ** (-self._MCRA_FALL_DB_S * (self._hop / 48000.0) / 10.0)
 
     @property
     def _mcra_delta(self) -> float:
@@ -839,7 +861,39 @@ class NoiseProfiler:
         alpha_d = self._MCRA_ALPHA_D0 + (1.0 - self._MCRA_ALPHA_D0) * I_min
 
         # 6. Actualizar estimado de potencia de ruido
+        anterior     = self._mcra_ld
         self._mcra_ld = alpha_d * self._mcra_ld + (1.0 - alpha_d) * power
+
+        # 7. Freno de CAÍDA del estimado. Subir queda libre; bajar no puede ir más
+        #    rápido que _MCRA_FALL_DB_S. Idea del usuario, medida sobre 5
+        #    grabaciones reales. El salto de la salida cuando el ruido de banda
+        #    sube ES la supresión que se pierde mientras λ_d va atrasado; si el
+        #    estimado no se hunde en los ratos flojos, la distancia que tiene que
+        #    recuperar en la subida es menor.
+        #    Medido (exceso del piso de salida 1,5 s después de una subida):
+        #      libre +2,5 dB | 20 dB/s +1,7 | 10 dB/s +0,6 | 5 dB/s −0,3 | 2 dB/s −0,3
+        #    NO es "suprimir más" con otro nombre, y ese fue el control decisivo: a
+        #    IGUAL supresión (~20,8 dB), el freno deja el exceso en +0,6 dB y el
+        #    escalón de ganancia en 0,62, mientras que llegar a esa misma supresión
+        #    bajando el piso espectral a 0,09 da +2,7 dB y 0,79. Todas las perillas
+        #    que ya existían empeoran el síntoma al suprimir más; ésta lo mejora.
+        #    El precio son dos cosas: ~0,5 dB de voz, y tardar más en aprovechar una
+        #    banda que se limpia de verdad (una bajada real de 10 dB pasa de 0,7 a
+        #    2,1 s) — y en ese rato lo único que pasa es que suprime de más, que es
+        #    el lado que el usuario reportó como inofensivo.
+        #    Como λ_d deja de ser un estimado neutro del piso para ser uno
+        #    conservador, se lleva EN PARALELO la misma recursión sin frenar, sólo
+        #    para el indicador de S/N (que el manual documenta con bandas).
+        #    Tiene que ser una recursión propia y no "el λ_d de este frame antes de
+        #    frenarlo": ese valor se calcula a partir del λ_d frenado del frame
+        #    anterior, así que arrastra todo el sesgo acumulado y no sirve —
+        #    medido, el indicador no se movía ni un dB respecto del frenado.
+        if (self._mcra_ld_medido is None
+                or self._mcra_ld_medido.shape != anterior.shape):
+            self._mcra_ld_medido = anterior.copy()
+        self._mcra_ld_medido = (alpha_d * self._mcra_ld_medido
+                                + (1.0 - alpha_d) * power)
+        self._mcra_ld = np.maximum(self._mcra_ld, anterior * self._mcra_fall_floor)
 
         return np.sqrt(self._mcra_ld).astype(np.float32)
 
@@ -927,13 +981,23 @@ class NoiseProfiler:
             # con alpha=0.50 baja en ~14 frames (<200ms incluso a +30dB SNR).
             mean_sig        = float(np.mean(sig_power))
             mean_noise_prof = float(np.mean(noise_prof2))
+            # El freno de caída sesga λ_d hacia arriba A PROPÓSITO (paso 7 de
+            # _mcra_update), así que λ_d ya no es el mejor estimado del piso sino
+            # uno conservador. Ese sesgo no debe ensuciar el INDICADOR de S/N, que
+            # el manual documenta con bandas: se usa el valor sin frenar, pasado
+            # por la misma curva de refuerzo en agudos que noise_prof2 (si no, el
+            # indicador cambiaría también con ese slider).
+            mean_noise_snr = mean_noise_prof
+            if self._mode == "mcra" and self._mcra_ld_medido is not None:
+                mean_noise_snr = float(np.mean(self._mcra_ld_medido
+                                               * self._hf_boost_curve_sq))
             # S/N para el indicador del espectro. Suavizado asimétrico: ataque
             # rápido (~100ms) y decaimiento lento (~1s) — lee los picos silábicos
             # de la señal sobre el piso, que es el S/N que espera un operador
             # (un EMA simétrico promedia los valles entre sílabas y marca bajo).
             # Nota: el estimado de ruido (min-tracking) subestima ~40% → el S/N
             # sobreestima ~1.5 dB; aceptable para un indicador comparativo.
-            snr_inst = 10.0 * np.log10(max(mean_sig / (mean_noise_prof + 1e-30), 1e-6))
+            snr_inst = 10.0 * np.log10(max(mean_sig / (mean_noise_snr + 1e-30), 1e-6))
             if snr_inst > self._snr_db:
                 self._snr_db = 0.90 * self._snr_db + 0.10 * snr_inst
             else:
