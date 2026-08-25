@@ -921,6 +921,27 @@ The viewer runs at ~15 frames per second. To reduce CPU cost, it pauses automati
 
 Each curve can be shown or hidden independently with the checkboxes in the top bar.
 
+> **Why does the noise floor seem to stop in the treble?** This question comes up as soon as you
+> widen the input bandpass: you take it to 5 or 6 kHz and the yellow line still seems to end near
+> 4 kHz. **It is not cut off: it is resting on the bottom edge of the graph.** The vertical scale
+> goes down to −80 dB, and above a certain frequency the noise falls below that value, so the curve
+> is flattened against the frame and blends into it. Measured on a real rig with the bandpass at
+> 6 kHz: −69 dB at 4 kHz, −74 dB at 4.5 kHz and **−80 dB at 5 kHz**, which is exactly where it
+> stops being distinguishable.
+>
+> What matters is the underlying cause: **that rolloff is the radio's doing, not the application's.**
+> The receiver's IF filter and audio chain already trimmed that region before the signal reaches the
+> sound card — measured on real recordings, the raw input drops about 17 dB at 4 kHz, 26 dB at 5 kHz
+> and 40 dB at 6 kHz relative to 1 kHz. Widening the bandpass cannot bring back a signal that never
+> came in.
+>
+> **Two practical consequences.** Widening the input bandpass beyond where your receiver reaches
+> adds no brightness — it only adds a strip with some residual noise and almost no voice; if you are
+> after treble, it comes from the **Aural exciter** or the **presence EQ**. And the canceller's
+> **HF floor boost** has the same ceiling: its ramp grows per octave from 2.5 kHz, but above the
+> radio's cutoff it is multiplying a floor that is already inaudible. To find where that cutoff is
+> on your rig, look at how far the **Input** curve reaches on this same graph.
+
 ### S/N indicator
 
 To the right of the checkboxes, the **S/N** indicator shows the full-band signal-to-noise ratio: how many dB above the estimated noise floor the current signal peaks are (smoothed ~1 s). Green = comfortable signal (>15 dB); yellow = workable (6–15 dB); gray = marginal or noise only (with band noise alone it reads close to 0). Requires the canceller enabled with a profile (learned or MCRA-calibrated). Useful for comparing antennas, bands or propagation conditions with an objective number.

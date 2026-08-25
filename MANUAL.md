@@ -922,6 +922,27 @@ El visualizador opera a ~15 cuadros por segundo. Para reducir el costo de CPU, s
 
 Cada curva puede mostrarse u ocultarse de forma independiente con las casillas de la barra superior.
 
+> **¿Por qué el piso de ruido parece cortarse en los agudos?** Es una pregunta que aparece apenas
+> se ensancha el pasabanda de entrada: se lo lleva a 5 o 6 kHz y la línea amarilla igual parece
+> terminar cerca de los 4 kHz. **No se corta: se apoya en el borde inferior del gráfico.** La escala
+> vertical llega hasta −80 dB, y arriba de cierta frecuencia el ruido cae por debajo de ese valor,
+> así que la curva queda aplastada contra el marco y se confunde con él. Medido en un equipo real
+> con el pasabanda en 6 kHz: −69 dB a 4 kHz, −74 dB a 4,5 kHz y **−80 dB a 5 kHz**, que es
+> exactamente donde deja de distinguirse.
+>
+> Lo importante es la causa de fondo: **ese rolloff lo hace la radio, no la aplicación.** El filtro
+> de FI y la cadena de audio del receptor ya recortaron esa zona antes de que la señal llegue a la
+> placa de sonido — medido sobre grabaciones reales, la entrada cruda cae unos 17 dB a 4 kHz, 26 dB
+> a 5 kHz y 40 dB a 6 kHz respecto de 1 kHz. Ensanchar el pasabanda no puede devolver una señal que
+> nunca entró.
+>
+> **Dos consecuencias prácticas.** Ensanchar el pasabanda de entrada más allá de donde llega tu
+> receptor no aporta brillo — sólo suma una franja con algo de ruido residual y casi nada de voz; si
+> buscás agudos, salen del **Excitador armónico** o del **EQ de presencia**. Y el **Refuerzo en
+> agudos** del cancelador tiene el mismo techo: su rampa crece por octava desde 2,5 kHz, pero por
+> encima del corte de la radio está multiplicando un piso que ya es inaudible. Para saber dónde está
+> ese corte en tu equipo, mirá hasta dónde llega la curva de **Entrada** en este mismo gráfico.
+
 ### Indicador S/N
 
 A la derecha de las casillas, el indicador **S/N** muestra la relación señal/ruido de banda completa: cuántos dB por encima del piso de ruido estimado están los picos de la señal actual (suavizado ~1 s). Verde = señal cómoda (>15 dB); amarillo = trabajable (6–15 dB); gris = marginal o solo ruido (con solo ruido de banda marca valores cercanos a 0). Requiere el cancelador activo con perfil (aprendido o MCRA calibrado). Útil para comparar antenas, bandas o condiciones de propagación con un número objetivo.
