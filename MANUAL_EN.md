@@ -571,6 +571,17 @@ This module detects the voice's **fundamental pitch** (f0) in real time via auto
 |---------|-------|---------|-------------|
 | **Harmonic protection** | 0% – 100% | 70% | How much `p_speech` is raised on harmonic bins. **70%** is the balance point: protects the voice without degrading noise suppression. **>85%**: harmonic bins are almost never suppressed — useful for very weak signals. **<40%**: minimal effect. |
 
+> **It depends on the block size, and that is worth knowing.** To protect a harmonic
+> without touching what sits next to it, the application needs enough resolution to
+> tell them apart: harmonics are spaced by the voice pitch (80–400 Hz), and the width
+> of each analysis bin is set by the **block size** (Advanced Audio). With small
+> blocks (240–480) and a low-pitched voice, two neighbouring harmonics land in
+> adjacent bins and the protection stops being selective: it behaves as a flat floor
+> across the whole band, costs noise suppression and does not deliver what it
+> promises. If you want to use this module, use **block 960 or 1920**. Up to v2.2 the
+> effect was much worse, and it also changed on its own when you changed the block
+> size, with nothing to indicate it.
+
 > **When to enable it:** when the voice sounds "ghostly" or "robotic" with the canceller in MCRA mode or at high intensity, on weak AM or SSB signals — it improves intelligibility in both modes. Under normal conditions, leave it off.
 
 ### Voice leveler

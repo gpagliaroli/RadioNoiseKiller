@@ -573,6 +573,16 @@ Este módulo detecta en tiempo real el **tono fundamental** (f0) de la voz media
 |---------|-------|---------|-------------|
 | **Protección de armónicos** | 0% – 100% | 70% | Cuánto se eleva `p_speech` en los bins armónicos. **70%** es el punto de equilibrio: protege la voz sin degradar la supresión del ruido. **>85%**: bins de armónicos casi nunca se suprimen — útil para señales muy débiles. **<40%**: efecto mínimo. |
 
+> **Depende del tamaño de bloque, y conviene saberlo.** Para proteger un armónico
+> sin tocar lo que hay al lado, la aplicación necesita resolución suficiente para
+> distinguirlos: los armónicos están separados por el tono de la voz (80–400 Hz) y
+> el ancho de cada bin de análisis lo fija el **tamaño de bloque** (Avanzada Audio).
+> Con bloques chicos (240–480) y una voz grave, dos armónicos vecinos caen en bins
+> contiguos y la protección deja de ser selectiva: se comporta como un piso parejo
+> sobre toda la banda, quita supresión de ruido y no aporta lo que promete. Si
+> querés usar este módulo, **bloque 960 o 1920**. Hasta la v2.2 el efecto era mucho
+> peor y además cambiaba solo al cambiar el bloque, sin que nada lo indicara.
+
 > **Cuándo activarlo:** cuando la voz suena "fantasmal" o "robótica" con el cancelador en modo MCRA o con intensidad alta, en señales débiles de AM o SSB — mejora la inteligibilidad en ambos modos. En condiciones normales, dejarlo desactivado.
 
 ### Nivelador de voz

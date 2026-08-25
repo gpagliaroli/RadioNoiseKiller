@@ -251,7 +251,9 @@ SLIDER_TIPS = {
     "_s_pitch_strength": (
         "Cuánto se protegen del cancelador los armónicos de la voz detectada.\n"
         "Fuerte rescata mejor una voz enterrada en ruido; si el tono se detecta mal,\n"
-        "puede terminar protegiendo bins que eran ruido."
+        "puede terminar protegiendo bins que eran ruido.\n"
+        "Necesita resolución para separar armónicos: con bloque 240–480 y voz grave\n"
+        "no discrimina y sale caro en supresión. Para este módulo, bloque 960 o 1920."
     ),
 }
 

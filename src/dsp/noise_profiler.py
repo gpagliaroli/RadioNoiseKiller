@@ -57,7 +57,23 @@ class NoiseProfiler:
     _PITCH_CONF_THR: float = 0.30   # umbral de confianza de la autocorrelación
     _PITCH_EVERY:    int   = 3      # autocorr cada N frames (2 FFTs de 4096 — caro en CPUs
                                     # débiles; el pitch no cambia en 30ms, se cachea)
-    _PITCH_SIGMA:    float = 1.5    # sigma (bins) de la máscara gaussiana por armónico
+    # Sigma de la máscara gaussiana por armónico. Tiene que cumplir DOS cosas a la
+    # vez, y cada una vive en un dominio distinto:
+    #   - cubrir el pico del armónico, que mide ~2 bins por el lóbulo de la ventana
+    #     (cantidad en BINS, no depende del tamaño de bloque)  -> _PITCH_SIGMA_MIN
+    #   - no llegar hasta el armónico vecino, que está a f0 Hz
+    #     (cantidad en Hz, sí depende del tamaño de bloque)    -> _PITCH_SIGMA_K
+    # Era un valor fijo de 1.5 BINS, que sólo cumplía la segunda por casualidad del
+    # f0 típico: como la separación entre armónicos medida en bins escala con el
+    # tamaño de FFT, las gaussianas se solapaban con bloques chicos. Medida la media
+    # de la máscara en la banda útil: 0.82–0.99 a hop 480 contra 0.20–0.46 a hop
+    # 1920. O sea que a hop 480 la máscara valía ~1 en TODO el espectro y el
+    # refuerzo dejaba de proteger armónicos para volverse un piso global de
+    # p_speech de 0.7 — con lo cual ningún bin bajaba del 0.3 con el que el
+    # post-filtro decide qué es ruido, y el indicador "Reducción extra" caía a 0.
+    # Reportado en el aire ("el refuerzo de pitch exagera mucho el problema").
+    _PITCH_SIGMA_K:   float = 0.12  # sigma como fracción de la separación entre armónicos
+    _PITCH_SIGMA_MIN: float = 1.0   # piso en bins: por debajo no cubre ni el pico
 
     # Parámetros MCRA
     _MCRA_ALPHA_S:       float = 0.9    # suavizado espectral
@@ -721,14 +737,16 @@ class NoiseProfiler:
     def _harmonic_mask(self, f0: float) -> np.ndarray:
         """Máscara gaussiana centrada en cada armónico de f0 (en bins FFT)."""
         freq_per_bin = 48000.0 / self._fft_n
+        separacion = f0 / freq_per_bin          # armónicos contiguos, en bins
+        sigma = max(self._PITCH_SIGMA_MIN, self._PITCH_SIGMA_K * separacion)
         mask = np.zeros(self._nb, dtype=np.float32)
         bins = np.arange(self._nb, dtype=np.float32)
         h = 1
         while True:
-            center = h * f0 / freq_per_bin
+            center = h * separacion
             if center >= self._nb:
                 break
-            mask += np.exp(-0.5 * ((bins - center) / self._PITCH_SIGMA) ** 2).astype(np.float32)
+            mask += np.exp(-0.5 * ((bins - center) / sigma) ** 2).astype(np.float32)
             h += 1
         return np.minimum(mask, 1.0)
 

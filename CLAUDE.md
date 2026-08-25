@@ -281,6 +281,48 @@ reajustaron en el aire. Todo el contenido de abajo se validó escuchando en la r
 iteraciones de ida y vuelta (ver los "reportado en el aire" de cada ítem: casi todos los fixes de
 esta versión salieron de una escucha que contradijo una medición sintética).
 
+**Post-v2.2: la máscara del refuerzo de pitch no discriminaba, y su efecto dependía del bloque.**
+Detectado por el usuario de oído: *"el refuerzo de pitch de voz exagera mucho el problema también, al
+deshabilitarlo mejora"*. Tenía razón, y la causa es un defecto de años.
+- **`_PITCH_SIGMA` valía 1.5 BINS.** La máscara tiene que cumplir dos cosas que viven en dominios
+  distintos: cubrir el pico del armónico (~2 bins de lóbulo de ventana — cantidad en **bins**) y no
+  llegar hasta el armónico vecino (que está a f0 — cantidad en **Hz**). Un sigma fijo en bins sólo
+  cumple la segunda por casualidad del f0 típico, porque la separación entre armónicos *medida en
+  bins* escala con el tamaño de FFT.
+- **Medido, la media de la máscara en la banda útil:** 0,82–0,99 a hop 480 contra 0,20–0,46 a hop
+  1920. O sea que con bloques chicos la máscara valía ~1 en TODO el espectro: el refuerzo dejaba de
+  proteger armónicos y se volvía **un piso global de `p_speech` de 0,7**. Con eso ningún bin baja del
+  0,3 con el que el post-filtro decide qué es ruido → **el post-filtro se apaga entero y el indicador
+  "Reducción extra" cae a 0**, que era el otro síntoma que el usuario reportó y yo no supe explicar.
+- **Es el mismo defecto que mató la criba armónica en la v2.2** (*"con bloque 480 la máscara vale
+  1,00 de media"*), pero ahí se descartó el feature y acá seguía vivo en uno activo — y en los **7
+  presets de fábrica**, todos con el refuerzo encendido.
+- **Costo medido sobre las grabaciones reales** (bloque 960): con el refuerzo activo, **2,9 dB menos
+  de supresión** y el **doble de escalón de ganancia de banda ancha** (0,70 → 1,35 dB entre frames
+  consecutivos). Eso último es la firma del crujido, la misma métrica que destapó el post-filtro.
+- **Fix:** `sigma = max(_PITCH_SIGMA_MIN=1.0 bin, _PITCH_SIGMA_K=0.12 · separación_en_bins)`. Codifica
+  las dos restricciones. Resultado: escalón 1,35 → 1,08 dB, supresión 16,8 → 17,6 dB, indicador en 0
+  del 3,3 % al 2,1 % (= el valor con el refuerzo apagado).
+- **Se evaluó σ fijo en Hz y se descartó pese a medir un pelo mejor** (0,94 dB de escalón y 17,9 de
+  supresión con σ=15 Hz). Es la formulación físicamente equivocada —satisface el ancho del pico sólo
+  por accidente— y la diferencia (0,14 dB sobre 5 grabaciones) está dentro del ruido de la medición.
+  La proporcional además es **la más consistente entre bloques y voces** (dispersión de la media de
+  la máscara 0,126 contra 0,201 del σ en Hz y 0,284 del original). **Regla: entre dos fórmulas que
+  miden casi igual, elegir la que expresa la restricción real, no la que gana por un decimal.**
+- **Límite que NO se puede arreglar y quedó documentado:** con bloque 480 y una voz de 150 Hz, los
+  armónicos están a 3 bins y **no existe ningún bin entre armónicos** (el banco lo delató devolviendo
+  NaN al promediar "entre armónicos"). Ninguna σ discrimina ahí. Manuales ES+EN y tooltip ahora dicen
+  que este módulo pide **bloque 960 o 1920**.
+- **La selectividad real del feature es chica en todos los casos** (+0,7 a +1,2 dB de protección
+  diferencial entre armónicos y lo de al lado). Con 2–3 dB de supresión de costo, dejarlo apagado es
+  una decisión razonable — que es a la que había llegado el usuario solo.
+- **No había NINGÚN test de DSP del refuerzo de pitch.** Cuatro guards nuevos en `test_noise_vad`:
+  que la máscara cubra el pico (≥0,85), que no puentee entre armónicos separados ≥6 bins (≤0,30),
+  que no imponga un piso global de `p_speech` y que **no dependa del tamaño de bloque**. Verificado
+  que los dos últimos **fallan con la fórmula vieja** — un guard que no puede fallar no prueba nada.
+- **Los 7 presets de fábrica traen el refuerzo activado**, así que todos cambian de sonido: suprimen
+  algo más y modulan menos. Pendiente de re-escucha.
+
 **Post-v2.2 — ABIERTO: el fondo salta cuando el ruido de banda sube. SIETE enfoques descartados.**
 Reportado con un diagnóstico del usuario que resultó correcto en la cadena causal: *"cuando baja el
 ruido no se perciben problemas, a lo sumo se cancela un poco de más. Cuando sube el ruido, el piso no
@@ -313,7 +355,16 @@ llega a subir a tiempo y la salida sube muy de golpe"*.
   | Ruido de confort | Métrica OK (fluctuación 7,4 → 5,1 dB) pero **rechazado de oído** |
   | Compresor de salida | El fondo está 15 dB bajo la voz: ningún umbral los separa |
   | Freno de subida del piso de salida | Duckea 4,1 dB permanentes por 1,7 dB de mejora |
+  | Look-ahead del estimado (0–800 ms) | **No hay futuro que mirar**: λ_d no sube NADA en 1,5 s |
+  | Freeze de MCRA partido (seguidor vivo, λ_d congelado) | Sin efecto: +2,3 vs +2,5 dB |
+  | Freeze de MCRA por bin (sólo los armónicos) | 43 % de bins actualizando, pero −2,3 dB de supresión |
 
+- **Dato duro que acota el problema, medido al probar el look-ahead: el estimador se alimenta en el
+  12,5 % de los frames.** El freeze de MCRA por voz se arma con un solo frame periódico y retiene
+  200 ms, así que en un QSO tapa hasta los huecos entre palabras, que son justo los frames que MCRA
+  necesita. Por eso λ_d no se mueve durante el evento. **No se puede sacar**: verificado contra el
+  guard que lo justificó en la v2.0, sin freeze la voz sostenida sube λ_d **7,4 dB**. Los dos intentos
+  de aflojarlo sin romperlo están en la tabla de arriba.
 - **La única palanca que funciona es cuánto se suprime.** El salto ES la supresión que se pierde
   durante el retardo: si el cancelador quita 20 dB y por un segundo no los quita, el salto es de
   20 dB. Piso más alto o Intensidad más baja → salto proporcionalmente menor. Es el mismo trade que

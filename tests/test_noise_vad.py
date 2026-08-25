@@ -559,6 +559,62 @@ check("el fondo entre palabras no parpadea de mas (%.1f dB)" % _flick, _flick < 
 
 # ---------------------------------------------------------------------------
 print()
+print("=== Mascara armonica del refuerzo de pitch ===")
+
+# La mascara tiene que cubrir el pico del armonico (~2 bins de lobulo, cantidad en
+# BINS) y NO llegar al armonico vecino (que esta a f0 Hz, cantidad en Hz). Con un
+# sigma fijo en bins solo se cumplia lo primero: la separacion entre armonicos
+# medida en bins escala con el tamaño de FFT, asi que con bloques chicos las
+# gaussianas se solapaban y la mascara valia ~1 en TODO el espectro. Ahi el
+# refuerzo dejaba de proteger armonicos y pasaba a ser un piso global de p_speech,
+# que apagaba el post-filtro entero (ningun bin bajaba del 0.3 con el que se
+# clasifica ruido) y dejaba el indicador "Reduccion extra" en 0.
+
+_HOPS = (240, 480, 960, 1920)
+_F0S = (85.0, 100.0, 150.0, 220.0, 300.0)
+
+
+def _mask_stats(hop, f0):
+    p = NoiseProfiler(hop)
+    fpb = 48000.0 / p._fft_n
+    m = p._harmonic_mask(f0)
+    nb = int(3500 / fpb)
+    sep = f0 / fpb
+    picos = [m[int(round(h * sep))] for h in range(1, int(nb / sep))
+             if int(round(h * sep)) < nb]
+    medios = [m[int(round((h + 0.5) * sep))] for h in range(1, int(nb / sep) - 1)
+              if int(round((h + 0.5) * sep)) < nb]
+    return float(m[:nb].mean()), min(picos), (max(medios) if medios else None), sep
+
+
+# 1. Siempre cubre el pico del armonico: si no, el refuerzo no refuerza nada.
+_peor_pico = min(_mask_stats(h, f)[1] for h in _HOPS for f in _F0S)
+check("la mascara cubre el pico del armonico (peor caso %.2f)" % _peor_pico,
+      _peor_pico >= 0.85)
+
+# 2. Donde la resolucion alcanza (armonicos separados >= 6 bins), no debe puentear
+#    hasta el vecino. Es la condicion que el sigma en bins violaba.
+_peor_medio = max(v for h in _HOPS for f in _F0S
+                  for _, _, v, sep in [_mask_stats(h, f)]
+                  if v is not None and sep >= 6.0)
+check("no puentea entre armonicos separados (peor caso %.2f)" % _peor_medio,
+      _peor_medio <= 0.30)
+
+# 3. Regresion del bug: con el sigma fijo en 1.5 bins, a hop 960 y f0 150 la media
+#    de la mascara daba 0.61 -> con strength 0.7 imponia p_speech 0.43 en toda la
+#    banda, por encima del 0.30 que separa voz de ruido.
+_media_960 = _mask_stats(960, 150.0)[0]
+check("la mascara no impone un piso global de p_speech (media %.2f)" % _media_960,
+      _media_960 * 0.7 < 0.30)
+
+# 4. Y no debe depender del tamaño de bloque (antes: 0.61 a hop 960 contra 0.31 a
+#    1920 con el mismo f0 — el mismo control sonaba distinto segun el bloque).
+_dif = abs(_media_960 - _mask_stats(1920, 150.0)[0])
+check("la mascara no depende del tamaño de bloque (%.2f de diferencia)" % _dif,
+      _dif < 0.20)
+
+# ---------------------------------------------------------------------------
+print()
 if _fails:
     print("FALLARON %d checks:" % len(_fails))
     for f in _fails:
