@@ -281,6 +281,71 @@ reajustaron en el aire. Todo el contenido de abajo se validó escuchando en la r
 iteraciones de ida y vuelta (ver los "reportado en el aire" de cada ítem: casi todos los fixes de
 esta versión salieron de una escucha que contradijo una medición sintética).
 
+**Post-v2.2: el squelch de portadora trababa el estimador — CUARTA vez que muerde la trampa
+autorreferencial.** Encontrado midiendo por qué el cancelador se lleva tanta voz. La detección de
+"se cortó la portadora" comparaba la energía del frame contra **λ_d**, o sea contra la salida del
+propio estimador que después alimenta.
+- **Estado absorbente:** con señal fuerte y pausas reales, λ_d queda alto → las pausas caen 13 dB por
+  debajo → se leen como portadora cortada → se saltean **justo los únicos frames en los que el
+  estimador puede medir el ruido** → λ_d nunca baja.
+- **Medido con ruido CONOCIDO** (voz con pausas de 1 s cada 3 s, S/N +15 dB): disparaba en el
+  **16,9 %** de los frames y dejaba λ_d **+16,2 dB** por encima del ruido real. Con la referencia
+  arreglada: **0 %** y **−0,1 dB**. A S/N +6 dB no disparaba ni antes ni después — **el bug crece con
+  la calidad de la señal**, que es lo que lo hacía invisible: aparece justo cuando todo lo demás
+  anda bien.
+- **Fix:** la referencia pasa a ser un seguidor de mínimos de la **ENTRADA** (`_sq_ref_min`, ventana
+  de 4 s en subtramas, el mismo patrón que MCRA y que el techo del AGC). Un hueco entre palabras se
+  queda EN el piso del canal (sigue entrando portadora y ruido) y no dispara; una portadora cortada
+  se va muy por debajo y sí. Verificado que el feature sigue sirviendo: con la portadora cortada
+  −40 dB dispara el 6,5 % de los frames. Exención de arranque obligatoria (`None` hasta que la
+  ventana se llena una vez), si no cualquier frame flojo del principio parece portadora cortada.
+- **NO es lo que el usuario está escuchando**: sobre sus 8 grabaciones de onda corta dispara el
+  0–1,1 % y λ_d no cambia. Se arregla igual porque el escenario donde sí muerde —señal fuerte con
+  pausas— es **AM local**, donde el usuario también opera.
+- **Regla, ahora con cuatro casos:** ningún detector que decida CONGELAR un estimador puede tomar su
+  decisión a partir de la salida de ese estimador. Van: el freeze de MCRA por vp (v2.0), el
+  congelamiento del AGC por VAD (v2.1), el detector de estimado obsoleto (post-v2.2) y éste.
+- **Trampa propia en el guard, corregida antes de commitear:** el primer test replicaba la condición
+  del squelch **afuera** del profiler, así que medía mi copia de la fórmula y daba verde con el
+  código viejo. Detectarlo por "S_f no cambió" tampoco servía: el freeze por voz y la cuarentena
+  dejan S_f quieto porque ni llaman al update. El detector exacto es **`_mcra_frames` avanzó Y S_f no
+  cambió**, porque el contador se incrementa antes de la rama del squelch. Con eso el guard da 0 %
+  con el código nuevo y **96,4 %** con el viejo.
+
+**Post-v2.2 — el cancelador se lleva 6–8 dB de la banda de voz. PARCIALMENTE ABIERTO.** Salió de
+medir por qué el usuario escucha distorsión. En sus 8 grabaciones el S/N de la voz sobre el piso es
+**+13,5 a +25,8 dB** (señales cómodas, no enterradas): un Wiener ideal a ese S/N tocaría la voz
+**0,2 dB**, y la cadena le saca **6,6 a 8,3 dB**.
+- **Causa identificada y resuelta: `noise_hf_boost` al 100 %.** Cuesta **1,0–1,6 dB de voz** (3,6 dB
+  en 2,5–3,5 kHz, la banda de las consonantes) y compra **0,2 dB de fondo** — nada. Consistente en
+  las 5 grabaciones medidas. El motivo enlaza con la nota del manual sobre la curva amarilla: **la
+  radio del usuario no entrega nada arriba de ~4 kHz**, así que la rampa del refuerzo (que crece
+  desde 2,5 kHz) cae donde hay voz y ya no hay ruido, inflando λ_d 2–3 dB sobre las consonantes.
+  **VALIDADO de oído por el usuario.** Regla: el refuerzo en agudos sólo sirve si el receptor
+  entrega ruido por encima de donde arranca la rampa; se verifica mirando hasta dónde llega la curva
+  de **Entrada** en el espectro.
+- **Lo que queda: el post-filtro se lleva 3,8 dB de voz, y es intrínseco a su diseño.** Aplica
+  profundidad por `(1 − p_speech)`, y con `p_speech = min(g_detect/0.80, 1)` un bin necesita **+6 dB
+  de S/N propio** para quedar protegido. Medido en frames dominados por voz: la **mediana de
+  `p_speech` en la banda de voz es 0,35**, el 98 % de los bins queda bajo 0,9 y el **87 % de la
+  ENERGÍA de la voz** vive en bins que el post-filtro puede tocar. A fuerza 4 son 18 dB de
+  profundidad, así que un bin con p=0,5 recibe 9 dB de recorte.
+- **Dos intentos de arreglo, los dos DESCARTADOS por medición:**
+  1. **Profundidad del post-filtro escalada por el S/N del frame.** No se activaba: mi rampa asumía
+     que `snr_db` reportaba el S/N real, y **lee 2–3,4 dB** cuando el S/N de la voz es +13 a +26
+     (es media de banda completa sobre media de λ_d, otra magnitud). Falla con la firma "la perilla
+     no mueve nada" (k medio 0,92–0,96).
+  2. **Bajar `_VAD_THRESHOLD`** (los +6 dB por bin): de 0,80 a 0,35 gana 1,0 dB de voz pero pierde
+     1,3 dB de fondo y el balance **empeora** (−2,4 → −2,1). Es "suprimir menos" con otro nombre.
+- **Trampa de medición propia, importante:** comparar λ_d contra "el mínimo real de su propia
+  ventana" **está viciado** — el mínimo de N muestras baja solo al crecer N, así que el sesgo
+  aparente cambia con el hop y con la ventana sin significar nada (daba +10,5 a hop 960 y +17,8 a
+  hop 240). Lo mismo con el percentil 10. **Para medir el sesgo de un estimador de ruido hace falta
+  ruido conocido**, y con eso el resultado fue otro: el sesgo depende del S/N, no del suavizado
+  (`_MCRA_ALPHA_S` no cambió nada: 17,3 dB en todo el barrido) ni de la ventana.
+- **Queda abierto** cómo bajar el daño del post-filtro sin perder supresión. La única vía que resta
+  es cambiar cómo se calcula `p_speech`, que es más invasivo.
+
 **Post-v2.2: el umbral del freeze de MCRA pasa a ser ajustable ("Congelar piso con voz").** Slider
 30–100 % en Avanzada Cancelador (`noise_freeze_thr`, default 0.30 = comportamiento previo; 1.00 =
 no congela nunca). **PENDIENTE de validación de oído** — se expuso justamente porque la medición no

@@ -605,6 +605,104 @@ check("el fondo entre palabras no parpadea de mas (%.1f dB)" % _flick, _flick < 
 
 # ---------------------------------------------------------------------------
 print()
+print("=== Squelch de portadora: la referencia NO puede ser lambda_d ===")
+
+# Comparar la energia del frame contra lambda_d era autorreferencial y creaba un
+# estado absorbente: con señal fuerte y pausas reales, lambda_d queda alto, las
+# pausas caen 13 dB por debajo y se leen como "se corto la portadora", asi que se
+# saltean justo los frames en los que el estimador puede medir el ruido y lambda_d
+# nunca baja. Medido con ruido CONOCIDO (voz con pausas a S/N +15): disparaba en el
+# 16.9% de los frames y dejaba lambda_d +16.2 dB sobre el ruido real. Con la
+# referencia derivada de la señal, 0% y -0.1 dB.
+
+_SQ_HOP = 960
+
+
+def _voz_con_pausas(n, snr_db, corte=False):
+    """Voz con pausas de 1 s cada 3 s sobre ruido conocido. Devuelve (mezcla, ruido)."""
+    r = np.random.default_rng(5)
+    t = np.arange(n * _SQ_HOP) / SR
+    f0 = 140 + 25 * np.sin(2 * np.pi * 0.35 * t)
+    v = np.zeros_like(t)
+    fase = 2 * np.pi * np.cumsum(f0) / SR
+    for k in range(1, 22):
+        v += (1.0 / k) * np.sin(k * fase + r.uniform(0, 6.28))
+    v /= np.max(np.abs(v))
+    v *= 0.45 + 0.55 * np.abs(np.sin(2 * np.pi * 2.6 * t))
+    v[np.mod(t, 3.0) > 2.0] = 0.0                      # las pausas
+    nz = r.normal(0, 0.05, len(t)).astype(np.float32)
+    a = np.sqrt(np.mean(nz ** 2)) * 10 ** (snr_db / 20) / np.sqrt(np.mean(v ** 2))
+    mix = (v * a + nz).astype(np.float32)
+    if corte:
+        mix[int(0.66 * len(mix)):] *= 10 ** (-40 / 20.0)   # portadora cortada
+    return mix, nz
+
+
+def _corre_sq(n, snr_db, corte=False):
+    """Devuelve (% de frames en squelch, sesgo de lambda_d en dB)."""
+    mix, nz = _voz_con_pausas(n, snr_db, corte)
+    fft_n = 2 * _SQ_HOP
+    win = np.sqrt(np.hanning(fft_n)).astype(np.float32)
+    fr_hz = np.arange(fft_n // 2 + 1) * SR / fft_n
+    banda = (fr_hz >= 300) & (fr_hz <= 3000)
+    ruido = np.empty((n, fft_n // 2 + 1))
+    for i in range(n):
+        seg = nz[max(0, i-1)*_SQ_HOP: max(0, i-1)*_SQ_HOP + fft_n]
+        if len(seg) < fft_n:
+            seg = np.pad(seg, (0, fft_n - len(seg)))
+        ruido[i] = np.abs(np.fft.rfft(seg * win)) ** 2 + 1e-20
+
+    p = NoiseProfiler(_SQ_HOP)
+    p.set_mode("mcra"); p.set_enabled(True)
+    p.set_mcra_window_ms(250.0)
+    # El disparo se detecta por la rama REAL, no replicando la condicion afuera
+    # (replicarla medía mi copia de la formula y daba verde aunque el codigo usara
+    # la vieja). La rama del squelch sale DESPUES de incrementar _mcra_frames pero
+    # ANTES de tocar S_f: entonces "entro a _mcra_update y S_f no cambio" es
+    # exactamente el squelch. Mirar solo S_f no alcanza — el freeze por voz y la
+    # cuarentena tambien dejan S_f quieto, porque ni siquiera llaman al update.
+    disparos, total, lds = 0, 0, []
+    sf_prev, fr_prev = None, 0
+    for i in range(n):
+        p.process(mix[i*_SQ_HOP:(i+1)*_SQ_HOP])
+        if p._mcra_ld is not None and p._mcra_Sf is not None:
+            lds.append(p._mcra_ld.copy())
+            entro = p._mcra_frames > fr_prev
+            if entro:
+                total += 1
+                if sf_prev is not None and np.array_equal(sf_prev, p._mcra_Sf):
+                    disparos += 1
+            fr_prev = p._mcra_frames
+            sf_prev = p._mcra_Sf.copy()
+    L = np.stack(lds)
+    hi = int(0.6*len(L)) if corte else len(L)
+    lo = len(L)//4
+    sesgo = 10*np.log10(L[lo:hi][:, banda].mean() / ruido[lo:hi][:, banda].mean())
+    return 100*disparos/max(total, 1), sesgo
+
+
+_pc, _ses = _corre_sq(1400, 15.0)
+check("una pausa de voz con buena señal NO dispara el squelch (%.1f%%)" % _pc, _pc < 2.0)
+check("y lambda_d queda sobre el ruido real (%+.1f dB, antes +16.2)" % _ses,
+      abs(_ses) < 3.0)
+
+# El feature tiene que SEGUIR sirviendo: una portadora cortada de verdad si dispara.
+_pc_c, _ = _corre_sq(1400, 15.0, corte=True)
+check("una portadora cortada si dispara el squelch (%.1f%%)" % _pc_c, _pc_c > 3.0)
+
+# La ventana del seguidor esta en segundos -> los frames por subtrama dependen del
+# hop (invariante 9), y hasta que se llena una vez no hay referencia (si no, al
+# arrancar cualquier frame flojo pareceria una portadora cortada).
+_p_sq = NoiseProfiler(480)
+check("sin la ventana llena no hay referencia de squelch", _p_sq._sq_ref_min() is None)
+_f480 = _p_sq._calc_sq_sub_frames()
+_p_sq.reset(960)
+check("los frames por subtrama escalan con el hop (%d -> %d)"
+      % (_f480, _p_sq._calc_sq_sub_frames()),
+      _p_sq._calc_sq_sub_frames() == max(1, round(_f480 / 2)))
+
+# ---------------------------------------------------------------------------
+print()
 print("=== Freno de caida de lambda_d (asimetrico: baja lento, sube libre) ===")
 
 # El salto de la salida cuando el ruido de banda sube ES la supresion que se pierde

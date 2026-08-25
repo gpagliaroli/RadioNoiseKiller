@@ -126,7 +126,9 @@ class NoiseProfiler:
     _MCRA_DELTA_MARGIN:  float = 1.25   # cuánto por encima del ruido se para el umbral
     _MCRA_B:             int   = 4      # número de subtramas
     _MCRA_M:             int   = 20     # frames por subtrama → ventana total = B×M = 80 frames ≈ 800ms
-    _MCRA_SQUELCH_RATIO: float = 0.05  # congelar si potencia_frame < 5% del piso estimado (-13 dB)
+    _MCRA_SQUELCH_RATIO: float = 0.05  # congelar si potencia_frame < 5% del piso de la ENTRADA (-13 dB)
+    _SQ_REF_SEC:         float = 4.0    # ventana del seguidor de piso de la entrada
+    _SQ_NSUB:            int   = 4      # subtramas de ese seguidor
     # Cuarentena look-behind: λ_d se actualiza con el frame de hace K frames, y solo
     # si ningún frame posterior detectó fade/impulso mientras estaba en cola. Así el
     # onset de un fade (que la detección ve 1-2 frames tarde por el OLA al 50%) se
@@ -363,6 +365,11 @@ class NoiseProfiler:
         # λ_d SIN el freno de caída — sólo para el indicador de S/N,
         # que debe reportar el piso medido y no el conservador.
         self._mcra_ld_medido: np.ndarray | None = None
+        # Seguidor del piso de la entrada, referencia del squelch de portadora.
+        # Se arma también acá y no sólo en _reset_mcra() porque __init__ no pasa
+        # por ese camino: un profiler recién construido en modo mcra llegaría al
+        # squelch sin estado.
+        self._sq_reset()
         self._mcra_subs:      np.ndarray | None = None  # (B, nb) subframe minimums
         self._mcra_cur_min:   np.ndarray | None = None
         self._mcra_sub_count: int = 0
@@ -395,6 +402,7 @@ class NoiseProfiler:
             self._reset_mcra()
 
     def _reset_mcra(self) -> None:
+        self._sq_reset()
         self._mcra_Sf        = None
         self._mcra_ld        = None
         self._mcra_ld_medido = None
@@ -825,6 +833,46 @@ class NoiseProfiler:
             return self._mcra_current()
         return self._mcra_update(old_power)
 
+    # ---- Seguidor del piso de la ENTRADA (referencia del squelch de portadora) --
+    # Mínimo por ventana deslizante sobre la potencia del frame, con el mismo
+    # patrón de subtramas que usan MCRA y el techo de ruido del AGC: baja al
+    # instante y sube recién cuando las subtramas viejas salen de la ventana. Es
+    # deliberadamente independiente de λ_d — ver el comentario del squelch.
+
+    def _calc_sq_sub_frames(self) -> int:
+        """Frames por subtrama del seguidor (depende del hop — invariante 9)."""
+        hop_s = self._hop / 48000.0
+        return max(1, round(self._SQ_REF_SEC / (self._SQ_NSUB * hop_s)))
+
+    def _sq_reset(self) -> None:
+        self._sq_subs      = [np.inf] * self._SQ_NSUB
+        self._sq_idx       = 0
+        self._sq_cur       = np.inf
+        self._sq_count     = 0
+        self._sq_sub_done  = 0
+        self._sq_sub_frames = self._calc_sq_sub_frames()
+
+    def _sq_feed(self, frame_mean: float) -> None:
+        self._sq_cur = min(self._sq_cur, frame_mean)
+        self._sq_count += 1
+        if self._sq_count >= self._sq_sub_frames:
+            self._sq_subs[self._sq_idx] = self._sq_cur
+            self._sq_idx = (self._sq_idx + 1) % self._SQ_NSUB
+            self._sq_cur = frame_mean
+            self._sq_count = 0
+            self._sq_sub_done += 1
+
+    def _sq_ref_min(self) -> "float | None":
+        """Piso de la entrada, o None hasta que la ventana se llenó una vez.
+
+        Devolver None durante el llenado es imprescindible: al arrancar, el
+        seguidor parte del nivel instantáneo y cualquier frame flojo posterior
+        parecería una portadora cortada.
+        """
+        if self._sq_sub_done < self._SQ_NSUB:
+            return None
+        return float(min(self._sq_subs))
+
     def _mcra_update(self, power: np.ndarray) -> "np.ndarray | None":
         """Actualiza el estimador MCRA con la potencia espectral de un frame
         (ya diferido por la cuarentena) y retorna noise_mag. None durante warmup."""
@@ -839,13 +887,30 @@ class NoiseProfiler:
             self._mcra_sub_count = 1
             return None
 
-        # Detección de squelch de portadora: si la energía del frame es mucho
-        # menor que el piso de ruido estimado, la portadora desapareció.
-        # Congelar TODO el estado MCRA para que al volver la señal se retome
-        # desde el perfil de ruido memorizado (sin perder el aprendizaje).
+        # Detección de squelch de portadora: si la energía del frame se desploma
+        # muy por debajo de lo que viene midiendo el canal, la portadora
+        # desapareció. Congelar TODO el estado MCRA para que al volver la señal se
+        # retome desde el perfil de ruido memorizado (sin perder el aprendizaje).
+        #
+        # La referencia es un seguidor de mínimos de la ENTRADA (_sq_ref_min), NO
+        # λ_d. Comparar contra λ_d era autorreferencial y creaba un estado
+        # absorbente: con señal fuerte y pausas reales, λ_d queda alto, las pausas
+        # caen 13 dB por debajo y se leen como "se cortó la portadora" — así que se
+        # saltean justo los únicos frames en los que el estimador puede medir el
+        # ruido, y λ_d nunca baja. Medido con ruido conocido (voz con pausas a S/N
+        # +15): disparaba en el 16,9 % de los frames y dejaba λ_d **+16,2 dB** por
+        # encima del ruido real; con la referencia derivada de la señal el sesgo
+        # queda en −0,1 dB. Es la misma trampa que ya mordió con el freeze por vp y
+        # con el congelamiento del AGC (ver los "no puede depender de su propia
+        # salida" más arriba).
+        #
+        # Un hueco entre palabras NO dispara porque se queda EN el piso del canal
+        # (sigue entrando portadora y ruido de banda); una portadora cortada sí,
+        # porque se va muy por debajo de ese piso.
         frame_mean = float(np.mean(power))
-        noise_mean = float(np.mean(self._mcra_ld))
-        if frame_mean < noise_mean * self._MCRA_SQUELCH_RATIO:
+        self._sq_feed(frame_mean)
+        ref = self._sq_ref_min()
+        if ref is not None and frame_mean < ref * self._MCRA_SQUELCH_RATIO:
             if self._mcra_frames >= self._mcra_warmup:
                 return np.sqrt(self._mcra_ld).astype(np.float32)
             return None
