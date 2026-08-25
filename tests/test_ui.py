@@ -1018,6 +1018,39 @@ def test_noise_fall_slider():
     print("slider del freno de caida del piso            OK")
 
 
+def test_noise_freeze_slider():
+    """El slider del freeze (Congelar piso con voz) llega al DSP en porcentaje.
+
+    El control muestra 30-100 % y el DSP trabaja en 0.30-1.00: es el punto donde
+    un factor 100 se puede perder en el camino sin que nada falle, salvo que el
+    valor del profiler no coincida.
+    """
+    w = MainWindow()
+    tab = w._adv_canceller_tab
+    row = tab._s_noise_freeze
+    prof = w._pipeline._noise_profiler
+
+    row.set_value(50.0)
+    row.set_value(70.0, emit=True)          # emit=True: setValue() solo no dispara
+    _app.processEvents()
+    assert abs(prof._freeze_thr - 0.70) < 0.01, prof._freeze_thr
+    assert abs(w._config.dsp.noise_freeze_thr - 0.70) < 0.01
+
+    row.set_value(100.0, emit=True)
+    _app.processEvents()
+    assert abs(prof._freeze_thr - 1.00) < 0.01, prof._freeze_thr
+
+    w._config.dsp.noise_enabled = False
+    tab.refresh_enabled_states()
+    assert not row._slider.isEnabled(), "el slider queda activo sin el cancelador"
+    w._config.dsp.noise_enabled = True
+    tab.refresh_enabled_states()
+    assert row._slider.isEnabled()
+
+    w.close()
+    print("slider del freeze del piso con voz            OK")
+
+
 def test_all_sliders_have_tooltip():
     """Todo SliderRow de la app tiene texto de ayuda, y llega a los HIJOS.
 
@@ -1104,6 +1137,7 @@ if __name__ == "__main__":
     test_waterfall_diff_mode()
     test_incompatible_devices_disable_activate()
     test_noise_fall_slider()
+    test_noise_freeze_slider()
     test_all_sliders_have_tooltip()
     test_dsp_error_is_visible()
     test_mcra_stall_reason()

@@ -689,7 +689,8 @@ class AdvancedCancellerTab(QWidget):
         dsp   = self._config.dsp
         noise = dsp.noise_enabled
         for s in (self._s_noise_floor, self._s_noise_smooth, self._s_noise_attack,
-                  self._s_mcra_window, self._s_noise_fall, self._s_hf_boost):
+                  self._s_mcra_window, self._s_noise_freeze, self._s_noise_fall,
+                  self._s_hf_boost):
             s.set_enabled(noise)
         for s in (self._s_squelch_threshold, self._s_squelch_hold):
             s.set_enabled(noise and dsp.squelch_enabled)
@@ -784,6 +785,21 @@ class AdvancedCancellerTab(QWidget):
         self._s_mcra_window.valueChanged.connect(self._pipeline.set_mcra_window_ms)
         layout.addWidget(self._s_mcra_window)
         layout.addWidget(_note(tr("  ↳ Ventana de seguimiento del ruido (solo Adaptativo). Reactivo (corto) = el piso sigue subidas rápidas de ruido cíclico, menos vaivén; estable (largo) = mejor con ruido parejo. Con valores reactivos, tener activo el Refuerzo de pitch de voz.")))
+
+        self._s_noise_freeze = SliderRow(
+            tr("Congelar piso con voz:"),
+            min_val=30.0, max_val=100.0,
+            default=_DSP_DEF.noise_freeze_thr * 100.0,
+            step=5.0, unit="%", fmt="{:.0f}",
+        )
+        self._s_noise_freeze._update_label = lambda v: self._s_noise_freeze._val_lbl.setText(
+            f"{v:.0f}%  ({tr('nunca') if v >= 99.5 else tr('poco') if v >= 65 else tr('normal')})"
+        )
+        self._s_noise_freeze._val_lbl.setFixedWidth(120)
+        self._s_noise_freeze.valueChanged.connect(
+            lambda v: self._pipeline.set_noise_freeze_thr(v / 100.0))
+        layout.addWidget(self._s_noise_freeze)
+        layout.addWidget(_note(tr("  ↳ Cuánta periodicidad hace falta para dejar de actualizar el piso mientras hay voz (solo Adaptativo). Con voz continua el valor bajo congela casi todo el tiempo y el piso llega tarde a las subidas de ruido. Subilo si el fondo salta; si la voz empieza a sonar apagada, bajalo.")))
 
         self._s_noise_fall = SliderRow(
             tr("Freno de bajada:"),
@@ -1064,6 +1080,7 @@ class AdvancedCancellerTab(QWidget):
         self._s_noise_smooth.set_value(cfg.noise_smooth)
         self._s_noise_attack.set_value(cfg.noise_attack)
         self._s_mcra_window.set_value(cfg.noise_mcra_window_ms)
+        self._s_noise_freeze.set_value(cfg.noise_freeze_thr * 100.0)
         self._s_noise_fall.set_value(cfg.noise_fall_db_s)
         self._s_hf_boost.set_value(cfg.noise_hf_boost * 100.0)
         self._s_squelch_threshold.set_value(cfg.squelch_threshold)

@@ -171,7 +171,7 @@ class NoiseProfiler:
     # la columna de la derecha, que es la que se rompe primero.
     # El warmup dura una VENTANA COMPLETA de mínimos (ver _mcra_warmup): con una
     # sola subtrama el estimador se daba por listo con 2 frames de voz.
-    _MCRA_PITCH_THR:     float = 0.30   # confianza de autocorrelación para congelar
+    _MCRA_PITCH_THR:     float = 0.30   # default del umbral de periodicidad para congelar
     _MCRA_VOICE_HOLD_MS: float = 200.0  # retención tras el último frame periódico
     _MCRA_FALL_DB_S:     float = 10.0   # default de la máxima caída de λ_d (dB/s); subir es libre
 
@@ -337,6 +337,7 @@ class NoiseProfiler:
         # más rápido a subidas de ruido (menos lag → menos vaivén con ruido cíclico).
         self._mcra_window_ms: float = 800.0     # slider 250-800 ms (default = comportamiento previo)
         self._fall_db_s: float = self._MCRA_FALL_DB_S   # slider 2-30 dB/s
+        self._freeze_thr: float = self._MCRA_PITCH_THR  # slider 0.30-1.00 (1.00 = nunca)
         self._mcra_M:         int   = self._calc_mcra_M()
 
         # Métricas para indicadores UI
@@ -653,6 +654,16 @@ class NoiseProfiler:
         hop_ms = self._hop / 48.0
         return max(1, round(self._mcra_window_ms / (self._MCRA_B * hop_ms)))
 
+    def set_freeze_thr(self, v: float) -> None:
+        """Periodicidad mínima para congelar el estimador con voz (0.30-1.00).
+
+        Con voz continua el freeze bloquea entre el 67 % y el 98 % de los frames
+        (medido sobre 7 grabaciones reales), y λ_d se queda sin material para
+        seguir las subidas de ruido. Subir el umbral deja pasar más frames.
+        1.00 = no congelar nunca. El clamp es el rango del slider (invariante 1).
+        """
+        self._freeze_thr = float(np.clip(v, 0.30, 1.00))
+
     def set_fall_db_s(self, v: float) -> None:
         """Máxima caída de λ_d en dB/s (subir siempre es libre).
 
@@ -938,7 +949,10 @@ class NoiseProfiler:
         # Freeze de MCRA por voz: se arma con la periodicidad (inmune al estado del
         # estimador, ver _MCRA_PITCH_THR) y se sostiene por el hold para cubrir los
         # tramos sordos. Corre SIEMPRE, no solo con el pitch enhance activo.
-        if pitch_conf >= self._MCRA_PITCH_THR:
+        # 1.00 significa NUNCA congelar: la confianza de la autocorrelación vive en
+        # [0,1], así que sin el chequeo explícito un umbral de 1.00 seguiría
+        # disparando en los frames perfectamente periódicos.
+        if self._freeze_thr < 1.0 and pitch_conf >= self._freeze_thr:
             self._mcra_voice_hold = self._mcra_voice_hold_frames
         elif self._mcra_voice_hold > 0:
             self._mcra_voice_hold -= 1

@@ -281,6 +281,92 @@ reajustaron en el aire. Todo el contenido de abajo se validó escuchando en la r
 iteraciones de ida y vuelta (ver los "reportado en el aire" de cada ítem: casi todos los fixes de
 esta versión salieron de una escucha que contradijo una medición sintética).
 
+**Post-v2.2: el umbral del freeze de MCRA pasa a ser ajustable ("Congelar piso con voz").** Slider
+30–100 % en Avanzada Cancelador (`noise_freeze_thr`, default 0.30 = comportamiento previo; 1.00 =
+no congela nunca). **PENDIENTE de validación de oído** — se expuso justamente porque la medición no
+alcanza para decidir.
+- **El material del usuario es voz CONTINUA**, dato que él aportó y que invalidó varias mediciones
+  mías (ver el bloque de abajo). Con voz continua el freeze bloquea **entre el 67 % y el 98 % de los
+  frames** según la grabación (medido sobre 7), y λ_d se queda sin material para seguir las subidas
+  de ruido. Ese es el mecanismo por el que el piso llega tarde.
+- **ORÁCULO — la medición que cierra la discusión sobre "mejorar la detección de voz".** El usuario
+  propuso mejorar el VAD (autocorrelación mejorada, o **Silero VAD** neuronal). Se midió con un
+  detector PERFECTO sobre un banco con verdad conocida (voz continua + salto real de ruido de
+  +10 dB):
+
+  | freeze | frames que alimentan λ_d | sigue el salto de +10 dB |
+  |---|---|---|
+  | actual (autocorrelación) | 50–75 % | +7,2 / +8,1 dB |
+  | **ORÁCULO (perfecto)** | **2 %** | **+0,0 dB** |
+  | ninguno | 100 % | +8,4 / +9,8 dB |
+
+  **Un detector perfecto es estrictamente el PEOR de los tres.** Con voz continua congela siempre y
+  λ_d no aprende nunca; el detector actual funciona *porque se equivoca*. **Regla: cuando el
+  problema es que un estimador se queda sin datos, mejorar el detector que le corta los datos
+  empeora las cosas.** No reproponer Silero ni ninguna mejora del VAD para este síntoma. (Sí
+  tendría sentido para el **squelch**, el **nivelador** y el **gate del excitador**, que dependen
+  del `voice_prob` de energía; y ahí habría que pesar el costo: `onnxruntime` son 15–50 MB en unos
+  distribuibles que se vienen achicando, rompe el "todo numpy/scipy puro" del proyecto, y el A6 de
+  2 núcleos es la referencia de CPU.)
+- **La opción "detección por armonicidad" ya estaba implementada**: es exactamente este gate
+  (`_pitch_autocorr` + `_MCRA_PITCH_THR`). Y la premisa de que *"el ruido atmosférico es totalmente
+  aleatorio"* **no se cumple** en HF real: medido sobre el material del usuario, el ruido de banda da
+  mediana 0,212 pero **p90 0,518**, contra voz real de mediana 0,544 y p10 0,201 — se solapan de
+  lleno. Portadoras, heterodinos, estaciones adyacentes y el propio pasabanda correlacionan el ruido.
+- **Por qué slider y no constante:** las mediciones dan **empate**. Sobre las 7 grabaciones, freeze
+  activo vs desactivado da la MISMA deriva media de λ_d (+0,2 dB) y la MISMA rugosidad del fondo
+  (8,8 dB); el fondo mejora 4–6 dB en dos grabaciones y empeora un poco en tres. Lo único robusto es
+  que sin freeze λ_d es más **predecible** (dispersión de la deriva 2,0 dB contra 5,5).
+- **El guard sintético NO puede decidir esto y hay que saberlo:** `voice_sig` es más sostenida y
+  periódica que la voz real (mediana de periodicidad 0,80 contra 0,544), así que la contaminación de
+  7,4 dB que justificó el freeze en la v2.0 puede ser un artefacto del banco. Es la trampa ya
+  documentada ("una señal demasiado limpia da un falso MAL resultado") vista otra vez.
+- Guards nuevos en `test_noise_vad`: clamp == rango del slider, que el default siga congelando
+  (2 % alimenta), que en 1.00 **no congele nunca** (100 % alimenta — sin el chequeo explícito
+  `_freeze_thr < 1.0` un umbral de 1.00 seguiría disparando en frames perfectamente periódicos), y
+  que en 1.00 la voz sostenida **sí** contamine (+9,7 dB): el control tiene que mover lo que dice
+  mover, y ése es el riesgo que expone a propósito. Test de UI: el slider muestra 30–100 % y el DSP
+  trabaja en 0.30–1.00, que es justo donde un factor 100 se pierde sin que nada falle.
+
+**Post-v2.2 — CORRECCIÓN de método: el material es voz CONTINUA, y eso invalidó mediciones propias.**
+El usuario lo aclaró después de que yo insistiera dos veces con que sus grabaciones no tenían voz.
+Vale registrar el error completo porque el patrón es caro:
+- **Mi criterio de "hay voz" era ≥10 dB sobre el piso, y está mal para este dominio.** Con voz a S/N
+  cercano a 0 dB —que es EL caso de uso de la app— la voz nunca cruza ese umbral. Cinco detectores
+  míos fallaron en confirmarla: nivel (0 %), modulación silábica (2,47× contra 5,41× de referencia),
+  peine armónico (0,283 vs 0,318, no discrimina), el VAD de la app (46 % vs 52 %, inútil — es la
+  trampa de realimentación) y el rango dinámico (6,2 vs 8,4 dB).
+- **Qué se cayó con la corrección:** (1) la afirmación *"el freeze dispara sobre el ruido, es un
+  falso positivo"* — con voz continua el freeze estaba haciendo lo correcto; (2) toda la comparación
+  de planitud espectral "ruido vs voz", que en realidad comparaba voz fuerte contra voz floja; (3) el
+  encuadre entero de buscar un **árbitro** que distinga "subió el ruido" de "arrancó la voz" — con
+  voz continua no hay arranques que confundir, el problema es sólo que MCRA se queda sin comer.
+- **Y me apuré con una muestra chica**: reporté +3,5 dB de deriva de λ_d con el freeze activo sobre
+  **2** grabaciones; sobre las **7**, la media es idéntica con y sin freeze. Es exactamente el error
+  contra el que este archivo advierte en tres lugares.
+- **Regla: antes de medir sobre material del usuario, confirmar con él QUÉ hay en la grabación.**
+  Preguntar sale gratis y cinco detectores automáticos no lo resolvieron.
+
+**Post-v2.2 — DESCARTADO por medición: planitud espectral (SFM) como árbitro.** Propuesta del
+usuario contra el salto del fondo: la voz tiene picos armónicos (planitud baja) y el QRN es de banda
+ancha (planitud alta), así que SF + RMS distinguirían el brote de ruido del arranque de voz.
+- **Es el primer árbitro de los tres con el SIGNO correcto** (d' positivo), a diferencia del VAD y de
+  la periodicidad, que estaban invertidos. El razonamiento era bueno: SFM se calcula sobre el
+  espectro crudo, así que no puede realimentarse con λ_d.
+- **Dos correcciones a los rangos citados**, medidas: (1) **el techo de la SFM no es 0,95 sino
+  ~0,56** — con una FFT finita cada bin de ruido es exponencial y la media geométrica sobre la
+  aritmética converge a `exp(−γ)=0,5615`; ruido blanco puro mide 0,562. (2) A S/N bajo **la voz se
+  aplana sola**: voz+ruido a 0 dB da 0,26, y el fondo de una grabación real da 0,17 — o sea que ahí
+  la voz sucia es MÁS plana que el ruido y el árbitro se da vuelta.
+- **Sin punto de operación usable:** a umbral 0,40 atrapa 36 % de las subidas pero dispara sobre
+  **6,6 %** de los frames de voz; a 0,50 la voz está a salvo pero atrapa 0 %.
+- La variante que parecía mejor —medir si la subida es **pareja en todos los bins** en vez de la
+  planitud del frame— **se quedó sin muestras** (3 eventos contra 6). No se pudo evaluar; no cuenta
+  ni a favor ni en contra.
+- Ojo: parte de estas cifras se calcularon con el etiquetado voz/ruido que después resultó inválido
+  (ver la corrección de arriba). Lo que **sí** sobrevive es el techo de 0,56 y el aplanamiento de la
+  voz a S/N bajo, que son propiedades medidas y no dependen del etiquetado.
+
 **Post-v2.2: freno de CAÍDA de λ_d — la primera cosa que mueve el salto del fondo.** Idea del
 usuario, después de diez enfoques descartados: *"el piso de ruido cae muy abruptamente y luego de
 esto viene la subida sin poder reaccionar. ¿Se puede pensar en que el piso no tenga cambios tan

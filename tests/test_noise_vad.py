@@ -489,6 +489,52 @@ check("el hold del freeze se recalcula con el hop (%d -> %d)"
       % (f480, ph._mcra_voice_hold_frames),
       ph._mcra_voice_hold_frames == 2 * f480)
 
+# 16. El umbral del freeze es ajustable (slider "Congelar piso con voz").
+#     Con voz CONTINUA el freeze bloquea entre el 67% y el 98% de los frames
+#     (medido sobre 7 grabaciones reales) y lambda_d se queda sin material para
+#     seguir las subidas de ruido; el slider permite aflojarlo. El clamp tiene que
+#     coincidir con el rango del slider (invariante 1).
+pt = _mk_mcra()
+pt.set_freeze_thr(0.05); check("clamp umbral del freeze lo (0.30)", pt._freeze_thr == 0.30)
+pt.set_freeze_thr(9.9);  check("clamp umbral del freeze hi (1.00)", pt._freeze_thr == 1.00)
+
+
+def _frames_alimentados(thr):
+    """Frames que llegan a alimentar lambda_d con voz sostenida presente."""
+    p = _mk_mcra()
+    p.set_freeze_thr(thr)
+    for f in fluct_noise(300):
+        p.process(f)
+    antes = p._mcra_frames
+    vv = voice_sig(200)
+    for f in vv:
+        p.process(f)
+    return (p._mcra_frames - antes) / len(vv)
+
+
+_alim_def = _frames_alimentados(NoiseProfiler._MCRA_PITCH_THR)
+_alim_max = _frames_alimentados(1.00)
+check("el umbral por defecto congela con voz (%.0f%% alimenta)" % (100*_alim_def),
+      _alim_def < 0.25)
+# En 1.00 NO debe congelar nunca: la confianza de la autocorrelacion vive en [0,1],
+# asi que sin el chequeo explicito del setter un umbral de 1.00 seguiria disparando
+# en los frames perfectamente periodicos.
+check("en 1.00 no congela nunca (%.0f%% alimenta)" % (100*_alim_max), _alim_max > 0.95)
+
+# Y el control tiene que MOVER lo que dice mover: en 1.00 la voz sostenida SI
+# contamina el estimador. Es el riesgo que el slider expone a proposito — el
+# guard 13 verifica que el default protege; este verifica que el extremo no.
+pc = _mk_mcra()
+pc.set_freeze_thr(1.00)
+for f in nz_conv:
+    pc.process(f)
+_ld0 = float(np.mean(pc._mcra_ld))
+for f in vsus:
+    pc.process(f)
+_sube_max = 10 * np.log10(float(np.mean(pc._mcra_ld)) / _ld0)
+check("en 1.00 la voz sostenida si entra al estimador (%+.1f dB)" % _sube_max,
+      _sube_max > 3.0)
+
 # ---------------------------------------------------------------------------
 print()
 print("=== Ataque de silaba (la voz no debe sonar 'limitada') ===")

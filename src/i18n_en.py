@@ -458,6 +458,28 @@ CATALOG = {
         "  ↳ Raises the noise floor above ~2.5 kHz (where noise energy is low and the estimator reacts late). Suppresses the HF hiss that leaks through with fading better, at the cost of some voice brightness — combine with Exciter/Presence to restore it.",
     "Freno de bajada:": "Fall brake:",
     "sin freno": "no brake",
+    "Congelar piso con voz:": "Freeze floor on voice:",
+    "poco": "seldom",
+    "nunca": "never",
+    "  ↳ Cuánta periodicidad hace falta para dejar de actualizar el piso mientras hay voz (solo Adaptativo). Con voz continua el valor bajo congela casi todo el tiempo y el piso llega tarde a las subidas de ruido. Subilo si el fondo salta; si la voz empieza a sonar apagada, bajalo.":
+        "  ↳ How much periodicity is needed to stop updating the floor while there is "
+        "voice (Adaptive only). With continuous speech a low value freezes almost all the "
+        "time and the floor arrives late at noise rises. Raise it if the background jumps; "
+        "if the voice starts to sound dull, lower it.",
+    "Cuánta periodicidad hace falta para que el piso de ruido deje de\n"
+    "actualizarse mientras hay voz. Existe para que la voz no se meta en el\n"
+    "estimador, pero con voz continua congela casi todo el tiempo y el piso\n"
+    "llega tarde cuando el ruido de banda sube.\n"
+    "Subilo si el fondo salta al subir el ruido; bajalo si la voz empieza a\n"
+    "sonar apagada o con artefactos. En 100% no congela nunca.\n"
+    "Solo tiene efecto en modo Adaptativo.":
+        "How much periodicity is needed for the noise floor to stop updating while\n"
+        "there is voice. It exists so the voice does not leak into the estimator, but\n"
+        "with continuous speech it freezes almost all the time and the floor arrives\n"
+        "late when band noise rises.\n"
+        "Raise it if the background jumps when noise rises; lower it if the voice\n"
+        "starts to sound dull or gains artifacts. At 100% it never freezes.\n"
+        "Only has an effect in Adaptive mode.",
     "  ↳ Limita cuán rápido puede BAJAR el piso estimado; subir siempre es libre (solo Adaptativo). Cuando el ruido de banda sube, la salida salta porque el piso llegó tarde: si no se hundió durante los ratos flojos, tiene menos que recuperar. Fuerte = el fondo queda más parejo, a costa de algo de voz y de tardar más en aprovechar una banda que se limpia.":
         "  ↳ Limits how fast the estimated floor can go DOWN; going up is always free "
         "(Adaptive only). When band noise rises the output jumps because the floor arrived "

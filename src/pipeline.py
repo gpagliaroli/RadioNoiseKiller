@@ -103,6 +103,7 @@ class ProcessingPipeline:
         self._noise_profiler.set_pitch_strength(config.dsp.pitch_enhance_strength)
         self._noise_profiler.set_mcra_window_ms(config.dsp.noise_mcra_window_ms)
         self._noise_profiler.set_fall_db_s(config.dsp.noise_fall_db_s)
+        self._noise_profiler.set_freeze_thr(config.dsp.noise_freeze_thr)
         self._noise_profiler.set_hf_boost(config.dsp.noise_hf_boost)
         self._noise_profiler.set_mode(config.dsp.noise_mode)
         self._noise_profiler.set_alpha(config.dsp.noise_alpha)
@@ -389,6 +390,7 @@ class ProcessingPipeline:
         self.set_pitch_enhance_strength(dsp.pitch_enhance_strength)
         self.set_mcra_window_ms(dsp.noise_mcra_window_ms)
         self.set_noise_fall_db_s(dsp.noise_fall_db_s)
+        self.set_noise_freeze_thr(dsp.noise_freeze_thr)
         self.set_hf_boost(dsp.noise_hf_boost)
         self.set_voice_leveler_enabled(dsp.voice_leveler_enabled)
         self.set_voice_leveler_max_db(dsp.voice_leveler_max_db)
@@ -525,6 +527,10 @@ class ProcessingPipeline:
     def set_post_filter_strength(self, v: float) -> None:
         self._config.dsp.post_filter_strength = float(v)
         self._noise_profiler.set_post_filter_strength(float(v))
+
+    def set_noise_freeze_thr(self, v: float) -> None:
+        self._config.dsp.noise_freeze_thr = float(v)
+        self._noise_profiler.set_freeze_thr(float(v))
 
     def set_noise_fall_db_s(self, v: float) -> None:
         self._config.dsp.noise_fall_db_s = float(v)

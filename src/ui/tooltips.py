@@ -207,6 +207,15 @@ SLIDER_TIPS = {
         "Rápido conserva mejor el ataque de cada palabra; suave reduce artefactos.\n"
         "Si la voz suena recortada al arrancar, hacelo más rápido."
     ),
+    "_s_noise_freeze": (
+        "Cuánta periodicidad hace falta para que el piso de ruido deje de\n"
+        "actualizarse mientras hay voz. Existe para que la voz no se meta en el\n"
+        "estimador, pero con voz continua congela casi todo el tiempo y el piso\n"
+        "llega tarde cuando el ruido de banda sube.\n"
+        "Subilo si el fondo salta al subir el ruido; bajalo si la voz empieza a\n"
+        "sonar apagada o con artefactos. En 100% no congela nunca.\n"
+        "Solo tiene efecto en modo Adaptativo."
+    ),
     "_s_noise_fall": (
         "Cuán rápido puede BAJAR el piso de ruido estimado. Subir es siempre libre.\n"
         "Cuando el ruido de banda sube de golpe, la salida salta porque el piso llegó\n"

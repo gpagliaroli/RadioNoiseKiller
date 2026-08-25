@@ -96,6 +96,7 @@ class DSPConfig:
     pitch_enhance_strength: float = 0.7    # qué tanto elevar p_speech en bins de armónicos (0-1)
     noise_mcra_window_ms:  float = 800.0   # ventana de mínimos MCRA / reactividad del piso (250-800 ms)
     noise_fall_db_s:       float = 10.0    # freno de caída del piso estimado (2-30 dB/s, solo Adaptativo)
+    noise_freeze_thr:      float = 0.30    # periodicidad mínima para congelar el piso con voz (0.30-1.00; 1.00 = nunca)
     noise_hf_boost:        float = 0.0      # refuerzo del piso en agudos, over-sustracción HF (0-1.5)
     voice_leveler_enabled:  bool  = False  # AGC de voz post-cancelador gateado por VAD
     voice_leveler_max_db:   float = 12.0   # ganancia máxima del nivelador (0-20 dB)
@@ -206,6 +207,7 @@ class AppConfig:
                 "pitch_enhance_strength": self.dsp.pitch_enhance_strength,
                 "noise_mcra_window_ms":  self.dsp.noise_mcra_window_ms,
                 "noise_fall_db_s":       self.dsp.noise_fall_db_s,
+                "noise_freeze_thr":      self.dsp.noise_freeze_thr,
                 "noise_hf_boost":        self.dsp.noise_hf_boost,
                 "voice_leveler_enabled":  self.dsp.voice_leveler_enabled,
                 "voice_leveler_max_db":   self.dsp.voice_leveler_max_db,
@@ -320,6 +322,7 @@ class AppConfig:
         self.dsp.pitch_enhance_strength = float(d.get("pitch_enhance_strength", self.dsp.pitch_enhance_strength))
         self.dsp.noise_mcra_window_ms = float(d.get("noise_mcra_window_ms", self.dsp.noise_mcra_window_ms))
         self.dsp.noise_fall_db_s = float(d.get("noise_fall_db_s", self.dsp.noise_fall_db_s))
+        self.dsp.noise_freeze_thr = float(d.get("noise_freeze_thr", self.dsp.noise_freeze_thr))
         self.dsp.noise_hf_boost = float(d.get("noise_hf_boost", self.dsp.noise_hf_boost))
         self.dsp.voice_leveler_enabled  = bool(d.get("voice_leveler_enabled",  self.dsp.voice_leveler_enabled))
         self.dsp.voice_leveler_max_db   = float(d.get("voice_leveler_max_db",  self.dsp.voice_leveler_max_db))
