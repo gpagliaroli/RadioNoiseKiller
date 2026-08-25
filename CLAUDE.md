@@ -399,7 +399,49 @@ bajar más rápido que eso, subir queda libre.
   frenado del frame anterior, así que arrastra todo el sesgo acumulado y el indicador no se movía ni
   un dB. Hace falta la recursión propia. No es exacta (α_d lo sigue calculando el camino frenado):
   el apartamiento queda bajo 1 dB contra los −1,8 de antes.
-- **Expuesto como slider "Freno de bajada" (2–30 dB/s, default 10)** en Avanzada Cancelador, a
+**VALIDADO EN EL AIRE, con el default cambiado a SIN FRENO (30 dB/s).** El usuario probó los dos
+valores y reportó: *"con ruido más bajo y mayor S/N el freno funciona; en AM Local puedo usarlo en
+10 dB/s sin problemas"*, y sobre una grabación de onda corta con QRN alto, que 30 (sin freno) era
+mejor que 10.
+- **Su oído detectó algo que mi métrica titular escondía.** Yo medía "supresión" como piso de entrada
+  menos piso de salida, pero **con voz continua ese piso INCLUYE voz**, así que contaba como mejora
+  lo que en parte era voz comida. Desglosado por banda en frames dominados por voz, el freno de 10
+  saca **1,5 a 3 dB más de voz en TODAS las bandas**, y pega más fuerte justo en 800–1500 Hz y
+  2500–3500 Hz, las dos zonas de la inteligibilidad.
+- **El control rehecho con la métrica corregida SÍ sostiene que el freno es un mecanismo propio:** a
+  igual voz perdida, da cola +2,3 dB contra +4,2 y pico +6,2 contra +10,5 de bajar el piso espectral.
+  O sea que funciona; lo que pasa es que cobra en voz, y en banda mala la voz no tiene con qué pagar.
+- **El costo depende casi por completo del S/N**, medido con una subida real de ruido de +8 dB:
+
+  | S/N | voz que cuesta el freno de 10 dB/s | ganancia en seguimiento |
+  |---|---|---|
+  | +18 dB | 0,02 dB | +0,00 dB |
+  | +12 dB | 0,03 dB | +0,00 dB |
+  | +6 dB | 0,22 dB | +0,52 dB |
+  | 0 dB | **1,19 dB** | +1,10 dB |
+  | −6 dB | **2,54 dB** | +0,10 dB |
+
+  Despreciable arriba de +6 dB, y se dispara abajo de 0. Exactamente lo que describió el usuario.
+- **Default 10 → 30 (sin freno).** El modo de falla a S/N bajo es daño a la voz, que es justo lo peor
+  y lo más difícil de diagnosticar; y S/N bajo es cuando uno recurre al cancelador. Mismo criterio
+  que el techo de ruido del AGC: cuando el valor correcto depende de la estación o la banda, el
+  default es "desactivado". Manual ES+EN con la tabla de costo por S/N y la regla operativa (AM local
+  10 dB/s, onda corta con QRN 30), apuntando al indicador de S/N de la pestaña Espectro para saber en
+  qué régimen se está.
+- **Al mover el default hubo que sacar cuatro guards de `_MCRA_FALL_DB_S`**: usaban la constante como
+  "el valor con freno", y con el default en 30 (= `_FALL_OFF`) habrían comparado dos corridas
+  idénticas y pasado sin probar nada. Ahora usan `_FALL_TEST = 10.0` explícito. **Es la tercera vez
+  en esta tanda que un guard queda mudo por depender de un default que cambia** (pasó con
+  `_MCRA_FALL_DB_S` al volverse slider y con `_MCRA_PITCH_THR`): **un guard nunca debe tomar del
+  default el valor que está probando.**
+- **Hallazgo grande que queda abierto, medido de paso:** en el material de onda corta del usuario, con
+  el freno APAGADO, el cancelador saca **14–17 dB de la banda de voz** en los frames donde la voz
+  domina, y el **93 % de los bins de voz sale atenuado más de 6 dB**. El balance entre lo que se le
+  quita al fondo y lo que se le quita a la voz es de apenas **3,2 dB**. Es mucho más margen que el que
+  quedaba en el salto del fondo, y probablemente sea la distorsión que el usuario viene reportando
+  desde el principio. **Próximo hilo a tirar.**
+
+- **Expuesto como slider "Freno de bajada" (2–30 dB/s, default 30 = sin freno)** en Avanzada Cancelador, a
   pedido del usuario para comparar valores de oído. Califica según la regla de la v2.1 porque los dos
   extremos son defendibles — más lento = mejor síntoma pero más costo de voz y más lentitud ante una
   banda que se limpia —, a diferencia del freno del techo del AGC, donde una punta era siempre peor.

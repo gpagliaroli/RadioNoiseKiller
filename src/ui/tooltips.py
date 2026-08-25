@@ -220,8 +220,11 @@ SLIDER_TIPS = {
         "Cuán rápido puede BAJAR el piso de ruido estimado. Subir es siempre libre.\n"
         "Cuando el ruido de banda sube de golpe, la salida salta porque el piso llegó\n"
         "tarde; si el piso no se hundió en los ratos flojos, tiene menos que recuperar.\n"
-        "Fuerte deja el fondo más parejo pero cuesta un poco de voz, y tarda más en\n"
-        "aprovechar una banda que se limpió de verdad. Sin freno = como hasta la v2.2.\n"
+        "Fuerte deja el fondo más parejo pero CUESTA VOZ, y tarda más en aprovechar\n"
+        "una banda que se limpió de verdad. Sin freno = como hasta la v2.2.\n"
+        "El costo depende del S/N (mirá el indicador en la pestaña Espectro): arriba\n"
+        "de +6 dB es despreciable, en 0 dB cuesta ~1 dB de voz y en −6 dB, ~2,5 dB.\n"
+        "Por eso viene sin freno de fábrica: usalo con señal cómoda.\n"
         "Solo tiene efecto en modo Adaptativo."
     ),
     "_s_mcra_window": (

@@ -630,6 +630,10 @@ def _ld_db(p):
 # de construir el profiler NO tiene efecto (ya se copio en __init__) y el test daria
 # verde comparando dos corridas identicas.
 _FALL_OFF = 30.0   # tope del slider: la caida natural de lambda_d no llega ahi
+# Valor CON freno para los guards. Explicito y no `_MCRA_FALL_DB_S`, porque el
+# default es justamente 30 (= sin freno): tomarlo de ahi haria que estos checks
+# comparasen dos corridas identicas y pasaran sin probar nada.
+_FALL_TEST = 10.0
 
 
 def _corre(fall_db_s, hop=HOP):
@@ -654,10 +658,10 @@ def _bajada(fall_db_s, seg=0.5):
     return (a - _ld_db(p)) / seg
 
 
-_cae_con, _cae_sin = _bajada(NoiseProfiler._MCRA_FALL_DB_S), _bajada(_FALL_OFF)
+_cae_con, _cae_sin = _bajada(_FALL_TEST), _bajada(_FALL_OFF)
 check("lambda_d no cae mas rapido que el freno (%.1f dB/s vs %.0f)"
-      % (_cae_con, NoiseProfiler._MCRA_FALL_DB_S),
-      _cae_con <= NoiseProfiler._MCRA_FALL_DB_S * 1.15)
+      % (_cae_con, _FALL_TEST),
+      _cae_con <= _FALL_TEST * 1.15)
 check("y el freno de verdad esta actuando (sin el cae %.1f dB/s)" % _cae_sin,
       _cae_sin > _cae_con + 2.0)
 
@@ -672,7 +676,7 @@ def _tope(fall_db_s):
     return _ld_db(p)
 
 
-_con, _sin = _tope(NoiseProfiler._MCRA_FALL_DB_S), _tope(_FALL_OFF)
+_con, _sin = _tope(_FALL_TEST), _tope(_FALL_OFF)
 check("el freno no limita la subida (llega a %.1f vs %.1f dB sin freno)" % (_con, _sin),
       _con >= _sin - 0.5)
 
@@ -704,7 +708,7 @@ def _snr_con_voz(fall_db_s):
 #    asi que la recursion paralela puede apartarse hasta ~1 dB— pero el sesgo pasa
 #    de -1.8 dB (dejaba de discriminar voz de ruido en test_integration) a menos de
 #    1 dB, y el indicador ya sobreestima ~1.5 dB por el bias del min-tracking.
-_s_con, _s_sin = _snr_con_voz(NoiseProfiler._MCRA_FALL_DB_S), _snr_con_voz(_FALL_OFF)
+_s_con, _s_sin = _snr_con_voz(_FALL_TEST), _snr_con_voz(_FALL_OFF)
 check("el freno no arrastra el indicador de S/N (%.1f vs %.1f dB)" % (_s_con, _s_sin),
       abs(_s_con - _s_sin) < 1.0)
 

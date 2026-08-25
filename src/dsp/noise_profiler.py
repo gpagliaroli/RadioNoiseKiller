@@ -173,7 +173,7 @@ class NoiseProfiler:
     # sola subtrama el estimador se daba por listo con 2 frames de voz.
     _MCRA_PITCH_THR:     float = 0.30   # default del umbral de periodicidad para congelar
     _MCRA_VOICE_HOLD_MS: float = 200.0  # retención tras el último frame periódico
-    _MCRA_FALL_DB_S:     float = 10.0   # default de la máxima caída de λ_d (dB/s); subir es libre
+    _MCRA_FALL_DB_S:     float = 30.0   # default: SIN freno (ver set_fall_db_s); subir siempre es libre
 
     # NOTA: acá vivía la "Compensación de fading HF" (freeze de MCRA + release DD
     # acelerado ante cambios bruscos de energía). Se eliminó tras medirla — el

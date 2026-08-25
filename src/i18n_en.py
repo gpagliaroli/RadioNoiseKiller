@@ -480,23 +480,30 @@ CATALOG = {
         "Raise it if the background jumps when noise rises; lower it if the voice\n"
         "starts to sound dull or gains artifacts. At 100% it never freezes.\n"
         "Only has an effect in Adaptive mode.",
-    "  ↳ Limita cuán rápido puede BAJAR el piso estimado; subir siempre es libre (solo Adaptativo). Cuando el ruido de banda sube, la salida salta porque el piso llegó tarde: si no se hundió durante los ratos flojos, tiene menos que recuperar. Fuerte = el fondo queda más parejo, a costa de algo de voz y de tardar más en aprovechar una banda que se limpia.":
+    "  ↳ Limita cuán rápido puede BAJAR el piso estimado; subir siempre es libre (solo Adaptativo). Cuando el ruido de banda sube, la salida salta porque el piso llegó tarde: si no se hundió durante los ratos flojos, tiene menos que recuperar. Fuerte = el fondo queda más parejo, pero CUESTA VOZ y tarda más en aprovechar una banda que se limpia. El costo depende del S/N: arriba de +6 dB es despreciable, en −6 dB llega a 2,5 dB de voz. Por eso viene sin freno de fábrica.":
         "  ↳ Limits how fast the estimated floor can go DOWN; going up is always free "
         "(Adaptive only). When band noise rises the output jumps because the floor arrived "
         "late: if it did not sink during the quiet stretches, it has less to catch up. Strong = "
-        "a more even background, at the cost of a little voice and of taking longer to take "
-        "advantage of a band that clears up.",
+        "a more even background, but it COSTS VOICE and takes longer to take advantage of a "
+        "band that clears up. The cost depends on the S/N: above +6 dB it is negligible, at "
+        "−6 dB it reaches 2.5 dB of voice. That is why it ships with no brake.",
     "Cuán rápido puede BAJAR el piso de ruido estimado. Subir es siempre libre.\n"
     "Cuando el ruido de banda sube de golpe, la salida salta porque el piso llegó\n"
     "tarde; si el piso no se hundió en los ratos flojos, tiene menos que recuperar.\n"
-    "Fuerte deja el fondo más parejo pero cuesta un poco de voz, y tarda más en\n"
-    "aprovechar una banda que se limpió de verdad. Sin freno = como hasta la v2.2.\n"
+    "Fuerte deja el fondo más parejo pero CUESTA VOZ, y tarda más en aprovechar\n"
+    "una banda que se limpió de verdad. Sin freno = como hasta la v2.2.\n"
+    "El costo depende del S/N (mirá el indicador en la pestaña Espectro): arriba\n"
+    "de +6 dB es despreciable, en 0 dB cuesta ~1 dB de voz y en −6 dB, ~2,5 dB.\n"
+    "Por eso viene sin freno de fábrica: usalo con señal cómoda.\n"
     "Solo tiene efecto en modo Adaptativo.":
         "How fast the estimated noise floor may go DOWN. Going up is always free.\n"
         "When band noise jumps up, the output jumps because the floor arrived late;\n"
         "if the floor did not sink during the quiet stretches, it has less to catch up.\n"
-        "Strong leaves a more even background but costs a little voice, and takes longer\n"
-        "to exploit a band that has really cleared. No brake = same as up to v2.2.\n"
+        "Strong leaves a more even background but COSTS VOICE, and takes longer to\n"
+        "exploit a band that has really cleared. No brake = same as up to v2.2.\n"
+        "The cost depends on the S/N (see the indicator on the Spectrum tab): above\n"
+        "+6 dB it is negligible, at 0 dB it costs ~1 dB of voice and at −6 dB, ~2.5 dB.\n"
+        "That is why it ships with no brake: use it when the signal is comfortable.\n"
         "Only has an effect in Adaptive mode.",
     "  ↳ Ventana de seguimiento del ruido (solo Adaptativo). Reactivo (corto) = el piso sigue subidas rápidas de ruido cíclico, menos vaivén; estable (largo) = mejor con ruido parejo. Con valores reactivos, tener activo el Refuerzo de pitch de voz.":
         "  ↳ Noise tracking window (Adaptive only). Reactive (short) = the floor follows fast rises of cyclic noise, less swaying; stable (long) = better with steady noise. With reactive values, keep Voice pitch reinforcement enabled.",

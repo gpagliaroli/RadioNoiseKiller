@@ -464,7 +464,31 @@ Este comportamiento es automático y no requiere ningún ajuste. Se activa cuand
 | **Anti-gorgojeo (β)** | 90% – 99% (pasos de 0,1%) | 96% | Dosifica dos mecanismos contra el ruido musical de fondo: el *release* del cancelador y, sobre todo, el **suavizado de la clasificación voz/ruido por bin** (evita que un bin que parpadea alrededor del umbral haga saltar su ganancia — la causa principal del "gorgojeo" de fondo persistente). **Zona útil 96–98%, muy dependiente de las condiciones.** Subir si se escucha gorgojeo o pitidos de fondo; bajar (90–95%) si la voz queda con una "cola" de ruido o suena poco reactiva. El extremo (99%) da el máximo anti-gorgojeo pero deja la cola más larga tras cada transmisión. |
 | **Velocidad de ataque** | 50% – 92% | 80% | Velocidad con que el cancelador "abre" los bins de voz cuando detecta una señal. Rápido (50–70%): consonantes más nítidas. Suave (>85%): menos artefactos en transiciones. |
 | **Reactividad del piso** *(solo Adaptativo)* | 250 – 800 ms | 800 ms | Ventana con que el estimador MCRA sigue el mínimo del ruido. **Reactivo (250–350 ms):** el piso sigue rápido las subidas y bajadas cíclicas del ruido, sin quedar desfasado (menos "vaivén" del sonido). **Estable (800 ms):** mejor para ruido parejo. Bajarlo cuando el ruido de banda sube y baja de golpe y en ciclos cortos. Con valores muy reactivos conviene tener activo el **Refuerzo de pitch de voz** (protege los armónicos de que una ventana corta los tome por ruido). |
+| **Freno de bajada** *(solo Adaptativo)* | 2 – 30 dB/s | 30 (sin freno) | Limita cuán rápido puede **bajar** el piso estimado; subir siempre es libre. Cuando el ruido de banda sube de golpe, la salida salta porque el piso llegó tarde — si el piso no se hundió durante los ratos flojos, tiene menos que recuperar. **Cuesta voz**, y cuánto depende del S/N (ver el consejo debajo). |
 | **Refuerzo en agudos** *(solo Adaptativo)* | 0% – 150% | 0% | Sube el piso de ruido estimado por encima de ~2,5 kHz, donde la energía del ruido es baja y el estimador reacciona tarde. Suprime mejor el siseo de agudos que se cuela con el fading. La curva es **logarítmica**: cada octava por encima de 2,5 kHz suma más refuerzo, así que actúa progresivamente más fuerte cuanto más alta la frecuencia. **Costo:** puede opacar un poco el brillo de la voz — compensar con el **Excitador armónico** o la **EQ de presencia** (regeneran brillo después del cancelador, sin traer de vuelta el ruido). |
+
+> **Consejo — el Freno de bajada se elige según el S/N, no según el gusto.** Es la clase de control
+> que en una banda es gratis y en otra arruina la voz, así que conviene entender qué cobra. Cuando
+> el ruido de banda sube de golpe, la salida pega un salto porque el piso estimado llegó tarde; el
+> freno impide que ese piso se hunda durante los ratos tranquilos, así tiene menos que recuperar. El
+> problema es que un piso estimado más alto también resta más de la voz.
+>
+> **Ese costo depende casi por completo del S/N**, medido con una subida real de ruido de 8 dB:
+>
+> | S/N (indicador de la pestaña Espectro) | Cuánta voz cuesta el freno |
+> |---|---|
+> | +12 dB o más | prácticamente nada (0,03 dB) |
+> | +6 dB | despreciable (0,2 dB) |
+> | 0 dB | ~1,2 dB |
+> | −6 dB | **~2,5 dB** |
+>
+> **En la práctica:** con señal cómoda —AM local, una estación fuerte— se puede usar en **10 dB/s**
+> sin pagar nada, y el fondo queda notoriamente más parejo. Con señal débil enterrada en ruido
+> —onda corta con QRN alto— dejalo en **30 (sin freno)**: ahí la voz no tiene margen del cual pagar,
+> y lo que se gana en el fondo se pierde en claridad. Por eso viene sin freno de fábrica.
+>
+> Es un ajuste **por condición**, no por preferencia: al viajar en el preset, cada perfil se lleva el
+> valor que corresponde a la banda para la que fue armado.
 
 > **Consejo — calibrar la Intensidad con el Preview:** activar **"Preview: escuchar ruido eliminado"** y subir la **Intensidad** escuchando lo que se elimina: mientras en el preview se escuche solo ruido, se puede seguir subiendo; en el punto donde empieza a filtrarse voz en lo eliminado, bajar un paso y dejarlo ahí. Ese es el máximo de cancelación que no modifica la voz. Desactivar el preview al terminar.
 >

@@ -813,7 +813,7 @@ class AdvancedCancellerTab(QWidget):
         self._s_noise_fall._val_lbl.setFixedWidth(120)
         self._s_noise_fall.valueChanged.connect(self._pipeline.set_noise_fall_db_s)
         layout.addWidget(self._s_noise_fall)
-        layout.addWidget(_note(tr("  ↳ Limita cuán rápido puede BAJAR el piso estimado; subir siempre es libre (solo Adaptativo). Cuando el ruido de banda sube, la salida salta porque el piso llegó tarde: si no se hundió durante los ratos flojos, tiene menos que recuperar. Fuerte = el fondo queda más parejo, a costa de algo de voz y de tardar más en aprovechar una banda que se limpia.")))
+        layout.addWidget(_note(tr("  ↳ Limita cuán rápido puede BAJAR el piso estimado; subir siempre es libre (solo Adaptativo). Cuando el ruido de banda sube, la salida salta porque el piso llegó tarde: si no se hundió durante los ratos flojos, tiene menos que recuperar. Fuerte = el fondo queda más parejo, pero CUESTA VOZ y tarda más en aprovechar una banda que se limpia. El costo depende del S/N: arriba de +6 dB es despreciable, en −6 dB llega a 2,5 dB de voz. Por eso viene sin freno de fábrica.")))
 
         self._s_hf_boost = SliderRow(
             tr("Refuerzo en agudos:"),

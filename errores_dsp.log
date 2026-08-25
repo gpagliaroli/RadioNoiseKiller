@@ -1,0 +1,3 @@
+
+===== 2026-08-25 14:27:17 MCRA no calibra =====
+modo_cfg=mcra modo_dsp=mcra noise_enabled=True learning=False frames=0 warmup=12 M=3 quar=0 voice_hold=0 ld=None hop=960 block_cfg=960 db_in=-29.9 errores=0

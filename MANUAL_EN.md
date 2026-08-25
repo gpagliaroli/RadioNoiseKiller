@@ -462,7 +462,32 @@ This behavior is automatic and requires no adjustment. It triggers when the sign
 | **Anti-warble (β)** | 90% – 99% (0.1% steps) | 96% | Doses two mechanisms against background musical noise: the canceller *release* and, above all, the **smoothing of the per-bin voice/noise classification** (prevents a bin flickering around the threshold from making its gain jump — the main cause of persistent background "warble"). **Useful range 96–98%, very condition-dependent.** Raise it if you hear warble or background birdies; lower it (90–95%) if the voice gets a noise "tail" or sounds sluggish. The extreme (99%) gives maximum anti-warble but leaves the longest tail after each transmission. |
 | **Attack speed** | 50% – 92% | 80% | How fast the canceller "opens" voice bins when a signal is detected. Fast (50–70%): crisper consonants. Soft (>85%): fewer transition artifacts. |
 | **Floor reactivity** *(Adaptive only)* | 250 – 800 ms | 800 ms | Window over which the MCRA estimator tracks the noise minimum. **Reactive (250–350 ms):** the floor follows fast cyclic rises and falls of the noise without lagging (less "swaying" of the sound). **Stable (800 ms):** better for steady noise. Lower it when the band noise rises and falls suddenly in short cycles. With very reactive values, keep **Voice pitch enhancement** on (protects the harmonics from a short window mistaking them for noise). |
+| **Fall brake** *(Adaptive only)* | 2 – 30 dB/s | 30 (no brake) | Limits how fast the estimated floor may go **down**; going up is always free. When band noise rises suddenly the output jumps because the floor arrived late — if the floor did not sink during the quiet stretches, it has less to catch up. **It costs voice**, and how much depends on the S/N (see the tip below). |
 | **HF floor boost** *(Adaptive only)* | 0% – 150% | 0% | Raises the estimated noise floor above ~2.5 kHz, where noise energy is low and the estimator reacts late. Suppresses the HF hiss that leaks through with fading better. The curve is **logarithmic**: each octave above 2.5 kHz adds more boost, so it acts progressively harder the higher the frequency. **Cost:** it can dull the voice's brightness a bit — compensate with the **Harmonic exciter** or the **Presence EQ** (they regenerate brightness after the canceller, without bringing the noise back). |
+
+> **Tip — the Fall brake is chosen by S/N, not by taste.** It is the kind of control that is free on
+> one band and ruins the voice on another, so it is worth understanding what it charges. When band
+> noise rises suddenly the output jumps because the estimated floor arrived late; the brake keeps
+> that floor from sinking during the quiet stretches, so it has less to catch up. The catch is that a
+> higher estimated floor also subtracts more from the voice.
+>
+> **That cost depends almost entirely on the S/N**, measured with a real 8 dB noise rise:
+>
+> | S/N (indicator on the Spectrum tab) | Voice the brake costs |
+> |---|---|
+> | +12 dB or more | practically nothing (0.03 dB) |
+> | +6 dB | negligible (0.2 dB) |
+> | 0 dB | ~1.2 dB |
+> | −6 dB | **~2.5 dB** |
+>
+> **In practice:** with a comfortable signal — local AM, a strong station — you can run it at
+> **10 dB/s** at no cost, and the background is noticeably steadier. With a weak signal buried in
+> noise — shortwave with high QRN — leave it at **30 (no brake)**: there the voice has no margin to
+> pay from, and what you gain in the background you lose in clarity. That is why it ships with no
+> brake.
+>
+> It is a **per-condition** setting, not a preference: since it travels in the preset, each profile
+> carries the value that suits the band it was built for.
 
 > **Tip — calibrating Intensity with the Preview:** enable **"Preview: listen to removed noise"** and raise the **Intensity** while listening to what is being removed: as long as the preview contains only noise, you can keep raising it; at the point where voice starts leaking into the removed audio, back off one step and leave it there. That is the maximum cancellation that does not touch the voice. Disable the preview when done.
 >

@@ -95,7 +95,7 @@ class DSPConfig:
     pitch_enhance_enabled:  bool  = False  # refuerzo de armónicos SSB via autocorrelación
     pitch_enhance_strength: float = 0.7    # qué tanto elevar p_speech en bins de armónicos (0-1)
     noise_mcra_window_ms:  float = 800.0   # ventana de mínimos MCRA / reactividad del piso (250-800 ms)
-    noise_fall_db_s:       float = 10.0    # freno de caída del piso estimado (2-30 dB/s, solo Adaptativo)
+    noise_fall_db_s:       float = 30.0    # freno de caída del piso estimado (2-30 dB/s; 30 = sin freno, ver noise_profiler)
     noise_freeze_thr:      float = 0.30    # periodicidad mínima para congelar el piso con voz (0.30-1.00; 1.00 = nunca)
     noise_hf_boost:        float = 0.0      # refuerzo del piso en agudos, over-sustracción HF (0-1.5)
     voice_leveler_enabled:  bool  = False  # AGC de voz post-cancelador gateado por VAD
