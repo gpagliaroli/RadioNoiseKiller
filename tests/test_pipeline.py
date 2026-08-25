@@ -1,9 +1,26 @@
+import os
 import sys
+import tempfile
 import time
+
+# Invariante 11: los tests nunca escriben en los datos reales del usuario.
+# `run_all.py` fija RNK_DATA_DIR por suite, pero corriendo ESTE archivo suelto
+# no había nada y el pipeline escribía `errores_dsp.log` en la carpeta del
+# proyecto — el test inyecta un error a propósito (ver la curva de 7 elementos
+# más abajo), así que ese log parecía un fallo real de la aplicación. Pasó:
+# se perdió tiempo diagnosticando como problema del usuario un archivo que
+# había dejado la propia suite. Mismo guard que ya tenía test_ui.
+if not os.environ.get("RNK_DATA_DIR"):
+    os.environ["RNK_DATA_DIR"] = tempfile.mkdtemp(prefix="rnk_test_pipeline_")
+
 sys.path.insert(0, "src")
 import numpy as np
 from config import AppConfig, RadioMode
 from pipeline import ProcessingPipeline
+
+assert "Reductor_Ruido_Radio" not in os.environ["RNK_DATA_DIR"] \
+    or "tmp" in os.environ["RNK_DATA_DIR"].lower(), \
+    "RNK_DATA_DIR apunta dentro del proyecto: el test escribiria datos reales"
 
 cfg = AppConfig()
 pipeline = ProcessingPipeline(cfg)

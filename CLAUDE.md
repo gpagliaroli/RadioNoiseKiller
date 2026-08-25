@@ -281,6 +281,61 @@ reajustaron en el aire. Todo el contenido de abajo se validó escuchando en la r
 iteraciones de ida y vuelta (ver los "reportado en el aire" de cada ítem: casi todos los fixes de
 esta versión salieron de una escucha que contradijo una medición sintética).
 
+**Post-v2.2 — ABIERTO: el fondo salta cuando el ruido de banda sube. SIETE enfoques descartados.**
+Reportado con un diagnóstico del usuario que resultó correcto en la cadena causal: *"cuando baja el
+ruido no se perciben problemas, a lo sumo se cancela un poco de más. Cuando sube el ruido, el piso no
+llega a subir a tiempo y la salida sube muy de golpe"*.
+- **Medido sobre 5 grabaciones reales** (22 eventos de cambio de piso ≥5 dB). La asimetría es real:
+  ante una SUBIDA de ruido de +5,1 dB el piso de salida se va a **+8,4 dB** (exceso **+3,4 dB**) y
+  tarda >1,5 s en acomodarse; ante una BAJADA de −5,6 dB la salida cae **−9,5 dB** (exceso −3,9), o
+  sea suprime de más. El retardo del estimador es simétrico; **lo asimétrico es la molestia**.
+- **Dato clave para no perder tiempo: lo que salta es el FONDO, no la voz.** Durante esos eventos la
+  parte alta de la salida se mueve **+1,2 dB** mientras el fondo se mueve +8,4 dB, y el fondo está
+  **15,3 dB por debajo** de la voz. Cualquier procesado que actúe por NIVEL (compresor, limitador,
+  ducker) no puede separarlos: el umbral que alcanza al fondo aplasta la voz.
+- **NO HAY ÁRBITRO para distinguir "subió el ruido" de "arrancó la voz"** en el instante del evento,
+  y esto está medido dos veces:
+  - **El VAD está INVERTIDO**: vp 0,93 en subidas de ruido contra 0,59 en onsets de voz reales
+    (vp_sq 0,71 vs 0,34). Es la trampa de realimentación ya documentada dos veces en este archivo —
+    vp se calcula sobre `snr_post`, que depende de λ_d; si λ_d va atrasado, TODO parece señal.
+  - **La periodicidad tampoco**: d' = **−0,74** (0,28 en subidas de ruido vs 0,22 en onsets). En el
+    primer frame de una palabra la autocorrelación todavía no tiene material periódico en su ventana.
+- **Los siete enfoques probados y por qué murieron** (no reintentar sin leer esto):
+
+  | Enfoque | Resultado medido |
+  |---|---|
+  | Freno de CAÍDA de ganancia por bin | Sin efecto: el escalón del arranque es hacia ARRIBA |
+  | `beta_fast` (Velocidad de ataque) | Sin efecto en todo el rango (pozo −9,4 dB constante) |
+  | Ventana de ataque de `p_speech` | −9,4 → −9,0 dB |
+  | Bloque más grande (960/1920) | **Peor**: rugosidad 6,3 → 12,6 dB |
+  | Reactividad del piso más corta | **Peor**: exceso +0,9 → +3,8 dB y menos supresión |
+  | Detector de estimado obsoleto + resync | Falsos positivos; y el resync no acelera (rearma sobre voz) |
+  | Ruido de confort | Métrica OK (fluctuación 7,4 → 5,1 dB) pero **rechazado de oído** |
+  | Compresor de salida | El fondo está 15 dB bajo la voz: ningún umbral los separa |
+  | Freno de subida del piso de salida | Duckea 4,1 dB permanentes por 1,7 dB de mejora |
+
+- **La única palanca que funciona es cuánto se suprime.** El salto ES la supresión que se pierde
+  durante el retardo: si el cancelador quita 20 dB y por un segundo no los quita, el salto es de
+  20 dB. Piso más alto o Intensidad más baja → salto proporcionalmente menor. Es el mismo trade que
+  aparece en todo este archivo.
+- **Trampas de medición propias en este recorrido** (patrones a reconocer): (1) tres bancos
+  sintéticos fallaron con la firma *"todas las variantes dan lo mismo"* o *"la dispersión se come la
+  diferencia"* — lo que destrabó todo fue medir sobre las **grabaciones reales del usuario**;
+  (2) un prototipo del freno de piso medía el nivel sobre la señal YA corregida y se realimentaba
+  hasta atenuar 107 dB; (3) se tomó por evidencia un `errores_dsp.log` que había dejado la propia
+  suite de tests (ver el fix de higiene abajo).
+- **ABIERTO.** El usuario va a pensar un enfoque. Lo que NO hay que volver a proponer está en la
+  tabla de arriba.
+
+**Post-v2.2: `test_pipeline` escribía en la carpeta de datos REAL.** El test inyecta a propósito una
+curva de piso corrupta (`np.ones(7)`) para verificar la recuperación del hilo DSP, y `run_all.py`
+aísla con `RNK_DATA_DIR` — pero corriendo el archivo suelto no había variable y el `errores_dsp.log`
+resultante caía en la carpeta del proyecto. **Costó tiempo real**: ese log se tomó por un fallo en la
+máquina del usuario y se llegó a anunciar como "la causa raíz que faltaba desde la v2.1", cuando era
+el propio test. Ahora `test_pipeline` se crea su temp dir si corre solo, con el mismo guard que ya
+tenía `test_ui` (invariante 11). **Regla: un test que escribe en la carpeta de datos deja evidencia
+indistinguible de un fallo real.**
+
 **Post-v2.2: el post-filtro retiraba su profundidad de golpe y eso crujía.** Reportado en el aire:
 *"cuando una voz pasa de un nivel bajo a una pronunciación más fuerte produce una distorsión"*, y
 por separado un ruido cíclico que hacía subir el volumen. **Diagnosticado sobre una grabación real
