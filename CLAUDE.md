@@ -330,7 +330,7 @@ propio estimador que después alimenta.
   cambió**, porque el contador se incrementa antes de la rama del squelch. Con eso el guard da 0 %
   con el código nuevo y **96,4 %** con el viejo.
 
-**Post-v2.2 — el cancelador se lleva 6–8 dB de la banda de voz. PARCIALMENTE ABIERTO.** Salió de
+**Post-v2.2 — el cancelador se lleva 6–8 dB de la banda de voz. El post-filtro queda CERRADO; el margen está en la etapa base.** Salió de
 medir por qué el usuario escucha distorsión. En sus 8 grabaciones el S/N de la voz sobre el piso es
 **+13,5 a +25,8 dB** (señales cómodas, no enterradas): un Wiener ideal a ese S/N tocaría la voz
 **0,2 dB**, y la cadena le saca **6,6 a 8,3 dB**.
@@ -361,8 +361,38 @@ medir por qué el usuario escucha distorsión. En sus 8 grabaciones el S/N de la
   hop 240). Lo mismo con el percentil 10. **Para medir el sesgo de un estimador de ruido hace falta
   ruido conocido**, y con eso el resultado fue otro: el sesgo depende del S/N, no del suavizado
   (`_MCRA_ALPHA_S` no cambió nada: 17,3 dB en todo el barrido) ni de la ventana.
-- **Queda abierto** cómo bajar el daño del post-filtro sin perder supresión. La única vía que resta
-  es cambiar cómo se calcula `p_speech`, que es más invasivo.
+- **CERRADO por medición: el trade del post-filtro es UNIDIMENSIONAL.** Se probaron cinco caminos y
+  los cinco caen sobre la misma curva que mover el slider. La comparación correcta es **a igual daño
+  de voz**, interpolando la curva del propio slider (post 0→8: voz −6,5→−10,1 dB, fondo −8,3→−14,4):
+
+  | enfoque | resultado |
+  |---|---|
+  | Profundidad escalada por el S/N del frame | La perilla no se activaba (`snr_db` lee 2–3 dB) |
+  | Refuerzo de pitch más fuerte | 0,5 dB de vocales en todo el rango, y cuesta 1,5 dB de fondo |
+  | Bajar `_VAD_THRESHOLD` (0,80 → 0,35) | +0,4 dB de media, **entre −0,2 y +1,1** según grabación |
+  | Protección de consonantes por contexto | **PEOR** que el slider a igual voz (−0,5 a −0,8 dB) |
+  | ORÁCULO con etiquetas perfectas | No hay techo: la separación **empeora** (−14,5 → −13,0) |
+
+- **Qué se rompe con la protección por contexto, y explica el oráculo:** el post-filtro tiene un
+  freno de retirada (`_POST_RELEASE_DB`, 12 dB/frame). Si se lo suelta durante la voz, cuando llega
+  el hueco todavía viene bajando y llega tarde — se pierde más supresión en el hueco de lo que se
+  gana en la consonante.
+- **Se corrige un descarte anterior mal fundado:** el umbral VAD se había desestimado como "suprimir
+  menos con otro nombre". El motivo correcto es que **cae sobre la misma línea** y gana apenas
+  0,4 dB con signo inconsistente. La comparación original no normalizaba por daño de voz — **regla:
+  al evaluar una alternativa a un control existente, compararla contra ese control en el punto que
+  iguala el costo, no en su valor por defecto.**
+- **Diagnóstico útil que sale de camino: el post-filtro NO era el principal culpable.** Con post 0 el
+  daño a la voz ya es **−6,5 dB**; a post 5 (el del usuario) es −9,1. O sea que el **cancelador base
+  se lleva 6,5 dB y el post-filtro agrega 2,6**. El margen grande está en la etapa base — Intensidad,
+  piso espectral y sobre todo **la exactitud de λ_d**. Ése es el próximo hilo, y hay que abrirlo
+  midiendo el sesgo de λ_d **con ruido conocido**: todas las referencias derivadas del propio audio
+  (percentil por bin, mínimo por ventana) están estadísticamente sesgadas y dan números que cambian
+  con el hop y la ventana sin significar nada.
+- **Qué SÍ se comió el post-filtro, medido:** consonantes **−11,5 dB** contra vocales −6,5 (las
+  fricativas son anchas y aperiódicas, así que a `p_speech` le parecen ruido), y dentro de las
+  vocales, bins de entremedio −8,3 contra picos armónicos −3,7. El desglose fue lo que hizo pensar
+  que había margen; la medición mostró que no lo hay **a nivel de frame**.
 
 **Post-v2.2: el umbral del freeze de MCRA pasa a ser ajustable ("Congelar piso con voz").** Slider
 30–100 % en Avanzada Cancelador (`noise_freeze_thr`, default 0.30 = comportamiento previo; 1.00 =
