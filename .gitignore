@@ -53,3 +53,9 @@ MANUAL_*.pdf
 # OS
 .DS_Store
 Thumbs.db
+
+# Datos escribibles de la app (viven junto al ejecutable, no en el repo).
+# errores_dsp.log en particular NUNCA debe versionarse: es diagnostico de la
+# maquina del usuario, y tenerlo en la carpeta del proyecto ya causo una vez
+# que se tomara por un fallo real lo que habia dejado la suite de tests.
+errores_dsp.log
