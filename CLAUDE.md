@@ -299,6 +299,27 @@ afinados al aire por el usuario — ver [[project_factory_presets]]). Cambian `A
   (`noise_fading_*` de la v2.2 y `pitch_shift_hz`). Verificado que los **7** cargan con
   `matches()==True`, o sea sin "(modificado)" espurio (invariante 10).
 
+**Post-v2.2: Grabar / Bypass / Mute con ancho uniforme (`_ACTION_BTN_W = 140`).** El usuario pidió
+120 porque los de 150 se veían vacíos. **Medido con `QFontMetrics`, 120 no alcanza**: `"⏺  Grabar"`
+pide 122 px y `"⏹  Detener"` 134.
+- **El hallazgo real del barrido: los TRES ya recortaban su estado ACTIVO.** `"⏹  Detener
+  grabación"` pedía **254 px** en un botón de 150, `"⇄  Sin procesar"` 194, y `"🔇  Silenciado"` 170
+  en uno de 120. El ancho fijo de cada uno se había elegido mirando **sólo el texto en reposo**.
+  **Regla: el ancho de un botón que cambia de texto se calcula con el texto MÁS LARGO de todos sus
+  estados, no con el inicial.**
+- Textos activos acortados para que entren: `"⏹  Detener grabación"` → **`"⏹  Detener"`** y
+  `"⇄  Sin procesar"` → **`"⇄  Crudo"`** (consistente con "señal cruda", que es el vocabulario de
+  los manuales). En EN: `"⏹  Stop"` y `"⇄  Raw"`.
+- **140 y no 134** (el mínimo justo) porque **el ancho de los emoji depende de la fuente del
+  sistema**: sin holgura, en otra máquina el texto sale con "...". Es el mismo tipo de cuidado que
+  el resto de los anchos fijos de la UI.
+- **`"🔇  Silenciado"` (170 px) sigue recortándose** y se dejó a propósito: es una palabra que eligió
+  el usuario, y en 140 recorta MENOS que antes en 120. Queda como decisión suya cambiarla
+  (`"🔇  Mudo"` entra en 98) o ensanchar los tres.
+- Test `test_ui::test_botones_de_escucha_mismo_ancho_y_sin_recortes`: mismo ancho los tres, y
+  ningún texto de ningún estado se elide — **en los dos idiomas**, porque las traducciones cambian
+  el largo (`"Detener"` mide 134 y `"Stop"` 98).
+
 **Post-v2.2: el Bypass pasa de casilla a botón, junto a Grabar y Mute.** Pedido de UX del usuario.
 Los tres son **acciones de escucha** que se aprietan y se sueltan mientras se opera, no ajustes que
 se dejan puestos — tenerlos juntos y con la misma forma es más coherente que dejar uno como casilla

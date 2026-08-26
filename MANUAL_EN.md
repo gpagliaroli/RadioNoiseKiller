@@ -880,7 +880,7 @@ In the same row, the **"⇄ Bypass"** button passes audio straight from input to
 
 - It used to be a checkbox in the *Control* group; it became a button and joined **Record** and **Mute** because all three are listening actions you press and release while operating, not settings you leave in place.
 - Unlike Record and Mute, it **does not require processing to be active**: having it ready before you start is useful, and it lets you calibrate each mode's level separately without audio.
-- When enabled it turns amber (**"⇄ Unprocessed"**) and the status bar shows it.
+- When enabled it turns amber (**"⇄ Raw"**) and the status bar shows it.
 - The **Output gain** also acts in bypass, and its value is remembered **separately** for bypass ON and OFF, so you can compare at a matched level without readjusting. Both levels are **saved and survive restarts**: you calibrate once. A preset does not carry the bypass level — it describes how you process, not how loud you listen to the raw signal.
 - Note about the canceller in **Adaptive** mode: in bypass the audio does not go through the processor, so the estimator cannot calibrate. The label says so ("it cannot calibrate in Bypass"); it is not a fault.
 

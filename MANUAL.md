@@ -880,7 +880,7 @@ En la misma fila, el botón **"⇄ Bypass"** pasa el audio directo de entrada a 
 
 - Era una casilla del grupo *Control*; pasó a botón y se juntó con **Grabar** y **Mute** porque los tres son acciones de escucha que se aprietan y se sueltan mientras se opera, no ajustes que se dejan puestos.
 - A diferencia de Grabar y Mute, **no requiere el procesamiento activo**: dejarlo preparado antes de activar es útil, y así se puede calibrar el nivel de cada modo por separado sin audio.
-- Al activarlo se pone en ámbar (**"⇄ Sin procesar"**) y la barra de estado lo indica.
+- Al activarlo se pone en ámbar (**"⇄ Crudo"**) y la barra de estado lo indica.
 - La **Ganancia de salida** también actúa en bypass, y su valor se recuerda **por separado** para bypass ON y OFF, así se compara a nivel parejo sin reajustar. Los dos niveles **se guardan y sobreviven al reinicio**: se calibran una vez. Un preset no se lleva el nivel de bypass — describe cómo procesás, no a qué volumen escuchás la señal cruda.
 - Ojo con el **cancelador en modo Adaptativo**: en bypass el audio no pasa por el procesador, así que el estimador no puede calibrar. El cartel lo dice ("en Bypass no calibra"); no es una falla.
 

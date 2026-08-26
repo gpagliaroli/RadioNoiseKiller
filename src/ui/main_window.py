@@ -29,6 +29,12 @@ from utils import settings_path, presets_dir, noise_profiles_dir, seed_factory_p
 
 # Borde de aviso para los combos de dispositivo cuando la combinación de APIs
 # es incompatible (entrada y salida en APIs de host distintas → -9993).
+# Ancho comun de los botones de accion de la fila de escucha (Grabar / Bypass /
+# Mute). Uniforme a proposito: son tres controles del mismo tipo, uno al lado
+# del otro. 140 y no menos porque el texto mas largo que muestran ('Detener')
+# pide 134 px, y el ancho de los emoji varia con la fuente del sistema — sin
+# holgura, en otra maquina el texto sale recortado con '...'.
+_ACTION_BTN_W = 140
 _COMBO_WARN_STYLE = "QComboBox { border: 1px solid #ef5350; }"
 
 # Ancho común de los combos de la pestaña Principal (Entrada/Salida/Canal/Modo/AGC/
@@ -763,7 +769,7 @@ class MainWindow(QMainWindow):
         self._btn_record = QPushButton(tr("⏺  Grabar"))
         self._btn_record.setCheckable(True)
         self._btn_record.setEnabled(False)   # requiere procesamiento activo
-        self._btn_record.setFixedWidth(150)
+        self._btn_record.setFixedWidth(_ACTION_BTN_W)
         self._btn_record.setToolTip(tr(
             "Graba la salida procesada a un archivo WAV (16-bit, 48 kHz)\n"
             "en la carpeta Grabaciones/, junto al ejecutable.\n"
@@ -796,7 +802,7 @@ class MainWindow(QMainWindow):
         # cada lado por separado sin audio.
         self._btn_bypass = QPushButton(tr("⇄  Bypass"))
         self._btn_bypass.setCheckable(True)
-        self._btn_bypass.setFixedWidth(150)
+        self._btn_bypass.setFixedWidth(_ACTION_BTN_W)
         self._btn_bypass.setToolTip(tr(
             "Pasa la señal cruda de la radio, sin ningún procesamiento.\n"
             "Para comparar el antes y el después sin detener nada.\n"
@@ -810,7 +816,7 @@ class MainWindow(QMainWindow):
         self._btn_mute = QPushButton(tr("🔇  Mute"))
         self._btn_mute.setCheckable(True)
         self._btn_mute.setEnabled(False)   # requiere procesamiento activo
-        self._btn_mute.setFixedWidth(120)
+        self._btn_mute.setFixedWidth(_ACTION_BTN_W)
         self._btn_mute.setToolTip(tr(
             "Silencia la salida a los parlantes sin detener el procesamiento.\n"
             "Útil para una prueba corta: el proceso, la grabación y los\n"
@@ -1216,7 +1222,7 @@ class MainWindow(QMainWindow):
                 self._status_bar.showMessage(
                     tr("Error al iniciar la grabación: {e}").format(e=e))
                 return
-            self._btn_record.setText(tr("⏹  Detener grabación"))
+            self._btn_record.setText(tr("⏹  Detener"))
             self._status_bar.showMessage(tr("Grabando en Grabaciones/ ..."))
         else:
             self._finish_recording()
@@ -1819,7 +1825,7 @@ class MainWindow(QMainWindow):
     def _refresh_bypass_button(self, checked: bool) -> None:
         """Estado visual del boton de Bypass (mismo patron que el Mute)."""
         if checked:
-            self._btn_bypass.setText(tr("⇄  Sin procesar"))
+            self._btn_bypass.setText(tr("⇄  Crudo"))
             self._btn_bypass.setStyleSheet("color: #ffd600; font-weight: bold;")
         else:
             self._btn_bypass.setText(tr("⇄  Bypass"))

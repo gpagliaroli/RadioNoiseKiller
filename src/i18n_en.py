@@ -212,7 +212,6 @@ CATALOG = {
 
     # --- Grabación a WAV ---
     "⏺  Grabar": "⏺  Record",
-    "⏹  Detener grabación": "⏹  Stop recording",
     "Graba la salida procesada a un archivo WAV (16-bit, 48 kHz)\n"
     "en la carpeta Grabaciones/, junto al ejecutable.\n"
     "Disponible con el procesamiento activo.":
@@ -447,7 +446,8 @@ CATALOG = {
     "  ↳ Sube el piso de ruido por encima de ~2.5 kHz (donde la energía del ruido es baja y el estimador reacciona tarde). Suprime mejor el siseo de agudos que se cuela con el fading, a costa de algo de brillo de la voz — combinar con Excitador/Presencia para reponerlo.":
         "  ↳ Raises the noise floor above ~2.5 kHz (where noise energy is low and the estimator reacts late). Suppresses the HF hiss that leaks through with fading better, at the cost of some voice brightness — combine with Exciter/Presence to restore it.",
     "⇄  Bypass": "⇄  Bypass",
-    "⇄  Sin procesar": "⇄  Unprocessed",
+    "⏹  Detener": "⏹  Stop",
+    "⇄  Crudo": "⇄  Raw",
     "Bypass activo — se escucha la señal cruda, sin procesar.":
         "Bypass on — you are hearing the raw signal, unprocessed.",
     "Pasa la señal cruda de la radio, sin ningún procesamiento.\n"

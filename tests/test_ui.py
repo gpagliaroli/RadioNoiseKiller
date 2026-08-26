@@ -738,6 +738,34 @@ def test_bypass_es_boton_junto_al_mute():
     print("Bypass: boton en la fila de Grabar/Mute      OK")
 
 
+def test_botones_de_escucha_mismo_ancho_y_sin_recortes():
+    """Grabar / Bypass / Mute comparten ancho, y su texto no sale recortado.
+
+    Los tres son la misma clase de control, uno al lado del otro: anchos distintos
+    se ven como un descuido. Y el ancho tiene que alcanzar para el texto de CADA
+    estado — antes los tres mostraban el estado activo con '...' porque el fijo se
+    habia elegido mirando solo el texto en reposo.
+    """
+    from PySide6.QtCore import Qt
+    from ui.main_window import _ACTION_BTN_W
+
+    w = _win()
+    anchos = {b.width() for b in (w._btn_record, w._btn_bypass, w._btn_mute)}
+    assert anchos == {_ACTION_BTN_W}, f"anchos distintos: {anchos}"
+
+    fm = w._btn_record.fontMetrics()
+    disponible = _ACTION_BTN_W - 14          # borde + padding del QPushButton
+    recortados = []
+    for b, textos in ((w._btn_record, ("⏺  Grabar", "⏹  Detener")),
+                      (w._btn_bypass, ("⇄  Bypass", "⇄  Crudo"))):
+        for txt in textos:
+            s = tr(txt)
+            if fm.elidedText(s, Qt.ElideRight, disponible) != s:
+                recortados.append(s)
+    assert not recortados, f"texto recortado en {_ACTION_BTN_W}px: {recortados}"
+    print("Botones de escucha: mismo ancho, sin recortes OK")
+
+
 def test_mute_button_gating_and_state():
     """El boton Mute arranca deshabilitado (requiere proceso); al togglear
     llama set_output_mute y cambia texto/estilo; destogglear lo restaura."""
@@ -1198,6 +1226,7 @@ if __name__ == "__main__":
     test_profile_buttons_visibility_by_mode()
     test_loaded_profile_name_label()
     test_bypass_es_boton_junto_al_mute()
+    test_botones_de_escucha_mismo_ancho_y_sin_recortes()
     test_mute_button_gating_and_state()
     test_bypass_remembers_output_gain()
     test_bypass_gain_persiste_entre_sesiones()
