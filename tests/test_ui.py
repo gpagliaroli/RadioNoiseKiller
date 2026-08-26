@@ -705,6 +705,39 @@ def test_loaded_profile_name_label():
     print("Nombre del perfil cargado en la UI         OK")
 
 
+def test_bypass_es_boton_junto_al_mute():
+    """Bypass paso de casilla (grupo Control) a boton en la fila de Grabar/Mute.
+
+    Los tres son acciones de escucha que se aprietan y se sueltan mientras se
+    opera, no ajustes que se dejan puestos. A diferencia de Grabar y Mute, Bypass
+    NO se deshabilita sin proceso: dejarlo preparado antes de activar es util, y
+    la ganancia de salida se recuerda por modo, asi que se calibra cada lado
+    aparte.
+    """
+    from PySide6.QtWidgets import QPushButton
+
+    w = _win()
+    b = w._btn_bypass
+    assert isinstance(b, QPushButton) and b.isCheckable(), "Bypass deberia ser un boton"
+    assert b.parent() is w._btn_mute.parent(), "Bypass no quedo en la fila del Mute"
+    assert b.isEnabled(), "Bypass no debe requerir el proceso activo"
+    assert not any("ypass" in c.text() for c in w.findChildren(QCheckBox)), \
+        "quedo la casilla vieja de Bypass"
+
+    texto_off = b.text()
+    b.setChecked(True)
+    _app.processEvents()
+    assert w._pipeline.bypass, "el boton no llego al pipeline"
+    assert b.text() != texto_off, "el boton no cambia de texto al activarse"
+    assert b.styleSheet(), "el boton no marca visualmente el estado activo"
+
+    b.setChecked(False)
+    _app.processEvents()
+    assert not w._pipeline.bypass
+    assert b.text() == texto_off and not b.styleSheet(), "no restaura el estado normal"
+    print("Bypass: boton en la fila de Grabar/Mute      OK")
+
+
 def test_mute_button_gating_and_state():
     """El boton Mute arranca deshabilitado (requiere proceso); al togglear
     llama set_output_mute y cambia texto/estilo; destogglear lo restaura."""
@@ -817,7 +850,7 @@ def test_bypass_remembers_output_gain():
     al alternar Bypass el slider salta al valor guardado del modo destino, sin
     reajustar cada vez."""
     w = _win()
-    assert not w._check_bypass.isChecked(), "arranca sin bypass"
+    assert not w._btn_bypass.isChecked(), "arranca sin bypass"
     init_bypass = w._out_gain_by_bypass[True]     # valor inicial (== config)
 
     # Ajuste en modo procesando → se recuerda en el slot False
@@ -825,7 +858,7 @@ def test_bypass_remembers_output_gain():
     assert w._out_gain_by_bypass[False] == -5.0, "no recordo la ganancia de procesando"
 
     # Pasar a bypass: el slider salta al valor guardado de bypass
-    w._check_bypass.setChecked(True)
+    w._btn_bypass.setChecked(True)
     assert abs(w._s_gain_out.value() - init_bypass) < 1e-6, "no restauro el valor de bypass"
     assert abs(w._pipeline._output_gain - 10 ** (init_bypass / 20.0)) < 1e-4, \
         "el pipeline no recibio la ganancia de bypass"
@@ -835,9 +868,9 @@ def test_bypass_remembers_output_gain():
     assert w._out_gain_by_bypass[True] == 3.0, "no recordo la ganancia de bypass"
 
     # Volver a procesando: recupera -5.0; y de nuevo a bypass: recupera 3.0
-    w._check_bypass.setChecked(False)
+    w._btn_bypass.setChecked(False)
     assert abs(w._s_gain_out.value() - (-5.0)) < 1e-6, "no restauro el valor de procesando"
-    w._check_bypass.setChecked(True)
+    w._btn_bypass.setChecked(True)
     assert abs(w._s_gain_out.value() - 3.0) < 1e-6, "no recordo el valor de bypass en el 2do toggle"
     print("Bypass recuerda ganancia de salida (A/B)   OK")
 
@@ -1128,10 +1161,10 @@ def test_bypass_gain_persiste_entre_sesiones():
     llegaba a servir. El nivel de comparacion se calibra una vez, no por sesion.
     """
     w = _win()
-    w._check_bypass.setChecked(False)
+    w._btn_bypass.setChecked(False)
     w._s_gain_out.set_value(-5.0, emit=True)
     _app.processEvents()
-    w._check_bypass.setChecked(True)
+    w._btn_bypass.setChecked(True)
     w._s_gain_out.set_value(3.0, emit=True)
     _app.processEvents()
     w._save_settings()
@@ -1146,7 +1179,7 @@ def test_bypass_gain_persiste_entre_sesiones():
     w2 = _win()
     assert w2._out_gain_by_bypass[False] == -5.0
     assert w2._out_gain_by_bypass[True] == 3.0
-    w2._check_bypass.setChecked(True)
+    w2._btn_bypass.setChecked(True)
     _app.processEvents()
     assert abs(w2._s_gain_out.value() - 3.0) < 1e-6,         "al reabrir, el bypass no recupera su nivel"
 
@@ -1164,6 +1197,7 @@ if __name__ == "__main__":
     test_post_filter_on_principal_autoenable()
     test_profile_buttons_visibility_by_mode()
     test_loaded_profile_name_label()
+    test_bypass_es_boton_junto_al_mute()
     test_mute_button_gating_and_state()
     test_bypass_remembers_output_gain()
     test_bypass_gain_persiste_entre_sesiones()

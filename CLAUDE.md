@@ -299,6 +299,25 @@ afinados al aire por el usuario — ver [[project_factory_presets]]). Cambian `A
   (`noise_fading_*` de la v2.2 y `pitch_shift_hz`). Verificado que los **7** cargan con
   `matches()==True`, o sea sin "(modificado)" espurio (invariante 10).
 
+**Post-v2.2: el Bypass pasa de casilla a botón, junto a Grabar y Mute.** Pedido de UX del usuario.
+Los tres son **acciones de escucha** que se aprietan y se sueltan mientras se opera, no ajustes que
+se dejan puestos — tenerlos juntos y con la misma forma es más coherente que dejar uno como casilla
+en el grupo Control. Queda a la izquierda del Mute, que sigue anclado al borde derecho.
+- **No se deshabilita con el proceso detenido**, a diferencia de Grabar y Mute: dejarlo preparado
+  antes de activar es útil, y como la ganancia de salida se recuerda por modo
+  (`_out_gain_by_bypass`), se puede calibrar cada lado sin audio. Es una diferencia deliberada, no
+  un olvido — el test la fija.
+- Estado visual como el Mute pero en **ámbar** (`#ffd600`), no rojo: bypass es un estado normal de
+  comparación, no un corte. `_refresh_bypass_button` centraliza el texto y el estilo.
+- `_check_bypass` → `_btn_bypass`. El rename no era obligatorio (un `QPushButton` checkable tiene
+  el mismo `setChecked/isChecked`), pero dejar un atributo llamado `_check_*` para un botón es una
+  mentira que después cuesta.
+- Manuales ES+EN: la fila del grupo Control se convierte en una sección propia junto a la de Mute,
+  con el aviso de que **en bypass el estimador adaptativo no puede calibrar** — que enlaza con el
+  bug de arriba.
+- Test en `test_ui::test_bypass_es_boton_junto_al_mute` (es botón, está en la fila del Mute, no
+  requiere proceso, llega al pipeline, cambia texto y estilo, y **no quedó ninguna casilla vieja**).
+
 **Post-v2.2 — RESUELTO: "el estimador adaptativo no completa la calibración" era el BYPASS.**
 Cierra las cuatro ramas de diagnóstico fallidas que este archivo venía acumulando. El usuario lo
 reportó como *"pasó cuando seleccioné SSB muy angosto, y falla siempre"* — el preset era una

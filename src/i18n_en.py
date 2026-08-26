@@ -48,7 +48,6 @@ CATALOG = {
     "Rápido": "Fast",
     "Medio": "Medium",
     "Lento": "Slow",
-    "Bypass (sin procesamiento)": "Bypass (no processing)",
     "Idioma de la interfaz — requiere reiniciar la aplicación":
         "Interface language — requires restarting the application",
     "Idioma guardado — reiniciar la aplicación para aplicarlo.":
@@ -447,6 +446,18 @@ CATALOG = {
     "Refuerzo en agudos:": "HF floor boost:",
     "  ↳ Sube el piso de ruido por encima de ~2.5 kHz (donde la energía del ruido es baja y el estimador reacciona tarde). Suprime mejor el siseo de agudos que se cuela con el fading, a costa de algo de brillo de la voz — combinar con Excitador/Presencia para reponerlo.":
         "  ↳ Raises the noise floor above ~2.5 kHz (where noise energy is low and the estimator reacts late). Suppresses the HF hiss that leaks through with fading better, at the cost of some voice brightness — combine with Exciter/Presence to restore it.",
+    "⇄  Bypass": "⇄  Bypass",
+    "⇄  Sin procesar": "⇄  Unprocessed",
+    "Bypass activo — se escucha la señal cruda, sin procesar.":
+        "Bypass on — you are hearing the raw signal, unprocessed.",
+    "Pasa la señal cruda de la radio, sin ningún procesamiento.\n"
+    "Para comparar el antes y el después sin detener nada.\n"
+    "La ganancia de salida se recuerda por separado en cada modo, así\n"
+    "que se puede comparar a volumen parejo.":
+        "Passes the raw signal from the radio, with no processing at all.\n"
+        "To compare before and after without stopping anything.\n"
+        "Output gain is remembered separately for each mode, so you can\n"
+        "compare at a matched volume.",
     "Modo:": "Mode:",   # combo de estimacion del ruido (estatico/MCRA)
     "Adaptativo (MCRA) — en Bypass no calibra (el cancelador no corre)":
         "Adaptive (MCRA) — it cannot calibrate in Bypass (the canceller is not running)",

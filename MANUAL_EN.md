@@ -138,7 +138,6 @@ The main operating controls: reception mode, AGC and processing activation.
 | **Level continuously (music)** | Checkbox belonging to the **Voice leveler** (Ch. 7), placed here because you change it depending on what you are listening to: ticked for music or continuous audio, unticked for voice. Requires the canceller and the leveler enabled. |
 | **Noise ceiling** | Limits how much the AGC can amplify, so it does not lift the band noise. See below. |
 | **▶ START / ■ STOP** | Starts or stops real-time processing. When started, audio flows through the whole pipeline. |
-| **Bypass** | Passes audio straight from input to output with no processing. Useful for comparing the sound with and without the application active. The **Output gain** also acts in bypass, and its value is remembered **separately** for bypass ON and OFF, saved across restarts (see the note under *Gain and levels*). |
 
 ### AGC — noise ceiling
 
@@ -874,6 +873,16 @@ At the bottom of the group, the **"⏺ Record"** button saves what you are heari
 - Stopping processing with a recording in progress closes the file cleanly and automatically; the status bar shows the saved duration.
 - Approximate size: ~5.6 MB per minute per file. Writing runs on a separate thread: recording does not affect audio latency or smoothness.
 - **Bypass** is recorded too: the recording always captures "what you hear", so toggling Bypass during a recording produces a **before/after in the same file** — ideal for demos of what the application does.
+
+### Bypass
+
+In the same row, the **"⇄ Bypass"** button passes audio straight from input to output, **with no processing at all**. It is how you compare before and after without stopping anything.
+
+- It used to be a checkbox in the *Control* group; it became a button and joined **Record** and **Mute** because all three are listening actions you press and release while operating, not settings you leave in place.
+- Unlike Record and Mute, it **does not require processing to be active**: having it ready before you start is useful, and it lets you calibrate each mode's level separately without audio.
+- When enabled it turns amber (**"⇄ Unprocessed"**) and the status bar shows it.
+- The **Output gain** also acts in bypass, and its value is remembered **separately** for bypass ON and OFF, so you can compare at a matched level without readjusting. Both levels are **saved and survive restarts**: you calibrate once. A preset does not carry the bypass level — it describes how you process, not how loud you listen to the raw signal.
+- Note about the canceller in **Adaptive** mode: in bypass the audio does not go through the processor, so the estimator cannot calibrate. The label says so ("it cannot calibrate in Bypass"); it is not a fault.
 
 ### Output mute
 

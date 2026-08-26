@@ -397,9 +397,6 @@ class MainWindow(QMainWindow):
         self._s_agc_ceiling.set_value(self._config.dsp.agc_noise_ceiling_db)
         self._s_agc_ceiling.set_enabled(self._config.dsp.agc_noise_ceiling_enabled)
 
-        self._check_bypass = QCheckBox(tr("Bypass (sin procesamiento)"))
-        self._check_bypass.toggled.connect(self._on_bypass_toggled)
-        layout.addWidget(self._check_bypass)
         return group
 
     def _on_leveler_continuous(self, on: bool) -> None:
@@ -788,6 +785,26 @@ class MainWindow(QMainWindow):
         self._lbl_rec_time.setFixedWidth(80)
         rec_row.addWidget(self._lbl_rec_time)
         rec_row.addStretch()   # empuja el Mute a la derecha
+
+        # --- Bypass (comparar crudo vs procesado) ---
+        # Era una casilla en el grupo Control. Pasa a boton y se junta con Grabar y
+        # Mute porque los tres son acciones de escucha que se aprietan y se sueltan
+        # mientras se opera, no ajustes que se dejan puestos.
+        # A diferencia de Grabar y Mute, NO se deshabilita con el proceso detenido:
+        # dejarlo preparado antes de activar es util, y ademas la ganancia de salida
+        # se recuerda por modo (ver _out_gain_by_bypass), asi que se puede calibrar
+        # cada lado por separado sin audio.
+        self._btn_bypass = QPushButton(tr("⇄  Bypass"))
+        self._btn_bypass.setCheckable(True)
+        self._btn_bypass.setFixedWidth(150)
+        self._btn_bypass.setToolTip(tr(
+            "Pasa la señal cruda de la radio, sin ningún procesamiento.\n"
+            "Para comparar el antes y el después sin detener nada.\n"
+            "La ganancia de salida se recuerda por separado en cada modo, así\n"
+            "que se puede comparar a volumen parejo."
+        ))
+        self._btn_bypass.toggled.connect(self._on_bypass_toggled)
+        rec_row.addWidget(self._btn_bypass)
 
         # --- Mute de salida (silencia los parlantes sin detener el proceso) ---
         self._btn_mute = QPushButton(tr("🔇  Mute"))
@@ -1422,7 +1439,7 @@ class MainWindow(QMainWindow):
         self._config.gain.output_gain_db = val
         self._pipeline.set_output_gain_db(val)
         # Recordar el valor para el modo bypass actual (A/B a nivel parejo).
-        self._out_gain_by_bypass[self._check_bypass.isChecked()] = val
+        self._out_gain_by_bypass[self._btn_bypass.isChecked()] = val
         self._schedule_save()
 
     def _on_bypass_toggled(self, checked: bool) -> None:
@@ -1432,6 +1449,10 @@ class MainWindow(QMainWindow):
         # empujamos config/pipeline a mano.
         self._out_gain_by_bypass[not checked] = self._s_gain_out.value()
         self._pipeline.set_bypass(checked)
+        self._refresh_bypass_button(checked)
+        if checked:
+            self._status_bar.showMessage(
+                tr("Bypass activo — se escucha la señal cruda, sin procesar."))
         target = self._out_gain_by_bypass[checked]
         if target != self._s_gain_out.value():
             self._s_gain_out.set_value(target)
@@ -1794,6 +1815,15 @@ class MainWindow(QMainWindow):
         self._schedule_save()
         self._status_bar.showMessage(
             tr("Perfil de ruido \"{name}\" cargado.").format(name=name))
+
+    def _refresh_bypass_button(self, checked: bool) -> None:
+        """Estado visual del boton de Bypass (mismo patron que el Mute)."""
+        if checked:
+            self._btn_bypass.setText(tr("⇄  Sin procesar"))
+            self._btn_bypass.setStyleSheet("color: #ffd600; font-weight: bold;")
+        else:
+            self._btn_bypass.setText(tr("⇄  Bypass"))
+            self._btn_bypass.setStyleSheet("")
 
     def _on_mute_toggled(self, checked: bool) -> None:
         """Silencia la salida a los parlantes sin detener el proceso."""
