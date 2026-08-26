@@ -890,6 +890,7 @@ def test_mcra_stall_reason():
     w = _win()
 
     class _Pipe:
+        bypass = False          # sin bypass: el aviso de falla SI corresponde
         dsp_error_count = 0
         noise_has_profile = False
         db_in = -20.0
@@ -1030,6 +1031,41 @@ def test_noise_fall_slider():
     print("slider del freno de caida del piso            OK")
 
 
+def test_mcra_en_bypass_no_es_falla():
+    """En Bypass el estimador NO puede calibrar, y eso no es una falla.
+
+    En bypass el audio no entra al hilo procesador, asi que el profiler queda en
+    frames=0 / quar=0 / lambda_d=None con audio presente y cero errores: la firma
+    EXACTA de un fallo real. Sin este caso, el aviso rojo salia cada vez que se
+    dejaba el bypass puesto unos segundos para comparar, y mandaba a diagnosticar
+    un problema inexistente (paso: se reporto como fallo de un preset del combo).
+    """
+    w = _win()
+    w._config.dsp.noise_mode = "mcra"
+    w._config.dsp.noise_enabled = True
+    w._pipeline.set_noise_mode("mcra")
+    w._pipeline.start(headless=True)
+    w._pipeline._db_in = -30.0          # hay audio: no es la causa "sin entrada"
+
+    w._pipeline.set_bypass(True)
+    w._mcra_wait = 999                  # como si llevara rato sin calibrar
+    w._update_noise_db()
+    txt = w._label_noise.text()
+    assert "Bypass" in txt, f"no explica el bypass: {txt!r}"
+    assert "⚠" not in txt, f"lo reporta como falla: {txt!r}"
+    assert "#ef5350" not in w._label_noise.styleSheet(), "lo pinta de rojo"
+    assert w._mcra_wait == 0, "en bypass no debe acumular ticks de espera"
+
+    # Y el volcado de diagnostico tiene que decirlo, que es lo que faltaba en el
+    # log real y mando a buscar la causa al lado equivocado.
+    assert "bypass=True" in w._pipeline.mcra_diag, w._pipeline.mcra_diag
+
+    w._pipeline.set_bypass(False)
+    w._pipeline.stop()
+    w.close()
+    print("MCRA en Bypass: no se reporta como falla     OK")
+
+
 def test_noise_freeze_slider():
     """El slider del freeze (Congelar piso con voz) llega al DSP en porcentaje.
 
@@ -1150,6 +1186,7 @@ if __name__ == "__main__":
     test_waterfall_diff_mode()
     test_incompatible_devices_disable_activate()
     test_noise_fall_slider()
+    test_mcra_en_bypass_no_es_falla()
     test_noise_freeze_slider()
     test_all_sliders_have_tooltip()
     test_dsp_error_is_visible()

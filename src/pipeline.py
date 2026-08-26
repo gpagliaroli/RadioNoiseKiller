@@ -254,6 +254,10 @@ class ProcessingPipeline:
     def agc_gain_db(self) -> float:
         return self._agc.gain_db
 
+    @property
+    def bypass(self) -> bool:
+        return self._bypass
+
     def set_bypass(self, bypass: bool) -> None:
         with self._lock:
             self._bypass = bypass
@@ -786,7 +790,11 @@ class ProcessingPipeline:
         de audio. Con esto la próxima vez el archivo dice qué contador está
         quieto en lugar de tener que adivinarlo."""
         p = self._noise_profiler
-        return (f"modo_cfg={self._config.dsp.noise_mode} modo_dsp={p._mode} "
+        # bypass va PRIMERO: en bypass el audio no llega al hilo procesador, asi
+        # que el estimador queda en frames=0/quar=0/None — la firma exacta de un
+        # fallo real. Sin este dato el log mandaba a buscar por el lado equivocado.
+        return (f"bypass={self._bypass} "
+                f"modo_cfg={self._config.dsp.noise_mode} modo_dsp={p._mode} "
                 f"noise_enabled={self._noise_enabled} learning={p.is_learning} "
                 f"frames={p._mcra_frames} warmup={p._mcra_warmup} M={p._mcra_M} "
                 f"quar={len(p._mcra_quar)} voice_hold={p._mcra_voice_hold} "

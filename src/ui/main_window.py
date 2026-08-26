@@ -1603,6 +1603,20 @@ class MainWindow(QMainWindow):
             else:
                 self._lbl_noise_db.setText("—")
                 self._lbl_noise_db.setStyleSheet("color: #888; font-weight: bold;")
+                if self._pipeline.bypass:
+                    # En Bypass el audio no entra al hilo procesador, asi que el
+                    # cancelador no corre y el estimador NO PUEDE calibrar: es
+                    # correcto, no una falla. Faltaba este caso y el aviso rojo
+                    # salia cada vez que se dejaba el bypass puesto unos segundos
+                    # para comparar — con la firma exacta de un fallo real
+                    # (frames=0, quar=0, lambda_d=None, con audio y sin errores).
+                    # Tampoco se cuentan ticks: al salir del bypass tiene que
+                    # empezar de cero, no arrancar ya en rojo.
+                    self._mcra_wait = 0
+                    self._label_noise.setText(
+                        tr("Adaptativo (MCRA) — en Bypass no calibra (el cancelador no corre)"))
+                    self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
+                    return
                 self._mcra_wait += 1
                 # El warmup son ~200 ms. Pasados unos segundos, seguir diciendo
                 # "calibrando" es mentir: hay que decir POR QUÉ no calibra. Sin
@@ -1877,7 +1891,7 @@ class MainWindow(QMainWindow):
     def _mcra_stall_reason(self) -> str:
         """Por qué el estimador adaptativo no termina de calibrar.
 
-        Son cuatro causas distintas y hasta ahora las cuatro se veían igual
+        Son varias causas distintas y hasta ahora todas se veían igual
         ('calibrando…' para siempre). Se ordenan de la más concreta a la más
         genérica; la última manda a mirar el log, que es donde está el detalle."""
         if self._pipeline.dsp_error_count:

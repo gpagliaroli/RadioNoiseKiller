@@ -448,6 +448,8 @@ CATALOG = {
     "  ↳ Sube el piso de ruido por encima de ~2.5 kHz (donde la energía del ruido es baja y el estimador reacciona tarde). Suprime mejor el siseo de agudos que se cuela con el fading, a costa de algo de brillo de la voz — combinar con Excitador/Presencia para reponerlo.":
         "  ↳ Raises the noise floor above ~2.5 kHz (where noise energy is low and the estimator reacts late). Suppresses the HF hiss that leaks through with fading better, at the cost of some voice brightness — combine with Exciter/Presence to restore it.",
     "Modo:": "Mode:",   # combo de estimacion del ruido (estatico/MCRA)
+    "Adaptativo (MCRA) — en Bypass no calibra (el cancelador no corre)":
+        "Adaptive (MCRA) — it cannot calibrate in Bypass (the canceller is not running)",
     "Pasabanda:": "Bandpass:",
     "SSB muy angosto": "SSB very narrow",
     "SSB angosto": "SSB narrow",

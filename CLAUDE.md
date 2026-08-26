@@ -299,6 +299,39 @@ afinados al aire por el usuario — ver [[project_factory_presets]]). Cambian `A
   (`noise_fading_*` de la v2.2 y `pitch_shift_hz`). Verificado que los **7** cargan con
   `matches()==True`, o sea sin "(modificado)" espurio (invariante 10).
 
+**Post-v2.2 — RESUELTO: "el estimador adaptativo no completa la calibración" era el BYPASS.**
+Cierra las cuatro ramas de diagnóstico fallidas que este archivo venía acumulando. El usuario lo
+reportó como *"pasó cuando seleccioné SSB muy angosto, y falla siempre"* — el preset era una
+coincidencia, estaba comparando con Bypass puesto.
+- **En bypass `_process` devuelve antes de encolar** al hilo procesador, así que el cancelador no
+  corre y el estimador no recibe **ni un frame**. Pero `db_in` se mide una línea ANTES del
+  `if self._bypass` (línea 1279 contra 1281), así que el diagnóstico mostraba audio normal.
+  Resultado: `frames=0 quar=0 ld=None db_in=-28.6 errores=0` — **la firma exacta de un fallo real**,
+  y por eso mandó a buscar el problema al lado equivocado durante cuatro rondas.
+- **Reproducido y confirmado**: con bypass ON el pipeline da exactamente esa firma; con bypass OFF,
+  127 frames y λ_d presente. Los 8 anchos del catálogo arrancan bien, headless y por la UI.
+- **Fix (tres partes):** (1) `_update_noise_db` detecta el bypass ANTES de contar ticks y muestra un
+  cartel **gris explicativo**, no el aviso rojo de falla; (2) **no acumula `_mcra_wait`** en bypass,
+  para que al salir empiece de cero y no aparezca ya en rojo; (3) `mcra_diag` reporta `bypass=` como
+  **primer campo** — era justo el dato que faltaba en el log.
+- **Lección de método, y es la que importa:** el diagnóstico enumeraba tres causas conocidas
+  (excepción del DSP, cancelador desactivado, falta de audio) y **le faltaba el estado que hace
+  imposible calibrar por diseño**. Un detector de "esto no funciona" tiene que empezar por los
+  estados en los que **no debe funcionar**; si no, reporta como falla algo correcto, y con una firma
+  indistinguible de la falla real. El log lo hubiera dicho en la primera ronda con un campo más.
+- **Cómo se encontró, después de cuatro rondas de hipótesis:** no reproduciendo (headless y por la
+  UI daba bien con los 8 anchos) sino **leyendo el orden de las líneas** de `_process` a partir de la
+  única pista dura del log — `quar=0`, que dice que la cuarentena no recibió nada, no que el
+  estimador esté atascado. **Cuando el repro no falla, el dato que sobra en el log es el que
+  discrimina.**
+- Test permanente en `test_ui::test_mcra_en_bypass_no_es_falla` (cartel sin ⚠, no rojo, ticks en 0 y
+  `bypass=True` en el volcado). El `_Pipe` falso de `test_mcra_stall_reason` declara `bypass = False`
+  explícitamente, para que ese test siga probando el caso de falla de verdad.
+
+**Post-v2.2: `errores_dsp.log` estaba versionado.** Se coló en un `git add -A` mío. Es diagnóstico de
+la máquina del usuario y ya causó una vez que se tomara por fallo real lo que había dejado la propia
+suite de tests. Sacado del índice y agregado a `.gitignore` con el motivo escrito al lado.
+
 **Post-v2.2: se elimina el modo AM/SSB; el combo pasa a ser "Pasabanda".** Pedido del usuario:
 *"con la llegada de los Presets no tiene sentido mantener el combo Modo"*. Tenía razón — el modo
 sólo elegía qué tupla de límites usaba el pasabanda, así que con presets que ya traen la banda,
