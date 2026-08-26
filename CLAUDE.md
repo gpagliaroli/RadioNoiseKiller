@@ -281,6 +281,24 @@ reajustaron en el aire. Todo el contenido de abajo se validó escuchando en la r
 iteraciones de ida y vuelta (ver los "reportado en el aire" de cada ítem: casi todos los fixes de
 esta versión salieron de una escucha que contradijo una medición sintética).
 
+**Post-v2.2: los 4 presets de fábrica de AM/SSB reafinados con los controles nuevos** (agosto 2026,
+afinados al aire por el usuario — ver [[project_factory_presets]]). Cambian `AM Local - RuidoMedio`,
+`AM SW - Ruido Alto y Fading`, `AM SW - Ruido Medio y Fading` y `SSB - Ruido ALto -Perfil Adaptativo`.
+- **El patrón, y es el resultado de toda la investigación de esta tanda:**
+  - **`noise_hf_boost` a 0.0** en los tres que lo tenían (0.5, 1.0 y 1.5). Es el hallazgo medido:
+    costaba 1,0–1,6 dB de voz por ~0 dB de fondo en este receptor.
+  - **`noise_fall_db_s` explícito en los cuatro** (10 en AM SW Ruido Alto, 20 en los otros tres):
+    confirma que el freno se elige por condición y no hay un valor único.
+  - **`noise_freeze_thr` distinto en cada uno** (0.3 a 1.0), ídem.
+  - **`agc_noise_ceiling_enabled` vuelve a True en los cuatro** — estaban todos en false desde la
+    tanda anterior, cuando el techo causaba subidones; con el freno de apertura de la v2.1 el
+    problema ya no está y el usuario lo reactivó.
+  - Más presencia (varios pasan a 2000 Hz / +4,5 a +6 dB), que es lo que compensa el brillo que ya no
+    aporta el refuerzo en agudos.
+- **Se regeneraron pasando por `_capture()`**, así que se fueron solas las claves muertas
+  (`noise_fading_*` de la v2.2 y `pitch_shift_hz`). Verificado que los **7** cargan con
+  `matches()==True`, o sea sin "(modificado)" espurio (invariante 10).
+
 **Post-v2.2: el squelch de portadora trababa el estimador — CUARTA vez que muerde la trampa
 autorreferencial.** Encontrado midiendo por qué el cancelador se lleva tanta voz. La detección de
 "se cortó la portadora" comparaba la energía del frame contra **λ_d**, o sea contra la salida del
@@ -571,7 +589,7 @@ deshabilitarlo mejora"*. Tenía razón, y la causa es un defecto de años.
 - **Los 7 presets de fábrica traen el refuerzo activado**, así que todos cambian de sonido: suprimen
   algo más y modulan menos. Pendiente de re-escucha.
 
-**Post-v2.2 — ABIERTO: el fondo salta cuando el ruido de banda sube. SIETE enfoques descartados.**
+**Post-v2.2 — el fondo salta cuando el ruido de banda sube. DIEZ enfoques descartados, y una resolución PRÁCTICA (agosto 2026).**
 Reportado con un diagnóstico del usuario que resultó correcto en la cadena causal: *"cuando baja el
 ruido no se perciben problemas, a lo sumo se cancela un poco de más. Cuando sube el ruido, el piso no
 llega a subir a tiempo y la salida sube muy de golpe"*.
@@ -623,8 +641,22 @@ llega a subir a tiempo y la salida sube muy de golpe"*.
   (2) un prototipo del freno de piso medía el nivel sobre la señal YA corregida y se realimentaba
   hasta atenuar 107 dB; (3) se tomó por evidencia un `errores_dsp.log` que había dejado la propia
   suite de tests (ver el fix de higiene abajo).
-- **ABIERTO.** El usuario va a pensar un enfoque. Lo que NO hay que volver a proponer está en la
-  tabla de arriba.
+- **RESUELTO EN LA PRÁCTICA, no con un arreglo único.** Conclusión del usuario tras probar todo al
+  aire: *"con estos nuevos controles y cambios se puede controlar mucho mejor el fading y además
+  perder menos voz; por ahora es la mejor solución que encontramos a este difícil problema"*. No
+  apareció EL mecanismo que borra el salto; lo que funciona es **combinar tres cosas, ajustadas por
+  condición y guardadas en el preset**:
+  1. **Freno de bajada** (nuevo) — el único mecanismo propio que se encontró: a igual voz perdida
+     mejora la cola y el pico más que cualquier perilla vieja. Se elige por S/N (10 dB/s con señal
+     cómoda, sin freno con señal débil; la tabla de costo está en su bloque).
+  2. **Congelar piso con voz** (nuevo) — afloja el freeze cuando el estimador se queda sin frames.
+  3. **Refuerzo en agudos en 0** — 1,0–1,6 dB de voz recuperados por ~0 dB de fondo en este equipo.
+  Más los dos bugs de fondo que se arreglaron por debajo (máscara armónica del pitch dependiente del
+  bloque, y el squelch de portadora comparándose contra λ_d).
+- **Lo que NO hay que volver a proponer está en la tabla de arriba.** Y la conclusión de método que
+  deja el recorrido: en este problema **no hay un arreglo único que lo cierre**; el avance vino de
+  controles por condición que el operador elige escuchando. Antes de buscar otra vez "la solución",
+  releer la tabla y el bloque del daño a la voz.
 
 **Post-v2.2: `test_pipeline` escribía en la carpeta de datos REAL.** El test inyecta a propósito una
 curva de piso corrupta (`np.ones(7)`) para verificar la recuperación del hilo DSP, y `run_all.py`
