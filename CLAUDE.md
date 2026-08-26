@@ -299,6 +299,26 @@ afinados al aire por el usuario — ver [[project_factory_presets]]). Cambian `A
   (`noise_fading_*` de la v2.2 y `pitch_shift_hz`). Verificado que los **7** cargan con
   `matches()==True`, o sea sin "(modificado)" espurio (invariante 10).
 
+**Post-v2.2: el estilo del botón ACTIVO se unifica en la regla global.** Pedido del usuario: que la
+letra del botón que se pone rojo quede **amarilla y en negrita**.
+- **La causa de la disparidad estaba a la vista una vez mirada:** la hoja global ya ponía
+  `QPushButton:checked { background-color: #c62828; ... }`, o sea **fondo rojo a cualquier botón
+  activado**, y encima cada botón traía su propio estilo inline. El **Mute quedaba con letra ROJA
+  (#ef5350) sobre el fondo rojo** del :checked — ilegible —, el Bypass en amarillo (lo puse hoy) y
+  Grabar y ACTIVAR con el gris por defecto. Tres criterios distintos para el mismo estado.
+- **El color va en la regla global, no inline en cada botón.** Un estilo inline **PISA** la hoja
+  global, así que mientras existieran los inline no había forma de unificar desde un solo lugar.
+  Ahora `QPushButton:checked` lleva también `color: #ffd600; font-weight: bold;` y los cuatro
+  botones quedaron **sin estilo propio** — incluido ACTIVAR/DETENER, que también es checkable y
+  arrastraba el problema sin que nadie lo hubiera notado.
+- Lo propio de cada botón pasa a ser sólo el **texto** (`Grabar/Detener`, `Bypass/Crudo`,
+  `Mute/Silenciado`). Cualquier botón checkable que se agregue hereda el aspecto correcto solo.
+- Test `test_ui::test_boton_activo_letra_amarilla_y_negrita`: la regla global tiene el amarillo y la
+  negrita, **y ningún botón de la fila la sobreescribe**. El segundo assert es el que importa — sin
+  él, un inline nuevo rompería la unificación sin que nada fallara.
+- Hubo que corregir dos asserts viejos que comprobaban `btn.styleSheet()` no vacío como prueba del
+  estado activo: comprobaban justo lo que se sacó a propósito. Ahora comprueban el cambio de texto.
+
 **Post-v2.2: Grabar / Bypass / Mute con ancho uniforme (`_ACTION_BTN_W = 140`).** El usuario pidió
 120 porque los de 150 se veían vacíos. **Medido con `QFontMetrics`, 120 no alcanza**: `"⏺  Grabar"`
 pide 122 px y `"⏹  Detener"` 134.

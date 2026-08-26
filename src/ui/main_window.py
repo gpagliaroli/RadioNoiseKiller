@@ -1826,22 +1826,18 @@ class MainWindow(QMainWindow):
         """Estado visual del boton de Bypass (mismo patron que el Mute)."""
         if checked:
             self._btn_bypass.setText(tr("⇄  Crudo"))
-            self._btn_bypass.setStyleSheet("color: #ffd600; font-weight: bold;")
         else:
             self._btn_bypass.setText(tr("⇄  Bypass"))
-            self._btn_bypass.setStyleSheet("")
 
     def _on_mute_toggled(self, checked: bool) -> None:
         """Silencia la salida a los parlantes sin detener el proceso."""
         self._pipeline.set_output_mute(checked)
         if checked:
             self._btn_mute.setText(tr("🔇  Silenciado"))
-            self._btn_mute.setStyleSheet("color: #ef5350; font-weight: bold;")
             self._status_bar.showMessage(
                 tr("Salida silenciada — el procesamiento sigue activo."))
         else:
             self._btn_mute.setText(tr("🔇  Mute"))
-            self._btn_mute.setStyleSheet("")
 
     def _on_toggle_processing(self, checked: bool) -> None:
         if checked:
@@ -2272,7 +2268,14 @@ class MainWindow(QMainWindow):
                 padding: 6px;
             }
             QPushButton:hover  { background-color: #1a4a7a; }
-            QPushButton:checked { background-color: #c62828; border-color: #ef5350; }
+            /* Cualquier boton activado se pone rojo: la letra va en amarillo y
+               negrita para que se lea. Va aca y no como estilo inline de cada
+               boton para que valga igual en los tres de la fila de escucha, en
+               ACTIVAR/DETENER y en cualquier boton checkable que se agregue. */
+            QPushButton:checked {
+                background-color: #c62828; border-color: #ef5350;
+                color: #ffd600; font-weight: bold;
+            }
             QPushButton:disabled { background-color: #333; color: #666; }
             QScrollArea { border: none; }
             QStatusBar { background-color: #111; color: #aaa; font-size: 8pt; }

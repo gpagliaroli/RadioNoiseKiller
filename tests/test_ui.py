@@ -729,12 +729,16 @@ def test_bypass_es_boton_junto_al_mute():
     _app.processEvents()
     assert w._pipeline.bypass, "el boton no llego al pipeline"
     assert b.text() != texto_off, "el boton no cambia de texto al activarse"
-    assert b.styleSheet(), "el boton no marca visualmente el estado activo"
+    # El estado activo se pinta con la regla global QPushButton:checked, no con un
+    # estilo inline: asi los tres botones de la fila (y ACTIVAR) se ven igual sin
+    # repetir el color en cada uno. Antes el Mute traia el suyo propio y quedaba
+    # con letra roja sobre el fondo rojo del :checked.
+    assert not b.styleSheet(),         "estilo inline en el boton: pisa la regla global QPushButton:checked"
 
     b.setChecked(False)
     _app.processEvents()
     assert not w._pipeline.bypass
-    assert b.text() == texto_off and not b.styleSheet(), "no restaura el estado normal"
+    assert b.text() == texto_off, "no restaura el texto normal"
     print("Bypass: boton en la fila de Grabar/Mute      OK")
 
 
@@ -766,6 +770,29 @@ def test_botones_de_escucha_mismo_ancho_y_sin_recortes():
     print("Botones de escucha: mismo ancho, sin recortes OK")
 
 
+def test_boton_activo_letra_amarilla_y_negrita():
+    """Cualquier boton activado se pone rojo (regla global QPushButton:checked):
+    la letra tiene que ir en amarillo y negrita para que se lea.
+
+    Antes cada boton traia su estilo inline y no coincidian: el Mute usaba rojo
+    (#ef5350) SOBRE el fondo rojo del :checked, y Grabar y ACTIVAR se quedaban con
+    el gris por defecto. Un estilo inline en el widget PISA la regla global, asi
+    que el guard exige las dos cosas: que la regla este, y que ningun boton de la
+    fila la sobreescriba.
+    """
+    w = _win()
+    hoja = w.styleSheet()
+    assert "QPushButton:checked" in hoja
+    regla = hoja.split("QPushButton:checked", 1)[1].split("}", 1)[0]
+    assert "#ffd600" in regla, f"la letra del boton activo no es amarilla: {regla}"
+    assert "bold" in regla, f"la letra del boton activo no es negrita: {regla}"
+
+    for nombre, b in (("Grabar", w._btn_record), ("Bypass", w._btn_bypass),
+                      ("Mute", w._btn_mute), ("ACTIVAR", w._btn_start)):
+        assert not b.styleSheet(),             f"{nombre} tiene estilo inline y pisa la regla global: {b.styleSheet()!r}"
+    print("Boton activo: letra amarilla y negrita        OK")
+
+
 def test_mute_button_gating_and_state():
     """El boton Mute arranca deshabilitado (requiere proceso); al togglear
     llama set_output_mute y cambia texto/estilo; destogglear lo restaura."""
@@ -775,13 +802,17 @@ def test_mute_button_gating_and_state():
     calls = []
     orig = w._pipeline.set_output_mute
     w._pipeline.set_output_mute = lambda v: calls.append(v)
+    normal = w._btn_mute.text()
     try:
         w._btn_mute.setChecked(True)
         assert calls and calls[-1] is True, "toggle Mute no llamo set_output_mute(True)"
-        assert w._btn_mute.styleSheet(), "Mute activo sin estilo de aviso"
+        # El aviso visual lo da la regla global QPushButton:checked (fondo rojo +
+        # letra amarilla). Lo propio del boton es cambiar de TEXTO; comprobar su
+        # styleSheet() era comprobar justo lo que se saco a proposito.
+        assert w._btn_mute.text() != normal, "Mute activo no cambia de texto"
         w._btn_mute.setChecked(False)
         assert calls[-1] is False, "destoggle Mute no llamo set_output_mute(False)"
-        assert not w._btn_mute.styleSheet(), "Mute inactivo no limpio el estilo"
+        assert w._btn_mute.text() == normal, "Mute inactivo no restaura el texto"
     finally:
         w._pipeline.set_output_mute = orig
     print("Mute: gating + estado del boton              OK")
@@ -1227,6 +1258,7 @@ if __name__ == "__main__":
     test_loaded_profile_name_label()
     test_bypass_es_boton_junto_al_mute()
     test_botones_de_escucha_mismo_ancho_y_sin_recortes()
+    test_boton_activo_letra_amarilla_y_negrita()
     test_mute_button_gating_and_state()
     test_bypass_remembers_output_gain()
     test_bypass_gain_persiste_entre_sesiones()
