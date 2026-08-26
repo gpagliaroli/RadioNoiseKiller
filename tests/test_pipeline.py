@@ -468,5 +468,49 @@ assert _pe.dsp_error_count == 0, "start() no reseteo el contador de errores"
 _pe.stop()
 print("Diagnostico del hilo procesador: OK")
 
+# ---------------------------------------------------------------------------
+# Pasabanda: el combo aplica, y entrada/salida no se corrompen entre si
+#
+# En la v1.6 el filtro de SALIDA escribia en el DSPConfig compartido y corrompia
+# los limites de ENTRADA (compartian la dict por modo). Al pasar a un solo par por
+# instancia esa clase de bug queda estructuralmente descartada, pero es codigo
+# recien reescrito y el fallo ya ocurrio una vez: se prueba en LOS DOS ordenes,
+# que es lo que la version original del test no hacia.
+from config import BANDPASS_PRESETS  # noqa: E402
+
+_cb = AppConfig()
+_cb.dsp.bandpass_limits = (200, 3000)
+_cb.dsp.bandpass_out_limits = (200, 3000)
+_cb.dsp.bandpass_out_independent = False
+_pb = ProcessingPipeline(_cb)
+
+_pb.set_bandpass_preset("SSB angosto")
+assert _pb._bandpass._limits == BANDPASS_PRESETS["SSB angosto"], _pb._bandpass._limits
+assert _pb._bandpass_out._limits == BANDPASS_PRESETS["SSB angosto"], \
+    "con la casilla OFF la salida debe seguir a la entrada"
+
+_pb.set_bandpass_out_independent(True)
+_pb.set_bandpass_out_limits(150, 4000)
+assert _pb._bandpass._limits == BANDPASS_PRESETS["SSB angosto"], \
+    f"la SALIDA corrompio los limites de ENTRADA: {_pb._bandpass._limits}"
+
+_pb.set_bandpass_preset("AM 6 kHz")          # orden inverso: mover la entrada
+assert _pb._bandpass_out._limits == (150, 4000), \
+    f"la ENTRADA corrompio los limites de SALIDA: {_pb._bandpass_out._limits}"
+
+_pb.set_bandpass_out_independent(False)
+assert _pb._bandpass_out._limits == BANDPASS_PRESETS["AM 6 kHz"], \
+    "al apagar la casilla la salida no volvio a seguir a la entrada"
+
+# Dos entradas del catalogo comparten Hz (SSB ancho / AM 3 kHz): elegir la segunda
+# no debe saltar sola a la primera al re-derivar el nombre desde los limites.
+_pb.set_bandpass_preset("AM 3 kHz")
+assert _cb.dsp.bandpass_preset == "AM 3 kHz", _cb.dsp.bandpass_preset
+# ...pero mover los limites a mano SI debe pasar a "Personalizado"
+_pb.set_bandpass_limits(210, 2990)
+assert _cb.dsp.bandpass_preset not in BANDPASS_PRESETS, \
+    "editar los limites a mano no paso el preset a Personalizado"
+print("Pasabanda: combo, salida independiente y nombres: OK")
+
 print(f"\nErrores: {errors if errors else 'ninguno'}")
 print("\nPipeline: OK")
