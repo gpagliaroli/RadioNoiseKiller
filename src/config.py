@@ -1,11 +1,54 @@
 import json
 from dataclasses import dataclass, field
-from enum import Enum
 
 
-class RadioMode(Enum):
-    AM = "AM"
-    SSB = "SSB"
+# Pasabandas predefinidos del combo de la pestaña Principal. Reemplazan al viejo
+# selector de modo AM/SSB: con los presets de la app, elegir "modo" y después el
+# ancho por separado era redundante — lo que el operador elige es el ANCHO.
+# El orden es el del combo. Dos entradas pueden compartir los mismos Hz (SSB ancho
+# y AM 3 kHz): la etiqueta existe para elegir por lo que uno está escuchando, y al
+# reconocer un par de límites gana la PRIMERA de la lista.
+BANDPASS_PRESETS: "dict[str, tuple[int, int]]" = {
+    "SSB muy angosto": (400, 2100),
+    "SSB angosto":     (300, 2400),
+    "SSB normal":      (200, 2700),
+    "SSB ancho":       (200, 3000),
+    "AM 3 kHz":        (200, 3000),
+    "AM 4 kHz":        (150, 4000),
+    "AM 6 kHz":        (100, 6000),
+    "AM 8 kHz":        (100, 8000),
+}
+BANDPASS_CUSTOM = "Personalizado"
+
+
+def _leer_limites(crudo, modo_viejo, por_defecto) -> tuple:
+    """Lee los límites del pasabanda aceptando el formato viejo y el nuevo.
+
+    Hasta la v2.2 se guardaba un par POR MODO (`{"AM": [...], "SSB": [...]}`)
+    y un campo `mode` que decía cuál estaba activo. Al desaparecer el selector
+    de modo, se migra tomando el par del modo que estaba en uso: así lo que se
+    escucha después de actualizar es exactamente lo que se escuchaba antes. El
+    par del otro modo se descarta — es justo lo que ahora cubren los presets.
+    """
+    if crudo is None:
+        return tuple(por_defecto)
+    if isinstance(crudo, dict):                       # formato viejo
+        modo = "SSB" if modo_viejo in (None, "SSB-USB", "SSB-LSB") else str(modo_viejo)
+        par = crudo.get(modo) or next(iter(crudo.values()), None)
+        return tuple(par) if par else tuple(por_defecto)
+    try:                                              # formato nuevo
+        return (int(crudo[0]), int(crudo[1]))
+    except (TypeError, IndexError, ValueError):
+        return tuple(por_defecto)
+
+
+def bandpass_preset_for(limits) -> str:
+    """Nombre del preset que coincide con `limits`, o BANDPASS_CUSTOM."""
+    par = (int(limits[0]), int(limits[1]))
+    for nombre, v in BANDPASS_PRESETS.items():
+        if v == par:
+            return nombre
+    return BANDPASS_CUSTOM
 
 
 # Escalas de interfaz ofrecidas. El tope es 150%: la ventana tiene ancho FIJO
@@ -44,7 +87,6 @@ class AudioConfig:
 
 @dataclass
 class DSPConfig:
-    mode: RadioMode = RadioMode.SSB
     agc_preset: str = "off"
     blanker_enabled:  bool  = True
     bandpass_pre_enabled:  bool = True
@@ -102,15 +144,12 @@ class DSPConfig:
     voice_leveler_max_db:   float = 12.0   # ganancia máxima del nivelador (0-20 dB)
     voice_leveler_gate_voice: bool = True  # True: adapta solo con voz (VAD). False: continuo (música)
     voice_leveler_release_ms: float = 1500.0  # velocidad de respuesta del nivelador (200-3000 ms)
-    bandpass_limits: dict = field(default_factory=lambda: {
-        RadioMode.AM:  (300, 5000),
-        RadioMode.SSB: (200, 3000),
-    })
+    # Un solo par de límites, no uno por modo: el ancho se elige con el combo
+    # "Pasabanda" (BANDPASS_PRESETS) o a mano en Avanzada Audio.
+    bandpass_preset: str = "SSB ancho"
+    bandpass_limits: tuple = (200, 3000)
     bandpass_out_independent: bool = False  # False = la salida sigue a la entrada (legado)
-    bandpass_out_limits: dict = field(default_factory=lambda: {
-        RadioMode.AM:  (300, 5000),
-        RadioMode.SSB: (200, 3000),
-    })
+    bandpass_out_limits: tuple = (200, 3000)
     filter_order: int = 4
 
 
@@ -163,7 +202,7 @@ class AppConfig:
                 "record_raw_input": self.audio.record_raw_input,
             },
             "dsp": {
-                "mode": self.dsp.mode.value,
+                "bandpass_preset": self.dsp.bandpass_preset,
                 "agc_preset": self.dsp.agc_preset,
                 "agc_noise_ceiling_enabled": self.dsp.agc_noise_ceiling_enabled,
                 "agc_noise_ceiling_db": self.dsp.agc_noise_ceiling_db,
@@ -214,15 +253,9 @@ class AppConfig:
                 "voice_leveler_gate_voice": self.dsp.voice_leveler_gate_voice,
                 "voice_leveler_release_ms": self.dsp.voice_leveler_release_ms,
                 "filter_order": self.dsp.filter_order,
-                "bandpass_limits": {
-                    m.value: list(v)
-                    for m, v in self.dsp.bandpass_limits.items()
-                },
+                "bandpass_limits": list(self.dsp.bandpass_limits),
                 "bandpass_out_independent": self.dsp.bandpass_out_independent,
-                "bandpass_out_limits": {
-                    m.value: list(v)
-                    for m, v in self.dsp.bandpass_out_limits.items()
-                },
+                "bandpass_out_limits": list(self.dsp.bandpass_out_limits),
             },
             "gain": {
                 "input_gain_db": self.gain.input_gain_db,
@@ -267,13 +300,6 @@ class AppConfig:
                                                  self.audio.record_raw_input))
 
         d = data.get("dsp", {})
-        try:
-            raw_mode = d.get("mode", self.dsp.mode.value)
-            if raw_mode in ("SSB-USB", "SSB-LSB"):
-                raw_mode = "SSB"
-            self.dsp.mode = RadioMode(raw_mode)
-        except ValueError:
-            pass
         self.dsp.agc_preset       = d.get("agc_preset",       self.dsp.agc_preset)
         self.dsp.agc_noise_ceiling_enabled = bool(d.get("agc_noise_ceiling_enabled", self.dsp.agc_noise_ceiling_enabled))
         self.dsp.agc_noise_ceiling_db = float(d.get("agc_noise_ceiling_db", self.dsp.agc_noise_ceiling_db))
@@ -329,20 +355,19 @@ class AppConfig:
         self.dsp.voice_leveler_gate_voice = bool(d.get("voice_leveler_gate_voice", self.dsp.voice_leveler_gate_voice))
         self.dsp.voice_leveler_release_ms = float(d.get("voice_leveler_release_ms", self.dsp.voice_leveler_release_ms))
         self.dsp.filter_order = d.get("filter_order", self.dsp.filter_order)
-        for mode_str, limits in d.get("bandpass_limits", {}).items():
-            if mode_str in ("SSB-USB", "SSB-LSB"):
-                mode_str = "SSB"
-            try:
-                self.dsp.bandpass_limits[RadioMode(mode_str)] = tuple(limits)
-            except ValueError:
-                pass
+        self.dsp.bandpass_limits = _leer_limites(
+            d.get("bandpass_limits"), d.get("mode"), self.dsp.bandpass_limits)
         self.dsp.bandpass_out_independent = bool(d.get("bandpass_out_independent",
                                                        self.dsp.bandpass_out_independent))
-        for mode_str, limits in d.get("bandpass_out_limits", {}).items():
-            try:
-                self.dsp.bandpass_out_limits[RadioMode(mode_str)] = tuple(limits)
-            except ValueError:
-                pass
+        self.dsp.bandpass_out_limits = _leer_limites(
+            d.get("bandpass_out_limits"), d.get("mode"), self.dsp.bandpass_out_limits)
+        # El nombre guardado sólo vale si sigue coincidiendo con los límites: si
+        # alguien editó el JSON a mano, manda lo que suena.
+        guardado = d.get("bandpass_preset")
+        real = bandpass_preset_for(self.dsp.bandpass_limits)
+        self.dsp.bandpass_preset = (
+            guardado if guardado in BANDPASS_PRESETS
+            and BANDPASS_PRESETS[guardado] == tuple(self.dsp.bandpass_limits) else real)
 
         g = data.get("gain", {})
         self.gain.input_gain_db = g.get("input_gain_db", self.gain.input_gain_db)

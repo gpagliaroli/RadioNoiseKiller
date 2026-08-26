@@ -133,7 +133,7 @@ Controles principales de operación: modo de recepción, AGC y activación del p
 
 | Control | Descripción |
 |---------|-------------|
-| **Modo** | Selecciona el tipo de señal recibida: **AM** (amplitud modulada, ancho de banda más amplio) o **SSB** (banda lateral única, voz comprimida en frecuencia). Afecta los límites por defecto del Filtro de Paso de Banda. |
+| **Pasabanda** | Ancho del filtro de entrada, elegido por lo que se está escuchando. Hay ocho anchos listos —cuatro de fonía SSB y cuatro de AM— más **Personalizado**, que son los límites que se ajusten a mano en *Avanzada Audio*. Reemplaza al viejo selector **Modo (AM/SSB)**: con los presets de la app, elegir el modo y después el ancho era decir dos veces lo mismo — lo que se elige es el **ancho**. |
 | **AGC** | Control Automático de Ganancia. **off** = sin AGC. **slow / medium / fast** = velocidad de respuesta (ataque/release fijos por preset). Para SSB se recomienda *slow* o *medium*; para AM con señales estables, *off* o *slow*. |
 | **Nivelar en continuo (música)** | Casilla del **Nivelador de voz** (Cap. 7), puesta acá porque se cambia según lo que se esté escuchando: marcada para música o audio continuo, sin marcar para voz. Requiere el cancelador y el nivelador activos. |
 | **Techo de ruido** | Limita cuánto puede amplificar el AGC, para que no levante el ruido de banda. Ver más abajo. |
@@ -286,17 +286,37 @@ Ambos se activan/desactivan de forma independiente desde **Módulos Activos**.
 
 ### Controles
 
-| Control | Rango | Default AM | Default SSB | Descripción |
-|---------|-------|-----------|-------------|-------------|
-| **AM Hz inferior** | 50–1000 Hz | 300 Hz | — | Frecuencia de corte inferior para AM. |
-| **AM Hz superior** | 1000–10000 Hz | 5000 Hz | — | Frecuencia de corte superior. Subir hasta 10 kHz para AM locales con audio de alta fidelidad. |
-| **SSB Hz inferior** | 50–1000 Hz | — | 200 Hz | Corte inferior para SSB. |
-| **SSB Hz superior** | 1000–5000 Hz | — | 3000 Hz | Corte superior para SSB. |
-| **Orden del filtro** | 2 / 4 / 6 / 8 | 4 | 4 | Pendiente del filtro. Mayor orden = corte más abrupto = mejor rechazo fuera de banda, pero mayor latencia de fase. Para uso normal, orden 4 es adecuado. |
+| Control | Rango | Default | Descripción |
+|---------|-------|---------|-------------|
+| **Entrada – Hz inferior** | 50–1000 Hz | 200 Hz | Corte inferior. Subirlo saca retumbe, zumbido de red y ruido de motor; bajarlo deja más cuerpo en la voz. |
+| **Entrada – Hz superior** | 1000–10000 Hz | 3000 Hz | Corte superior. Bajarlo saca siseo y QRM del canal de al lado; subirlo deja más brillo y consonantes. Hasta 10 kHz para emisoras de AM local con buen audio. |
+| **Orden del filtro** | 2 / 4 / 6 / 8 | 4 | Pendiente del filtro. Mayor orden = corte más abrupto = mejor rechazo fuera de banda, pero mayor latencia de fase. Para uso normal, orden 4 es adecuado. |
+
+> **Estos sliders y el combo Pasabanda son el mismo ajuste visto de dos maneras.** Elegir un ancho en
+> el combo mueve los sliders; mover un slider pone el combo en **Personalizado**. Nunca muestran
+> cosas distintas, así que el combo siempre dice lo que de verdad está sonando.
+>
+> **Anchos disponibles en el combo:**
+>
+> | | Corte inferior | Corte superior |
+> |---|---|---|
+> | SSB muy angosto | 400 Hz | 2100 Hz |
+> | SSB angosto | 300 Hz | 2400 Hz |
+> | SSB normal | 200 Hz | 2700 Hz |
+> | SSB ancho | 200 Hz | 3000 Hz |
+> | AM 3 kHz | 200 Hz | 3000 Hz |
+> | AM 4 kHz | 150 Hz | 4000 Hz |
+> | AM 6 kHz | 100 Hz | 6000 Hz |
+> | AM 8 kHz | 100 Hz | 8000 Hz |
+>
+> *SSB ancho* y *AM 3 kHz* son los mismos hercios con dos nombres: la etiqueta está para elegir por
+> lo que uno escucha, no para que haya que traducir mentalmente. Y ojo con los anchos grandes: no
+> sirven de nada si el receptor no entrega señal ahí arriba — se ve mirando hasta dónde llega la
+> curva de **Entrada** en la pestaña Espectro (ver el Cap. del espectro).
 
 ### Salida independiente de la entrada
 
-Por defecto, el filtro de salida usa **los mismos límites** que el de entrada. La casilla **"Salida independiente de la entrada"** habilita cuatro sliders propios (AM/SSB salida, inferior/superior) para desacoplarlos.
+Por defecto, el filtro de salida usa **los mismos límites** que el de entrada. La casilla **"Salida independiente de la entrada"** habilita dos sliders propios (*Salida – Hz inferior/superior*) para desacoplarlos. La salida no tiene combo: es un retoque fino sobre el ancho que ya se eligió, y casi siempre se define en relación a la entrada (más ancha).
 
 ¿Para qué? Dos filtros iguales en cascada duplican la atenuación en el borde de banda: la parte alta de la voz llega **doblemente apagada**. Con salida independiente se puede usar:
 
@@ -383,7 +403,7 @@ El estimador Log-MMSE (Ephraim & Malah, 1985) calcula la ganancia óptima bin a 
 
 ### Modos de estimación de ruido
 
-El cancelador ofrece dos modos, seleccionables desde el selector **Modo:** en la pestaña Principal:
+El cancelador ofrece dos modos, seleccionables desde el selector **Modo:** del grupo *Cancelador de ruido* en la pestaña Principal (no confundir con el combo **Pasabanda**, que elige el ancho del filtro):
 
 **Perfil estático** (modo manual)
 El algoritmo aprende una "foto" del ruido de fondo durante unos segundos y la usa como referencia fija. Ideal cuando el ruido de banda es muy estable.

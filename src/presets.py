@@ -11,7 +11,8 @@ del preset.
 import json
 import os
 import re
-from config import AppConfig, DSPConfig, GainConfig, RadioMode
+from config import (AppConfig, DSPConfig, GainConfig,
+                    BANDPASS_PRESETS, _leer_limites, bandpass_preset_for)
 
 
 class PresetManager:
@@ -121,7 +122,7 @@ class PresetManager:
             "name": name,
             "version": PresetManager.VERSION,
             "dsp": {
-                "mode":                      dsp.mode.value,
+                "bandpass_preset":           dsp.bandpass_preset,
                 "agc_preset":                dsp.agc_preset,
                 "agc_noise_ceiling_enabled": dsp.agc_noise_ceiling_enabled,
                 "agc_noise_ceiling_db":      dsp.agc_noise_ceiling_db,
@@ -130,9 +131,9 @@ class PresetManager:
                 "blanker_mini":              dsp.blanker_mini,
                 "bandpass_pre_enabled":      dsp.bandpass_pre_enabled,
                 "bandpass_post_enabled":     dsp.bandpass_post_enabled,
-                "bandpass_limits":           {m.value: list(v) for m, v in dsp.bandpass_limits.items()},
+                "bandpass_limits":           list(dsp.bandpass_limits),
                 "bandpass_out_independent":  dsp.bandpass_out_independent,
-                "bandpass_out_limits":       {m.value: list(v) for m, v in dsp.bandpass_out_limits.items()},
+                "bandpass_out_limits":       list(dsp.bandpass_out_limits),
                 "filter_order":              dsp.filter_order,
                 "anf_enabled":               dsp.anf_enabled,
                 "anf_threshold":             dsp.anf_threshold,
@@ -202,10 +203,6 @@ class PresetManager:
         ddef = DSPConfig()    # defaults de fabrica (instancia propia: dicts mutables)
         gdef = GainConfig()
 
-        try:
-            dsp.mode = RadioMode(d.get("mode", ddef.mode.value))
-        except ValueError:
-            dsp.mode = ddef.mode
         dsp.agc_preset           = d.get("agc_preset",           ddef.agc_preset)
         dsp.agc_noise_ceiling_enabled = bool(d.get("agc_noise_ceiling_enabled", ddef.agc_noise_ceiling_enabled))
         dsp.agc_noise_ceiling_db = float(d.get("agc_noise_ceiling_db", ddef.agc_noise_ceiling_db))
@@ -216,24 +213,20 @@ class PresetManager:
         dsp.blanker_mini         = float(d.get("blanker_mini",    ddef.blanker_mini))
         dsp.bandpass_pre_enabled  = bool(d.get("bandpass_pre_enabled",  ddef.bandpass_pre_enabled))
         dsp.bandpass_post_enabled = bool(d.get("bandpass_post_enabled", ddef.bandpass_post_enabled))
-        # Los limites parten SIEMPRE de los defaults y el preset los pisa (un modo
-        # ausente en el JSON vuelve a fabrica, no conserva el valor vivo).
-        limits = dict(ddef.bandpass_limits)
-        for mode_str, v in d.get("bandpass_limits", {}).items():
-            try:
-                limits[RadioMode(mode_str)] = tuple(v)
-            except ValueError:
-                pass
-        dsp.bandpass_limits = limits
+        # Ausente -> default de fabrica (invariante 10). `_leer_limites` acepta el
+        # formato viejo (un par por modo + el campo `mode`) y migra tomando el par
+        # del modo que el preset tenia activo, asi un preset de la v2.2 suena igual.
+        dsp.bandpass_limits = _leer_limites(d.get("bandpass_limits"), d.get("mode"),
+                                            ddef.bandpass_limits)
         dsp.bandpass_out_independent = bool(d.get("bandpass_out_independent",
                                                   ddef.bandpass_out_independent))
-        out_limits = dict(ddef.bandpass_out_limits)
-        for mode_str, v in d.get("bandpass_out_limits", {}).items():
-            try:
-                out_limits[RadioMode(mode_str)] = tuple(v)
-            except ValueError:
-                pass
-        dsp.bandpass_out_limits = out_limits
+        dsp.bandpass_out_limits = _leer_limites(d.get("bandpass_out_limits"), d.get("mode"),
+                                                ddef.bandpass_out_limits)
+        guardado = d.get("bandpass_preset")
+        dsp.bandpass_preset = (
+            guardado if guardado in BANDPASS_PRESETS
+            and BANDPASS_PRESETS[guardado] == tuple(dsp.bandpass_limits)
+            else bandpass_preset_for(dsp.bandpass_limits))
         dsp.filter_order    = int(d.get("filter_order",   ddef.filter_order))
         dsp.anf_enabled     = bool(d.get("anf_enabled",   ddef.anf_enabled))
         dsp.anf_threshold   = float(d.get("anf_threshold",ddef.anf_threshold))

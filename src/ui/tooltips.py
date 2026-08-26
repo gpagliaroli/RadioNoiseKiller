@@ -72,39 +72,28 @@ SLIDER_TIPS = {
         "o más) para que no bombee. Si escuchás la ganancia 'respirar', andá hacia\n"
         "suave."
     ),
-    "_s_am_lo": (
-        "Corte inferior del filtro de entrada en AM. Subilo para sacar retumbe,\n"
-        "zumbido de red y ruido de motor; bajarlo deja más cuerpo en la voz."
+    "_s_bp_lo": (
+        "Corte inferior del filtro de entrada. Subilo para sacar retumbe, zumbido\n"
+        "de red y ruido de motor; bajarlo deja más cuerpo en la voz.\n"
+        "En banda angosta, 300 Hz limpia bastante sin tocar la inteligibilidad."
     ),
-    "_s_am_hi": (
-        "Corte superior del filtro de entrada en AM. Bajarlo saca siseo y QRM del\n"
-        "canal de al lado; subirlo deja más brillo y claridad en las consonantes."
+    "_s_bp_hi": (
+        "Corte superior del filtro de entrada. Bajarlo saca siseo y QRM del canal\n"
+        "de al lado; subirlo deja más brillo y claridad en las consonantes.\n"
+        "2700–2900 Hz es el ancho clásico de fonía; en AM se puede ir bastante más\n"
+        "arriba, hasta donde llegue tu receptor.\n"
+        "Moverlo pone el combo Pasabanda en Personalizado."
     ),
-    "_s_ssb_lo": (
-        "Corte inferior del filtro de entrada en SSB. En banda angosta subirlo un\n"
-        "poco (300 Hz) limpia mucho retumbe sin tocar la inteligibilidad."
-    ),
-    "_s_ssb_hi": (
-        "Corte superior del filtro de entrada en SSB. 2700–2900 Hz es el ancho\n"
-        "clásico de fonía; angostarlo le da menos soplido que masticar al cancelador."
-    ),
-    "_s_out_am_lo": (
-        "Corte inferior del filtro de SALIDA en AM (sólo con 'Salida independiente').\n"
+    "_s_out_lo": (
+        "Corte inferior del filtro de SALIDA (sólo con 'Salida independiente').\n"
         "Sirve para dejar la entrada angosta —menos ruido al cancelador— y la salida\n"
         "más ancha, para que la voz no llegue doblemente apagada."
     ),
-    "_s_out_am_hi": (
-        "Corte superior del filtro de SALIDA en AM (sólo con 'Salida independiente').\n"
+    "_s_out_hi": (
+        "Corte superior del filtro de SALIDA (sólo con 'Salida independiente').\n"
         "Poniéndolo por encima del corte de entrada se recupera el borde de la voz\n"
-        "que se perdía al encadenar dos filtros con el mismo corte."
-    ),
-    "_s_out_ssb_lo": (
-        "Corte inferior del filtro de SALIDA en SSB (sólo con 'Salida independiente')."
-    ),
-    "_s_out_ssb_hi": (
-        "Corte superior del filtro de SALIDA en SSB (sólo con 'Salida independiente').\n"
-        "3200–3500 Hz con la entrada en 2700 deja la voz más abierta sin dejar\n"
-        "entrar más ruido al cancelador."
+        "que se perdía al encadenar dos filtros con el mismo corte: 3200–3500 Hz\n"
+        "con la entrada en 2700 deja la voz más abierta sin dejar entrar más ruido."
     ),
     "_s_order": (
         "Qué tan abrupto es el corte en el borde de la banda.\n"

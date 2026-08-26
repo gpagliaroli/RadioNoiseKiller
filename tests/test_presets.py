@@ -10,13 +10,13 @@ import tempfile
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from config import AppConfig, DSPConfig, GainConfig, RadioMode
+from config import AppConfig, DSPConfig, GainConfig, BANDPASS_PRESETS
 from presets import PresetManager
 from pipeline import ProcessingPipeline
 
 
 # Campos de DSPConfig gestionados como sub-dict en el preset (no campo simple)
-_DSP_COMPLEX = {"bandpass_limits"}
+_DSP_COMPLEX = set()
 
 
 def _all_dsp_fields():
@@ -197,18 +197,22 @@ def test_multiple_presets_list_order():
         print("List ordenado alfabeticamente    OK")
 
 
-def test_load_applies_mode():
+def test_load_applies_bandpass():
+    """El preset trae el pasabanda: sus limites Y el nombre del combo."""
     with tempfile.TemporaryDirectory() as tmpdir:
         mgr = PresetManager(tmpdir)
         app = AppConfig()
-        app.dsp.mode = RadioMode.AM
+        app.dsp.bandpass_limits = BANDPASS_PRESETS["AM 6 kHz"]
+        app.dsp.bandpass_preset = "AM 6 kHz"
         mgr.save("AM Preset", app)
 
         app2 = AppConfig()
-        app2.dsp.mode = RadioMode.SSB
+        app2.dsp.bandpass_limits = (300, 2400)
+        app2.dsp.bandpass_preset = "SSB angosto"
         mgr.load_into("AM Preset", app2)
-        assert app2.dsp.mode == RadioMode.AM
-        print("load_into aplica RadioMode       OK")
+        assert tuple(app2.dsp.bandpass_limits) == BANDPASS_PRESETS["AM 6 kHz"]
+        assert app2.dsp.bandpass_preset == "AM 6 kHz"
+        print("load_into aplica el pasabanda    OK")
 
 
 # ---------------------------------------------------------------------- #
@@ -248,7 +252,6 @@ def test_missing_keys_use_factory_defaults():
         mgr.load_into("Viejo", app)
 
         # Lo que el preset SI trae
-        assert app.dsp.mode == RadioMode.AM
         assert app.dsp.noise_alpha == 0.5
         assert app.gain.input_gain_db == 3.0
         # Lo ausente vuelve a fabrica, no conserva el valor vivo
@@ -268,30 +271,38 @@ def test_missing_keys_use_factory_defaults():
         print("Claves ausentes -> default       OK")
 
 
-def test_missing_bandpass_mode_uses_default():
-    """Un modo ausente en bandpass_limits vuelve al default, no queda el vivo."""
+def test_preset_viejo_migra_el_pasabanda():
+    """Un preset del formato viejo (un par POR MODO + campo `mode`) migra tomando
+    el par del modo que tenia activo: lo que se escucha no cambia al actualizar.
+    Y si no trae limites, vuelve al default de fabrica (invariante 10)."""
     with tempfile.TemporaryDirectory() as tmpdir:
         mgr = PresetManager(tmpdir)
-        old = {
-            "name": "SoloAM",
-            "version": 1,
-            "dsp": {"bandpass_limits": {"AM": [400, 4000]}},
+        viejo = {
+            "name": "ViejoAM", "version": 1,
+            "dsp": {"mode": "AM",
+                    "bandpass_limits":     {"AM": [400, 4000], "SSB": [200, 2700]},
+                    "bandpass_out_limits": {"AM": [300, 5000], "SSB": [200, 3000]}},
             "gain": {},
         }
-        with open(os.path.join(tmpdir, "SoloAM.json"), "w", encoding="utf-8") as f:
-            json.dump(old, f)
+        with open(os.path.join(tmpdir, "ViejoAM.json"), "w", encoding="utf-8") as f:
+            json.dump(viejo, f)
+        sin_limites = dict(viejo, name="SinLimites")
+        sin_limites["dsp"] = {"mode": "AM"}
+        with open(os.path.join(tmpdir, "SinLimites.json"), "w", encoding="utf-8") as f:
+            json.dump(sin_limites, f)
 
         app = AppConfig()
-        app.dsp.bandpass_limits[RadioMode.SSB]     = (100, 2000)
-        app.dsp.bandpass_out_limits[RadioMode.AM]  = (500, 4500)
-
-        mgr.load_into("SoloAM", app)
+        app.dsp.bandpass_limits = (100, 2000)      # valor vivo, no debe sobrevivir
+        mgr.load_into("ViejoAM", app)
+        assert tuple(app.dsp.bandpass_limits) == (400, 4000), app.dsp.bandpass_limits
+        assert tuple(app.dsp.bandpass_out_limits) == (300, 5000)
 
         dflt = DSPConfig()
-        assert app.dsp.bandpass_limits[RadioMode.AM] == (400, 4000)
-        assert app.dsp.bandpass_limits[RadioMode.SSB] == dflt.bandpass_limits[RadioMode.SSB]
-        assert app.dsp.bandpass_out_limits == dflt.bandpass_out_limits
-        print("Bandpass: modo ausente -> default OK")
+        app2 = AppConfig()
+        app2.dsp.bandpass_limits = (100, 2000)
+        mgr.load_into("SinLimites", app2)
+        assert tuple(app2.dsp.bandpass_limits) == tuple(dflt.bandpass_limits)
+        print("Preset viejo: migra el pasabanda OK")
 
 
 # ---------------------------------------------------------------------------- #
@@ -352,9 +363,9 @@ if __name__ == "__main__":
     test_rename()
     test_delete()
     test_multiple_presets_list_order()
-    test_load_applies_mode()
+    test_load_applies_bandpass()
     test_missing_keys_use_factory_defaults()
-    test_missing_bandpass_mode_uses_default()
+    test_preset_viejo_migra_el_pasabanda()
     test_seed_factory_presets()
     test_specs_bundle_factory_presets()
     print()

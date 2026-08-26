@@ -291,49 +291,61 @@ def test_leveler_continuous_checkbox():
     print("Nivelador: casilla continuo + gating         OK")
 
 
-def test_bandpass_sliders_gated_by_mode():
-    """Los sliders de bandpass AM se habilitan solo en modo AM y los SSB solo en SSB
-    (UX). El slider de orden es común a ambos. Cambiar el modo refresca el estado."""
-    from config import RadioMode
+def test_bandpass_preset_combo():
+    """El combo Pasabanda aplica los limites, y editarlos a mano lo pasa a
+    Personalizado (si no, el combo mentiria sobre lo que esta sonando)."""
+    from config import BANDPASS_PRESETS, BANDPASS_CUSTOM
     w = _win()
     aud = w._adv_audio_tab
-    w._config.dsp.bandpass_pre_enabled = True   # asegurar bandpass activo
+    w._config.dsp.bandpass_pre_enabled = True
 
-    _set_combo(w._combo_mode, RadioMode.AM)
-    assert aud._s_am_lo._slider.isEnabled(),      "AM lo deshabilitado en modo AM"
-    assert aud._s_am_hi._slider.isEnabled(),      "AM hi deshabilitado en modo AM"
-    assert not aud._s_ssb_lo._slider.isEnabled(), "SSB lo habilitado en modo AM"
-    assert aud._s_order._slider.isEnabled(),      "orden (común) deshabilitado"
+    _set_combo(w._combo_bandpass, "AM 6 kHz")
+    assert tuple(w._config.dsp.bandpass_limits) == BANDPASS_PRESETS["AM 6 kHz"]
+    # value() del SliderRow, no _slider.value(): el QSlider guarda el valor
+    # ESCALADO a entero (paso de 10 Hz), no los Hz.
+    assert aud._s_bp_hi.value() == BANDPASS_PRESETS["AM 6 kHz"][1],         "los sliders de Avanzada no siguieron al combo"
 
-    _set_combo(w._combo_mode, RadioMode.SSB)
-    assert not aud._s_am_lo._slider.isEnabled(),  "AM lo habilitado en modo SSB"
-    assert aud._s_ssb_lo._slider.isEnabled(),     "SSB lo deshabilitado en modo SSB"
-    assert aud._s_ssb_hi._slider.isEnabled(),     "SSB hi deshabilitado en modo SSB"
-    print("Bandpass AM/SSB gateado por modo           OK")
+    _set_combo(w._combo_bandpass, "SSB angosto")
+    assert tuple(w._config.dsp.bandpass_limits) == BANDPASS_PRESETS["SSB angosto"]
+
+    # Editar a mano -> Personalizado, y el combo lo refleja
+    aud._s_bp_hi.set_value(2550, emit=True)
+    _app.processEvents()
+    assert w._config.dsp.bandpass_preset == BANDPASS_CUSTOM,         "editar los limites no paso el preset a Personalizado"
+    assert w._combo_bandpass.currentData() == BANDPASS_CUSTOM,         "el combo no siguio al cambio manual"
+    print("Combo Pasabanda: aplica y detecta manual   OK")
+
+
+def test_bandpass_preset_ambiguo_no_salta():
+    """Dos entradas comparten Hz (SSB ancho / AM 3 kHz): elegir la segunda no
+    debe saltar sola a la primera al re-derivar el nombre desde los limites."""
+    from config import BANDPASS_PRESETS
+    assert BANDPASS_PRESETS["SSB ancho"] == BANDPASS_PRESETS["AM 3 kHz"],         "el test asume que estos dos comparten limites"
+    w = _win()
+    _set_combo(w._combo_bandpass, "AM 3 kHz")
+    assert w._config.dsp.bandpass_preset == "AM 3 kHz", w._config.dsp.bandpass_preset
+    assert w._combo_bandpass.currentData() == "AM 3 kHz"
+    print("Combo Pasabanda: no salta entre iguales    OK")
 
 
 def test_bandpass_out_requires_post_and_independent():
     """Los sliders de salida independiente requieren bandpass post + la casilla."""
-    from config import RadioMode
     w = _win()
     aud = w._adv_audio_tab
-    _set_combo(w._combo_mode, RadioMode.AM)   # chequeamos los sliders de salida AM
 
     w._chk_bandpass_post.setChecked(True)
     aud._chk_bp_out.setChecked(True)
     _app.processEvents()
-    assert aud._s_out_am_lo._slider.isEnabled(), "salida independiente deberia habilitarse"
+    assert aud._s_out_lo._slider.isEnabled(), "salida independiente deberia habilitarse"
 
     aud._chk_bp_out.setChecked(False)
     _app.processEvents()
-    assert not aud._s_out_am_lo._slider.isEnabled(), \
-        "salida independiente habilitada con la casilla OFF"
+    assert not aud._s_out_lo._slider.isEnabled(),         "salida independiente habilitada con la casilla OFF"
 
     aud._chk_bp_out.setChecked(True)
     w._chk_bandpass_post.setChecked(False)
     _app.processEvents()
-    assert not aud._s_out_am_lo._slider.isEnabled(), \
-        "salida independiente habilitada con bandpass post OFF"
+    assert not aud._s_out_lo._slider.isEnabled(),         "salida independiente habilitada con bandpass post OFF"
     print("Bandpass salida independiente gateado      OK")
 
 
@@ -1127,7 +1139,8 @@ if __name__ == "__main__":
     test_agc_noise_ceiling_controls()
     test_voice_leveler_requires_noise()
     test_leveler_continuous_checkbox()
-    test_bandpass_sliders_gated_by_mode()
+    test_bandpass_preset_combo()
+    test_bandpass_preset_ambiguo_no_salta()
     test_bandpass_out_requires_post_and_independent()
     test_refresh_from_config_restores_checkboxes()
     test_window_title_reflects_preset()

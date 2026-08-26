@@ -12,7 +12,8 @@ from audio.devices import (
     list_devices, rescan_devices, AudioDevice,
     IncompatibleDevicesError, duplex_hostapi_mismatch,
 )
-from config import AppConfig, RadioMode, GainConfig, DSPConfig, UI_SCALES
+from config import (AppConfig, GainConfig, DSPConfig, UI_SCALES,
+                    BANDPASS_PRESETS, BANDPASS_CUSTOM)
 from i18n import tr, set_language
 from pipeline import ProcessingPipeline
 from ui.vu_meter import VuMeter
@@ -177,6 +178,7 @@ class MainWindow(QMainWindow):
         # Los sliders de Avanzadas conectan directo al pipeline; sin esto sus
         # cambios no marcan "(modificado)" ni agendan el guardado.
         self._adv_audio_tab.changed.connect(self._schedule_save)
+        self._adv_audio_tab.bandpass_changed.connect(self._refresh_bandpass_combo)
         self._adv_impulse_tab.changed.connect(self._schedule_save)
         self._adv_canceller_tab.changed.connect(self._schedule_save)
         self._tabs.addTab(self._adv_audio_tab,     tr("Avanzada Audio"))
@@ -302,13 +304,21 @@ class MainWindow(QMainWindow):
         group = QGroupBox(tr("Control"))
         layout = QVBoxLayout(group)
 
-        self._combo_mode = QComboBox()
-        for mode in RadioMode:
-            self._combo_mode.addItem(mode.value, mode)
-        self._combo_mode.currentIndexChanged.connect(self._on_mode_changed)
-        mode_row = self._labeled_row(tr("Modo:"), self._combo_mode)
-        mode_row.addStretch()
-        layout.addLayout(mode_row)
+        # Reemplaza al viejo selector de modo AM/SSB: con los presets de la app,
+        # elegir el modo y despues el ancho era redundante. Lo que se elige es el
+        # ANCHO; "Personalizado" son los limites de Avanzada Audio.
+        self._combo_bandpass = QComboBox()
+        for nombre in BANDPASS_PRESETS:
+            self._combo_bandpass.addItem(tr(nombre), nombre)
+        self._combo_bandpass.addItem(tr(BANDPASS_CUSTOM), BANDPASS_CUSTOM)
+        self._combo_bandpass.setToolTip(tr(
+            "Ancho del filtro de entrada. Elegilo por lo que estás escuchando:\n"
+            "los SSB son para fonía de banda lateral y los AM para emisoras.\n"
+            "Al mover los límites en Avanzada Audio pasa solo a Personalizado."))
+        self._combo_bandpass.currentIndexChanged.connect(self._on_bandpass_preset)
+        bp_row = self._labeled_row(tr("Pasabanda:"), self._combo_bandpass)
+        bp_row.addStretch()
+        layout.addLayout(bp_row)
 
         agc_row = QHBoxLayout()
         agc_lbl = QLabel(tr("AGC:"))
@@ -1055,10 +1065,7 @@ class MainWindow(QMainWindow):
             cb.blockSignals(False)
             setter(val)
 
-        for i in range(self._combo_mode.count()):
-            if self._combo_mode.itemData(i) == self._config.dsp.mode:
-                self._combo_mode.setCurrentIndex(i)
-                break
+        self._refresh_bandpass_combo()
 
         for i in range(self._combo_agc.count()):
             if self._combo_agc.itemData(i) == self._config.dsp.agc_preset:
@@ -1124,14 +1131,9 @@ class MainWindow(QMainWindow):
             cb.blockSignals(False)
             setter(val)
 
-        # --- Modo AM/SSB ---
-        for i in range(self._combo_mode.count()):
-            if self._combo_mode.itemData(i) == cfg.mode:
-                self._combo_mode.blockSignals(True)
-                self._combo_mode.setCurrentIndex(i)
-                self._combo_mode.blockSignals(False)
-                self._pipeline.set_mode(cfg.mode)
-                break
+        # --- Pasabanda ---
+        # Los limites ya los aplico apply_config(); aca solo se sincroniza el combo.
+        self._refresh_bandpass_combo()
 
         # --- AGC ---
         for i in range(self._combo_agc.count()):
@@ -1345,13 +1347,31 @@ class MainWindow(QMainWindow):
         if btn_donar is not None and box.clickedButton() is btn_donar:
             QDesktopServices.openUrl(QUrl(_DONATE_URL))
 
-    def _on_mode_changed(self, idx: int) -> None:
-        mode: RadioMode = self._combo_mode.itemData(idx)
-        self._pipeline.set_mode(mode)
-        # Habilita/deshabilita los sliders de bandpass AM vs SSB según el modo
-        if hasattr(self, "_adv_audio_tab"):
-            self._adv_audio_tab.refresh_enabled_states()
+    def _on_bandpass_preset(self, idx: int) -> None:
+        nombre = self._combo_bandpass.itemData(idx)
+        if nombre == BANDPASS_CUSTOM:
+            # "Personalizado" no cambia nada: los limites los manda Avanzada Audio.
+            self._config.dsp.bandpass_preset = BANDPASS_CUSTOM
+        else:
+            self._pipeline.set_bandpass_preset(nombre)
+            if hasattr(self, "_adv_audio_tab"):
+                self._adv_audio_tab.reload()
         self._schedule_save()
+
+    def _refresh_bandpass_combo(self) -> None:
+        """Pone el combo en el preset que corresponde a los limites actuales.
+
+        Con señales bloqueadas: se llama al cargar un preset y cuando los sliders
+        de Avanzada Audio cambian los limites, y sin el bloqueo el propio combo
+        volveria a aplicar el preset (bucle).
+        """
+        objetivo = self._config.dsp.bandpass_preset
+        self._combo_bandpass.blockSignals(True)
+        for i in range(self._combo_bandpass.count()):
+            if self._combo_bandpass.itemData(i) == objetivo:
+                self._combo_bandpass.setCurrentIndex(i)
+                break
+        self._combo_bandpass.blockSignals(False)
 
     def _on_post_filter_strength(self, val: float) -> None:
         self._config.dsp.post_filter_strength = val

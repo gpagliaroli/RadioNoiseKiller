@@ -3,7 +3,7 @@ import threading
 import queue
 from collections import deque
 import numpy as np
-from config import AppConfig, RadioMode
+from config import AppConfig, BANDPASS_PRESETS, bandpass_preset_for
 from audio.stream import AudioStream
 from audio.devices import AudioDevice
 from audio.recorder import WavRecorder
@@ -77,8 +77,8 @@ class ProcessingPipeline:
         self._bandpass     = BandpassFilter(config.dsp, config.audio.sample_rate)
         self._bandpass_out = BandpassFilter(config.dsp, config.audio.sample_rate)
         if config.dsp.bandpass_out_independent:
-            for _m, (_lo, _hi) in config.dsp.bandpass_out_limits.items():
-                self._bandpass_out.set_limits(_m, int(_lo), int(_hi))
+            self._bandpass_out.set_limits(int(config.dsp.bandpass_out_limits[0]),
+                                          int(config.dsp.bandpass_out_limits[1]))
         self._anf = AdaptiveNotchFilter(
             sample_rate=config.audio.sample_rate,
             threshold=config.dsp.anf_threshold,
@@ -176,11 +176,20 @@ class ProcessingPipeline:
     def set_error_callback(self, cb) -> None:
         self._on_error = cb
 
-    def set_mode(self, mode: RadioMode) -> None:
-        with self._lock:
-            self._config.dsp.mode = mode
-            self._bandpass.set_mode(mode)
-            self._bandpass_out.set_mode(mode)
+    def set_bandpass_preset(self, nombre: str) -> None:
+        """Aplica un pasabanda del catálogo (combo de la pestaña Principal).
+
+        Un nombre que no esté en el catálogo (p. ej. "Personalizado") no cambia
+        los límites: sólo deja constancia de que los está mandando el usuario.
+        """
+        lim = BANDPASS_PRESETS.get(nombre)
+        if lim is not None:
+            self.set_bandpass_limits(int(lim[0]), int(lim[1]))
+        # DESPUES de aplicar los límites: set_bandpass_limits re-deriva el nombre
+        # a partir de los Hz, y dos entradas del catálogo pueden compartirlos
+        # (SSB ancho / AM 3 kHz). Sin esto, elegir la segunda saltaría a la
+        # primera sola.
+        self._config.dsp.bandpass_preset = str(nombre)
 
     def set_agc_preset(self, preset: str) -> None:
         self._config.dsp.agc_preset = preset
@@ -287,28 +296,31 @@ class ProcessingPipeline:
         with self._lock:
             self._limiter._limit = 10 ** (db / 20.0)
 
-    def set_bandpass_limits(self, mode: RadioMode, lo: int, hi: int) -> None:
-        self._config.dsp.bandpass_limits[mode] = (lo, hi)
+    def set_bandpass_limits(self, lo: int, hi: int) -> None:
+        self._config.dsp.bandpass_limits = (int(lo), int(hi))
+        # El nombre del combo tiene que seguir a los límites: si el usuario los
+        # movió a mano, el combo pasa a "Personalizado" solo. Sin esto el combo
+        # mentiría sobre lo que está sonando.
+        self._config.dsp.bandpass_preset = bandpass_preset_for((lo, hi))
         with self._lock:
-            self._bandpass.set_limits(mode, lo, hi)
+            self._bandpass.set_limits(lo, hi)
             if not self._config.dsp.bandpass_out_independent:
-                self._bandpass_out.set_limits(mode, lo, hi)
+                self._bandpass_out.set_limits(lo, hi)
 
     def set_bandpass_out_independent(self, v: bool) -> None:
         """Salida independiente de la entrada. Al cambiar, re-empuja al filtro
         de salida los límites de la fuente que corresponde (ambos modos)."""
         self._config.dsp.bandpass_out_independent = bool(v)
-        src = (self._config.dsp.bandpass_out_limits if v
-               else self._config.dsp.bandpass_limits)
+        lo, hi = (self._config.dsp.bandpass_out_limits if v
+                  else self._config.dsp.bandpass_limits)
         with self._lock:
-            for m, (lo, hi) in src.items():
-                self._bandpass_out.set_limits(m, int(lo), int(hi))
+            self._bandpass_out.set_limits(int(lo), int(hi))
 
-    def set_bandpass_out_limits(self, mode: RadioMode, lo: int, hi: int) -> None:
-        self._config.dsp.bandpass_out_limits[mode] = (lo, hi)
+    def set_bandpass_out_limits(self, lo: int, hi: int) -> None:
+        self._config.dsp.bandpass_out_limits = (int(lo), int(hi))
         if self._config.dsp.bandpass_out_independent:
             with self._lock:
-                self._bandpass_out.set_limits(mode, lo, hi)
+                self._bandpass_out.set_limits(lo, hi)
 
     def set_filter_order(self, order: int) -> None:
         self._config.dsp.filter_order = order
@@ -326,7 +338,6 @@ class ProcessingPipeline:
         dsp  = config.dsp
         gain = config.gain
 
-        self.set_mode(dsp.mode)
         self.set_agc_preset(dsp.agc_preset)
 
         self.set_blanker_enabled(dsp.blanker_enabled)
@@ -335,10 +346,11 @@ class ProcessingPipeline:
 
         self.set_bandpass_pre_enabled(dsp.bandpass_pre_enabled)
         self.set_bandpass_post_enabled(dsp.bandpass_post_enabled)
-        for mode, (lo, hi) in dsp.bandpass_limits.items():
-            self.set_bandpass_limits(mode, int(lo), int(hi))
-        for mode, (lo, hi) in dsp.bandpass_out_limits.items():
-            self.set_bandpass_out_limits(mode, int(lo), int(hi))
+        self.set_bandpass_limits(int(dsp.bandpass_limits[0]), int(dsp.bandpass_limits[1]))
+        self.set_bandpass_out_limits(int(dsp.bandpass_out_limits[0]),
+                                     int(dsp.bandpass_out_limits[1]))
+        # Idem: el nombre lo manda la config, no la re-derivación por Hz.
+        self._config.dsp.bandpass_preset = dsp.bandpass_preset
         # último: re-empuja los límites de la fuente correcta al filtro de salida
         self.set_bandpass_out_independent(dsp.bandpass_out_independent)
         self.set_filter_order(dsp.filter_order)

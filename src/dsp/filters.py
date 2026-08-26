@@ -7,7 +7,7 @@ garantizar continuidad en la señal procesada.
 """
 import numpy as np
 from scipy.signal import butter, sosfilt, sosfilt_zi, lfilter
-from config import DSPConfig, RadioMode
+from config import DSPConfig
 
 
 class BandpassFilter:
@@ -18,34 +18,27 @@ class BandpassFilter:
 
     def __init__(self, config: DSPConfig, sample_rate: int = 48000):
         self._sr    = sample_rate
-        self._mode  = config.mode
         self._order = config.filter_order
         # Copia PROPIA de los límites: cada instancia (entrada/salida) es dueña
         # de los suyos. Nunca escribir en el DSPConfig compartido desde acá —
         # con el filtro de salida independiente (v1.6), el set_limits del filtro
-        # de salida corrompía los límites de ENTRADA del config (misma dict), y
-        # un cambio de modo rediseñaba la salida con los límites de entrada.
-        # La persistencia en config la maneja el pipeline, no el filtro.
-        self._limits = {m: tuple(v) for m, v in config.bandpass_limits.items()}
+        # de salida corrompía los límites de ENTRADA del config. La persistencia
+        # en config la maneja el pipeline, no el filtro.
+        self._limits = (int(config.bandpass_limits[0]), int(config.bandpass_limits[1]))
         self._sos: np.ndarray | None = None
         self._zi: np.ndarray | None = None
         self._design()
 
-    def set_mode(self, mode: RadioMode) -> None:
-        self._mode = mode
+    def set_limits(self, lo: int, hi: int) -> None:
+        self._limits = (int(lo), int(hi))
         self._design()
-
-    def set_limits(self, mode: RadioMode, lo: int, hi: int) -> None:
-        self._limits[mode] = (int(lo), int(hi))
-        if self._mode == mode:
-            self._design()
 
     def set_order(self, order: int) -> None:
         self._order = int(order)
         self._design()
 
     def _design(self) -> None:
-        lo, hi = self._limits[self._mode]
+        lo, hi = self._limits
         nyq = self._sr / 2.0
         self._sos = butter(
             self._order,

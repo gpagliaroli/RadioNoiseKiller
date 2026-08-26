@@ -15,7 +15,7 @@ if not os.environ.get("RNK_DATA_DIR"):
 
 sys.path.insert(0, "src")
 import numpy as np
-from config import AppConfig, RadioMode
+from config import AppConfig
 from pipeline import ProcessingPipeline
 
 assert "Reductor_Ruido_Radio" not in os.environ["RNK_DATA_DIR"] \
@@ -50,7 +50,7 @@ print(f"Latencia p99:        {p99:.2f} ms")
 print(f"Latencia maxima:     {maxi:.2f} ms")
 print(f"Tiempo real OK:      {avg < budget}")
 
-pipeline.set_mode(RadioMode.AM)
+pipeline.set_bandpass_preset("AM 6 kHz")
 pipeline.set_bypass(True)
 pipeline.spectrum_pre_frames.clear()
 pipeline.spectrum_post_frames.clear()
@@ -189,14 +189,12 @@ print(f"Grabacion WAV: OK ({secs:.2f} s grabados)")
 # sin suprimir al ensanchar/reiniciar).
 # ------------------------------------------------------------------
 print("\nPerfil independiente del filtro...")
-from config import RadioMode
 
 cf = AppConfig()
 cf.dsp.noise_mode = "static"
 cf.dsp.noise_enabled = True
 cf.dsp.bandpass_pre_enabled = True
-cf.dsp.mode = RadioMode.SSB
-cf.dsp.bandpass_limits[RadioMode.SSB] = (300, 1500)   # pasabanda ANGOSTO
+cf.dsp.bandpass_limits = (300, 1500)   # pasabanda ANGOSTO
 cf.dsp.anf_enabled = False
 cf.dsp.squelch_enabled = False
 cf.dsp.perceptual_floor_enabled = False

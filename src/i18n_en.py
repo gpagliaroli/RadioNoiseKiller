@@ -43,7 +43,6 @@ CATALOG = {
 
     # --- Control ---
     "Control": "Control",
-    "Modo:": "Mode:",
     "AGC:": "AGC:",
     "Desactivado": "Off",
     "Rápido": "Fast",
@@ -320,10 +319,6 @@ CATALOG = {
     "lento": "slow",
     "Filtro de paso de banda  (pre y post — en tiempo real)":
         "Bandpass filter  (pre & post — real time)",
-    "AM – Hz inferior:": "AM – low Hz:",
-    "AM – Hz superior:": "AM – high Hz:",
-    "SSB – Hz inferior:": "SSB – low Hz:",
-    "SSB – Hz superior:": "SSB – high Hz:",
     "Orden del filtro:": "Filter order:",
     "Orden {n}": "Order {n}",
     "Salida independiente de la entrada": "Output independent from input",
@@ -335,10 +330,6 @@ CATALOG = {
         "the input one (classic behavior). Checked, the output has its own\n"
         "limits: allows a narrow input (less hiss into the canceller) with\n"
         "a wider output (the voice is not clipped twice at the band edge).",
-    "AM salida – Hz inferior:": "AM output – low Hz:",
-    "AM salida – Hz superior:": "AM output – high Hz:",
-    "SSB salida – Hz inferior:": "SSB output – low Hz:",
-    "SSB salida – Hz superior:": "SSB output – high Hz:",
     "  ↳ Consejo: entrada angosta (p. ej. SSB hasta 2700 Hz) + salida más ancha "
     "(3500–4000 Hz) conserva el borde superior de la voz y el brillo del excitador.":
         "  ↳ Tip: narrow input (e.g. SSB up to 2700 Hz) + wider output "
@@ -456,6 +447,57 @@ CATALOG = {
     "Refuerzo en agudos:": "HF floor boost:",
     "  ↳ Sube el piso de ruido por encima de ~2.5 kHz (donde la energía del ruido es baja y el estimador reacciona tarde). Suprime mejor el siseo de agudos que se cuela con el fading, a costa de algo de brillo de la voz — combinar con Excitador/Presencia para reponerlo.":
         "  ↳ Raises the noise floor above ~2.5 kHz (where noise energy is low and the estimator reacts late). Suppresses the HF hiss that leaks through with fading better, at the cost of some voice brightness — combine with Exciter/Presence to restore it.",
+    "Modo:": "Mode:",   # combo de estimacion del ruido (estatico/MCRA)
+    "Pasabanda:": "Bandpass:",
+    "SSB muy angosto": "SSB very narrow",
+    "SSB angosto": "SSB narrow",
+    "SSB normal": "SSB normal",
+    "SSB ancho": "SSB wide",
+    "AM 3 kHz": "AM 3 kHz",
+    "AM 4 kHz": "AM 4 kHz",
+    "AM 6 kHz": "AM 6 kHz",
+    "AM 8 kHz": "AM 8 kHz",
+    "Personalizado": "Custom",
+    "Entrada – Hz inferior:": "Input – low Hz:",
+    "Entrada – Hz superior:": "Input – high Hz:",
+    "Salida – Hz inferior:": "Output – low Hz:",
+    "Salida – Hz superior:": "Output – high Hz:",
+    "Ancho del filtro de entrada. Elegilo por lo que estás escuchando:\n"
+    "los SSB son para fonía de banda lateral y los AM para emisoras.\n"
+    "Al mover los límites en Avanzada Audio pasa solo a Personalizado.":
+        "Width of the input filter. Pick it by what you are listening to:\n"
+        "the SSB ones are for sideband phone and the AM ones for broadcast.\n"
+        "Moving the limits in Advanced Audio switches it to Custom on its own.",
+    "Corte inferior del filtro de entrada. Subilo para sacar retumbe, zumbido\n"
+    "de red y ruido de motor; bajarlo deja más cuerpo en la voz.\n"
+    "En banda angosta, 300 Hz limpia bastante sin tocar la inteligibilidad.":
+        "Low cutoff of the input filter. Raise it to remove rumble, mains hum and\n"
+        "motor noise; lowering it leaves more body in the voice.\n"
+        "On a narrow band, 300 Hz cleans up a lot without touching intelligibility.",
+    "Corte superior del filtro de entrada. Bajarlo saca siseo y QRM del canal\n"
+    "de al lado; subirlo deja más brillo y claridad en las consonantes.\n"
+    "2700–2900 Hz es el ancho clásico de fonía; en AM se puede ir bastante más\n"
+    "arriba, hasta donde llegue tu receptor.\n"
+    "Moverlo pone el combo Pasabanda en Personalizado.":
+        "High cutoff of the input filter. Lowering it removes hiss and QRM from the\n"
+        "adjacent channel; raising it leaves more brightness and consonant clarity.\n"
+        "2700–2900 Hz is the classic phone width; on AM you can go considerably\n"
+        "higher, as far as your receiver reaches.\n"
+        "Moving it sets the Bandpass combo to Custom.",
+    "Corte inferior del filtro de SALIDA (sólo con 'Salida independiente').\n"
+    "Sirve para dejar la entrada angosta —menos ruido al cancelador— y la salida\n"
+    "más ancha, para que la voz no llegue doblemente apagada.":
+        "Low cutoff of the OUTPUT filter (only with 'Independent output').\n"
+        "Lets you keep the input narrow —less noise into the canceller— and the\n"
+        "output wider, so the voice does not arrive doubly dulled.",
+    "Corte superior del filtro de SALIDA (sólo con 'Salida independiente').\n"
+    "Poniéndolo por encima del corte de entrada se recupera el borde de la voz\n"
+    "que se perdía al encadenar dos filtros con el mismo corte: 3200–3500 Hz\n"
+    "con la entrada en 2700 deja la voz más abierta sin dejar entrar más ruido.":
+        "High cutoff of the OUTPUT filter (only with 'Independent output').\n"
+        "Setting it above the input cutoff recovers the top edge of the voice that\n"
+        "was lost when chaining two filters with the same cutoff: 3200–3500 Hz with\n"
+        "the input at 2700 leaves the voice more open without letting more noise in.",
     "Freno de bajada:": "Fall brake:",
     "sin freno": "no brake",
     "Congelar piso con voz:": "Freeze floor on voice:",
@@ -700,43 +742,6 @@ CATALOG = {
         "Fast (400-600 ms) for cyclic fading and music with QSB; smooth (1500 ms\n"
         "or more) so it does not pump. If you hear the gain 'breathing', go\n"
         "toward smooth.",
-    "Corte inferior del filtro de entrada en AM. Subilo para sacar retumbe,\n"
-    "zumbido de red y ruido de motor; bajarlo deja más cuerpo en la voz.":
-        "Low cutoff of the input filter in AM. Raise it to remove rumble, mains\n"
-        "hum and engine noise; lowering it leaves more body in the voice.",
-    "Corte superior del filtro de entrada en AM. Bajarlo saca siseo y QRM del\n"
-    "canal de al lado; subirlo deja más brillo y claridad en las consonantes.":
-        "High cutoff of the input filter in AM. Lowering it removes hiss and QRM\n"
-        "from the adjacent channel; raising it leaves more brightness and clearer\n"
-        "consonants.",
-    "Corte inferior del filtro de entrada en SSB. En banda angosta subirlo un\n"
-    "poco (300 Hz) limpia mucho retumbe sin tocar la inteligibilidad.":
-        "Low cutoff of the input filter in SSB. In narrow band, raising it a bit\n"
-        "(300 Hz) cleans up a lot of rumble without hurting intelligibility.",
-    "Corte superior del filtro de entrada en SSB. 2700–2900 Hz es el ancho\n"
-    "clásico de fonía; angostarlo le da menos soplido que masticar al cancelador.":
-        "High cutoff of the input filter in SSB. 2700-2900 Hz is the classic voice\n"
-        "width; narrowing it gives the canceller less hiss to chew on.",
-    "Corte inferior del filtro de SALIDA en AM (sólo con 'Salida independiente').\n"
-    "Sirve para dejar la entrada angosta —menos ruido al cancelador— y la salida\n"
-    "más ancha, para que la voz no llegue doblemente apagada.":
-        "Low cutoff of the OUTPUT filter in AM (only with 'Output independent').\n"
-        "Useful to keep the input narrow -less noise into the canceller- and the\n"
-        "output wider, so the voice does not arrive doubly muffled.",
-    "Corte superior del filtro de SALIDA en AM (sólo con 'Salida independiente').\n"
-    "Poniéndolo por encima del corte de entrada se recupera el borde de la voz\n"
-    "que se perdía al encadenar dos filtros con el mismo corte.":
-        "High cutoff of the OUTPUT filter in AM (only with 'Output independent').\n"
-        "Setting it above the input cutoff recovers the edge of the voice that was\n"
-        "lost when chaining two filters with the same cutoff.",
-    "Corte inferior del filtro de SALIDA en SSB (sólo con 'Salida independiente').":
-        "Low cutoff of the OUTPUT filter in SSB (only with 'Output independent').",
-    "Corte superior del filtro de SALIDA en SSB (sólo con 'Salida independiente').\n"
-    "3200–3500 Hz con la entrada en 2700 deja la voz más abierta sin dejar\n"
-    "entrar más ruido al cancelador.":
-        "High cutoff of the OUTPUT filter in SSB (only with 'Output independent').\n"
-        "3200-3500 Hz with the input at 2700 leaves the voice more open without\n"
-        "letting more noise into the canceller.",
     "Qué tan abrupto es el corte en el borde de la banda.\n"
     "Mayor orden = paredes más verticales contra el QRM vecino, pero más\n"
     "ringing en los transitorios y más CPU. 4 es el default sensato; 6–8 sólo\n"

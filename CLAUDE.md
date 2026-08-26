@@ -299,6 +299,45 @@ afinados al aire por el usuario — ver [[project_factory_presets]]). Cambian `A
   (`noise_fading_*` de la v2.2 y `pitch_shift_hz`). Verificado que los **7** cargan con
   `matches()==True`, o sea sin "(modificado)" espurio (invariante 10).
 
+**Post-v2.2: se elimina el modo AM/SSB; el combo pasa a ser "Pasabanda".** Pedido del usuario:
+*"con la llegada de los Presets no tiene sentido mantener el combo Modo"*. Tenía razón — el modo
+sólo elegía qué tupla de límites usaba el pasabanda, así que con presets que ya traen la banda,
+elegir modo y después ancho era decir dos veces lo mismo. **Lo que el operador elige es el ANCHO.**
+- **`RadioMode` desaparece del proyecto.** Se verificó antes de tocar nada que **nada más dependía
+  del modo**: ningún módulo DSP ramifica por AM/SSB, sólo `BandpassFilter` lo usaba para indexar su
+  dict de límites. Por eso el cambio, que parecía grande, es acotado.
+- `bandpass_limits` y `bandpass_out_limits` pasan de **dict-por-modo a un solo par `(lo, hi)`**.
+  Campo nuevo `bandpass_preset: str` con el nombre del ancho elegido (o `"Personalizado"`).
+  Catálogo `BANDPASS_PRESETS` en `config.py` — 8 anchos (4 SSB, 4 AM) elegidos por el usuario.
+- **UI:** el combo de Principal pasa de *Modo* a *Pasabanda*; Avanzada Audio queda con **un solo
+  par** de sliders de entrada y uno de salida, en vez de cuatro pares. El filtro de salida **no**
+  lleva combo, a propósito: es un retoque fino sobre el ancho ya elegido, casi siempre definido en
+  relación a la entrada (más ancha), y un segundo combo con la misma lista sumaba control sin
+  agregar decisión.
+- **Migración sin cambio de sonido, y verificada sobre los datos reales.** `_leer_limites()` acepta
+  los dos formatos: con el viejo (dict + campo `mode`) toma el par **del modo que estaba activo**.
+  Verificado sobre los 7 presets de fábrica y el `settings.json` del usuario: **todos conservan sus
+  límites exactos y ninguno marca "(modificado)"** (invariante 10). El par del otro modo se
+  descarta, que es justo lo que ahora cubre el preset.
+- **Dos trampas del rediseño, ambas resueltas y con test:**
+  1. **`set_bandpass_limits` re-deriva el nombre a partir de los Hz**, para que mover un slider
+     ponga el combo en "Personalizado" solo (si no, el combo mentiría sobre lo que suena). Pero eso
+     pisaba la elección del usuario cuando **dos entradas comparten los mismos Hz** (*SSB ancho* y
+     *AM 3 kHz*): elegir la segunda saltaba a la primera. `set_bandpass_preset` fija el nombre
+     **después** de aplicar los límites, y `apply_config` hace lo mismo. Test:
+     `test_bandpass_preset_ambiguo_no_salta`.
+  2. **`_refresh_bandpass_combo` bloquea señales**: sin eso, sincronizar el combo desde el config
+     dispara su propio handler y vuelve a aplicar el preset (bucle).
+- **Regresión que casi se me pasa: hay OTRO combo llamado "Modo:"** — el de Perfil estático /
+  Adaptativo, dentro del grupo del cancelador. Al limpiar el catálogo i18n de las claves del modo
+  AM/SSB **borré también su clave** y se quedaba sin traducir. Restaurada, y los manuales ahora
+  aclaran cuál es cuál. **Regla: antes de borrar una clave de i18n por “el control ya no existe”,
+  buscar el texto en el código — dos controles distintos pueden compartir etiqueta.**
+- Manuales ES+EN: el control se documenta con la tabla de los 8 anchos, la aclaración de que combo y
+  sliders son el mismo ajuste visto de dos maneras, y el aviso de que los anchos grandes no sirven
+  si el receptor no entrega señal ahí arriba (se verifica con la curva de Entrada del espectro, que
+  enlaza con la nota de por qué el piso amarillo parece cortarse).
+
 **Post-v2.2: el squelch de portadora trababa el estimador — CUARTA vez que muerde la trampa
 autorreferencial.** Encontrado midiendo por qué el cancelador se lleva tanta voz. La detección de
 "se cortó la portadora" comparaba la energía del frame contra **λ_d**, o sea contra la salida del

@@ -14,7 +14,7 @@ import sys
 import time
 sys.path.insert(0, "src")
 import numpy as np
-from config import AppConfig, RadioMode
+from config import AppConfig
 from pipeline import ProcessingPipeline
 
 rng = np.random.default_rng(11)
@@ -71,7 +71,7 @@ def feed(pipeline, frames, collect=False):
 # --- Configuracion con todo activado ---
 cfg = AppConfig()
 d = cfg.dsp
-d.mode                      = RadioMode.SSB
+d.bandpass_limits           = (200, 3000)
 d.noise_enabled             = True
 d.noise_mode                = "mcra"
 d.squelch_enabled           = True

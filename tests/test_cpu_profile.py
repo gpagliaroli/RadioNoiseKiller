@@ -20,7 +20,7 @@ import time
 sys.path.insert(0, "src")
 
 import numpy as np
-from config import AppConfig, DSPConfig, RadioMode
+from config import AppConfig, DSPConfig
 from dsp.agc import AGC
 from dsp.anf import AdaptiveNotchFilter
 from dsp.bass import BassRestorer
@@ -146,7 +146,7 @@ for etiqueta, ajustes in (
           bandpass_out_independent=True)),
 ):
     cfg = AppConfig()
-    cfg.dsp.mode = RadioMode.SSB
+    cfg.dsp.bandpass_limits = (200, 3000)
     cfg.dsp.agc_preset = "medium"
     for k, v in ajustes.items():
         setattr(cfg.dsp, k, v)

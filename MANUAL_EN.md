@@ -133,7 +133,7 @@ The main operating controls: reception mode, AGC and processing activation.
 
 | Control | Description |
 |---------|-------------|
-| **Mode** | Selects the type of received signal: **AM** (amplitude modulation, wider bandwidth) or **SSB** (single sideband, voice compressed in frequency). Affects the default limits of the Bandpass Filter. |
+| **Bandpass** | Width of the input filter, chosen by what you are listening to. There are eight ready-made widths —four for SSB phone and four for AM— plus **Custom**, which is whatever limits you set by hand in *Advanced Audio*. It replaces the old **Mode (AM/SSB)** selector: with the app's presets, picking the mode and then the width was saying the same thing twice — what you pick is the **width**. |
 | **AGC** | Automatic Gain Control. **off** = no AGC. **slow / medium / fast** = response speed (attack/release fixed per preset). For SSB, *slow* or *medium* is recommended; for AM with stable signals, *off* or *slow*. |
 | **Level continuously (music)** | Checkbox belonging to the **Voice leveler** (Ch. 7), placed here because you change it depending on what you are listening to: ticked for music or continuous audio, unticked for voice. Requires the canceller and the leveler enabled. |
 | **Noise ceiling** | Limits how much the AGC can amplify, so it does not lift the band noise. See below. |
@@ -286,17 +286,37 @@ Both are enabled/disabled independently from **Active Modules**.
 
 ### Controls
 
-| Control | Range | AM default | SSB default | Description |
-|---------|-------|-----------|-------------|-------------|
-| **AM low Hz** | 50–1000 Hz | 300 Hz | — | Lower cutoff frequency for AM. |
-| **AM high Hz** | 1000–10000 Hz | 5000 Hz | — | Upper cutoff frequency. Raise up to 10 kHz for local AM stations with hi-fi audio. |
-| **SSB low Hz** | 50–1000 Hz | — | 200 Hz | Lower cutoff for SSB. |
-| **SSB high Hz** | 1000–5000 Hz | — | 3000 Hz | Upper cutoff for SSB. |
-| **Filter order** | 2 / 4 / 6 / 8 | 4 | 4 | Filter slope. Higher order = sharper cutoff = better out-of-band rejection, but more phase latency. For normal use, order 4 is adequate. |
+| Control | Range | Default | Description |
+|---------|-------|---------|-------------|
+| **Input – low Hz** | 50–1000 Hz | 200 Hz | Lower cutoff. Raising it removes rumble, mains hum and motor noise; lowering it leaves more body in the voice. |
+| **Input – high Hz** | 1000–10000 Hz | 3000 Hz | Upper cutoff. Lowering it removes hiss and QRM from the adjacent channel; raising it leaves more brightness and consonants. Up to 10 kHz for local AM stations with good audio. |
+| **Filter order** | 2 / 4 / 6 / 8 | 4 | Filter slope. Higher order = sharper cutoff = better out-of-band rejection, but more phase latency. For normal use, order 4 is adequate. |
+
+> **These sliders and the Bandpass combo are the same setting seen two ways.** Picking a width in the
+> combo moves the sliders; moving a slider sets the combo to **Custom**. They never show different
+> things, so the combo always says what is really being heard.
+>
+> **Widths available in the combo:**
+>
+> | | Low cutoff | High cutoff |
+> |---|---|---|
+> | SSB very narrow | 400 Hz | 2100 Hz |
+> | SSB narrow | 300 Hz | 2400 Hz |
+> | SSB normal | 200 Hz | 2700 Hz |
+> | SSB wide | 200 Hz | 3000 Hz |
+> | AM 3 kHz | 200 Hz | 3000 Hz |
+> | AM 4 kHz | 150 Hz | 4000 Hz |
+> | AM 6 kHz | 100 Hz | 6000 Hz |
+> | AM 8 kHz | 100 Hz | 8000 Hz |
+>
+> *SSB wide* and *AM 3 kHz* are the same hertz under two names: the label is there so you can pick by
+> what you are hearing, not so you have to translate in your head. And beware of the wide settings:
+> they are useless if the receiver does not deliver signal up there — you can see how far it reaches
+> by looking at the **Input** curve on the Spectrum tab (see that chapter).
 
 ### Output independent from input
 
-By default, the output filter uses **the same limits** as the input one. The **"Output independent from input"** checkbox enables four dedicated sliders (AM/SSB output, low/high) to decouple them.
+By default, the output filter uses **the same limits** as the input one. The **"Output independent from input"** checkbox enables two dedicated sliders (*Output – low/high Hz*) to decouple them. The output has no combo: it is a fine adjustment on top of the width you already chose, and it is almost always defined in relation to the input (wider).
 
 Why? Two identical cascaded filters double the attenuation at the band edge: the top of the voice arrives **doubly dulled**. With an independent output you can use:
 
@@ -381,7 +401,7 @@ The Log-MMSE estimator (Ephraim & Malah, 1985) computes the optimal gain bin by 
 
 ### Noise estimation modes
 
-The canceller offers two modes, selectable from the **Mode:** selector on the Main tab:
+The canceller offers two modes, selectable from the **Mode:** selector in the *Noise canceller* group on the Main tab (not to be confused with the **Bandpass** combo, which picks the filter width):
 
 **Static profile** (manual mode)
 The algorithm learns a "photo" of the background noise over a few seconds and uses it as a fixed reference. Ideal when the band noise is very stable.
