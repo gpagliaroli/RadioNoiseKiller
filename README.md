@@ -38,7 +38,8 @@ panorama general y las notas para quien quiera tocar el código.
 - **Supresor de impulsos** — dos niveles en cascada (10 ms y 0,67 ms) para QRN atmosférico,
   detectados por contraste contra el audio vecino (no contra el piso), así la voz no dispara
 - **ANF** — filtro de muesca espectral adaptativo para heterodinos, portadoras y zumbidos
-- **Squelch de voz** — silencia entre transmisiones, con cierre progresivo (sin cola de squelch)
+- **Gate de ruido** — baja el fondo entre transmisiones cuando el nivel de entrada no llega al
+  umbral, con cierre progresivo; umbral en dBFS, así se calibra mirando el indicador de nivel
 
 **Nivel y timbre**
 
@@ -164,6 +165,7 @@ src/
 │   ├── exciter.py        # AuralExciter: armónicos con carácter par/impar y gate por VAD
 │   ├── bass.py           # BassRestorer: fundamental derivado de los armónicos
 │   ├── blanker.py        # ImpulseBlanker: impulsos por contraste local en el tiempo
+│   ├── gate.py           # NoiseGate: decide con el nivel de entrada, atenúa la salida
 │   ├── gain.py           # GainLimiter: limitador de picos con rodilla suave
 │   └── level.py          # LevelMeter: RMS con decaimiento
 └── ui/
@@ -210,7 +212,8 @@ Images/                   # Logo, ícono y diagramas del pipeline
   bajar un paso donde empiece a filtrarse voz
 - **Receta recomendada**: Intensidad baja (50–60 %) + Post-Filtro alto. Da mejor cancelación y voz
   más natural que subir la Intensidad sola
-- **Squelch**: sólo para transmisiones de voz — con música produce bombeo
+- **Gate de ruido**: poner el umbral entre el nivel que marca el indicador en los huecos y el que
+  marca con señal. Es un ajuste de cada estación: no hay un valor recomendado
 - **Bypass**: compara la señal con y sin procesamiento en vivo, y recuerda la ganancia de salida por
   separado en cada estado para que la comparación sea a nivel parejo
 

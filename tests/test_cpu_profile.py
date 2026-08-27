@@ -141,7 +141,7 @@ for etiqueta, ajustes in (
     ("todo activado",
      dict(noise_mode="mcra", post_filter_enabled=True, post_filter_strength=3.0,
           perceptual_floor_enabled=True, pitch_enhance_enabled=True,
-          squelch_enabled=True, voice_leveler_enabled=True, exciter_enabled=True,
+          gate_enabled=True, voice_leveler_enabled=True, exciter_enabled=True,
           bass_enabled=True, agc_noise_ceiling_enabled=True,
           bandpass_out_independent=True)),
 ):

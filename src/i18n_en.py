@@ -107,9 +107,6 @@ CATALOG = {
         "from the noise canceller. Improves intelligibility of weak voice\n"
         "signals buried in noise, on both AM and SSB.\n"
         "Sensitivity adjustable in the Advanced Canceller tab.",
-    "Squelch de voz  (con música no utilizar!)": "Voice squelch  (do not use with music!)",
-    "Silencia la salida cuando no hay voz detectada. Requiere perfil de ruido aprendido.":
-        "Mutes the output when no voice is detected. Requires a learned noise profile.",
     "Congela el estimador de ruido durante fades ionosféricos y acelera\n"
     "la recuperación al volver la señal. Solo tiene efecto en modo Adaptativo (MCRA).\n"
     "Sensibilidad y duración del freeze configurables en Avanzada Cancelador.":
@@ -190,8 +187,6 @@ CATALOG = {
         "0 = off. It leaves the speech bins alone. It turns on by itself above 0.",
     "Reducción activa:": "Active reduction:",
     "Preview: escuchar ruido eliminado": "Preview: listen to removed noise",
-    "Emite el ruido que está siendo restado.\nSi suena como voz, bajar la Intensidad.":
-        "Plays the noise being subtracted.\nIf it sounds like voice, lower the Intensity.",
     "Sin perfil — activar procesamiento y presionar Aprender":
         "No profile — start processing and press Learn",
     "Sin perfil — presionar Aprender para calibrar":
@@ -328,10 +323,6 @@ CATALOG = {
         "the input one (classic behavior). Checked, the output has its own\n"
         "limits: allows a narrow input (less hiss into the canceller) with\n"
         "a wider output (the voice is not clipped twice at the band edge).",
-    "  ↳ Consejo: entrada angosta (p. ej. SSB hasta 2700 Hz) + salida más ancha "
-    "(3500–4000 Hz) conserva el borde superior de la voz y el brillo del excitador.":
-        "  ↳ Tip: narrow input (e.g. SSB up to 2700 Hz) + wider output "
-        "(3500–4000 Hz) preserves the upper edge of the voice and the exciter's brightness.",
     "Frecuencia de cuerpo:": "Body frequency:",
     "grave": "low",
     "cuerpo": "body",
@@ -458,6 +449,73 @@ CATALOG = {
         "To compare before and after without stopping anything.\n"
         "Output gain is remembered separately for each mode, so you can\n"
         "compare at a matched volume.",
+    "Gate de ruido  (baja el fondo entre transmisiones)":
+        "Noise gate  (lowers the background between transmissions)",
+    "Gate de ruido  (activar en Módulos Activos)":
+        "Noise gate  (enable it in Active Modules)",
+    "silencio": "silence",
+    "{piso:.0f} dBFS · abre en {abre:.0f}": "{piso:.0f} dBFS · opens at {abre:.0f}",
+    "  ↳ Cuánto baja el fondo con el gate cerrado. Atenuar 15–25 dB suena más natural que silenciar del todo; el máximo es silencio.":
+        "  ↳ How much the background drops while the gate is closed. Attenuating "
+        "15–25 dB sounds more natural than silencing completely; the maximum is silence.",
+    "  ↳ Tiempo que el gate sigue abierto tras caer la señal, para no cortar entre palabras. La segunda mitad es un desvanecimiento, no un corte.":
+        "  ↳ How long the gate stays open after the signal drops, so it does not cut "
+        "between words. The second half is a fade, not a cut.",
+    "Cuánto baja el fondo mientras el gate está cerrado.\n"
+    "Atenuar 15–25 dB suele sonar bastante más natural en HF que silenciar del\n"
+    "todo: el silencio digital entre transmisiones se nota como si se cortara\n"
+    "la radio. En 0 dB el gate no atenúa nada; en el máximo, silencia.":
+        "How much the background drops while the gate is closed.\n"
+        "Attenuating 15–25 dB usually sounds far more natural on HF than silencing\n"
+        "completely: digital silence between transmissions feels like the radio just\n"
+        "died. At 0 dB the gate attenuates nothing; at the maximum, it silences.",
+    "Tiempo que el gate sigue abierto después de que la señal cae, para no\n"
+    "cortar entre palabras. La primera mitad mantiene el volumen y la segunda\n"
+    "es un desvanecimiento, así el cierre no se escucha como un tajo.\n"
+    "Corto para conversación rápida; largo si corta sílabas.":
+        "How long the gate stays open after the signal drops, so it does not cut\n"
+        "between words. The first half holds the volume and the second is a fade,\n"
+        "so the close is not heard as a chop.\n"
+        "Short for fast conversation; long if it clips syllables.",
+    "Nivel de entrada:": "Input level:",
+    "Umbral:": "Threshold:",
+    "Atenúa la salida cuando el nivel de entrada no llega al umbral.\n"
+    "Se calibra mirando el indicador de nivel, no a ciegas como el\n"
+    "squelch que reemplaza. Ajustes en Avanzada Cancelador.":
+        "Attenuates the output when the input level does not reach the threshold.\n"
+        "You calibrate it watching the level indicator, not blindly like the\n"
+        "squelch it replaces. Settings in Advanced Canceller.",
+    "  ↳ Poné el umbral entre el nivel que marca en los huecos y el que marca "
+    "con señal. El indicador de arriba muestra los dos datos que hacen falta: "
+    "el nivel de ahora y el umbral elegido.":
+        "  ↳ Set the threshold between the level it reads in the gaps and the level "
+        "it reads with signal. The indicator above shows the two figures you need: "
+        "the current level and the chosen threshold.",
+    "  ↳ Nivel de entrada a partir del cual el gate abre. Si corta voz débil, bajarlo; si abre con el ruido solo, subirlo. Es un ajuste de TU estación: depende del nivel con que entra la radio.":
+        "  ↳ Input level at which the gate opens. If it cuts weak voice, lower it; "
+        "if it opens on noise alone, raise it. It is a setting for YOUR station: it "
+        "depends on the level the radio comes in at.",
+    "Nivel de entrada, en dBFS, a partir del cual el gate abre.\n"
+    "Se calibra mirando el indicador de arriba: dejalo entre el nivel que marca\n"
+    "en los huecos y el que marca con señal. Si corta voz débil, bajalo; si abre\n"
+    "con el ruido solo, subilo.\n"
+    "Es un ajuste de TU estación (depende del nivel con que entra la radio), así\n"
+    "que revisalo al cambiar de banda, de antena o de hora.":
+        "Input level, in dBFS, at which the gate opens.\n"
+        "You calibrate it watching the indicator above: leave it between the level\n"
+        "it reads in the gaps and the level it reads with signal. If it cuts weak\n"
+        "voice, lower it; if it opens on noise alone, raise it.\n"
+        "It is a setting for YOUR station (it depends on the level the radio comes\n"
+        "in at), so review it when you change band, antenna or time of day.",
+    "  ↳ Consejo: entrada angosta (p. ej. hasta 2700 Hz) + salida más ancha "
+    "(3500–4000 Hz) conserva el borde superior de la voz y el brillo del excitador.":
+        "  ↳ Tip: narrow input (e.g. up to 2700 Hz) + wider output (3500–4000 Hz) "
+        "preserves the upper edge of the voice and the brightness of the exciter.",
+    "Emite el ruido que está siendo restado (Intensidad + Post-Filtro).\n"
+    "Si suena como voz, algo está de más: bajar la Intensidad (o el Post-Filtro).":
+        "Plays the noise being subtracted (Strength + Post-Filter).\n"
+        "If it sounds like voice, something is too high: lower the Strength\n"
+        "(or the Post-Filter).",
     "Modo:": "Mode:",   # combo de estimacion del ruido (estatico/MCRA)
     "Adaptativo (MCRA) — en Bypass no calibra (el cancelador no corre)":
         "Adaptive (MCRA) — it cannot calibrate in Bypass (the canceller is not running)",
@@ -568,17 +626,8 @@ CATALOG = {
         "  ↳ Enable in Active Modules (canceller sub-module). Adaptive mode only.",
     "sensible": "sensitive",
     "selectivo": "selective",
-    "Squelch de voz  (activar en Módulos Activos)": "Voice squelch  (enable in Active Modules)",
-    "Nivel de voz:": "Voice level:",
     "Gate:": "Gate:",
-    "  ↳ Ajustar Umbral (%) para que quede entre el nivel en silencio y con voz.":
-        "  ↳ Set the Threshold (%) between the silent level and the voice level.",
-    "Umbral:": "Threshold:",
-    "  ↳ El ruido marca ~0% (el detector exige estructura de voz): 10–25% suele bastar. Subirlo solo si una interferencia tonal abre el gate.":
-        "  ↳ Noise reads ~0% (the detector requires voice structure): 10–25% is usually enough. Raise it only if a tonal interference opens the gate.",
     "Retención:": "Hold:",
-    "  ↳ Tiempo que el gate permanece abierto tras perder la voz. Default 300 ms.":
-        "  ↳ How long the gate stays open after voice is lost. Default 300 ms.",
     "Piso espectral perceptual  (activar en Módulos Activos)":
         "Perceptual spectral floor  (enable in Active Modules)",
     "Piso vocal:": "Vocal floor:",

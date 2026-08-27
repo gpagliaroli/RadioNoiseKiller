@@ -111,9 +111,14 @@ class DSPConfig:
     noise_floor:  float = 0.15
     noise_smooth:    float = 0.96   # Anti-gorgojeo: β DD + suavizado p_speech (útil 96-98%; ver noise_profiler)
     noise_attack:    float = 0.80   # beta_fast DD asimétrico: bajo=ataque rápido en bins de voz (0.50-0.92)
-    squelch_enabled:   bool  = False
-    squelch_threshold: float = 0.15  # voice_prob mínimo para gain=1.0 (0.10=sensible, 0.40=selectivo)
-    squelch_hold_ms:   float = 500.0 # ms que el gate permanece abierto tras perder la voz
+    # Gate de ruido por nivel (reemplaza al squelch por VAD, ver dsp/gate.py).
+    # El umbral es el nivel de ENTRADA en dBFS: se calibra mirando el VU, que es
+    # lo que al squelch le faltaba (su umbral era un % de una probabilidad que no
+    # se veía en ninguna parte). Es un ajuste POR ESTACIÓN, como el techo del AGC.
+    gate_enabled:      bool  = False
+    gate_threshold_db: float = -50.0  # dBFS de entrada a partir del cual abre (-80..-20)
+    gate_hold_ms:      float = 300.0  # retención tras caer la señal (50-2000 ms)
+    gate_depth_db:     float = 20.0   # atenuación con el gate cerrado (0-60 dB)
     agc_noise_ceiling_enabled: bool = False  # limita la ganancia del AGC por el ruido
     agc_noise_ceiling_db:     float = -45.0  # el ruido de banda no pasa de este nivel (-70..-25)
     exciter_enabled:   bool  = False
@@ -221,9 +226,10 @@ class AppConfig:
                 "noise_floor":   self.dsp.noise_floor,
                 "noise_smooth":  self.dsp.noise_smooth,
                 "noise_attack":  self.dsp.noise_attack,
-                "squelch_enabled":   self.dsp.squelch_enabled,
-                "squelch_threshold": self.dsp.squelch_threshold,
-                "squelch_hold_ms":   self.dsp.squelch_hold_ms,
+                "gate_enabled":      self.dsp.gate_enabled,
+                "gate_threshold_db": self.dsp.gate_threshold_db,
+                "gate_hold_ms":      self.dsp.gate_hold_ms,
+                "gate_depth_db":     self.dsp.gate_depth_db,
                 "exciter_enabled":   self.dsp.exciter_enabled,
                 "exciter_drive":     self.dsp.exciter_drive,
                 "exciter_mix":       self.dsp.exciter_mix,
@@ -323,9 +329,10 @@ class AppConfig:
         self.dsp.noise_floor    = max(0.05, float(d.get("noise_floor", self.dsp.noise_floor)))
         self.dsp.noise_smooth   = d.get("noise_smooth",  self.dsp.noise_smooth)
         self.dsp.noise_attack      = d.get("noise_attack",      self.dsp.noise_attack)
-        self.dsp.squelch_enabled   = bool(d.get("squelch_enabled",   self.dsp.squelch_enabled))
-        self.dsp.squelch_threshold = float(d.get("squelch_threshold", self.dsp.squelch_threshold))
-        self.dsp.squelch_hold_ms   = float(d.get("squelch_hold_ms",   self.dsp.squelch_hold_ms))
+        self.dsp.gate_enabled      = bool(d.get("gate_enabled",      self.dsp.gate_enabled))
+        self.dsp.gate_threshold_db = float(d.get("gate_threshold_db", self.dsp.gate_threshold_db))
+        self.dsp.gate_hold_ms      = float(d.get("gate_hold_ms",      self.dsp.gate_hold_ms))
+        self.dsp.gate_depth_db     = float(d.get("gate_depth_db",     self.dsp.gate_depth_db))
         self.dsp.exciter_enabled   = bool(d.get("exciter_enabled",   self.dsp.exciter_enabled))
         self.dsp.exciter_drive     = float(d.get("exciter_drive",    self.dsp.exciter_drive))
         self.dsp.exciter_mix       = float(d.get("exciter_mix",      self.dsp.exciter_mix))

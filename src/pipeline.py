@@ -14,6 +14,7 @@ from dsp.bass import BassRestorer
 from dsp.exciter import AuralExciter
 from dsp.filters import BandpassFilter, PresenceFilter
 from dsp.gain import GainLimiter
+from dsp.gate import NoiseGate
 from dsp.level import LevelMeter
 from dsp.noise_profiler import NoiseProfiler
 
@@ -22,10 +23,11 @@ class ProcessingPipeline:
     """
     Orquesta el flujo DSP en tiempo real:
     AudioStream callback → blanker → AGC → BandpassFilter pre
-                        → ANF → NoiseProfiler → Squelch → Nivelador de voz
+                        → ANF → NoiseProfiler → Nivelador de voz
                         → BandpassFilter out → EQ (presencia + cuerpo)
                         → Excitador → Recuperar graves
-                        → GainLimiter (aplica la ganancia de salida) → salida
+                        → GainLimiter (aplica la ganancia de salida)
+                        → NoiseGate (decide con el nivel de ENTRADA) → salida
 
     El diagrama canónico —el que ven el README y los manuales— es
     `Images/pipeline_diagram.png`, generado por `tools/gen_pipeline_diagram.py`.
@@ -108,12 +110,15 @@ class ProcessingPipeline:
         self._noise_profiler.set_mode(config.dsp.noise_mode)
         self._noise_profiler.set_alpha(config.dsp.noise_alpha)
         self._noise_profiler.set_floor(config.dsp.noise_floor)
-        self._squelch_enabled:   bool  = config.dsp.squelch_enabled
-        self._squelch_threshold: float = config.dsp.squelch_threshold
-        self._squelch_hold_ms:   float = config.dsp.squelch_hold_ms
-        self._squelch_hold_frames: int = 0   # se calcula en start()
-        self._squelch_hold_count:  int = 0
-        self._sq_gain_prev:        float = 1.0   # ganancia del gate en el frame anterior (rampa)
+        # Gate de ruido por nivel. Decide con el nivel de ENTRADA y actúa sobre la
+        # SALIDA: silenciar la entrada dejaría al estimador midiendo el silencio que
+        # el propio gate fabrica (medido: −9,5 dB en λ_d) y justo en las pausas, que
+        # son los únicos ratos en que MCRA puede medir el ruido.
+        self._gate = NoiseGate(config.audio.sample_rate)
+        self._gate.set_enabled(config.dsp.gate_enabled)
+        self._gate.set_threshold_db(config.dsp.gate_threshold_db)
+        self._gate.set_hold_ms(config.dsp.gate_hold_ms)
+        self._gate.set_depth_db(config.dsp.gate_depth_db)
         self._learn_gain_prev:     float = 1.0   # ganancia del duck de aprendizaje (rampa)
         # Techo de ruido del AGC (ver _track_input_noise)
         self._agc_noise_ceiling_enabled: bool = config.dsp.agc_noise_ceiling_enabled
@@ -370,9 +375,10 @@ class ProcessingPipeline:
         self.set_noise_smooth(dsp.noise_smooth)
         self.set_noise_attack(dsp.noise_attack)
 
-        self.set_squelch_enabled(dsp.squelch_enabled)
-        self.set_squelch_threshold(dsp.squelch_threshold)
-        self.set_squelch_hold_ms(dsp.squelch_hold_ms)
+        self.set_gate_enabled(dsp.gate_enabled)
+        self.set_gate_threshold_db(dsp.gate_threshold_db)
+        self.set_gate_hold_ms(dsp.gate_hold_ms)
+        self.set_gate_depth_db(dsp.gate_depth_db)
 
         self.set_exciter_enabled(dsp.exciter_enabled)
         self.set_exciter_drive(dsp.exciter_drive)
@@ -498,19 +504,21 @@ class ProcessingPipeline:
         self._config.dsp.noise_attack = attack
         self._noise_profiler.set_attack(attack)
 
-    def set_squelch_enabled(self, enabled: bool) -> None:
-        self._config.dsp.squelch_enabled = enabled
-        self._squelch_enabled = enabled
+    def set_gate_enabled(self, enabled: bool) -> None:
+        self._config.dsp.gate_enabled = bool(enabled)
+        self._gate.set_enabled(bool(enabled))
 
-    def set_squelch_threshold(self, threshold: float) -> None:
-        self._config.dsp.squelch_threshold = threshold
-        self._squelch_threshold = threshold
+    def set_gate_threshold_db(self, v: float) -> None:
+        self._config.dsp.gate_threshold_db = float(v)
+        self._gate.set_threshold_db(float(v))
 
-    def set_squelch_hold_ms(self, ms: float) -> None:
-        self._config.dsp.squelch_hold_ms = ms
-        self._squelch_hold_ms = ms
-        hop_ms = self._config.audio.block_size / self._config.audio.sample_rate * 1000.0
-        self._squelch_hold_frames = max(0, round(ms / hop_ms))
+    def set_gate_depth_db(self, v: float) -> None:
+        self._config.dsp.gate_depth_db = float(v)
+        self._gate.set_depth_db(float(v))
+
+    def set_gate_hold_ms(self, ms: float) -> None:
+        self._config.dsp.gate_hold_ms = float(ms)
+        self._gate.set_hold_ms(float(ms))
 
     def set_noise_mode(self, mode: str) -> None:
         self._config.dsp.noise_mode = mode
@@ -610,18 +618,21 @@ class ProcessingPipeline:
 
     @property
     def noise_voice_prob_sq(self) -> float:
-        """voice_prob rápido (release ~40ms), el que usa el gate de squelch."""
+        """voice_prob rápido (release ~40ms). Indicador de actividad de voz."""
         return self._noise_profiler.voice_prob_sq
 
     @property
-    def squelch_gate_open(self) -> bool:
-        """True si el gate de squelch está abierto (audio pasa).
-        Refleja las mismas condiciones que el bloque de squelch en _run_processor."""
-        if (not self._squelch_enabled or not self._noise_enabled
-                or not self._noise_profiler.has_profile):
-            return True
-        vp = self._noise_profiler.voice_prob_sq
-        return vp >= self._squelch_threshold or self._squelch_hold_count > 0
+    def gate_open(self) -> bool:
+        """True si el gate deja pasar el audio. Lo reporta el propio gate, no una
+        replica de sus condiciones: la property del squelch viejo replicaba la
+        logica del bloque y se desincronizo mas de una vez (invariante 3)."""
+        return self._gate.is_open
+
+    @property
+    def gate_gain_db(self) -> float:
+        """Atenuacion que el gate esta aplicando ahora (0 = abierto)."""
+        import math
+        return 20.0 * math.log10(max(self._gate.gain, 1e-6))
 
     @property
     def noise_reduction_db(self) -> float:
@@ -720,6 +731,20 @@ class ProcessingPipeline:
             return None
         return max(0.0, self._agc_noise_ceiling_db
                    - 20.0 * float(np.log10(self._in_noise_min)))
+
+    @property
+    def input_level_db(self) -> "float | None":
+        """Nivel de entrada con el MISMO suavizado con que se mide el piso (~30 ms).
+
+        Es lo que compara el gate, y no `db_in`: el medidor de los VU tiene otro
+        decaimiento, así que restarle un mínimo de 4 s mezcla dos estadísticas
+        distintas y aparece un desnivel sistemático que no es "señal sobre ruido".
+        Medido sobre grabaciones reales, `db_in − piso` daba +1,6 dB de mediana con
+        voz presente — el gate cerraba o abría por el desnivel, no por la señal.
+        """
+        if self._in_noise_ema is None or self._in_noise_ema <= 1e-9:
+            return None
+        return 20.0 * float(np.log10(self._in_noise_ema))
 
     @property
     def input_noise_db(self) -> "float | None":
@@ -886,10 +911,8 @@ class ProcessingPipeline:
             self._agc.set_hop(self._config.audio.block_size)
             self._agc_voice.set_hop(self._config.audio.block_size)
             self._exciter.reset()
-            hop_ms = self._config.audio.block_size / self._config.audio.sample_rate * 1000.0
-            self._squelch_hold_frames = max(0, round(self._squelch_hold_ms / hop_ms))
-            self._squelch_hold_count  = 0
-            self._sq_gain_prev        = 1.0
+            self._gate.set_hop(self._config.audio.block_size)   # hold en frames (inv. 9)
+            self._gate.reset()
             self._learn_gain_prev     = 1.0
             # La ventana de mínimos se expresa en frames: depende del hop (inv. 9)
             self._reset_input_noise()
@@ -1171,7 +1194,7 @@ class ProcessingPipeline:
                 # lo que RESTA, y es material de diagnóstico — tiene que llegar al
                 # oído tal cual. Las etapas de coloreo posteriores lo falsean, y
                 # justamente todas se disparan cuando hay voz:
-                #   - squelch: el gate cierra sin voz → no se escucharía el ruido
+                #   - gate de ruido: cierra sin señal → no se escucharía el ruido
                 #   - nivelador: AGC de hasta +20 dB sobre una señal de bajo nivel
                 #   - EQ presencia/cuerpo: realza 1.5 kHz, plena banda de legibilidad
                 #   - excitador: con el gate por VAD ABRE con voz y le agrega armónicos
@@ -1180,35 +1203,6 @@ class ProcessingPipeline:
                 # se está quitando. Se conservan el pasabanda de salida (define la
                 # banda que se escucha) y el limitador (protección).
                 preview = self._preview_mode
-
-                # El squelch depende de voice_prob_sq, que solo se actualiza con el
-                # cancelador activo — sin _noise_enabled el vp queda congelado y el
-                # gate podría cerrar para siempre.
-                if (self._squelch_enabled and self._noise_enabled
-                        and not preview
-                        and self._noise_profiler.has_profile):
-                    vp = self._noise_profiler.voice_prob_sq
-                    if vp >= self._squelch_threshold:
-                        self._squelch_hold_count = self._squelch_hold_frames
-                    elif self._squelch_hold_count > 0:
-                        self._squelch_hold_count -= 1
-                    # Ganancia del gate: plena con voz y durante la primera mitad
-                    # de la retención (no toca pausas entre palabras); fade suave
-                    # en la segunda mitad — evita la "cola de squelch" (ruido a
-                    # pleno volumen hasta el mute abrupto). Si vuelve la voz, la
-                    # rampa por frame reabre sin click.
-                    if vp >= self._squelch_threshold:
-                        sq_gain = 1.0
-                    else:
-                        half    = max(1, self._squelch_hold_frames // 2)
-                        sq_gain = min(1.0, self._squelch_hold_count / half)
-                    if sq_gain < 1.0 or self._sq_gain_prev < 1.0:
-                        ramp = np.linspace(self._sq_gain_prev, sq_gain,
-                                           len(filtered), dtype=np.float32)
-                        filtered = filtered * ramp
-                    self._sq_gain_prev = sq_gain
-                else:
-                    self._sq_gain_prev = 1.0
 
                 # Nivelador de voz (el vp requiere cancelador activo — invariante 2).
                 # Con gate por VAD: solo adapta con voz presente (evita perseguir el
@@ -1244,6 +1238,13 @@ class ProcessingPipeline:
                         # (es justo la banda que la radio ya había cortado).
                         mixed = self._bass.process(mixed)
                     out_frame = self._limiter.process(mixed, self._config.audio.sample_rate)
+
+                # Gate de ruido: decide con el nivel de ENTRADA (que es lo que el
+                # operador ve en el VU y contra lo que calibra el umbral) y actúa
+                # acá, sobre la salida ya procesada. En preview no corre: ahí lo
+                # que se escucha es material de diagnóstico, no la señal.
+                if not preview:
+                    out_frame = self._gate.process(out_frame, self.input_level_db)
 
                 self._spec_post_frames.append(out_frame.copy())
 

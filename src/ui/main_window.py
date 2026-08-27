@@ -495,10 +495,6 @@ class MainWindow(QMainWindow):
             "débiles enterradas en ruido, tanto en AM como en SSB.\n"
             "Sensibilidad configurable en pestaña Avanzada Ruido."),
         )
-        self._chk_squelch = _chk_sub(
-            tr("Squelch de voz  (con música no utilizar!)"),
-            tr("Silencia la salida cuando no hay voz detectada. Requiere perfil de ruido aprendido."),
-        )
         self._chk_voice_leveler = _chk_sub(
             tr("Nivelador de voz  (compensa condiciones de banda)"),
             tr("AGC de voz después del cancelador: mantiene la voz limpia a nivel\n"
@@ -507,7 +503,7 @@ class MainWindow(QMainWindow):
             "transmisiones no se re-amplifica. Requiere cancelador activo."),
         )
         # (post) va aquí — refleja el orden real del pipeline:
-        # cancelador → squelch → bandpass POST → EQ voz → excitador
+        # cancelador → bandpass POST → EQ voz → excitador → gate de ruido
         self._chk_bandpass_post = _chk(
             tr("Filtro de paso de banda  (post)"),
             tr("Butterworth IIR después del cancelador de ruido — elimina fugas espectrales del STFT."),
@@ -522,6 +518,15 @@ class MainWindow(QMainWindow):
         self._chk_exciter = _chk(
             tr("Excitador armónico"),
             tr("Genera armónicos en 1–4 kHz para recuperar presencia y ataque de consonantes."),
+        )
+        # Modulo de primer nivel, NO sub-modulo del cancelador: el gate decide con
+        # el nivel de entrada, que se mide siempre. El squelch que reemplaza si
+        # dependia del cancelador (usaba su VAD) y por eso vivia indentado.
+        self._chk_gate = _chk(
+            tr("Gate de ruido  (baja el fondo entre transmisiones)"),
+            tr("Atenúa la salida cuando el nivel de entrada no llega al umbral.\n"
+               "Se calibra mirando el indicador de nivel, no a ciegas como el\n"
+               "squelch que reemplaza. Ajustes en Avanzada Cancelador."),
         )
         self._chk_bass = _chk(
             tr("Recuperar graves"),
@@ -541,7 +546,7 @@ class MainWindow(QMainWindow):
         self._chk_post_filter.toggled.connect(lambda v: self._on_module_toggled("post_filter_enabled", self._pipeline.set_post_filter_enabled, v))
         self._chk_pitch_enhance.toggled.connect(lambda v: self._on_module_toggled("pitch_enhance_enabled", self._pipeline.set_pitch_enhance_enabled, v))
         self._chk_presence.toggled.connect(lambda v: self._on_module_toggled("presence_enabled", self._pipeline.set_presence_enabled, v))
-        self._chk_squelch.toggled.connect(lambda v: self._on_module_toggled("squelch_enabled", self._pipeline.set_squelch_enabled, v))
+        self._chk_gate.toggled.connect(lambda v: self._on_module_toggled("gate_enabled", self._pipeline.set_gate_enabled, v))
         self._chk_voice_leveler.toggled.connect(lambda v: self._on_module_toggled("voice_leveler_enabled", self._pipeline.set_voice_leveler_enabled, v))
         self._chk_exciter.toggled.connect(lambda v: self._on_module_toggled("exciter_enabled", self._pipeline.set_exciter_enabled, v))
         self._chk_bass.toggled.connect(lambda v: self._on_module_toggled("bass_enabled", self._pipeline.set_bass_enabled, v))
@@ -1077,7 +1082,7 @@ class MainWindow(QMainWindow):
             (self._chk_post_filter,      "post_filter_enabled",      self._pipeline.set_post_filter_enabled),
             (self._chk_pitch_enhance, "pitch_enhance_enabled", self._pipeline.set_pitch_enhance_enabled),
             (self._chk_presence,      "presence_enabled",      self._pipeline.set_presence_enabled),
-            (self._chk_squelch,  "squelch_enabled",   self._pipeline.set_squelch_enabled),
+            (self._chk_gate,     "gate_enabled",      self._pipeline.set_gate_enabled),
             (self._chk_voice_leveler, "voice_leveler_enabled", self._pipeline.set_voice_leveler_enabled),
             (self._chk_exciter,  "exciter_enabled",   self._pipeline.set_exciter_enabled),
             (self._chk_bass,     "bass_enabled",      self._pipeline.set_bass_enabled),
@@ -1143,7 +1148,7 @@ class MainWindow(QMainWindow):
             (self._chk_post_filter,       "post_filter_enabled",       self._pipeline.set_post_filter_enabled),
             (self._chk_pitch_enhance,     "pitch_enhance_enabled",     self._pipeline.set_pitch_enhance_enabled),
             (self._chk_presence,          "presence_enabled",          self._pipeline.set_presence_enabled),
-            (self._chk_squelch,           "squelch_enabled",           self._pipeline.set_squelch_enabled),
+            (self._chk_gate,              "gate_enabled",              self._pipeline.set_gate_enabled),
             (self._chk_voice_leveler,     "voice_leveler_enabled",     self._pipeline.set_voice_leveler_enabled),
             (self._chk_exciter,           "exciter_enabled",           self._pipeline.set_exciter_enabled),
             (self._chk_bass,              "bass_enabled",              self._pipeline.set_bass_enabled),

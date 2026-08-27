@@ -62,25 +62,25 @@ Los términos que aparecen a lo largo del manual, en orden alfabético. Los oper
 | **Fading / QSB** | Desvanecimiento: subidas y bajadas lentas del nivel de señal por cambios en la propagación ionosférica, típico de onda corta. QSB es su código Q en radioafición. |
 | **FFT / Espectro** | La FFT (*Fast Fourier Transform*) descompone el audio en sus frecuencias componentes. El **espectro** es esa representación: cuánta energía hay en cada frecuencia. |
 | **Filtro de paso de banda** | Filtro que deja pasar solo las frecuencias entre un límite inferior y uno superior (ej. 200–3000 Hz para SSB), eliminando todo lo demás. |
-| **Gate** | Compuerta de audio: abierta deja pasar el sonido, cerrada lo silencia por completo. Es el mecanismo del squelch. |
+| **Gate** | Compuerta de audio: abierta deja pasar el sonido, cerrada lo atenúa. Es el mecanismo del Gate de ruido (Cap. 8). |
 | **Heterodino** | Tono continuo (silbido) producido por una portadora cercana a la frecuencia sintonizada. El ANF los elimina automáticamente. |
 | **Hz / kHz** | Hertz: unidad de frecuencia (ciclos por segundo). 1 kHz = 1000 Hz. La voz en SSB ocupa aproximadamente 200–3000 Hz. |
 | **MCRA** | Modo de estimación **Adaptativa** del ruido (*Minima Controlled Recursive Averaging*). Estima el piso de ruido de forma continua y automática, sin necesidad de "aprender" un perfil manualmente. Alternativa al Perfil estático. |
 | **Perfil de ruido** | "Fotografía" del ruido de la banda que el cancelador usa como referencia. En modo estático se aprende manualmente (3–5 s sin señal); en modo Adaptativo (MCRA) se estima solo. |
 | **Pipeline** | La cadena de procesamiento: la secuencia ordenada de etapas que el audio atraviesa desde la entrada hasta la salida. |
 | **Piso de ruido** | El nivel de ruido de fondo constante de la banda. Todo lo que está por debajo es inaudible; la señal útil debe superarlo. |
-| **Pitch (f0)** | La frecuencia fundamental de la voz — el "tono" con que habla una persona (80–400 Hz). La aplicación lo detecta para proteger los armónicos de la voz y para el squelch. |
+| **Pitch (f0)** | La frecuencia fundamental de la voz — el "tono" con que habla una persona (80–400 Hz). La aplicación lo detecta para proteger los armónicos de la voz. |
 | **Portadora** | Señal de radio sin modulación (un tono puro en RF). En el audio demodulado aparece como silbido continuo o como silencio con ruido de fondo, según el modo. |
 | **Preset** | Conjunto guardado de todos los ajustes DSP y de ganancia, para cargar de una vez configuraciones completas (pestaña Presets). |
 | **Q (selectividad)** | Factor de calidad de un filtro: qué tan angosto es. Q bajo = afecta una banda ancha de frecuencias; Q alto = pico angosto y selectivo. |
 | **QRN** | Código Q para el ruido atmosférico: descargas eléctricas, tormentas, crujidos impulsivos. Lo ataca el Supresor de Impulsos. |
-| **Retención (hold)** | Tiempo que el squelch mantiene el gate abierto después de que la voz desaparece, para no cortar finales de palabra ni pausas breves. |
+| **Retención (hold)** | Tiempo que el gate sigue abierto después de que la señal cae, para no cortar finales de palabra ni pausas breves. |
 | **RMS** | Valor eficaz (*Root Mean Square*): medida del nivel promedio de una señal, más representativa del volumen percibido que el valor pico. |
 | **SDR** | Radio Definida por Software (*Software Defined Radio*). Receptores cuya demodulación se hace en la PC (SDR#, HDSDR, etc.); su audio se puede procesar con esta aplicación usando un cable de audio virtual. |
 | **SNR** | Relación señal/ruido (*Signal-to-Noise Ratio*): cuántas veces la señal supera al ruido. SNR alto = señal limpia; SNR bajo = señal enterrada en ruido. |
-| **Squelch** | Silenciador: suprime la salida de audio cuando no hay una transmisión presente, eliminando el ruido de banda entre comunicados. |
-| **Umbral** | Valor de disparo de un detector: por encima de él actúa, por debajo no. Varios módulos tienen umbral configurable (squelch, ANF, supresor de impulsos). |
-| **VAD** | Detector de Actividad de Voz (*Voice Activity Detector*). Decide en tiempo real si lo que se escucha es voz humana o solo ruido; alimenta al squelch y al cancelador. |
+| **Squelch** | Silenciador del receptor: corta la salida de audio cuando no hay una transmisión presente. En esta aplicación el equivalente es el **Gate de ruido** (Cap. 8), que atenúa en vez de cortar y decide por nivel de entrada. |
+| **Umbral** | Valor de disparo de un detector: por encima de él actúa, por debajo no. Varios módulos tienen umbral configurable (gate de ruido, ANF, supresor de impulsos). |
+| **VAD** | Detector de Actividad de Voz (*Voice Activity Detector*). Decide en tiempo real si lo que se escucha es voz humana o solo ruido; alimenta al cancelador. |
 | **Wiener (filtro)** | Técnica matemática de reducción de ruido que atenúa cada bin del espectro en proporción a cuánto ruido contiene. Es el corazón del Cancelador de Ruido Estacionario. |
 
 ---
@@ -227,12 +227,12 @@ Cada casilla de verificación activa o desactiva un módulo del pipeline de form
 | &nbsp;&nbsp;&nbsp;↳ **Piso espectral perceptual** | Sub-módulo del cancelador. Reemplaza el piso fijo por una curva que varía con la frecuencia: eleva el piso en la zona vocal (~500 Hz, preserva la calidez de la voz) y lo baja en alta frecuencia (suprime más el soplido). Curva configurable en Avanzada Cancelador. |
 | &nbsp;&nbsp;&nbsp;↳ **Post-filtro espectral** | Sub-módulo del cancelador. Elimina el "ruido musical" (pitidos intermitentes) que el Wiener deja como residuo. Activar cuando se note ese artefacto. Agresividad configurable en Avanzada Cancelador. |
 | &nbsp;&nbsp;&nbsp;↳ **Refuerzo de pitch de voz** | Sub-módulo del cancelador. Para señales de voz muy débiles (AM o SSB): detecta el tono fundamental de la voz y protege sus armónicos de ser suprimidos — mejora la inteligibilidad. Activar si la voz suena "fantasmal" con el cancelador al máximo. Sensibilidad configurable en Avanzada Cancelador. |
-| &nbsp;&nbsp;&nbsp;↳ **Squelch de voz** | Sub-módulo del cancelador. Silencia el audio entre transmisiones con cierre progresivo (sin gorgojeo ni cola de ruido). **No usar con música.** Indicador de nivel de voz y estado del gate en Avanzada Cancelador. |
 | &nbsp;&nbsp;&nbsp;↳ **Nivelador de voz** | Sub-módulo del cancelador. AGC de voz aplicado *después* de la reducción de ruido: mantiene la voz limpia a nivel constante aunque las condiciones de la banda (y la cantidad de cancelación) varíen. Solo adapta cuando detecta voz — el ruido entre transmisiones no se re-amplifica. |
-| **Filtro de paso de banda (post)** | Casi siempre activo junto con el pre. Limpia artefactos del procesamiento espectral. Corre después del cancelador y el squelch (el orden de esta lista refleja el pipeline). Sus límites pueden independizarse de la entrada (ver Cap. 5). |
+| **Filtro de paso de banda (post)** | Casi siempre activo junto con el pre. Limpia artefactos del procesamiento espectral. Corre después del cancelador (el orden de esta lista refleja el pipeline). Sus límites pueden independizarse de la entrada (ver Cap. 5). |
 | **EQ Voz (presencia + cuerpo)** | Dos bandas paramétricas: presencia (claridad, 1–2 kHz) y cuerpo (calidez, 150–800 Hz). Activar para modelar la voz con señales debilitadas o muy filtradas. |
 | **Excitador armónico** | Para señales de voz opacas, sin brillo. Añade presencia. Comparar con y sin para decidir. |
 | **Recuperar graves** | Devuelve el fundamental de la voz cuando el filtro de la radio lo cortó, derivándolo de los armónicos que sí pasaron. Para voces que suenan delgadas o "telefónicas" pese a tener buen nivel — sobre todo en SSB con filtro angosto. |
+| **Gate de ruido** | Módulo de primer nivel (no depende del cancelador). Baja el fondo entre transmisiones cuando el nivel de entrada no llega al umbral, con cierre progresivo y sin cortar de golpe. Corre al final de la cadena. Se calibra mirando el indicador de nivel en Avanzada Cancelador (ver Cap. 8). |
 
 > **Consejo — activar de a uno:** al armar una configuración (o al recibir una señal nueva), activar y desactivar los módulos **de a uno por vez**, escuchando el efecto que produce cada uno. Como todos los cambios aplican en vivo, se oye la diferencia al instante: eso permite ajustar mejor cada módulo — o directamente quitarlo si en esa señal no aporta. Activar todo junto de entrada hace imposible saber qué está ayudando y qué no.
 
@@ -471,8 +471,8 @@ Este comportamiento es automático y no requiere ningún ajuste. Se activa cuand
 | Indicador | Descripción |
 |-----------|-------------|
 | **Reducción (dB)** | Cuánto está reduciendo el ruido en este momento. Verde = reducción fuerte (>10 dB). Amarillo = reducción moderada. |
-| **Voz (%)** | Probabilidad de que el frame actual contenga voz (señal suavizada usada internamente por el Wiener). Para calibrar el Squelch, usar el indicador **Nivel de voz** del grupo Squelch (más reactivo). |
-| **Preview: escuchar ruido eliminado** (pestaña Principal, junto a *Reducción extra*) | Invierte la salida para escuchar **todo lo que el cancelador está restando** — refleja la reducción **completa: Intensidad + Post-Filtro** (más el piso perceptual). Mientras está activo se saltean el **squelch, el nivelador de voz, la EQ de presencia/cuerpo y el excitador**: son etapas que colorean y que se disparan justo cuando hay voz, así que falsearían el diagnóstico (un resto de voz apenas audible saldría nivelado, realzado en 1,5 kHz y con armónicos nuevos). Se conservan el pasabanda de salida —define la banda que estás escuchando— y el limitador. Útil para verificar que no se esté eliminando voz: si en el preview se escucha voz, algo está de más. |
+| **Voz (%)** | Probabilidad de que el frame actual contenga voz (señal suavizada usada internamente por el Wiener). |
+| **Preview: escuchar ruido eliminado** (pestaña Principal, junto a *Reducción extra*) | Invierte la salida para escuchar **todo lo que el cancelador está restando** — refleja la reducción **completa: Intensidad + Post-Filtro** (más el piso perceptual). Mientras está activo se saltean el **gate de ruido, el nivelador de voz, la EQ de presencia/cuerpo y el excitador**: son etapas que colorean y que se disparan justo cuando hay voz, así que falsearían el diagnóstico (un resto de voz apenas audible saldría nivelado, realzado en 1,5 kHz y con armónicos nuevos). Se conservan el pasabanda de salida —define la banda que estás escuchando— y el limitador. Útil para verificar que no se esté eliminando voz: si en el preview se escucha voz, algo está de más. |
 
 ### Controles avanzados (Pestaña Avanzada Cancelador)
 
@@ -633,7 +633,7 @@ Este módulo detecta en tiempo real el **tono fundamental** (f0) de la voz media
 **Activar:** Módulos Activos → casilla "Nivelador de voz (compensa condiciones de banda)"  
 **Ajustar:** Pestaña Avanzada Audio → grupo "Nivelador de voz"
 
-En una sesión de escucha real el nivel de la voz limpia varía constantemente: cambia la propagación, cambia la estación, y la propia cantidad de cancelación de ruido resta más o menos energía según las condiciones. El nivelador es un **AGC dedicado a la voz** que trabaja *después* del cancelador y del squelch — es decir, sobre el audio ya limpio — y lo lleva a un nivel constante.
+En una sesión de escucha real el nivel de la voz limpia varía constantemente: cambia la propagación, cambia la estación, y la propia cantidad de cancelación de ruido resta más o menos energía según las condiciones. El nivelador es un **AGC dedicado a la voz** que trabaja *después* del cancelador — es decir, sobre el audio ya limpio — y lo lleva a un nivel constante.
 
 La diferencia con el AGC general (Cap. 2) es el **gate por detección de voz**: por defecto el nivelador solo adapta su ganancia cuando el detector de voz del cancelador confirma que hay voz presente. Con ruido o silencio la ganancia queda **congelada** en el último valor — el ruido residual entre transmisiones no se re-amplifica, que es el defecto típico de encadenar dos AGC comunes. Este gate se puede desactivar (casilla **"Nivelar en continuo"**, ver abajo) para **música o audio continuo**.
 
@@ -647,54 +647,64 @@ La diferencia con el AGC general (Cap. 2) es el **gate por detección de voz**: 
 | **Velocidad de respuesta** | 200 – 3000 ms | 1500 ms | Qué tan rápido sigue el nivelador los cambios de nivel (el *release* del AGC). **Rápido (200–600 ms):** sigue un fading cíclico y rápido, sin dejar "pozos" de volumen al bajar la señal. **Es el control principal contra el QSB:** medido con un desvanecimiento de 20 dB, bajarlo de 1500 a 200 ms reduce a la mitad el vaivén de nivel que agrega el procesado. El precio es que la ganancia da saltos más marcados; si se notan, bajar la *Ganancia máxima* en vez de frenar la velocidad. **Suave (2000–3000 ms):** nivelado más estable, menos riesgo de bombear el ruido de fondo. |
 | **Nivelar en continuo (música)** | casilla | off | *(La casilla está en la pestaña **Principal** → grupo "Control", debajo del selector de AGC — se cambia según el material que se escucha, así que va a la vista.)* Desactiva el gate por detección de voz: el nivelador adapta **en todo momento**, sin esperar voz. **Activar para música o audio continuo** — donde el detector de voz no reconoce estructura de voz y, con el gate, el nivelador quedaría congelado. Para voz en banda ruidosa dejar **off** (evita re-amplificar el ruido en las pausas). |
 
-> **Cuándo activarlo:** sesiones largas con estaciones de niveles dispares o QSB pronunciado, especialmente con squelch activo (los saltos de nivel entre transmisiones se notan más al no haber ruido de fondo que los enmascare).
+> **Cuándo activarlo:** sesiones largas con estaciones de niveles dispares o QSB pronunciado, especialmente con el gate de ruido activo (los saltos de nivel entre transmisiones se notan más al no haber ruido de fondo que los enmascare).
 
 > **Música con fading (QSB cíclico):** activá el Nivelador, marcá **"Nivelar en continuo"**, subí la Ganancia máxima a ~15 dB y bajá la **Velocidad de respuesta a 400–600 ms**. Así el nivelador empareja el sube-y-baja cíclico de la señal en vez de quedar congelado esperando una voz que no llega. Si empieza a "respirar" el ruido de fondo, subí un paso la velocidad. Dato relacionado: contra el QSB conviene **subir** el Piso espectral (Cap. 5), no bajarlo. Medido con un fading de 20 dB: pasar el piso de 0,10 a 0,20 baja el vaivén de nivel de 28,9 a 24,7 dB. El motivo es que el vaivén lo agrega el propio cancelador —al bajar la señal cae el S/N y con él la ganancia del Wiener, así que la salida cae más que la entrada— y el piso limita cuánto puede caer esa ganancia. Se paga con menos supresión de ruido (unos 2 dB). *(Corregido tras medirlo: hasta la v2.2 esta nota decía lo contrario.)*
 
 ---
 
-## Capítulo 8 — Squelch de Voz
+## Capítulo 8 — Gate de Ruido
 
-**Ubicación:** Pestaña Módulos → sub-módulo "↳ Squelch de voz" (bajo el Cancelador)  
-**Configuración avanzada:** Pestaña Avanzada Cancelador → grupo "Squelch de Voz"
-
-> ⚠️ **No usar con música.** El detector de voz está calibrado para voz humana. Con música produce subidas y bajadas repentinas del nivel de audio al ritmo de la dinámica musical.
+**Ubicación:** Pestaña Módulos → "Gate de ruido"  
+**Configuración avanzada:** Pestaña Avanzada Cancelador → grupo "Gate de ruido"
 
 ### Descripción
 
-Silencia completamente la salida cuando el cancelador de ruido no detecta voz humana. En SSB, entre transmisiones no hay portadora — solo ruido de banda — y el squelch elimina ese ruido residual que queda después de la reducción.
+Baja el fondo entre transmisiones. Mientras el **nivel de entrada** no llega al umbral, la salida se atenúa; en cuanto lo supera, pasa entera.
 
-El detector de voz no mide solo energía: exige **estructura de voz** — concentración de energía en armónicos y periodicidad (autocorrelación) — y descuenta la ganancia del AGC. Por eso el ruido de banda marca valores cercanos a 0% en el indicador aunque fluctúe fuerte o el AGC lo amplifique al terminar una transmisión, y la voz marca 80–100%.
+> **Reemplaza al Squelch de voz** de versiones anteriores. Aquel decidía con el detector de voz del cancelador, y ese criterio tenía dos problemas de fondo. Uno: **no se podía calibrar**. El umbral estaba en porcentaje de una probabilidad que no aparece en ninguna pantalla de la radio, así que sólo se ajustaba por prueba y error. Dos: **el detector no es confiable con señal débil** — se calcula sobre la relación señal/ruido estimada, que a su vez depende del estimador de ruido; medido sobre grabaciones reales marcaba **más alto en las subidas de ruido que en los arranques de voz reales**. El gate decide con un dato que se ve en pantalla: el nivel de entrada en dBFS.
 
-Funciona como un **gate con cierre progresivo**: con voz detectada el audio pasa sin modificación; al desaparecer la voz, el gate se mantiene a volumen pleno durante la primera mitad de la Retención (las pausas entre palabras no se alteran), se desvanece suavemente durante la segunda mitad, y queda en silencio completo. Si la voz reaparece en cualquier punto, el gate reabre al instante sin clicks. No hay audio residual ni gorgojeo en el estado cerrado.
+Tres decisiones de diseño, las tres medidas:
 
-**Requiere el Cancelador de ruido estacionario activo** — el detector de voz vive dentro del cancelador. Si el cancelador está desactivado, el squelch queda en bypass (el audio pasa siempre). Además necesita perfil de ruido aprendido (modo estático) o el período de calentamiento del MCRA (~200 ms).
+**Decide con la entrada, actúa sobre la salida.** Silenciar la entrada parece lo natural, pero deja al estimador de ruido midiendo el silencio que el propio gate fabrica: medido sobre una grabación real, un gate puesto en la entrada hunde el piso estimado **9,5 dB**, mientras que el mismo gate aplicado a la salida lo deja idéntico. Y cerraría justamente en las pausas, que son los únicos ratos en que el modo Adaptativo puede medir el ruido de banda.
 
-### Indicadores en tiempo real (grupo Squelch, Avanzada Cancelador)
+**El umbral es absoluto, en dBFS.** Es lo que permite calibrarlo mirando el indicador en vez de a ciegas. A cambio **no es portable**: el nivel con que entra la radio depende de la estación, la antena y el volumen del receptor, así que es un ajuste propio — el mismo caso que el *Techo de ruido* del AGC. Viaja en el preset y viene desactivado de fábrica.
+
+**Atenúa en vez de silenciar.** Con el gate cerrado el fondo baja lo que diga *Profundidad*, no necesariamente a cero. En HF, 15–25 dB suele sonar bastante más natural que el silencio digital, que se percibe como si la radio se hubiera apagado. El máximo del control sí silencia del todo.
+
+El cierre es **progresivo**: al caer la señal, el gate mantiene el volumen pleno durante la primera mitad de la *Retención* (las pausas entre palabras no se tocan) y se desvanece durante la segunda. Si la señal vuelve en cualquier punto, reabre al instante y sin clicks.
+
+**No requiere el cancelador.** Es un módulo de primer nivel: funciona con el cancelador apagado e incluso sirve solo, para bajar el fondo de una banda ruidosa entre transmisiones. El squelch al que reemplaza sí dependía del cancelador, porque usaba su detector de voz.
+
+**Con música** el gate no molesta como molestaba el squelch: no busca estructura de voz, sólo mira el nivel. Aun así, si la música tiene pasajes suaves que caen por debajo del umbral, los va a atenuar — en ese caso bajar el umbral o dejar la *Profundidad* en un valor chico.
+
+### Indicadores en tiempo real (grupo Gate de ruido, Avanzada Cancelador)
 
 | Indicador | Descripción |
 |-----------|-------------|
-| **Nivel de voz** | Porcentaje de actividad vocal detectada en el frame actual, con respuesta rápida (~20 ms). Gris = ruido puro. Amarillo = señal marginal. Azul = voz detectada, gate va a abrir. |
-| **Gate** | Estado actual del gate: **ABIERTO** (verde, audio pasa) o **CERRADO** (gris, silencio). Permanece ABIERTO durante el período de Retención tras fin de la voz. |
+| **Nivel de entrada** | Nivel de la señal que entra, en dBFS, medido **antes del AGC** y con el mismo suavizado con que se compara contra el umbral. Al lado muestra el umbral elegido ("abre en"). Es la herramienta de calibración: con estos dos números el ajuste deja de ser a ciegas. |
+| **Gate** | Estado actual: **ABIERTO** (verde, el audio pasa entero) o **CERRADO** (gris, el fondo está atenuado). Permanece ABIERTO durante la Retención. |
 
 ### Controles
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
-| **Umbral squelch** | 5% – 100% | 15% | Nivel mínimo de actividad de voz para abrir el gate, en la misma escala que el indicador **Nivel de voz**. Como el detector exige estructura de voz, el ruido marca ~0% y no hace falta un umbral alto: **10–25% cubre la mayoría de los casos**. Bajarlo a 5–10% para señales muy débiles; subirlo solo si alguna interferencia con estructura tonal (p. ej. un heterodino que el ANF no atrapa) abriera el gate. |
-| **Retención** | 0 – 1000 ms | 500 ms | Tiempo desde el fin de la voz hasta el silencio total: volumen pleno la primera mitad, desvanecimiento progresivo la segunda. 500 ms es adecuado para SSB normal; con el detector actual se puede bajar a 300 ms para un mute más rápido. Subir a 700–1000 ms para operadores con pausas largas entre palabras. |
+| **Umbral** | −80 a −20 dBFS | −50 dBFS | Nivel de entrada a partir del cual el gate abre. Se elige entre el nivel que marca el indicador en los huecos y el que marca con señal. Si corta voz débil, bajarlo; si abre con el ruido solo, subirlo. **Es un ajuste de tu estación** — conviene repasarlo al cambiar de banda, de antena o de hora. |
+| **Profundidad** | 0 a 60 dB | 20 dB | Cuánto baja el fondo con el gate cerrado. En 0 dB el gate no atenúa nada (queda inerte); 15–25 dB es la zona natural en HF; el máximo silencia por completo. |
+| **Retención** | 50 a 2000 ms | 300 ms | Tiempo que el gate sigue abierto después de que la señal cae, para no cortar entre palabras. Volumen pleno la primera mitad, desvanecimiento la segunda. Corto para conversación rápida; 500–1000 ms para operadores con pausas largas. |
 
 ### Calibración
 
-El indicador **Nivel de voz** y el estado del **Gate** en la pestaña Avanzada Cancelador son la herramienta principal de calibración:
+1. Activar el gate en la pestaña Módulos y abrir **Avanzada Cancelador** para ver el indicador **Nivel de entrada**.
+2. Con la radio en un hueco (sin transmisión), anotar el nivel que marca.
+3. Con una transmisión en curso, anotar el nivel que marca.
+4. Poner el **Umbral** entre esos dos valores, más cerca del de los huecos que del de la señal.
+5. Escuchar: si corta el arranque de las palabras o la voz débil, bajarlo un paso; si el gate abre con el ruido solo, subirlo.
+6. Ajustar la **Profundidad** al gusto (15–25 dB es un buen punto de partida) y la **Retención** si corta finales de palabra.
 
-1. **Con solo ruido de banda** (sin transmisión) → "Nivel de voz" debería marcar 0–10%, incluso con ruido fuerte, fluctuante o con el AGC amplificándolo. Si marca más de forma sostenida, probablemente haya una interferencia tonal — activar el ANF.
-2. **Con transmisión activa** → "Nivel de voz" sube hacia 80–100% y "Gate: ABIERTO".
-3. Ajustar el **Umbral** en 15–25%. Para señales muy débiles que no llegan a abrir, bajarlo a 5–10%.
+> **Si los dos niveles son casi iguales**, el gate no tiene margen donde trabajar: la señal no sobresale del ruido de banda. Ahí lo que hace falta es el cancelador, no el gate.
 
-> **Si el gate nunca cierra:** hay algo con estructura tonal o periódica en la banda (heterodino, portadora). Activar el ANF para eliminarlo, o subir el umbral por encima de lo que marca el indicador.
-
-> **Nota de temporización:** tras el fin de la voz, el indicador baja en ~100–150 ms; el gate sigue a volumen pleno la primera mitad de la Retención y se desvanece durante la segunda. Si corta finales de palabras, aumentar la Retención; si el ruido tarda en apagarse, reducirla.
+> **Migración desde el Squelch de voz:** los presets guardados con versiones anteriores se cargan sin problema — las claves del squelch se ignoran y el gate toma sus valores de fábrica, o sea **desactivado**. Si usabas el squelch, activá el gate y calibralo con el procedimiento de arriba; no hay conversión automática porque los dos umbrales miden cosas distintas.
 
 ---
 
@@ -909,7 +919,7 @@ A la derecha de la misma fila, el botón **"🔇 Mute"** silencia la salida a lo
 | ↳ Post-filtro espectral | ⬜ Opcional | Activar si se escuchan pitidos intermitentes residuales |
 | ↳ Refuerzo de pitch de voz | ⬜ Opcional | Para señales SSB DX muy débiles — mejora la inteligibilidad |
 | ↳ Nivelador de voz | ⬜ Opcional | Activar con estaciones de niveles dispares o QSB fuerte |
-| Squelch | ✅ Activo | Umbral 15%, retención 300 ms |
+| Gate de ruido | ⬜ Opcional | Umbral entre el nivel que marca el indicador en los huecos y el que marca con señal; profundidad 15–25 dB |
 | EQ Voz | ✅ Activo | Presencia +4 dB a 2000 Hz; cuerpo +3 dB a 350 Hz si la voz suena delgada |
 | Excitador armónico | ⬜ Opcional | Drive 2,0×, mezcla 25% |
 | Recuperar graves | ⬜ Opcional | Si la voz suena delgada. Empezar en 35% y subir de a poco |
@@ -927,7 +937,7 @@ A la derecha de la misma fila, el botón **"🔇 Mute"** silencia la salida a lo
 | ↳ Post-filtro espectral | ⬜ Opcional | Activar si quedan pitidos residuales |
 | ↳ Refuerzo de pitch de voz | ⬜ Opcional | También ayuda en AM: la demodulación preserva los armónicos de la voz |
 | ↳ Nivelador de voz | ⬜ Opcional | Para música **marcá "Nivelar en continuo"** (sin eso el gate de voz congela la ganancia); útil para emparejar el fading cíclico |
-| Squelch | ❌ No usar | Produce bombeo con música |
+| Gate de ruido | ⬜ Opcional | Ya no molesta con música (decide por nivel, no por voz), pero atenúa los pasajes suaves que caigan bajo el umbral |
 | EQ Voz | ⬜ Opcional | Presencia si la voz suena apagada; cuerpo si suena delgada |
 | Excitador armónico | ⬜ Opcional | Con moderación |
 | Recuperar graves | ⬜ Opcional | En AM ancho el fundamental suele estar: revisar primero el corte inferior del pasabanda |
@@ -1083,7 +1093,7 @@ Cómo leerlo:
 
 Un preset guarda una "foto" completa de la configuración DSP y de ganancia — todos los módulos, sliders y modos de las pestañas Principal y Avanzadas. Los dispositivos de audio y la posición de la ventana **no** forman parte del preset (son específicos de cada equipo).
 
-Uso típico: un preset "SSB DX débil" con cancelador agresivo y pitch enhancement, otro "AM local" con squelch apagado y filtros anchos, y cambiar entre ellos con doble clic según lo que estés escuchando.
+Uso típico: un preset "SSB DX débil" con cancelador agresivo y pitch enhancement, otro "AM local" con el gate apagado y filtros anchos, y cambiar entre ellos con doble clic según lo que estés escuchando.
 
 ### Operaciones
 

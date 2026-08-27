@@ -2,7 +2,7 @@
 test_integration — pipeline completo sin hardware, con TODOS los modulos activos.
 
 A diferencia de test_pipeline (config default: casi todo apagado), este test
-ejercita el camino real de _run_processor con: MCRA + squelch + fading comp +
+ejercita el camino real de _run_processor con: MCRA + gate de ruido +
 post-filtro + piso perceptual + pitch enhance + exciter + EQ + AGC custom.
 Incluye las dos maniobras historicamente fragiles: cambio de modo de ruido en
 caliente y cambio de tamano de bloque con reinicio (shape mismatch, estados
@@ -74,9 +74,10 @@ d = cfg.dsp
 d.bandpass_limits           = (200, 3000)
 d.noise_enabled             = True
 d.noise_mode                = "mcra"
-d.squelch_enabled           = True
-d.squelch_threshold         = 0.30
-d.squelch_hold_ms           = 300.0
+d.gate_enabled              = True
+d.gate_threshold_db         = -34.0   # entre el ruido (max ~-36) y la voz (mediana -32)
+d.gate_hold_ms              = 300.0
+d.gate_depth_db             = 20.0
 d.post_filter_enabled       = True
 d.perceptual_floor_enabled  = True
 d.pitch_enhance_enabled     = True
@@ -91,11 +92,14 @@ pipeline.set_error_callback(lambda msg: errors.append(msg))
 
 hop = cfg.audio.block_size
 
-print("=== Fase 1: ruido de banda (warmup MCRA + squelch cerrado) ===")
+print("=== Fase 1: ruido de banda (warmup MCRA + gate cerrado) ===")
 pipeline.start(headless=True)
 rms_noise = feed(pipeline, noise_frames(400, hop), collect=True)
 check("MCRA completo el warmup (has_profile)", pipeline.noise_has_profile)
-check("gate cerrado con solo ruido", not pipeline.squelch_gate_open)
+# El gate decide con el NIVEL de entrada (dBFS absolutos), no con el VAD: con
+# solo ruido el nivel medido no llega al umbral y el gate cierra.
+# Los generadores del test miden -39 dBFS de mediana con ruido y -32 con voz.
+check("gate cerrado con solo ruido", not pipeline.gate_open)
 check("vp bajo con solo ruido (%.2f)" % pipeline.noise_voice_prob_sq,
       pipeline.noise_voice_prob_sq < 0.30)
 
@@ -106,12 +110,12 @@ for i in range(0, 300, 50):
     feed(pipeline, vx[i:i + 50])
     vps.append(pipeline.noise_voice_prob_sq)
 check("vp sube con voz (max %.2f)" % max(vps), max(vps) > 0.5)
-check("gate abierto con voz", pipeline.squelch_gate_open)
+check("gate abierto con voz", pipeline.gate_open)
 check("indicador S/N alto con voz (%.1f dB)" % pipeline.snr_db, pipeline.snr_db > 6.0)
 
 print("\n=== Fase 3: vuelve el ruido (gate cierra tras la retencion) ===")
 feed(pipeline, noise_frames(150, hop))
-check("gate cerrado de nuevo tras el hold", not pipeline.squelch_gate_open)
+check("gate cerrado de nuevo tras el hold", not pipeline.gate_open)
 check("indicador S/N cae con solo ruido (%.1f dB)" % pipeline.snr_db, pipeline.snr_db < 6.0)
 
 print("\n=== Fase 3b: nivelador de voz (adapta con voz, congela con ruido) ===")
@@ -185,7 +189,7 @@ vx2 = voice_frames(200, hop2)
 for i in range(0, 200, 40):
     feed(pipeline, vx2[i:i + 40])
     vps2.append(pipeline.noise_voice_prob_sq)
-check("hop 960: la voz abre el gate (max vp %.2f)" % max(vps2), max(vps2) > 0.5)
+check("hop 960: la voz sube el vp (max %.2f)" % max(vps2), max(vps2) > 0.5)
 pipeline.stop()
 cfg.audio.block_size = 480
 pipeline.start(headless=True)

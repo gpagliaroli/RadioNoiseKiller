@@ -649,7 +649,7 @@ class AdvancedImpulseTab(QWidget):
 
 
 # ---------------------------------------------------------------------------
-# Pestaña Avanzada Cancelador  (Wiener + Squelch + sub-módulos)
+# Pestaña Avanzada Cancelador  (Wiener + Gate de ruido + sub-módulos)
 # ---------------------------------------------------------------------------
 
 class AdvancedCancellerTab(QWidget):
@@ -675,8 +675,11 @@ class AdvancedCancellerTab(QWidget):
                   self._s_mcra_window, self._s_noise_freeze, self._s_noise_fall,
                   self._s_hf_boost):
             s.set_enabled(noise)
-        for s in (self._s_squelch_threshold, self._s_squelch_hold):
-            s.set_enabled(noise and dsp.squelch_enabled)
+        # El gate NO depende del cancelador: decide con el nivel de entrada, que
+        # se mide siempre (a diferencia del squelch viejo, que necesitaba el VAD
+        # del profiler y por eso arrastraba el invariante 2).
+        for s in (self._s_gate_threshold, self._s_gate_hold, self._s_gate_depth):
+            s.set_enabled(dsp.gate_enabled)
         for s in (self._s_pf_boost, self._s_pf_center,
                   self._s_pf_rolloff_hz, self._s_pf_rolloff_depth):
             s.set_enabled(noise and dsp.perceptual_floor_enabled)
@@ -685,7 +688,7 @@ class AdvancedCancellerTab(QWidget):
     def _build_ui(self) -> None:
         layout = _make_scroll_layout(self)
         layout.addWidget(self._build_canceller_group())
-        layout.addWidget(self._build_squelch_group())
+        layout.addWidget(self._build_gate_group())
         layout.addWidget(self._build_perceptual_floor_group())
         layout.addWidget(self._build_pitch_group())
         layout.addWidget(_reset_button_widget(self._reset_defaults))
@@ -814,49 +817,66 @@ class AdvancedCancellerTab(QWidget):
 
         return group
 
-    def _build_squelch_group(self) -> QGroupBox:
-        group = QGroupBox(tr("Squelch de voz  (activar en Módulos Activos)"))
+    def _build_gate_group(self) -> QGroupBox:
+        group = QGroupBox(tr("Gate de ruido  (activar en Módulos Activos)"))
         layout = QVBoxLayout(group)
 
-        sq_row = QHBoxLayout()
-        sq_row.addWidget(QLabel(tr("Nivel de voz:")))
-        self._lbl_sq_vp = QLabel("—")
-        self._lbl_sq_vp.setStyleSheet("color: #888;")
-        sq_row.addWidget(self._lbl_sq_vp)
-        sq_row.addSpacing(20)
-        sq_row.addWidget(QLabel(tr("Gate:")))
-        self._lbl_sq_gate = QLabel("—")
-        self._lbl_sq_gate.setStyleSheet("color: #888;")
-        sq_row.addWidget(self._lbl_sq_gate)
-        sq_row.addStretch()
-        layout.addLayout(sq_row)
-        layout.addWidget(_note(
-            tr("  ↳ Ajustar Umbral (%) para que quede entre el nivel en silencio y con voz.")
-        ))
+        # El indicador es la ayuda de calibración que al squelch le faltaba: el
+        # umbral está en dBFS, así que hay que poder ver el nivel en dBFS.
+        g_row = QHBoxLayout()
+        g_row.addWidget(QLabel(tr("Nivel de entrada:")))
+        self._lbl_gate_floor = QLabel("—")
+        self._lbl_gate_floor.setStyleSheet("color: #888;")
+        g_row.addWidget(self._lbl_gate_floor)
+        g_row.addSpacing(20)
+        g_row.addWidget(QLabel(tr("Gate:")))
+        self._lbl_gate_state = QLabel("—")
+        self._lbl_gate_state.setStyleSheet("color: #888;")
+        g_row.addWidget(self._lbl_gate_state)
+        g_row.addStretch()
+        layout.addLayout(g_row)
+        layout.addWidget(_note(tr(
+            "  ↳ Poné el umbral entre el nivel que marca en los huecos y el que marca "
+            "con señal. El indicador de arriba muestra los dos datos que hacen falta: "
+            "el nivel de ahora y el umbral elegido.")))
 
-        self._s_squelch_threshold = SliderRow(
+        self._s_gate_threshold = SliderRow(
             tr("Umbral:"),
-            min_val=0.05, max_val=1.00,
-            default=_DSP_DEF.squelch_threshold,
-            step=0.05, unit="", fmt="{:.0f}",
+            min_val=-80.0, max_val=-20.0,
+            default=_DSP_DEF.gate_threshold_db,
+            step=1.0, unit="dBFS", fmt="{:.0f}",
         )
-        self._s_squelch_threshold._update_label = lambda v: self._s_squelch_threshold._val_lbl.setText(
-            f"{v*100:.0f}%  ({tr('sensible') if v < 0.15 else tr('normal') if v < 0.35 else tr('selectivo') if v < 0.75 else tr('máximo')})"
+        self._s_gate_threshold._update_label = lambda v: self._s_gate_threshold._val_lbl.setText(
+            f"{v:.0f} dBFS"
         )
-        self._s_squelch_threshold._val_lbl.setFixedWidth(110)
-        self._s_squelch_threshold.valueChanged.connect(self._on_squelch_threshold)
-        layout.addWidget(self._s_squelch_threshold)
-        layout.addWidget(_note(tr("  ↳ El ruido marca ~0% (el detector exige estructura de voz): 10–25% suele bastar. Subirlo solo si una interferencia tonal abre el gate.")))
+        self._s_gate_threshold._val_lbl.setFixedWidth(120)
+        self._s_gate_threshold.valueChanged.connect(self._pipeline.set_gate_threshold_db)
+        layout.addWidget(self._s_gate_threshold)
+        layout.addWidget(_note(tr("  ↳ Nivel de entrada a partir del cual el gate abre. Si corta voz débil, bajarlo; si abre con el ruido solo, subirlo. Es un ajuste de TU estación: depende del nivel con que entra la radio.")))
 
-        self._s_squelch_hold = SliderRow(
+        self._s_gate_depth = SliderRow(
+            tr("Profundidad:"),
+            min_val=0.0, max_val=60.0,
+            default=_DSP_DEF.gate_depth_db,
+            step=5.0, unit="dB", fmt="{:.0f}",
+        )
+        self._s_gate_depth._update_label = lambda v: self._s_gate_depth._val_lbl.setText(
+            f"−{v:.0f} dB  ({tr('desactivado') if v < 2.5 else tr('suave') if v < 17.5 else tr('fuerte') if v < 45 else tr('silencio')})"
+        )
+        self._s_gate_depth._val_lbl.setFixedWidth(120)
+        self._s_gate_depth.valueChanged.connect(self._pipeline.set_gate_depth_db)
+        layout.addWidget(self._s_gate_depth)
+        layout.addWidget(_note(tr("  ↳ Cuánto baja el fondo con el gate cerrado. Atenuar 15–25 dB suena más natural que silenciar del todo; el máximo es silencio.")))
+
+        self._s_gate_hold = SliderRow(
             tr("Retención:"),
-            min_val=0.0, max_val=1000.0,
-            default=_DSP_DEF.squelch_hold_ms,
+            min_val=50.0, max_val=2000.0,
+            default=_DSP_DEF.gate_hold_ms,
             step=50.0, unit="ms", fmt="{:.0f}",
         )
-        self._s_squelch_hold.valueChanged.connect(self._on_squelch_hold)
-        layout.addWidget(self._s_squelch_hold)
-        layout.addWidget(_note(tr("  ↳ Tiempo que el gate permanece abierto tras perder la voz. Default 300 ms.")))
+        self._s_gate_hold.valueChanged.connect(self._pipeline.set_gate_hold_ms)
+        layout.addWidget(self._s_gate_hold)
+        layout.addWidget(_note(tr("  ↳ Tiempo que el gate sigue abierto tras caer la señal, para no cortar entre palabras. La segunda mitad es un desvanecimiento, no un corte.")))
         return group
 
     def _build_perceptual_floor_group(self) -> QGroupBox:
@@ -971,32 +991,25 @@ class AdvancedCancellerTab(QWidget):
 
     def _update_stats(self) -> None:
         vp = self._pipeline.noise_voice_prob
-        thr = self._config.dsp.squelch_threshold
-
-        # Indicador squelch: usa voice_prob_sq (rápido), igual que el gate real
-        sq_on = self._config.dsp.squelch_enabled and self._config.dsp.noise_enabled
-        if sq_on:
-            vp_sq = self._pipeline.noise_voice_prob_sq
-            self._lbl_sq_vp.setText(f"{vp_sq*100:.0f}%")
-            if vp_sq > thr:
-                color_sq = "#4fc3f7"   # azul — por encima del umbral → gate abre
-            elif vp_sq > thr * 0.5:
-                color_sq = "#fff176"   # amarillo — zona marginal
-            else:
-                color_sq = "#888"      # gris — ruido claro
-            self._lbl_sq_vp.setStyleSheet(f"color: {color_sq}; font-weight: bold;")
-
-            gate_open = self._pipeline.squelch_gate_open
-            self._lbl_sq_gate.setText(tr("ABIERTO") if gate_open else tr("CERRADO"))
-            self._lbl_sq_gate.setStyleSheet(
-                "color: #69f0ae; font-weight: bold;" if gate_open
-                else "color: #888; font-weight: bold;"
-            )
+        # Gate de ruido: el nivel de entrada es lo que se compara con el umbral,
+        # así que hay que mostrarlo (invariante 5: se actualiza siempre).
+        nivel = self._pipeline.input_level_db
+        if self._config.dsp.gate_enabled and nivel is not None:
+            umbral = self._config.dsp.gate_threshold_db
+            self._lbl_gate_floor.setText(
+                tr("{piso:.0f} dBFS · abre en {abre:.0f}").format(piso=nivel, abre=umbral))
+            self._lbl_gate_floor.setStyleSheet("color: #888;")
+            abierto = self._pipeline.gate_open
+            self._lbl_gate_state.setText(tr("ABIERTO") if abierto else tr("CERRADO"))
+            self._lbl_gate_state.setStyleSheet(
+                "color: #69f0ae; font-weight: bold;" if abierto
+                else "color: #888; font-weight: bold;")
         else:
-            self._lbl_sq_vp.setText(tr("—  (desactivado)"))
-            self._lbl_sq_vp.setStyleSheet("color: #888;")
-            self._lbl_sq_gate.setText("—")
-            self._lbl_sq_gate.setStyleSheet("color: #888;")
+            self._lbl_gate_floor.setText(
+                tr("—  (desactivado)") if not self._config.dsp.gate_enabled else "—")
+            self._lbl_gate_floor.setStyleSheet("color: #888;")
+            self._lbl_gate_state.setText("—")
+            self._lbl_gate_state.setStyleSheet("color: #888;")
 
         if not self._config.dsp.noise_enabled:
             # Cancelador desactivado: reduction_db/voice_prob quedan congelados
@@ -1066,8 +1079,9 @@ class AdvancedCancellerTab(QWidget):
         self._s_noise_freeze.set_value(cfg.noise_freeze_thr * 100.0)
         self._s_noise_fall.set_value(cfg.noise_fall_db_s)
         self._s_hf_boost.set_value(cfg.noise_hf_boost * 100.0)
-        self._s_squelch_threshold.set_value(cfg.squelch_threshold)
-        self._s_squelch_hold.set_value(cfg.squelch_hold_ms)
+        self._s_gate_threshold.set_value(cfg.gate_threshold_db)
+        self._s_gate_depth.set_value(cfg.gate_depth_db)
+        self._s_gate_hold.set_value(cfg.gate_hold_ms)
         self._s_pf_boost.set_value(cfg.perceptual_floor_boost)
         self._s_pf_center.set_value(cfg.perceptual_floor_center)
         self._s_pf_rolloff_hz.set_value(cfg.perceptual_floor_rolloff_hz)
@@ -1079,8 +1093,9 @@ class AdvancedCancellerTab(QWidget):
         self._config.dsp.noise_floor       = defaults.noise_floor
         self._config.dsp.noise_smooth      = defaults.noise_smooth
         self._config.dsp.noise_attack      = defaults.noise_attack
-        self._config.dsp.squelch_threshold = defaults.squelch_threshold
-        self._config.dsp.squelch_hold_ms   = defaults.squelch_hold_ms
+        self._config.dsp.gate_threshold_db = defaults.gate_threshold_db
+        self._config.dsp.gate_depth_db     = defaults.gate_depth_db
+        self._config.dsp.gate_hold_ms      = defaults.gate_hold_ms
         self._config.dsp.perceptual_floor_boost        = defaults.perceptual_floor_boost
         self._config.dsp.perceptual_floor_center       = defaults.perceptual_floor_center
         self._config.dsp.perceptual_floor_rolloff_hz   = defaults.perceptual_floor_rolloff_hz
@@ -1089,8 +1104,9 @@ class AdvancedCancellerTab(QWidget):
         self._pipeline.set_noise_floor(defaults.noise_floor)
         self._pipeline.set_noise_smooth(defaults.noise_smooth)
         self._pipeline.set_noise_attack(defaults.noise_attack)
-        self._pipeline.set_squelch_threshold(defaults.squelch_threshold)
-        self._pipeline.set_squelch_hold_ms(defaults.squelch_hold_ms)
+        self._pipeline.set_gate_threshold_db(defaults.gate_threshold_db)
+        self._pipeline.set_gate_depth_db(defaults.gate_depth_db)
+        self._pipeline.set_gate_hold_ms(defaults.gate_hold_ms)
         self._pipeline.set_pf_boost(defaults.perceptual_floor_boost)
         self._pipeline.set_pf_center(defaults.perceptual_floor_center)
         self._pipeline.set_pf_rolloff_hz(defaults.perceptual_floor_rolloff_hz)
@@ -1114,14 +1130,6 @@ class AdvancedCancellerTab(QWidget):
     def _on_noise_attack(self, val: float) -> None:
         self._config.dsp.noise_attack = val
         self._pipeline.set_noise_attack(val)
-
-    def _on_squelch_threshold(self, val: float) -> None:
-        self._config.dsp.squelch_threshold = val
-        self._pipeline.set_squelch_threshold(val)
-
-    def _on_squelch_hold(self, val: float) -> None:
-        self._config.dsp.squelch_hold_ms = val
-        self._pipeline.set_squelch_hold_ms(val)
 
     def _on_pf_boost(self, val: float) -> None:
         self._config.dsp.perceptual_floor_boost = val

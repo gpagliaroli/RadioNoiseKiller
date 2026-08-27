@@ -51,13 +51,13 @@ STAGES = [
     ("Filtro de Paso de Banda — PRE", "Bandpass Filter — PRE", "Limita el espectro antes del cancelador", "Limits the spectrum before the canceller", "st"),
     ("ANF — Muesca Espectral", "ANF — Spectral Notch", "Cancela heterodinos y tonos fijos", "Cancels heterodynes and steady tones", "st"),
     ("Cancelador de Ruido Estacionario", "Stationary Noise Canceller", "Filtro Wiener espectral adaptativo", "Adaptive spectral Wiener filter", "main"),
-    ("Squelch de Voz", "Voice Squelch", "Silencia la salida entre transmisiones (opcional)", "Mutes output between overs (optional)", "st"),
     ("Nivelador de Voz", "Voice Leveler", "Empareja estaciones de nivel dispar (opcional)", "Evens out stations of differing level (optional)", "st"),
     ("Filtro de Paso de Banda — POST", "Bandpass Filter — POST", "Limpia fugas espectrales post-procesado", "Cleans spectral leakage after processing", "st"),
     ("EQ de Voz: presencia + cuerpo", "Voice EQ: presence + body", "Realza consonantes y cuerpo de la voz", "Boosts consonants and voice body", "st"),
     ("Excitador Armónico", "Harmonic Exciter", "Genera armónicos para recuperar brillo (opcional)", "Adds harmonics to restore brightness (optional)", "st"),
     ("Recuperar Graves", "Restore Bass", "Devuelve el fundamental que cortó la radio (opcional)", "Brings back the fundamental the radio cut (optional)", "st"),
     ("Ganancia de salida + Limitador", "Output gain + Limiter", "Nivel final y limitador de picos", "Final level and peak limiter", "st"),
+    ("Gate de Ruido", "Noise Gate", "Baja el fondo entre transmisiones (opcional)", "Lowers the background between overs (optional)", "st"),
     ("AUDIO — SALIDA", "AUDIO — OUTPUT", "", "", "io"),
 ]
 # Sub-módulos del cancelador

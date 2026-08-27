@@ -488,3 +488,111 @@ assert _sup < -8.0, f"ya no suprime impulsos ({_sup:.1f} dB)"
 assert np.max(np.abs(_out_i)) <= np.max(np.abs(_imp_b)) * 1.01, \
     "el supresor amplifico la senal"
 print("  Supresor de impulsos: OK")
+
+# ---------------------------------------------------------------------------
+# NoiseGate — reemplaza al squelch por VAD
+#
+# Dos decisiones de diseno que el test tiene que fijar, porque las dos se
+# tomaron contra la intuicion y con medicion:
+#   - decide con el nivel de ENTRADA y actua sobre la SALIDA (un gate que
+#     silencia la entrada hunde lambda_d 9,5 dB: el estimador termina midiendo
+#     el silencio que el propio gate fabrica, justo en las pausas);
+#   - el umbral es ABSOLUTO en dBFS, y eso NO es simplificacion: ver mas abajo.
+print()
+print("=== NoiseGate (gate por nivel con ventana) ===")
+from dsp.gate import NoiseGate  # noqa: E402
+
+_GH = 480
+_PISO = -40.0
+
+
+def _gate(**kw):
+    g = NoiseGate(SR)
+    g.set_enabled(True)
+    g.set_hop(_GH)
+    g.set_threshold_db(kw.get("thr", -34.0))
+    g.set_hold_ms(kw.get("hold", 300.0))
+    g.set_depth_db(kw.get("depth", 20.0))
+    return g
+
+
+def _correr(g, niveles):
+    """Devuelve (ganancia media por frame, audio concatenado)."""
+    gan, sal = [], []
+    for lv in niveles:
+        y = g.process(np.ones(_GH, dtype=np.float32), lv)
+        gan.append(float(np.abs(y).mean()))
+        sal.append(y)
+    return np.array(gan), np.concatenate(sal)
+
+
+_n = int(1.0 * SR / _GH)
+_g = _gate()
+_gan, _audio = _correr(_g, [_PISO]*_n + [_PISO + 15]*_n + [_PISO]*_n)
+
+_cerrado = 10 ** (-20 / 20)
+assert abs(_gan[_n//2] - _cerrado) < 0.02, f"no atenua en silencio: {_gan[_n//2]:.3f}"
+assert _gan[_n + _n//2] > 0.99, f"no abre con señal: {_gan[_n + _n//2]:.3f}"
+assert abs(_gan[-1] - _cerrado) < 0.02, f"no vuelve a cerrar: {_gan[-1]:.3f}"
+print("  abre con señal y atenua en silencio: OK")
+
+# La retencion cubre las pausas entre palabras: apenas termina la señal el gate
+# sigue abierto (si no, cortaria entre palabra y palabra).
+assert _gan[2*_n + 2] > 0.99, f"cierra apenas termina la señal: {_gan[2*_n + 2]:.3f}"
+print("  la retencion no corta entre palabras: OK")
+
+# Sin clicks: lo que importa es la continuidad MUESTRA a muestra, no el promedio
+# por frame (que salta ~0,45 al abrir, y esta bien: el ataque tiene que ser
+# rapido para no comerse el arranque de la palabra).
+_salto = float(np.max(np.abs(np.diff(_audio))))
+assert _salto < 0.02, f"discontinuidad en la señal (click): {_salto:.4f}"
+print(f"  sin discontinuidades de muestra ({_salto:.4f}): OK")
+
+# Profundidad: atenuar, no mutear. 0 dB = el gate no hace nada.
+_g0 = _gate(depth=0.0)
+_gan0, _ = _correr(_g0, [_PISO]*_n)
+assert _gan0[-1] > 0.99, f"con profundidad 0 igual atenua: {_gan0[-1]:.3f}"
+_g40 = _gate(depth=40.0)
+_gan40, _ = _correr(_g40, [_PISO]*_n)
+assert _gan40[-1] < 0.02, f"profundidad 40 dB no atenua lo suficiente: {_gan40[-1]:.3f}"
+print("  la profundidad manda cuanto atenua: OK")
+
+# El umbral es ABSOLUTO en dBFS: abre exactamente donde dice el slider. La primera
+# version lo hizo relativo a un piso medido, buscando que se auto-calibrara al
+# cambiar de banda; NO funciona, y el motivo es estructural: cualquier seguidor de
+# piso o persigue a la señal —y entonces el gate cierra sobre la voz— o no sigue al
+# ruido. Medido con voz continua, el umbral relativo dejaba el gate CERRADO el 100%
+# del tiempo. Absoluto ademas es observable: se calibra mirando el VU de entrada,
+# que era justo lo que al squelch le faltaba.
+_gr = _gate(thr=-30.0)
+assert _correr(_gr, [-29.0]*_n)[0][-1] > 0.99, "no abre con nivel sobre el umbral"
+_gr2 = _gate(thr=-30.0)
+assert _correr(_gr2, [-31.0]*_n)[0][-1] < 0.2, "abrio con nivel bajo el umbral"
+print("  el umbral es absoluto en dBFS: OK")
+
+# Sin piso medido todavia, el gate queda ABIERTO: mejor dejar pasar audio que
+# mutear por no saber donde esta el piso.
+_gsp = _gate()
+assert float(np.abs(_gsp.process(np.ones(_GH, dtype=np.float32), None)).mean()) > 0.99, \
+    "muteo sin tener nivel medido"
+# Y apagarlo tiene que dejarlo abierto, no conservar el estado cerrado.
+_goff = _gate()
+_correr(_goff, [_PISO]*_n)
+_goff.set_enabled(False)
+assert float(np.abs(_goff.process(np.ones(_GH, dtype=np.float32), -80.0)).mean()) > 0.99, \
+    "desactivado sigue atenuando"
+print("  sin nivel y desactivado: pasa todo: OK")
+
+# El hold esta en frames -> depende del hop (invariante 9)
+_gh = NoiseGate(SR); _gh.set_hold_ms(300.0); _gh.set_hop(480)
+_f480 = _gh._hold_frames
+_gh.set_hop(960)
+assert _gh._hold_frames == max(1, round(_f480 / 2)), \
+    f"el hold no escala con el hop: {_f480} -> {_gh._hold_frames}"
+# Clamps == rango de los sliders (invariante 1)
+_gc = NoiseGate(SR)
+_gc.set_threshold_db(99);   assert _gc._threshold_db == -20.0
+_gc.set_threshold_db(-999); assert _gc._threshold_db == -80.0
+_gc.set_depth_db(999);     assert _gc._depth_db == 60.0
+_gc.set_hold_ms(1);        assert _gc._hold_ms == 50.0
+print("  hold por hop y clamps de los setters: OK")

@@ -360,7 +360,7 @@ def test_refresh_from_config_restores_checkboxes():
     # Estado conocido, distinto en varios flags
     dsp.noise_enabled     = True
     dsp.exciter_enabled   = False
-    dsp.squelch_enabled   = True
+    dsp.gate_enabled      = True
     dsp.presence_enabled  = False
     dsp.anf_enabled       = True
     w.refresh_from_config()
@@ -368,7 +368,7 @@ def test_refresh_from_config_restores_checkboxes():
 
     assert w._chk_noise.isChecked() is True
     assert w._chk_exciter.isChecked() is False
-    assert w._chk_squelch.isChecked() is True
+    assert w._chk_gate.isChecked() is True
     assert w._chk_presence.isChecked() is False
     assert w._chk_anf.isChecked() is True
     print("refresh_from_config restaura checkboxes    OK")

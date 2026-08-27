@@ -144,9 +144,10 @@ class PresetManager:
                 "noise_floor":               dsp.noise_floor,
                 "noise_smooth":              dsp.noise_smooth,
                 "noise_attack":              dsp.noise_attack,
-                "squelch_enabled":           dsp.squelch_enabled,
-                "squelch_threshold":         dsp.squelch_threshold,
-                "squelch_hold_ms":           dsp.squelch_hold_ms,
+                "gate_enabled":              dsp.gate_enabled,
+                "gate_threshold_db":         dsp.gate_threshold_db,
+                "gate_hold_ms":              dsp.gate_hold_ms,
+                "gate_depth_db":             dsp.gate_depth_db,
                 "exciter_enabled":           dsp.exciter_enabled,
                 "exciter_drive":             dsp.exciter_drive,
                 "exciter_mix":               dsp.exciter_mix,
@@ -238,9 +239,10 @@ class PresetManager:
         dsp.noise_floor     = max(0.05, float(d.get("noise_floor", ddef.noise_floor)))
         dsp.noise_smooth    = float(d.get("noise_smooth", ddef.noise_smooth))
         dsp.noise_attack    = float(d.get("noise_attack", ddef.noise_attack))
-        dsp.squelch_enabled    = bool(d.get("squelch_enabled",    ddef.squelch_enabled))
-        dsp.squelch_threshold  = float(d.get("squelch_threshold", ddef.squelch_threshold))
-        dsp.squelch_hold_ms    = float(d.get("squelch_hold_ms",   ddef.squelch_hold_ms))
+        dsp.gate_enabled       = bool(d.get("gate_enabled",       ddef.gate_enabled))
+        dsp.gate_threshold_db  = float(d.get("gate_threshold_db", ddef.gate_threshold_db))
+        dsp.gate_hold_ms       = float(d.get("gate_hold_ms",      ddef.gate_hold_ms))
+        dsp.gate_depth_db      = float(d.get("gate_depth_db",     ddef.gate_depth_db))
         dsp.exciter_enabled    = bool(d.get("exciter_enabled",    ddef.exciter_enabled))
         dsp.exciter_drive      = float(d.get("exciter_drive",     ddef.exciter_drive))
         dsp.exciter_mix        = float(d.get("exciter_mix",       ddef.exciter_mix))

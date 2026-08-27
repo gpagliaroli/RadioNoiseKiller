@@ -196,6 +196,26 @@ SLIDER_TIPS = {
         "Rápido conserva mejor el ataque de cada palabra; suave reduce artefactos.\n"
         "Si la voz suena recortada al arrancar, hacelo más rápido."
     ),
+    "_s_gate_threshold": (
+        "Nivel de entrada, en dBFS, a partir del cual el gate abre.\n"
+        "Se calibra mirando el indicador de arriba: dejalo entre el nivel que marca\n"
+        "en los huecos y el que marca con señal. Si corta voz débil, bajalo; si abre\n"
+        "con el ruido solo, subilo.\n"
+        "Es un ajuste de TU estación (depende del nivel con que entra la radio), así\n"
+        "que revisalo al cambiar de banda, de antena o de hora."
+    ),
+    "_s_gate_depth": (
+        "Cuánto baja el fondo mientras el gate está cerrado.\n"
+        "Atenuar 15–25 dB suele sonar bastante más natural en HF que silenciar del\n"
+        "todo: el silencio digital entre transmisiones se nota como si se cortara\n"
+        "la radio. En 0 dB el gate no atenúa nada; en el máximo, silencia."
+    ),
+    "_s_gate_hold": (
+        "Tiempo que el gate sigue abierto después de que la señal cae, para no\n"
+        "cortar entre palabras. La primera mitad mantiene el volumen y la segunda\n"
+        "es un desvanecimiento, así el cierre no se escucha como un tajo.\n"
+        "Corto para conversación rápida; largo si corta sílabas."
+    ),
     "_s_noise_freeze": (
         "Cuánta periodicidad hace falta para que el piso de ruido deje de\n"
         "actualizarse mientras hay voz. Existe para que la voz no se meta en el\n"
@@ -226,17 +246,6 @@ SLIDER_TIPS = {
         "Sube el piso estimado por encima de ~2.5 kHz, donde el estimador queda\n"
         "corto y se cuela el siseo. Es progresivo: cuanto más alta la frecuencia,\n"
         "más refuerzo. Cuesta algo de brillo — compensá con Excitador o Presencia."
-    ),
-    "_s_squelch_threshold": (
-        "Cuánta certeza de que hay voz hace falta para abrir el gate y dejar pasar\n"
-        "el audio. Sensible abre fácil (y deja pasar ruido); selectivo filtra mejor\n"
-        "pero puede cortar voz débil. Si el gate no abre con señales flojas,\n"
-        "hacelo más sensible."
-    ),
-    "_s_squelch_hold": (
-        "Cuánto se mantiene abierto el gate después de que se dejó de detectar voz.\n"
-        "Corto corta las pausas entre palabras; largo deja pasar más ruido entre\n"
-        "frases. 300–500 ms es lo habitual."
     ),
     "_s_pf_boost": (
         "Cuánto se levanta el piso en la zona de los fundamentales de la voz, para\n"

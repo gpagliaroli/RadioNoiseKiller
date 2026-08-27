@@ -281,6 +281,47 @@ reajustaron en el aire. Todo el contenido de abajo se validó escuchando en la r
 iteraciones de ida y vuelta (ver los "reportado en el aire" de cada ítem: casi todos los fixes de
 esta versión salieron de una escucha que contradijo una medición sintética).
 
+**Post-v2.2: el Squelch de voz se reemplaza por un Gate de ruido por nivel** (`src/dsp/gate.py`).
+Pedido del usuario, con el diagnóstico ya hecho: *"la verdad es muy poco o casi nulo su utilización.
+Muy difícil de calibrar para que esté correcto y sólo uso en SSB"*. El squelch decidía con
+`voice_prob_sq` y tenía dos defectos de fondo: (1) **su umbral era un % de una probabilidad que no
+aparece en ninguna pantalla**, así que sólo se ajustaba por prueba y error; (2) el VAD se calcula
+sobre `snr_post`, que depende de λ_d — medido sobre las grabaciones reales del usuario marcaba
+**0,93 en subidas de ruido contra 0,59 en onsets de voz**, o sea invertido.
+- **Decide con el nivel de ENTRADA y actúa sobre la SALIDA.** Silenciar la entrada parece lo
+  natural, pero deja al estimador midiendo el silencio que el propio gate fabrica: medido sobre una
+  grabación real, un gate en la entrada hunde λ_d **9,5 dB**; el mismo gate sobre la salida lo deja
+  idéntico. Y cerraría justo en las pausas, los únicos ratos en que MCRA puede medir el ruido. Por
+  eso `process(audio, level_db)` recibe por separado con qué decide y sobre qué actúa.
+- **El umbral terminó siendo ABSOLUTO en dBFS, y el primer diseño (relativo al piso medido) FALLÓ.**
+  La idea era que se auto-calibrara al cambiar de banda —el patrón "un umbral absoluto no es
+  portable" del techo de ruido del AGC— pero **el fallo es estructural**: la referencia tiene que ser
+  el ruido, y cualquier seguidor de piso o persigue a la señal (y el gate cierra sobre la voz) o no
+  sigue al ruido. Medido con las grabaciones de voz continua del usuario, con umbral relativo de
+  +6 dB el gate quedaba **cerrado el 100 % del tiempo** atenuando todo 20 dB; agregarle al gate un
+  piso propio de subida frenada no lo arregló, porque **el nivel de banda completa se mueve apenas
+  ~5 dB entre voz y no-voz** en HF. **Regla: un umbral relativo necesita una referencia que el propio
+  control no perturbe; si la referencia sólo puede medirse cuando el control está abierto, no hay
+  diseño relativo posible.** El absoluto además es **observable** —se calibra mirando el indicador de
+  nivel—, que era justo el reclamo original.
+- Lo portable se maneja como el techo del AGC: es **un ajuste por estación**, viaja en el preset y
+  viene **desactivado** de fábrica. Rango −80..−20 dBFS, default −50 (verificado bajo los niveles
+  medidos del usuario: p5 −37,9 / mediana −34,7 / p95 −33,0 dBFS, así que no puede mutear de
+  sorpresa).
+- **Atenúa, no mutea**: `gate_depth_db` 0–60, default 20. En HF 15–25 dB suena bastante más natural
+  que el silencio digital. Del squelch se conservan la retención, el **cierre progresivo** (mitad
+  plena + desvanecimiento, la "cola de squelch" de la v1.3) y la rampa por frame.
+- **Módulo de PRIMER NIVEL, no sub-módulo del cancelador** (invariante 2 al revés): el nivel de
+  entrada se mide siempre, así que el gate funciona con el cancelador apagado. El squelch vivía
+  indentado porque usaba su VAD.
+- Se fueron `squelch_*` de DSPConfig, `voice_prob_sq`-como-gate del pipeline, el grupo de Avanzada
+  Cancelador, los 2 tooltips y sus claves i18n. **Los 7 presets de fábrica cargan con
+  `matches()==True`** con las claves muertas del squelch adentro y sin las del gate — cuarta vez que
+  paga la normalización por `snapshot()` (invariante 10), y **no se regeneraron a propósito**.
+- El gate corre **después del limitador** y se saltea en Preview (es una etapa que se dispara con la
+  señal, como las cuatro que ya se salteaban). Diagrama del pipeline regenerado.
+- **PENDIENTE: validación en el aire.** Todo lo de arriba está medido sobre grabaciones y banco.
+
 **Post-v2.2: los 4 presets de fábrica de AM/SSB reafinados con los controles nuevos** (agosto 2026,
 afinados al aire por el usuario — ver [[project_factory_presets]]). Cambian `AM Local - RuidoMedio`,
 `AM SW - Ruido Alto y Fading`, `AM SW - Ruido Medio y Fading` y `SSB - Ruido ALto -Perfil Adaptativo`.

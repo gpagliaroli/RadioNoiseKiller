@@ -62,25 +62,25 @@ Terms used throughout this manual, in alphabetical order. Experienced operators 
 | **Fading / QSB** | Slow rises and falls of the signal level due to changes in ionospheric propagation, typical of shortwave. QSB is its Q code in amateur radio. |
 | **FFT / Spectrum** | The FFT (*Fast Fourier Transform*) decomposes audio into its component frequencies. The **spectrum** is that representation: how much energy exists at each frequency. |
 | **Bandpass filter** | A filter that only passes frequencies between a lower and an upper limit (e.g. 200–3000 Hz for SSB), removing everything else. |
-| **Gate** | An audio gate: open, it lets sound through; closed, it silences it completely. It is the mechanism behind the squelch. |
+| **Gate** | An audio gate: open, it lets sound through; closed, it attenuates it. It is the mechanism behind the Noise gate (Ch. 8). |
 | **Harmonics** | Multiples of a sound's fundamental frequency. The human voice concentrates its energy in the fundamental (80–400 Hz) and its harmonics — that structure is what distinguishes voice from noise. |
 | **Heterodyne** | A continuous tone (whistle) produced by a carrier close to the tuned frequency. The ANF removes them automatically. |
-| **Hold** | The time the squelch keeps the gate open after the voice disappears, to avoid cutting word endings or brief pauses. |
+| **Hold** | The time the gate stays open after the signal drops, to avoid cutting word endings or brief pauses. |
 | **Hz / kHz** | Hertz: frequency unit (cycles per second). 1 kHz = 1000 Hz. SSB voice occupies roughly 200–3000 Hz. |
 | **MCRA** | **Adaptive** noise estimation mode (*Minima Controlled Recursive Averaging*). Estimates the noise floor continuously and automatically, with no need to "learn" a profile manually. The alternative to the Static profile. |
 | **Noise floor** | The constant background noise level of the band. Everything below it is inaudible; the useful signal must rise above it. |
 | **Noise profile** | A "photograph" of the band noise the canceller uses as a reference. In static mode it is learned manually (3–5 s without signal); in Adaptive (MCRA) mode it is estimated automatically. |
 | **Pipeline** | The processing chain: the ordered sequence of stages the audio passes through from input to output. |
-| **Pitch (f0)** | The fundamental frequency of the voice — the "tone" a person speaks at (80–400 Hz). The application detects it to protect the voice harmonics and for the squelch. |
+| **Pitch (f0)** | The fundamental frequency of the voice — the "tone" a person speaks at (80–400 Hz). The application detects it to protect the voice harmonics. |
 | **Preset** | A saved set of all DSP and gain settings, to load complete configurations at once (Presets tab). |
 | **Q (selectivity)** | The quality factor of a filter: how narrow it is. Low Q = affects a wide band of frequencies; high Q = a narrow, selective peak. |
 | **QRN** | Q code for atmospheric noise: electrical discharges, storms, impulsive crackle. Handled by the Impulse Suppressor. |
 | **RMS** | Root Mean Square: a measure of a signal's average level, more representative of perceived loudness than the peak value. |
 | **SDR** | Software Defined Radio. Receivers whose demodulation happens on the PC (SDR#, HDSDR, etc.); their audio can be processed with this application using a virtual audio cable. |
 | **SNR** | Signal-to-Noise Ratio: how many times the signal exceeds the noise. High SNR = clean signal; low SNR = signal buried in noise. |
-| **Squelch** | A silencer: suppresses the audio output when no transmission is present, removing band noise between overs. |
-| **Threshold** | A detector's trigger value: above it, the detector acts; below it, it doesn't. Several modules have a configurable threshold (squelch, ANF, impulse suppressor). |
-| **VAD** | Voice Activity Detector. Decides in real time whether what is heard is human voice or just noise; it feeds the squelch and the canceller. |
+| **Squelch** | The receiver's silencer: cuts the audio output when no transmission is present. In this application the equivalent is the **Noise gate** (Ch. 8), which attenuates instead of cutting and decides on input level. |
+| **Threshold** | A detector's trigger value: above it, the detector acts; below it, it doesn't. Several modules have a configurable threshold (noise gate, ANF, impulse suppressor). |
+| **VAD** | Voice Activity Detector. Decides in real time whether what is heard is human voice or just noise; it feeds the canceller. |
 | **Wiener (filter)** | A mathematical noise reduction technique that attenuates each spectrum bin in proportion to how much noise it contains. It is the heart of the Stationary Noise Canceller. |
 
 ---
@@ -227,12 +227,12 @@ Each checkbox enables or disables one pipeline module independently and in real 
 | &nbsp;&nbsp;&nbsp;↳ **Perceptual spectral floor** | Canceller sub-module. Replaces the fixed floor with a frequency-dependent curve: raises the floor in the vocal zone (~500 Hz, preserves voice warmth) and lowers it at high frequency (suppresses hiss harder). Curve adjustable in Advanced Canceller. |
 | &nbsp;&nbsp;&nbsp;↳ **Spectral post-filter** | Canceller sub-module. Removes the "musical noise" (intermittent birdies) the Wiener filter leaves behind. Enable when you notice that artifact. Aggressiveness adjustable in Advanced Canceller. |
 | &nbsp;&nbsp;&nbsp;↳ **Voice pitch enhancement** | Canceller sub-module. For very weak voice signals (AM or SSB): detects the voice's fundamental pitch and protects its harmonics from being suppressed — improves intelligibility. Enable if the voice sounds "ghostly" with the canceller at maximum. Sensitivity adjustable in Advanced Canceller. |
-| &nbsp;&nbsp;&nbsp;↳ **Voice squelch** | Canceller sub-module. Mutes the audio between transmissions with a progressive close (no warble, no noise tail). **Do not use with music.** Voice level and gate indicators in Advanced Canceller. |
 | &nbsp;&nbsp;&nbsp;↳ **Voice leveler** | Canceller sub-module. A voice AGC applied *after* noise reduction: keeps the clean voice at a constant level even as band conditions (and the amount of cancellation) vary. Only adapts while voice is detected — noise between transmissions is not re-amplified. |
-| **Bandpass filter (post)** | Almost always on together with pre. Cleans up spectral-processing artifacts. Runs after the canceller and the squelch (this list reflects the pipeline order). Its limits can be made independent from the input (see Ch. 5). |
+| **Bandpass filter (post)** | Almost always on together with pre. Cleans up spectral-processing artifacts. Runs after the canceller (this list reflects the pipeline order). Its limits can be made independent from the input (see Ch. 5). |
 | **Voice EQ (presence + body)** | Two parametric bands: presence (clarity, 1–2 kHz) and body (warmth, 150–800 Hz). Enable to shape the voice on weakened or heavily filtered signals. |
 | **Harmonic exciter** | For dull voice signals lacking brightness. Adds presence. Compare with and without to decide. |
 | **Restore bass** | Brings back the voice's fundamental when the radio's filter cut it, deriving it from the harmonics that did get through. For voices that sound thin or "telephone-like" despite a good level — above all on SSB with a narrow filter. |
+| **Noise gate** | Top-level module (it does not depend on the canceller). Lowers the background between transmissions when the input level does not reach the threshold, with a progressive close instead of an abrupt cut. Runs at the end of the chain. Calibrated by watching the level indicator in Advanced Canceller (see Ch. 8). |
 
 > **Tip — enable one at a time:** when building a configuration (or on a new signal), enable and disable the modules **one at a time**, listening to the effect each one produces. Since all changes apply live, you hear the difference instantly: that lets you tune each module better — or simply drop it if it brings nothing on that signal. Enabling everything at once makes it impossible to tell what is helping and what is not.
 
@@ -469,8 +469,8 @@ This behavior is automatic and requires no adjustment. It triggers when the sign
 | Indicator | Description |
 |-----------|-------------|
 | **Reduction (dB)** | How much noise is being reduced right now. Green = strong reduction (>10 dB). Yellow = moderate reduction. |
-| **Voice (%)** | Probability that the current frame contains voice (the smoothed signal used internally by the Wiener filter). To calibrate the Squelch, use the **Voice level** indicator in the Squelch group (more reactive). |
-| **Preview: listen to removed noise** (Main tab, next to *Extra reduction*) | Inverts the output so you hear **everything the canceller is subtracting** — it reflects the **full reduction: Intensity + Post-filter** (plus the perceptual floor). While it is active the **squelch, voice leveller, presence/body EQ and exciter are skipped**: they are colouring stages that trigger precisely when there is speech, so they would falsify the diagnosis (a barely audible voice remnant would come out levelled, boosted at 1.5 kHz and with new harmonics). The output bandpass — which defines the band you are listening to — and the limiter are kept. Useful for checking that no voice is being removed: if you hear voice in the preview, something is too aggressive. |
+| **Voice (%)** | Probability that the current frame contains voice (the smoothed signal used internally by the Wiener filter). |
+| **Preview: listen to removed noise** (Main tab, next to *Extra reduction*) | Inverts the output so you hear **everything the canceller is subtracting** — it reflects the **full reduction: Intensity + Post-filter** (plus the perceptual floor). While it is active the **noise gate, voice leveller, presence/body EQ and exciter are skipped**: they are colouring stages that trigger precisely when there is speech, so they would falsify the diagnosis (a barely audible voice remnant would come out levelled, boosted at 1.5 kHz and with new harmonics). The output bandpass — which defines the band you are listening to — and the limiter are kept. Useful for checking that no voice is being removed: if you hear voice in the preview, something is too aggressive. |
 
 ### Advanced controls (Advanced Canceller tab)
 
@@ -633,7 +633,7 @@ This module detects the voice's **fundamental pitch** (f0) in real time via auto
 **Enable:** Active Modules → "Voice leveler (compensates band conditions)" checkbox  
 **Adjust:** Advanced Audio tab → "Voice leveler" group
 
-In a real listening session the level of the clean voice varies constantly: propagation changes, stations change, and the amount of noise cancellation itself removes more or less energy depending on conditions. The leveler is an **AGC dedicated to the voice** that works *after* the canceller and the squelch — that is, on the already-clean audio — and brings it to a constant level.
+In a real listening session the level of the clean voice varies constantly: propagation changes, stations change, and the amount of noise cancellation itself removes more or less energy depending on conditions. The leveler is an **AGC dedicated to the voice** that works *after* the canceller — that is, on the already-clean audio — and brings it to a constant level.
 
 The difference from the general AGC (Ch. 2) is the **voice-detection gate**: by default the leveler only adapts its gain while the canceller's voice detector confirms voice is present. With noise or silence the gain stays **frozen** at its last value — residual noise between transmissions is not re-amplified, which is the typical flaw of chaining two ordinary AGCs. This gate can be disabled (**"Level continuously"** checkbox, see below) for **music or continuous audio**.
 
@@ -647,54 +647,64 @@ The difference from the general AGC (Ch. 2) is the **voice-detection gate**: by 
 | **Response speed** | 200 – 3000 ms | 1500 ms | How fast the leveler follows level changes (the AGC *release*). **Fast (200–600 ms):** follows fast cyclic fading without leaving volume "dips" when the signal drops. **This is the main control against QSB:** measured on a 20 dB fade, lowering it from 1500 to 200 ms halves the level swing the processing adds. The price is more abrupt gain steps; if you hear them, lower *Maximum gain* rather than slowing the speed back down. **Smooth (2000–3000 ms):** more stable leveling, less risk of pumping the background noise. |
 | **Level continuously (music)** | checkbox | off | *(The checkbox lives on the **Main** tab → "Control" group, below the AGC selector — you change it depending on what you are listening to, so it stays in sight.)* Disables the voice-detection gate: the leveler adapts **at all times**, without waiting for voice. **Enable for music or continuous audio** — where the voice detector does not recognize voice structure and, with the gate, the leveler would stay frozen. For voice on noisy bands leave it **off** (avoids re-amplifying noise in the gaps). |
 
-> **When to enable it:** long sessions with stations at very different levels or pronounced QSB, especially with the squelch active (level jumps between transmissions are more noticeable when there is no background noise to mask them).
+> **When to enable it:** long sessions with stations at very different levels or pronounced QSB, especially with the noise gate active (level jumps between transmissions are more noticeable when there is no background noise to mask them).
 
 > **Music with fading (cyclic QSB):** enable the Leveler, tick **"Level continuously"**, raise Max gain to ~15 dB and lower the **Response speed to 400–600 ms**. This way the leveler tracks the signal's cyclic rise and fall instead of staying frozen waiting for a voice that never comes. If it starts to "breathe" the background noise, raise the speed one step. Related note: against QSB you want to **raise** the Spectral floor (Ch. 5), not lower it. Measured on a 20 dB fade: moving the floor from 0.10 to 0.20 brings the level swing down from 28.9 to 24.7 dB. The reason is that the swing is added by the canceller itself — as the signal drops the SNR falls and the Wiener gain with it, so the output falls further than the input — and the floor limits how far that gain can fall. The cost is about 2 dB less noise suppression. *(Corrected after measuring it: up to v2.2 this note said the opposite.)*
 
 ---
 
-## Chapter 8 — Voice Squelch
+## Chapter 8 — Noise Gate
 
-**Location:** Modules tab → "↳ Voice squelch" sub-module (under the Canceller)  
-**Advanced settings:** Advanced Canceller tab → "Voice Squelch" group
-
-> ⚠️ **Do not use with music.** The voice detector is calibrated for human voice. With music it produces sudden level rises and drops following the musical dynamics.
+**Location:** Modules tab → "Noise gate"  
+**Advanced settings:** Advanced Canceller tab → "Noise gate" group
 
 ### Description
 
-Completely mutes the output when the noise canceller detects no human voice. On SSB there is no carrier between transmissions — only band noise — and the squelch removes the residual noise left after reduction.
+Lowers the background between transmissions. While the **input level** stays below the threshold, the output is attenuated; as soon as it rises above it, the audio passes untouched.
 
-The voice detector does not measure energy alone: it requires **voice structure** — energy concentrated in harmonics and periodicity (autocorrelation) — and discounts the AGC gain. That is why band noise reads close to 0% on the indicator even when it fluctuates strongly or the AGC amplifies it after a transmission ends, while voice reads 80–100%.
+> **It replaces the Voice squelch** of earlier versions. That one decided using the canceller's voice detector, and that criterion had two fundamental problems. One: **it could not be calibrated**. The threshold was a percentage of a probability that appears on no screen of the radio, so it could only be adjusted by trial and error. Two: **the detector is not reliable with weak signals** — it is computed on the estimated signal-to-noise ratio, which in turn depends on the noise estimator; measured on real recordings it read **higher on noise rises than on real voice onsets**. The gate decides using a figure you can actually see: the input level in dBFS.
 
-It works as a **gate with progressive close**: with voice detected, audio passes unmodified; when the voice disappears, the gate stays at full volume for the first half of the Hold (pauses between words are untouched), fades smoothly during the second half, and ends in complete silence. If voice reappears at any point, the gate reopens instantly without clicks. There is no residual audio or warble in the closed state.
+Three design decisions, all three measured:
 
-**Requires the Stationary noise canceller enabled** — the voice detector lives inside the canceller. If the canceller is off, the squelch stays in bypass (audio always passes). It also needs a learned noise profile (static mode) or the MCRA warm-up period (~200 ms).
+**It decides on the input and acts on the output.** Muting the input looks like the natural choice, but it leaves the noise estimator measuring the very silence the gate manufactures: measured on a real recording, a gate placed on the input sinks the estimated floor by **9.5 dB**, while the same gate applied to the output leaves it identical. And it would close precisely during the pauses, which are the only moments when Adaptive mode can measure the band noise.
 
-### Real-time indicators (Squelch group, Advanced Canceller)
+**The threshold is absolute, in dBFS.** That is what lets you calibrate it by watching the indicator instead of blindly. In exchange it is **not portable**: the level the radio comes in at depends on the station, the antenna and the receiver's volume, so it is a per-station setting — the same case as the AGC's *Noise ceiling*. It travels in the preset and ships disabled.
+
+**It attenuates instead of silencing.** With the gate closed the background drops by whatever *Depth* says, not necessarily to zero. On HF, 15–25 dB usually sounds far more natural than digital silence, which feels like the radio just died. The maximum of the control does silence completely.
+
+The close is **progressive**: when the signal drops, the gate holds full volume during the first half of the *Hold* (pauses between words are untouched) and fades during the second half. If the signal returns at any point, it reopens instantly and without clicks.
+
+**It does not require the canceller.** It is a top-level module: it works with the canceller off, and it is even useful on its own, to lower the background of a noisy band between transmissions. The squelch it replaces did depend on the canceller, because it used its voice detector.
+
+**With music** the gate is no longer the nuisance the squelch was: it does not look for voice structure, only at the level. Even so, if the music has quiet passages that fall below the threshold, it will attenuate them — in that case lower the threshold or leave *Depth* at a small value.
+
+### Real-time indicators (Noise gate group, Advanced Canceller)
 
 | Indicator | Description |
 |-----------|-------------|
-| **Voice level** | Percentage of vocal activity detected in the current frame, with fast response (~20 ms). Gray = pure noise. Yellow = marginal signal. Blue = voice detected, gate about to open. |
-| **Gate** | Current gate state: **OPEN** (green, audio passes) or **CLOSED** (gray, silence). Stays OPEN during the Hold period after the voice ends. |
+| **Input level** | Level of the incoming signal, in dBFS, measured **before the AGC** and with the same smoothing used to compare it against the threshold. Next to it, the chosen threshold ("opens at"). This is the calibration tool: with these two numbers the adjustment stops being blind. |
+| **Gate** | Current state: **OPEN** (green, audio passes untouched) or **CLOSED** (grey, the background is attenuated). It stays OPEN throughout the Hold. |
 
 ### Controls
 
 | Control | Range | Default | Description |
 |---------|-------|---------|-------------|
-| **Squelch threshold** | 5% – 100% | 15% | Minimum voice activity to open the gate, on the same scale as the **Voice level** indicator. Since the detector requires voice structure, noise reads ~0% and a high threshold is unnecessary: **10–25% covers most cases**. Lower it to 5–10% for very weak signals; raise it only if some tonal interference (e.g. a heterodyne the ANF misses) opens the gate. |
-| **Hold** | 0 – 1000 ms | 500 ms | Time from the end of the voice to total silence: full volume for the first half, progressive fade for the second. 500 ms suits normal SSB; with the current detector it can go down to 300 ms for a faster mute. Raise to 700–1000 ms for operators with long pauses between words. |
+| **Threshold** | −80 to −20 dBFS | −50 dBFS | Input level at which the gate opens. Pick it between the level the indicator reads in the gaps and the level it reads with signal. If it cuts weak voice, lower it; if it opens on noise alone, raise it. **It is a setting for your station** — worth reviewing when you change band, antenna or time of day. |
+| **Depth** | 0 to 60 dB | 20 dB | How much the background drops while the gate is closed. At 0 dB the gate attenuates nothing (it is inert); 15–25 dB is the natural range on HF; the maximum silences completely. |
+| **Hold** | 50 to 2000 ms | 300 ms | How long the gate stays open after the signal drops, so it does not cut between words. Full volume during the first half, fade during the second. Short for fast conversation; 500–1000 ms for operators with long pauses. |
 
 ### Calibration
 
-The **Voice level** indicator and the **Gate** state on the Advanced Canceller tab are the main calibration tools:
+1. Enable the gate in the Modules tab and open **Advanced Canceller** to see the **Input level** indicator.
+2. With the radio on a gap (no transmission), note the level it reads.
+3. With a transmission under way, note the level it reads.
+4. Set the **Threshold** between those two values, closer to the gap reading than to the signal one.
+5. Listen: if it cuts word onsets or weak voice, lower it a step; if the gate opens on noise alone, raise it.
+6. Adjust **Depth** to taste (15–25 dB is a good starting point) and **Hold** if it clips word endings.
 
-1. **With band noise only** (no transmission) → "Voice level" should read 0–10%, even with strong, fluctuating noise or with the AGC amplifying it. If it reads higher consistently, there is probably tonal interference — enable the ANF.
-2. **With an active transmission** → "Voice level" rises to 80–100% and "Gate: OPEN".
-3. Set the **Threshold** to 15–25%. For very weak signals that fail to open the gate, lower it to 5–10%.
+> **If the two levels are nearly the same**, the gate has no margin to work in: the signal does not rise above the band noise. What is needed there is the canceller, not the gate.
 
-> **If the gate never closes:** something with tonal or periodic structure is on the band (heterodyne, carrier). Enable the ANF to remove it, or raise the threshold above what the indicator reads.
-
-> **Timing note:** after the voice ends, the indicator drops within ~100–150 ms; the gate stays at full volume for the first half of the Hold and fades during the second. If it cuts word endings, increase the Hold; if the noise takes too long to mute, reduce it.
+> **Migrating from the Voice squelch:** presets saved with earlier versions load without a problem — the squelch keys are ignored and the gate takes its factory values, that is, **disabled**. If you used the squelch, enable the gate and calibrate it with the procedure above; there is no automatic conversion because the two thresholds measure different things.
 
 ---
 
@@ -909,7 +919,7 @@ On the right of the same row, the **"🔇 Mute"** button silences the speaker ou
 | ↳ Spectral post-filter | ⬜ Optional | Enable if residual intermittent birdies are heard |
 | ↳ Voice pitch enhancement | ⬜ Optional | For very weak SSB DX signals — improves intelligibility |
 | ↳ Voice leveler | ⬜ Optional | Enable with stations at uneven levels or strong QSB |
-| Squelch | ✅ On | Threshold 15%, hold 300 ms |
+| Noise gate | ⬜ Optional | Threshold between the level the indicator reads in the gaps and the level it reads with signal; depth 15–25 dB |
 | Voice EQ | ✅ On | Presence +4 dB at 2000 Hz; body +3 dB at 350 Hz if the voice sounds thin |
 | Harmonic exciter | ⬜ Optional | Drive 2.0×, mix 25% |
 | Restore bass | ⬜ Optional | If the voice sounds thin. Start at 35% and raise it gradually |
@@ -927,7 +937,7 @@ On the right of the same row, the **"🔇 Mute"** button silences the speaker ou
 | ↳ Spectral post-filter | ⬜ Optional | Enable if residual birdies remain |
 | ↳ Voice pitch enhancement | ⬜ Optional | Also helps on AM: demodulation preserves the voice harmonics |
 | ↳ Voice leveler | ⬜ Optional | For music **tick "Level continuously"** (without it the voice gate freezes the gain); useful to even out cyclic fading |
-| Squelch | ❌ Do not use | Produces pumping with music |
+| Noise gate | ⬜ Optional | No longer a nuisance with music (it decides on level, not on voice), but it attenuates quiet passages that fall below the threshold |
 | Voice EQ | ⬜ Optional | Presence if the voice sounds dull; body if it sounds thin |
 | Harmonic exciter | ⬜ Optional | In moderation |
 | Restore bass | ⬜ Optional | On wide AM the fundamental is usually there: check the bandpass low cut first |
@@ -1083,7 +1093,7 @@ How to read it:
 
 A preset stores a complete "snapshot" of the DSP and gain configuration — every module, slider and mode from the Main and Advanced tabs. Audio devices and the window position are **not** part of the preset (they are machine-specific).
 
-Typical use: a "weak SSB DX" preset with an aggressive canceller and pitch enhancement, another "local AM" preset with the squelch off and wide filters, switching between them with a double click depending on what you are listening to.
+Typical use: a "weak SSB DX" preset with an aggressive canceller and pitch enhancement, another "local AM" preset with the gate off and wide filters, switching between them with a double click depending on what you are listening to.
 
 ### Operations
 
