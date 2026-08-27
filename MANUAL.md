@@ -1,6 +1,6 @@
 ﻿# RadioNoiseKiller — Manual de Usuario
 
-**Versión 2.2**
+**Versión 2.3**
 
 ---
 
@@ -484,7 +484,28 @@ Este comportamiento es automático y no requiere ningún ajuste. Se activa cuand
 | **Velocidad de ataque** | 50% – 92% | 80% | Velocidad con que el cancelador "abre" los bins de voz cuando detecta una señal. Rápido (50–70%): consonantes más nítidas. Suave (>85%): menos artefactos en transiciones. |
 | **Reactividad del piso** *(solo Adaptativo)* | 250 – 800 ms | 800 ms | Ventana con que el estimador MCRA sigue el mínimo del ruido. **Reactivo (250–350 ms):** el piso sigue rápido las subidas y bajadas cíclicas del ruido, sin quedar desfasado (menos "vaivén" del sonido). **Estable (800 ms):** mejor para ruido parejo. Bajarlo cuando el ruido de banda sube y baja de golpe y en ciclos cortos. Con valores muy reactivos conviene tener activo el **Refuerzo de pitch de voz** (protege los armónicos de que una ventana corta los tome por ruido). |
 | **Freno de bajada** *(solo Adaptativo)* | 2 – 30 dB/s | 30 (sin freno) | Limita cuán rápido puede **bajar** el piso estimado; subir siempre es libre. Cuando el ruido de banda sube de golpe, la salida salta porque el piso llegó tarde — si el piso no se hundió durante los ratos flojos, tiene menos que recuperar. **Cuesta voz**, y cuánto depende del S/N (ver el consejo debajo). |
+| **Congelar piso con voz** *(solo Adaptativo)* | 30% – 100% | 30% | Cuánta periodicidad tiene que tener el audio para que el estimador **deje de actualizar** el piso mientras hay voz. El estimador aprende el ruido en los frames donde no detecta voz; si la transmisión es continua se queda sin material y el piso llega tarde a los cambios. Subirlo deja que más frames lo alimenten (100% = no congela nunca), a costa de que algo de voz se cuele en el piso. 30% es el comportamiento de las versiones anteriores. |
 | **Refuerzo en agudos** *(solo Adaptativo)* | 0% – 150% | 0% | Sube el piso de ruido estimado por encima de ~2,5 kHz, donde la energía del ruido es baja y el estimador reacciona tarde. Suprime mejor el siseo de agudos que se cuela con el fading. La curva es **logarítmica**: cada octava por encima de 2,5 kHz suma más refuerzo, así que actúa progresivamente más fuerte cuanto más alta la frecuencia. **Costo:** puede opacar un poco el brillo de la voz — compensar con el **Excitador armónico** o la **EQ de presencia** (regeneran brillo después del cancelador, sin traer de vuelta el ruido). |
+
+> **Ojo con el Refuerzo en agudos: sólo sirve si tu receptor entrega ruido ahí arriba.** La rampa
+> empieza en ~2,5 kHz y crece hacia las frecuencias altas. Si el audio de la radio se corta antes de
+> eso —lo verificás mirando hasta dónde llega la curva de **Entrada** en la pestaña Espectro— la
+> rampa cae en una zona donde ya no queda ruido que suprimir pero sí quedan consonantes, y lo único
+> que hace es comérselas. Medido en un receptor así, el refuerzo al 100% costaba **1,0 a 1,6 dB de
+> voz** (3,6 dB entre 2,5 y 3,5 kHz, justo la banda de las consonantes) a cambio de 0,2 dB de fondo.
+> Por eso los presets de fábrica lo traen en 0%.
+
+> **Consejo — "Congelar piso con voz" sirve cuando la transmisión es continua.** El estimador
+> adaptativo sólo puede medir el ruido en los ratos en que no detecta voz. En un QSO normal, con
+> pausas entre palabras, le sobra material. Pero con **voz continua** —una emisora, un operador que
+> no para, música— el freno se arma casi todo el tiempo y el piso deja de seguir los cambios del
+> ruido de banda: se escucha como que la cancelación llega tarde a cada subida. Subir el control
+> afloja ese freno.
+>
+> El precio es real: con el control en 100%, la voz sostenida sube el piso estimado unos 10 dB, y
+> entonces el cancelador resta de más. Por eso el extremo del recorrido es para probar, no para
+> dejar puesto. Los presets de fábrica usan un valor **distinto en cada uno** (entre 30% y 100%),
+> que es la forma corta de decir que esto se elige por condición y no hay un valor bueno para todo.
 
 > **Consejo — el Freno de bajada se elige según el S/N, no según el gusto.** Es la clase de control
 > que en una banda es gratis y en otra arruina la voz, así que conviene entender qué cobra. Cuando
@@ -1149,4 +1170,4 @@ El archivo se limita a unos pocos errores por sesión, así que no crece sin con
 
 ---
 
-*RadioNoiseKiller — versión 2.2*
+*RadioNoiseKiller — versión 2.3*

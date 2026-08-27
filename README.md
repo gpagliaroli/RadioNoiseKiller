@@ -33,7 +33,8 @@ panorama general y las notas para quien quiera tocar el código.
 - **Cancelador de ruido estacionario** — estimador decision-directed con ganancia Log-MMSE
   (Ephraim-Malah) y suavizado OMLSA, con anti-gorgojeo automático gateado por el detector de voz
 - **Dos modos de estimación** — perfil **estático** aprendido a mano, o **adaptativo (MCRA)** que
-  sigue el piso de ruido en continuo sin intervención
+  sigue el piso de ruido en continuo sin intervención, con freno de bajada y umbral de congelado
+  ajustables para el ruido cíclico de onda corta
 - **Post-filtro espectral** — segunda pasada que hunde el piso sólo en los bins de ruido
 - **Supresor de impulsos** — dos niveles en cascada (10 ms y 0,67 ms) para QRN atmosférico,
   detectados por contraste contra el audio vecino (no contra el piso), así la voz no dispara
@@ -47,8 +48,9 @@ panorama general y las notas para quien quiera tocar el código.
   amplifique el ruido de banda cuando la señal es débil
 - **Nivelador de voz** — segundo AGC post-cancelador gateado por el detector de voz, para emparejar
   estaciones de niveles dispares; con opción de nivelar en continuo para música
-- **Filtro de paso de banda** — por modo (AM / SSB), con la salida configurable independiente de la
-  entrada para no apilar dos rolloffs sobre la voz
+- **Filtro de paso de banda** — 8 anchos de fábrica (4 de SSB y 4 de AM) elegibles con un combo, o
+  los cortes a mano; la salida se puede configurar independiente de la entrada para no apilar dos
+  rolloffs sobre la voz
 - **EQ de voz** — presencia (consonantes) y cuerpo (fundamentales), paramétricos
 - **Excitador armónico** — genera armónicos reales para recuperar el brillo que cortó la radio, con
   control de carácter par/impar y gate por detección de voz

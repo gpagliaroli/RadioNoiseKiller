@@ -1,6 +1,6 @@
 ﻿# RadioNoiseKiller — User Manual
 
-**Version 2.2**
+**Version 2.3**
 
 ---
 
@@ -482,7 +482,29 @@ This behavior is automatic and requires no adjustment. It triggers when the sign
 | **Attack speed** | 50% – 92% | 80% | How fast the canceller "opens" voice bins when a signal is detected. Fast (50–70%): crisper consonants. Soft (>85%): fewer transition artifacts. |
 | **Floor reactivity** *(Adaptive only)* | 250 – 800 ms | 800 ms | Window over which the MCRA estimator tracks the noise minimum. **Reactive (250–350 ms):** the floor follows fast cyclic rises and falls of the noise without lagging (less "swaying" of the sound). **Stable (800 ms):** better for steady noise. Lower it when the band noise rises and falls suddenly in short cycles. With very reactive values, keep **Voice pitch enhancement** on (protects the harmonics from a short window mistaking them for noise). |
 | **Fall brake** *(Adaptive only)* | 2 – 30 dB/s | 30 (no brake) | Limits how fast the estimated floor may go **down**; going up is always free. When band noise rises suddenly the output jumps because the floor arrived late — if the floor did not sink during the quiet stretches, it has less to catch up. **It costs voice**, and how much depends on the S/N (see the tip below). |
+| **Freeze floor on voice** *(Adaptive only)* | 30% – 100% | 30% | How periodic the audio must be for the estimator to **stop updating** the floor while there is voice. The estimator learns the noise on the frames where it detects no voice; if the transmission is continuous it runs out of material and the floor arrives late to the changes. Raising it lets more frames feed it (100% = never freezes), at the cost of some voice leaking into the floor. 30% is the behaviour of earlier versions. |
 | **HF floor boost** *(Adaptive only)* | 0% – 150% | 0% | Raises the estimated noise floor above ~2.5 kHz, where noise energy is low and the estimator reacts late. Suppresses the HF hiss that leaks through with fading better. The curve is **logarithmic**: each octave above 2.5 kHz adds more boost, so it acts progressively harder the higher the frequency. **Cost:** it can dull the voice's brightness a bit — compensate with the **Harmonic exciter** or the **Presence EQ** (they regenerate brightness after the canceller, without bringing the noise back). |
+
+> **Careful with the HF floor boost: it only helps if your receiver delivers noise up there.** The ramp
+> starts at ~2.5 kHz and grows towards the high frequencies. If the radio's audio is cut off before
+> that —you can check it by looking at how far the **Input** curve reaches on the Spectrum tab— the
+> ramp lands in a region where there is no noise left to suppress but there are still consonants, and
+> all it does is eat them. Measured on such a receiver, the boost at 100% cost **1.0 to 1.6 dB of
+> voice** (3.6 dB between 2.5 and 3.5 kHz, precisely the consonant band) in exchange for 0.2 dB of
+> background. That is why the factory presets ship it at 0%.
+
+> **Tip — "Freeze floor on voice" is for continuous transmissions.** The adaptive estimator can only
+> measure the noise during the stretches where it detects no voice. On a normal QSO, with pauses
+> between words, it has material to spare. But with **continuous voice** —a broadcast station, an
+> operator who never stops, music— the freeze engages almost all the time and the floor stops
+> following the changes in band noise: it sounds as if the cancellation arrived late to every rise.
+> Raising the control loosens that freeze.
+>
+> The price is real: with the control at 100%, sustained voice raises the estimated floor by some
+> 10 dB, and then the canceller subtracts too much. That is why the end of the travel is for trying,
+> not for leaving set. The factory presets use a **different value in each one** (between 30% and
+> 100%), which is the short way of saying that this is chosen per condition and there is no single
+> good value.
 
 > **Tip — the Fall brake is chosen by S/N, not by taste.** It is the kind of control that is free on
 > one band and ruins the voice on another, so it is worth understanding what it charges. When band
@@ -1149,4 +1171,4 @@ The file is capped at a few errors per session, so it does not grow without boun
 
 ---
 
-*RadioNoiseKiller — version 2.2*
+*RadioNoiseKiller — version 2.3*

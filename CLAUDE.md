@@ -272,6 +272,22 @@ Bugs reales encontrados en revisión — cada uno es un patrón que puede reapar
    `test_post_filter_on_principal_autoenable`, falla intermitente según el estado del disco). Al
    testear un handler de slider, partir de un valor distinto conocido.
 
+**v2.3 publicada (agosto 2026)** — release en GitHub con distribuibles Windows y Linux. Versión de
+app 2.3.0, manuales `MANUAL_RadioNoiseKiller_v2.3.pdf` (ES, 44 págs) y `..._v2.3_EN.pdf` (EN, 42
+págs). Título "v2.3 by LU6APA". **Salto de menor**: no cambia el significado numérico de ningún
+control que sobreviva, pero **saca dos controles y agrega tres**, así que la UI se mueve:
+- **Se va el Squelch de voz** y en su lugar entra el **Gate de ruido**, que decide por nivel de
+  entrada en dBFS. No hay conversión automática: los dos umbrales miden cosas distintas, y los
+  presets viejos cargan con el gate desactivado.
+- **Se va el combo Modo (AM/SSB)** y el que ocupa su lugar elige el **ancho de pasabanda** entre 8
+  de fábrica. Los presets viejos migran solos y conservan sus Hz exactos.
+- **Entran dos sliders del estimador adaptativo**: *Freno de bajada* y *Congelar piso con voz*, los
+  dos nacidos del problema del salto del fondo — que no se resolvió con un mecanismo único sino
+  combinando controles por condición.
+- Todo el contenido salió de escuchar en la radio, con la excepción notable del gate: ése se diseñó
+  entero midiendo sobre grabaciones y la escucha lo confirmó sin correcciones.
+- Los bloques de abajo que dicen "Post-v2.2" son el detalle de esta versión.
+
 **v2.0 publicada (agosto 2026)** — release en GitHub con distribuibles Windows y Linux. Versión de
 app 2.0.0, manuales `MANUAL_RadioNoiseKiller_v2.0.pdf` (ES, 37 págs) y `..._v2.0_EN.pdf` (EN, 36
 págs). Título "v2.0 by LU6APA". **Salto de mayor, no de menor**: cambió el corazón del cancelador y,
@@ -487,6 +503,20 @@ elegir modo y después ancho era decir dos veces lo mismo. **Lo que el operador 
      `test_bandpass_preset_ambiguo_no_salta`.
   2. **`_refresh_bandpass_combo` bloquea señales**: sin eso, sincronizar el combo desde el config
      dispara su propio handler y vuelve a aplicar el preset (bucle).
+  3. **El mismo guard en `apply_config` era INERTE, y lo destapó el release.** Estaba escrito como
+     "aplico los setters y después restauro `self._config.dsp.bandpass_preset = dsp.bandpass_preset`",
+     que en la UI **no hace nada**: `config` y `self._config` son el MISMO objeto, así que
+     `set_bandpass_limits` ya había pisado el nombre y la línea se asignaba el valor corrupto a sí
+     misma. Hay que **capturar el nombre ANTES** de tocar los setters. **Regla: un guard que
+     "restaura" un valor no sirve si la fuente y el destino pueden ser el mismo objeto — sólo se ve
+     al probarlo por el camino en que lo son.** Síntoma: `"(modificado)"` espurio permanente en
+     cualquier preset guardado con uno de los dos anchos que comparten Hz.
+     - **Cómo apareció:** el test de "(modificado)" empezó a fallar recién al correr la suite
+       ENTERA, porque depende de qué ancho dejó puesto el test anterior. Suelto pasaba siempre.
+       Vale como recordatorio de que **el orden de los tests es parte del test**.
+     - El guard nuevo comprueba las dos direcciones: que el nombre ambiguo sobreviva a
+       `apply_config`, y que un nombre que **no** corresponde a los Hz vigentes sí se re-derive (si
+       no, el combo mentiría sobre lo que suena). Verificado que falla con el código viejo.
 - **Regresión que casi se me pasa: hay OTRO combo llamado "Modo:"** — el de Perfil estático /
   Adaptativo, dentro del grupo del cancelador. Al limpiar el catálogo i18n de las claves del modo
   AM/SSB **borré también su clave** y se quedaba sin traducir. Restaurada, y los manuales ahora

@@ -325,6 +325,22 @@ def test_bandpass_preset_ambiguo_no_salta():
     _set_combo(w._combo_bandpass, "AM 3 kHz")
     assert w._config.dsp.bandpass_preset == "AM 3 kHz", w._config.dsp.bandpass_preset
     assert w._combo_bandpass.currentData() == "AM 3 kHz"
+
+    # Y tiene que sobrevivir a apply_config, que es el camino de "cargar preset".
+    # El guard de apply_config era INERTE: en la UI `config` y el config del
+    # pipeline son el MISMO objeto, asi que set_bandpass_limits ya habia pisado el
+    # nombre y la linea de restauracion se asignaba el valor corrupto a si misma.
+    # Sintoma: "(modificado)" espurio permanente en un preset guardado con
+    # cualquiera de los dos anchos que comparten Hz.
+    w._pipeline.apply_config(w._config)
+    assert w._config.dsp.bandpass_preset == "AM 3 kHz",         "apply_config re-derivo el nombre: %s" % w._config.dsp.bandpass_preset
+
+    # Un nombre que NO corresponde a los Hz vigentes si debe re-derivarse: el combo
+    # no puede mentir sobre lo que suena.
+    w._config.dsp.bandpass_preset = "AM 8 kHz"
+    w._pipeline.apply_config(w._config)
+    assert w._config.dsp.bandpass_preset in ("SSB ancho", "AM 3 kHz"),         "un nombre incoherente con los Hz sobrevivio: %s" % w._config.dsp.bandpass_preset
+    _set_combo(w._combo_bandpass, "AM 3 kHz")
     print("Combo Pasabanda: no salta entre iguales    OK")
 
 

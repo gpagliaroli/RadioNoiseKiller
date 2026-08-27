@@ -347,6 +347,15 @@ class ProcessingPipeline:
         dsp  = config.dsp
         gain = config.gain
 
+        # El nombre del ancho de pasabanda se guarda ANTES de tocar nada. Si no,
+        # el guard de más abajo es INERTE: en la UI `config` y `self._config` son
+        # el MISMO objeto, así que `set_bandpass_limits` ya pisó `bandpass_preset`
+        # con el nombre re-derivado de los Hz y la línea de restauración termina
+        # asignándose el valor corrupto a sí misma. Muerde sólo con los dos anchos
+        # que comparten Hz (*SSB ancho* y *AM 3 kHz*), y el síntoma es un
+        # "(modificado)" espurio permanente en el preset del usuario.
+        nombre_bp = dsp.bandpass_preset
+
         self.set_agc_preset(dsp.agc_preset)
 
         self.set_blanker_enabled(dsp.blanker_enabled)
@@ -358,8 +367,12 @@ class ProcessingPipeline:
         self.set_bandpass_limits(int(dsp.bandpass_limits[0]), int(dsp.bandpass_limits[1]))
         self.set_bandpass_out_limits(int(dsp.bandpass_out_limits[0]),
                                      int(dsp.bandpass_out_limits[1]))
-        # Idem: el nombre lo manda la config, no la re-derivación por Hz.
-        self._config.dsp.bandpass_preset = dsp.bandpass_preset
+        # Idem: el nombre lo manda la config, no la re-derivación por Hz — pero
+        # sólo si sigue siendo cierto (un nombre que no corresponde a estos Hz
+        # mentiría sobre lo que suena; ahí vale más el derivado).
+        if (nombre_bp in BANDPASS_PRESETS
+                and BANDPASS_PRESETS[nombre_bp] == tuple(self._config.dsp.bandpass_limits)):
+            self._config.dsp.bandpass_preset = nombre_bp
         # último: re-empuja los límites de la fuente correcta al filtro de salida
         self.set_bandpass_out_independent(dsp.bandpass_out_independent)
         self.set_filter_order(dsp.filter_order)
