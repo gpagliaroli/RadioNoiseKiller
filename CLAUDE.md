@@ -452,7 +452,9 @@ coincidencia, estaba comparando con Bypass puesto.
 la máquina del usuario y ya causó una vez que se tomara por fallo real lo que había dejado la propia
 suite de tests. Sacado del índice y agregado a `.gitignore` con el motivo escrito al lado.
 
-**Post-v2.2: se elimina el modo AM/SSB; el combo pasa a ser "Pasabanda".** Pedido del usuario:
+**Post-v2.2: se elimina el modo AM/SSB; el combo pasa a ser "Pasabanda". VALIDADO EN EL AIRE**
+(agosto 2026: *"el refactor del pasabanda quedó ok, podemos cerrar eso"* — revisión funcional y de
+sonido con los 8 anchos). Pedido del usuario:
 *"con la llegada de los Presets no tiene sentido mantener el combo Modo"*. Tenía razón — el modo
 sólo elegía qué tupla de límites usaba el pasabanda, así que con presets que ya traen la banda,
 elegir modo y después ancho era decir dos veces lo mismo. **Lo que el operador elige es el ANCHO.**
