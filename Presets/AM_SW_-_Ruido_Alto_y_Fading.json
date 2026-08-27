@@ -2,44 +2,32 @@
   "name": "AM SW - Ruido Alto y Fading",
   "version": 1,
   "dsp": {
-    "mode": "AM",
+    "bandpass_preset": "AM 6 kHz",
     "agc_preset": "medium",
     "agc_noise_ceiling_enabled": true,
-    "agc_noise_ceiling_db": -40.0,
+    "agc_noise_ceiling_db": -35.0,
     "blanker_enabled": true,
     "blanker_frame": 15.0,
     "blanker_mini": 7.0,
     "bandpass_pre_enabled": true,
     "bandpass_post_enabled": true,
-    "bandpass_limits": {
-      "AM": [
-        50,
-        3500
-      ],
-      "SSB": [
-        100,
-        2500
-      ]
-    },
+    "bandpass_limits": [
+      100,
+      6000
+    ],
     "bandpass_out_independent": true,
-    "bandpass_out_limits": {
-      "AM": [
-        50,
-        6000
-      ],
-      "SSB": [
-        200,
-        3000
-      ]
-    },
+    "bandpass_out_limits": [
+      50,
+      6000
+    ],
     "filter_order": 8,
     "anf_enabled": true,
     "anf_threshold": 2.0,
     "anf_depth": 0.7000000000000001,
     "noise_enabled": true,
     "noise_mode": "mcra",
-    "noise_alpha": 0.85,
-    "noise_floor": 0.2,
+    "noise_alpha": 0.75,
+    "noise_floor": 0.15000000000000002,
     "noise_smooth": 0.97,
     "noise_attack": 0.7,
     "squelch_enabled": false,
@@ -53,10 +41,10 @@
     "bass_amount": 0.15000000000000002,
     "presence_enabled": true,
     "presence_freq": 2000.0,
-    "presence_db": 6.0,
+    "presence_db": 3.0,
     "presence_q": 0.5,
     "body_freq": 575.0,
-    "body_db": 3.0,
+    "body_db": 1.5,
     "perceptual_floor_enabled": true,
     "perceptual_floor_boost": 1.0,
     "perceptual_floor_center": 500.0,
@@ -67,13 +55,13 @@
     "pitch_enhance_enabled": true,
     "pitch_enhance_strength": 0.8,
     "noise_mcra_window_ms": 500.0,
-    "noise_fall_db_s": 10.0,
+    "noise_fall_db_s": 5.0,
     "noise_freeze_thr": 1.0,
     "noise_hf_boost": 0.0,
     "voice_leveler_enabled": true,
-    "voice_leveler_max_db": 6.0,
+    "voice_leveler_max_db": 12.0,
     "voice_leveler_gate_voice": false,
-    "voice_leveler_release_ms": 500.0
+    "voice_leveler_release_ms": 1000.0
   },
   "gain": {
     "input_gain_db": -3.0,

@@ -594,8 +594,10 @@ medir por qué el usuario escucha distorsión. En sus 8 grabaciones el S/N de la
 
 **Post-v2.2: el umbral del freeze de MCRA pasa a ser ajustable ("Congelar piso con voz").** Slider
 30–100 % en Avanzada Cancelador (`noise_freeze_thr`, default 0.30 = comportamiento previo; 1.00 =
-no congela nunca). **PENDIENTE de validación de oído** — se expuso justamente porque la medición no
-alcanza para decidir.
+no congela nunca). **VALIDADO EN EL AIRE**: se expuso justamente porque la medición daba empate, y
+la escucha resolvió lo que la medición no podía — los presets de fábrica terminaron con un umbral
+DISTINTO en cada uno (0,3 a 1,0), que es la confirmación de que el valor correcto depende de la
+condición y de que el control tenía que existir.
 - **El material del usuario es voz CONTINUA**, dato que él aportó y que invalidó varias mediciones
   mías (ver el bloque de abajo). Con voz continua el freeze bloquea **entre el 67 % y el 98 % de los
   frames** según la grabación (medido sobre 7), y λ_d se queda sin material para seguir las subidas
@@ -773,7 +775,9 @@ mejor que 10.
   congela todo el estado MCRA — hay que usar −8 dB; (2) medir la subida como *delta en dB* daba un
   falso fallo, porque con freno λ_d **parte de más arriba** (que es el mecanismo) y termina igual o
   más alto: hay que comparar el NIVEL al que llega, no cuánto subió.
-- **PENDIENTE: validación de oído.** Todo lo de arriba es medición sobre grabaciones.
+- **VALIDADO EN EL AIRE** — ver el bloque de arriba: el usuario comparó los dos extremos escuchando,
+  y de ahí salió el default en 30 (sin freno). Los presets de fábrica traen `noise_fall_db_s`
+  explícito y distinto en cada uno, o sea que el slider se quedó como control.
 
 **Post-v2.2: la máscara del refuerzo de pitch no discriminaba, y su efecto dependía del bloque.**
 Detectado por el usuario de oído: *"el refuerzo de pitch de voz exagera mucho el problema también, al
@@ -815,7 +819,8 @@ deshabilitarlo mejora"*. Tenía razón, y la causa es un defecto de años.
   que no imponga un piso global de `p_speech` y que **no dependa del tamaño de bloque**. Verificado
   que los dos últimos **fallan con la fórmula vieja** — un guard que no puede fallar no prueba nada.
 - **Los 7 presets de fábrica traen el refuerzo activado**, así que todos cambian de sonido: suprimen
-  algo más y modulan menos. Pendiente de re-escucha.
+  algo más y modulan menos. **Re-escuchados y reajustados en el aire** (agosto 2026), en dos tandas:
+  la de los 4 de AM/SSB y la de `AM Local` + `AM SW Ruido Alto` que cierra la v2.3.
 
 **Post-v2.2 — el fondo salta cuando el ruido de banda sube. DIEZ enfoques descartados, y una resolución PRÁCTICA (agosto 2026).**
 Reportado con un diagnóstico del usuario que resultó correcto en la cadena causal: *"cuando baja el
