@@ -1411,7 +1411,7 @@ class MainWindow(QMainWindow):
         self._config.dsp.agc_preset = preset
         self._pipeline.set_agc_preset(preset)
         if preset == "off":
-            self._label_agc_gain.setText("")
+            self._label_agc_gain.setText("—")
         self._schedule_save()
 
     def _on_module_toggled(self, key: str, setter, checked: bool) -> None:
@@ -1885,15 +1885,7 @@ class MainWindow(QMainWindow):
             self._spectrum_widget.stop()
             self._waterfall_widget.stop()
             self._btn_start.setText(tr("▶  ACTIVAR"))
-            self._vu_in.set_level(-60)
-            self._vu_out.set_level(-60)
-            self._label_latency.setText(tr("Latencia: --"))
-            self._lbl_leveler.setText("—")
-            self._lbl_leveler.setStyleSheet("color: #555; font-size: 8pt; font-weight: bold;")
-            self._adv_audio_tab._lbl_leveler_act.setText("—")
-            self._adv_audio_tab._lbl_leveler_act.setStyleSheet("color: #555;")
-            self._lbl_agc_ceiling.setText("—")
-            self._lbl_agc_ceiling.setStyleSheet("color: #555; font-size: 8pt;")
+            self._reset_live_indicators()
             self._status_bar.showMessage(tr("Detenido."))
             self._btn_refresh_devices.setEnabled(True)
             self._combo_in.setEnabled(True)
@@ -1971,14 +1963,50 @@ class MainWindow(QMainWindow):
         # "calibrando (~200 ms)..." y el aviso no se llega a leer.
         self._dsp_error_hold = 10
 
+    # Estado en reposo de los indicadores que sólo pinta _tick_levels.
+    _IDLE_LBL_STYLE = "color: #555; font-size: 8pt; font-weight: bold;"
+
+    def _reset_live_indicators(self) -> None:
+        """Deja en reposo TODO lo que sólo se actualiza en `_tick_levels`.
+
+        Ese timer se detiene junto con el procesamiento, así que cualquier
+        indicador que se pinte únicamente ahí se queda congelado con el último
+        valor medido — mostrando actividad de un proceso que ya no corre
+        (invariante 5). Reportado con el indicador del AGC de entrada, pero le
+        pasaba lo mismo al del limitador, al S/N y a los marcadores de heterodino.
+
+        Va en un método propio y no como una lista de líneas dentro del `else` de
+        _on_toggle_processing para que agregar un indicador nuevo tenga UN lugar
+        evidente donde declarar su reposo.
+        """
+        self._vu_in.set_level(-60)
+        self._vu_out.set_level(-60)
+        self._label_latency.setText(tr("Latencia: --"))
+        self._label_agc_gain.setText("—")
+        self._lbl_peak_active.setText("—")
+        self._lbl_peak_active.setStyleSheet(self._IDLE_LBL_STYLE)
+        self._lbl_leveler.setText("—")
+        self._lbl_leveler.setStyleSheet(self._IDLE_LBL_STYLE)
+        self._adv_audio_tab._lbl_leveler_act.setText("—")
+        self._adv_audio_tab._lbl_leveler_act.setStyleSheet("color: #555;")
+        self._lbl_agc_ceiling.setText("—")
+        self._lbl_agc_ceiling.setStyleSheet("color: #555; font-size: 8pt;")
+        self._lbl_snr.setText(tr("S/N: —"))
+        self._lbl_snr.setStyleSheet("color: #888; font-weight: bold;")
+        self._waterfall_widget.set_tone_freqs(None)
+
     def _tick_levels(self) -> None:
         self._check_dsp_errors()
         self._vu_in.set_level(self._pipeline.db_in)
         self._vu_out.set_level(self._pipeline.db_out)
         lat = self._pipeline.latency_ms
         self._label_latency.setText(tr("Latencia: {ms:.0f} ms").format(ms=lat) if lat > 0 else tr("Latencia: --"))
+        # Con if/else y no sólo if: sin el else, apagar el AGC dejaba el último
+        # valor pegado en pantalla (invariante 5, el mismo caso que el reposo).
         if self._combo_agc.currentData() != "off":
             self._label_agc_gain.setText(f"{self._pipeline.agc_gain_db:+.0f} dB")
+        else:
+            self._label_agc_gain.setText("—")
 
         red = self._pipeline.peak_reduction_db
         if red < -0.1:

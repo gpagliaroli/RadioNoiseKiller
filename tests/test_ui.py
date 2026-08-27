@@ -770,6 +770,38 @@ def test_botones_de_escucha_mismo_ancho_y_sin_recortes():
     print("Botones de escucha: mismo ancho, sin recortes OK")
 
 
+def test_indicadores_vuelven_a_reposo_al_detener():
+    """Al DETENER, ningun indicador puede quedar con el ultimo valor medido.
+
+    Los que se pintan solo en `_tick_levels` son los expuestos: ese timer se
+    detiene junto con el proceso, asi que sin un reset explicito muestran
+    actividad de algo que ya no corre (invariante 5). Se reporto con el AGC de
+    entrada; le pasaba lo mismo al limitador, al S/N y a los marcadores de
+    heterodino.
+    """
+    w = _win()
+    vivos = {
+        "AGC de entrada":  (w._label_agc_gain, "+18 dB"),
+        "limitador":       (w._lbl_peak_active, "ACTIVO  -4.2 dB"),
+        "nivelador":       (w._lbl_leveler, "+7.5 dB"),
+        "nivelador (Avanzada)": (w._adv_audio_tab._lbl_leveler_act, "+7.5 dB"),
+        "techo del AGC":   (w._lbl_agc_ceiling, "piso -45 dBFS · limitando a +9 dB"),
+        "S/N":             (w._lbl_snr, "S/N: +12 dB"),
+        "latencia":        (w._label_latency, "Latencia: 40 ms"),
+    }
+    for lbl, texto in vivos.values():
+        lbl.setText(texto)
+
+    w._reset_live_indicators()
+
+    pegados = [n for n, (lbl, texto) in vivos.items() if lbl.text() == texto]
+    assert not pegados, f"indicadores congelados tras detener: {pegados}"
+    for n, (lbl, _) in vivos.items():
+        assert "—" in lbl.text() or "--" in lbl.text(), \
+            f"{n} no quedo en reposo: {lbl.text()!r}"
+    print("Indicadores vuelven a reposo al detener      OK")
+
+
 def test_boton_activo_letra_amarilla_y_negrita():
     """Cualquier boton activado se pone rojo (regla global QPushButton:checked):
     la letra tiene que ir en amarillo y negrita para que se lea.
@@ -1258,6 +1290,7 @@ if __name__ == "__main__":
     test_loaded_profile_name_label()
     test_bypass_es_boton_junto_al_mute()
     test_botones_de_escucha_mismo_ancho_y_sin_recortes()
+    test_indicadores_vuelven_a_reposo_al_detener()
     test_boton_activo_letra_amarilla_y_negrita()
     test_mute_button_gating_and_state()
     test_bypass_remembers_output_gain()

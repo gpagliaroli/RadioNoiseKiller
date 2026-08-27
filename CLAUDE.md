@@ -299,6 +299,25 @@ afinados al aire por el usuario — ver [[project_factory_presets]]). Cambian `A
   (`noise_fading_*` de la v2.2 y `pitch_shift_hz`). Verificado que los **7** cargan con
   `matches()==True`, o sea sin "(modificado)" espurio (invariante 10).
 
+**Post-v2.2: los indicadores quedaban congelados al DETENER (invariante 5, otra vez).** Reportado
+sobre el **AGC de entrada**: al detener el proceso se quedaba con el último valor medido.
+- **La causa no es un early-return sino el TIMER**: todo lo que se pinta únicamente en
+  `_tick_levels` se congela, porque ese timer se detiene junto con el procesamiento. El `else` del
+  propio tick nunca llega a correr. **Variante del invariante 5 que no estaba anotada: no alcanza
+  con que el indicador tenga su rama de reposo — si su timer se detiene, esa rama no se ejecuta.**
+- **Eran cuatro, no uno.** Además del AGC de entrada: el del **limitador de picos**, el **S/N** y los
+  **marcadores de heterodino** de la cascada. Los que sí volvían a reposo (VU, latencia, nivelador,
+  techo del AGC) lo hacían por una lista de líneas sueltas dentro del `else` de
+  `_on_toggle_processing`, que es justo la forma de que al agregar el quinto nadie se acuerde.
+- **Fix:** `_reset_live_indicators()` en un método propio, con TODO lo que sólo pinta `_tick_levels`.
+  Un indicador nuevo tiene ahora un lugar evidente donde declarar su reposo.
+- De paso, dos casos del mismo invariante en el indicador del AGC: el tick lo actualizaba con `if`
+  sin `else` (apagar el AGC dejaba el valor pegado) y `_on_agc_changed` lo limpiaba a `""` en vez de
+  a `"—"`, o sea desaparecía en lugar de mostrarse en reposo.
+- Test `test_ui::test_indicadores_vuelven_a_reposo_al_detener`: se les mete un valor "vivo" a los
+  siete, se detiene, y **ninguno puede seguir mostrándolo**. El test enumera los indicadores por
+  nombre, así que al agregar uno hay que sumarlo ahí — que es la idea.
+
 **Post-v2.2: el estilo del botón ACTIVO se unifica en la regla global.** Pedido del usuario: que la
 letra del botón que se pone rojo quede **amarilla y en negrita**.
 - **La causa de la disparidad estaba a la vista una vez mirada:** la hoja global ya ponía
