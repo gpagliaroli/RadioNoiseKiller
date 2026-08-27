@@ -2,7 +2,7 @@
   "name": "SSB - Ruido ALto -Perfil Adaptativo",
   "version": 1,
   "dsp": {
-    "mode": "SSB",
+    "bandpass_preset": "Personalizado",
     "agc_preset": "medium",
     "agc_noise_ceiling_enabled": true,
     "agc_noise_ceiling_db": -35.0,
@@ -11,27 +11,15 @@
     "blanker_mini": 12.0,
     "bandpass_pre_enabled": true,
     "bandpass_post_enabled": true,
-    "bandpass_limits": {
-      "AM": [
-        100,
-        6000
-      ],
-      "SSB": [
-        100,
-        2700
-      ]
-    },
+    "bandpass_limits": [
+      100,
+      2700
+    ],
     "bandpass_out_independent": true,
-    "bandpass_out_limits": {
-      "AM": [
-        50,
-        8000
-      ],
-      "SSB": [
-        50,
-        3000
-      ]
-    },
+    "bandpass_out_limits": [
+      100,
+      3000
+    ],
     "filter_order": 8,
     "anf_enabled": true,
     "anf_threshold": 3.0,
@@ -42,9 +30,10 @@
     "noise_floor": 0.15000000000000002,
     "noise_smooth": 0.97,
     "noise_attack": 0.6,
-    "squelch_enabled": false,
-    "squelch_threshold": 0.15000000000000002,
-    "squelch_hold_ms": 500.0,
+    "gate_enabled": false,
+    "gate_threshold_db": -50.0,
+    "gate_hold_ms": 300.0,
+    "gate_depth_db": 20.0,
     "exciter_enabled": true,
     "exciter_drive": 3.0,
     "exciter_mix": 0.4,
@@ -68,11 +57,11 @@
     "pitch_enhance_strength": 0.5,
     "noise_mcra_window_ms": 350.0,
     "noise_fall_db_s": 20.0,
-    "noise_freeze_thr": 0.3,
+    "noise_freeze_thr": 0.75,
     "noise_hf_boost": 0.0,
     "voice_leveler_enabled": true,
     "voice_leveler_max_db": 12.0,
-    "voice_leveler_gate_voice": true,
+    "voice_leveler_gate_voice": false,
     "voice_leveler_release_ms": 1000.0
   },
   "gain": {

@@ -175,6 +175,47 @@ def test_canceller_subcontrols_require_noise():
     print("Sub-controles del cancelador gateados      OK")
 
 
+def test_sliders_de_lambda_d_solo_en_adaptativo():
+    """Los tres sliders que tocan lambda_d quedan grises en Perfil estatico.
+
+    Verificado midiendo sobre el profiler: en estatico la salida es identica bit a
+    bit con cualquier valor de los tres, porque el piso sale del perfil aprendido y
+    es fijo. Antes quedaban habilitados y sin efecto, que es peor que estar grises.
+    El refuerzo en agudos NO entra: multiplica el piso venga de donde venga."""
+    w = _win()
+    can = w._adv_canceller_tab
+    w._chk_noise.setChecked(True)
+    _app.processEvents()
+
+    solo_mcra = (can._s_mcra_window, can._s_noise_freeze, can._s_noise_fall)
+
+    _set_combo(w._combo_noise_mode, "mcra")
+    _app.processEvents()
+    for s in solo_mcra:
+        assert s._slider.isEnabled(), "deshabilitado en Adaptativo, donde SI actua"
+    assert can._s_hf_boost._slider.isEnabled()
+
+    _set_combo(w._combo_noise_mode, "static")
+    _app.processEvents()
+    for s in solo_mcra:
+        assert not s._slider.isEnabled(), \
+            "habilitado en estatico, donde no hace nada"
+    # El control que si funciona en los dos modos no debe caer en la misma bolsa.
+    assert can._s_hf_boost._slider.isEnabled(), \
+        "refuerzo en agudos deshabilitado en estatico, donde SI actua"
+
+    # Y el gating tiene que sobrevivir a apagar/prender el cancelador en estatico.
+    w._chk_noise.setChecked(False)
+    _app.processEvents()
+    w._chk_noise.setChecked(True)
+    _app.processEvents()
+    for s in solo_mcra:
+        assert not s._slider.isEnabled(), "reaparecio habilitado tras togglear el cancelador"
+    _set_combo(w._combo_noise_mode, "mcra")
+    _app.processEvents()
+    print("Sliders de lambda_d: grises en estatico    OK")
+
+
 def test_bass_and_character_controls():
     """Recuperar graves: modulo propio (no depende del cancelador — su f0 sale de
     la autocorrelacion, que corre siempre) y su slider se gatea con el checkbox.
@@ -1159,13 +1200,17 @@ def test_noise_fall_slider():
     _app.processEvents()
     assert abs(prof._fall_db_s - 30.0) < 0.01, prof._fall_db_s
 
-    # Gating: es un control del cancelador, no debe quedar vivo sin el.
+    # Gating: es un control del cancelador Y solo actua en Adaptativo (toca lambda_d).
+    w._config.dsp.noise_mode = "mcra"
     w._config.dsp.noise_enabled = False
     tab.refresh_enabled_states()
     assert not row._slider.isEnabled(), "el slider queda activo sin el cancelador"
     w._config.dsp.noise_enabled = True
     tab.refresh_enabled_states()
     assert row._slider.isEnabled()
+    w._config.dsp.noise_mode = "static"
+    tab.refresh_enabled_states()
+    assert not row._slider.isEnabled(), "el slider queda activo en Perfil estatico"
 
     w.close()
     print("slider del freno de caida del piso            OK")
@@ -1315,6 +1360,7 @@ if __name__ == "__main__":
     test_about_donate_button()
     test_auto_load_respects_saved_mode()
     test_canceller_subcontrols_require_noise()
+    test_sliders_de_lambda_d_solo_en_adaptativo()
     test_bass_and_character_controls()
     test_agc_noise_ceiling_controls()
     test_voice_leveler_requires_noise()

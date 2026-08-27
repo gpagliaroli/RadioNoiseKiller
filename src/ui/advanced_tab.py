@@ -672,9 +672,19 @@ class AdvancedCancellerTab(QWidget):
         dsp   = self._config.dsp
         noise = dsp.noise_enabled
         for s in (self._s_noise_floor, self._s_noise_smooth, self._s_noise_attack,
-                  self._s_mcra_window, self._s_noise_freeze, self._s_noise_fall,
                   self._s_hf_boost):
             s.set_enabled(noise)
+        # Estos tres tocan SÓLO a λ_d, que existe únicamente en modo Adaptativo:
+        # en estático el piso sale del perfil aprendido y es fijo, así que no hay
+        # nada que reaccione, que frene su caída ni que congelar. Verificado
+        # midiendo: en estático la salida es idéntica bit a bit con cualquier valor.
+        # Sin este gating quedaban habilitados, se movían y guardaban su valor en
+        # el preset sin producir ningún efecto — que es peor que estar grises.
+        # OJO: el `Refuerzo en agudos` NO va acá. Multiplica el piso venga de donde
+        # venga, así que funciona en los dos modos (el manual decía lo contrario).
+        adaptativo = noise and dsp.noise_mode == "mcra"
+        for s in (self._s_mcra_window, self._s_noise_freeze, self._s_noise_fall):
+            s.set_enabled(adaptativo)
         # El gate NO depende del cancelador: decide con el nivel de entrada, que
         # se mide siempre (a diferencia del squelch viejo, que necesitaba el VAD
         # del profiler y por eso arrastraba el invariante 2).

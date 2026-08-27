@@ -1541,6 +1541,11 @@ class MainWindow(QMainWindow):
         mode = self._combo_noise_mode.itemData(idx)
         self._pipeline.set_noise_mode(mode)
         self._spectrum_widget.clear_floor()
+        # Tres sliders de Avanzada Cancelador sólo actúan en Adaptativo (tocan λ_d),
+        # así que el cambio de modo tiene que re-evaluar el gating — si no, quedan
+        # habilitados y sin efecto. Guard por si el combo se inicializa antes de las tabs.
+        if hasattr(self, "_adv_canceller_tab"):
+            self._adv_canceller_tab.refresh_enabled_states()
         if mode != "static":
             self._btn_learn.setVisible(False)
             self._btn_clear_noise.setVisible(False)

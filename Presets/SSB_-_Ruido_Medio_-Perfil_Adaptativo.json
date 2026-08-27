@@ -2,34 +2,24 @@
   "name": "SSB - Ruido Medio -Perfil Adaptativo",
   "version": 1,
   "dsp": {
-    "mode": "SSB",
+    "bandpass_preset": "Personalizado",
     "agc_preset": "fast",
+    "agc_noise_ceiling_enabled": true,
+    "agc_noise_ceiling_db": -30.0,
     "blanker_enabled": true,
     "blanker_frame": 30.0,
     "blanker_mini": 10.0,
     "bandpass_pre_enabled": true,
     "bandpass_post_enabled": true,
-    "bandpass_limits": {
-      "AM": [
-        100,
-        6000
-      ],
-      "SSB": [
-        100,
-        2700
-      ]
-    },
+    "bandpass_limits": [
+      100,
+      2700
+    ],
     "bandpass_out_independent": true,
-    "bandpass_out_limits": {
-      "AM": [
-        50,
-        8000
-      ],
-      "SSB": [
-        50,
-        4000
-      ]
-    },
+    "bandpass_out_limits": [
+      50,
+      4000
+    ],
     "filter_order": 6,
     "anf_enabled": true,
     "anf_threshold": 2.5,
@@ -38,11 +28,12 @@
     "noise_mode": "mcra",
     "noise_alpha": 0.7,
     "noise_floor": 0.15000000000000002,
-    "noise_smooth": 0.92,
+    "noise_smooth": 0.97,
     "noise_attack": 0.8,
-    "squelch_enabled": false,
-    "squelch_threshold": 0.15000000000000002,
-    "squelch_hold_ms": 750.0,
+    "gate_enabled": true,
+    "gate_threshold_db": -40.0,
+    "gate_hold_ms": 300.0,
+    "gate_depth_db": 20.0,
     "exciter_enabled": true,
     "exciter_drive": 2.5,
     "exciter_mix": 0.30000000000000004,
@@ -55,21 +46,19 @@
     "presence_q": 0.4,
     "body_freq": 400.0,
     "body_db": 3.0,
-    "pitch_shift_hz": 0.0,
     "perceptual_floor_enabled": true,
-    "perceptual_floor_boost": 1.0,
-    "perceptual_floor_center": 350.0,
-    "perceptual_floor_rolloff_hz": 3000.0,
+    "perceptual_floor_boost": 0.5,
+    "perceptual_floor_center": 400.0,
+    "perceptual_floor_rolloff_hz": 1500.0,
     "perceptual_floor_rolloff_depth": 0.5,
     "post_filter_enabled": true,
-    "post_filter_strength": 2.0,
+    "post_filter_strength": 4.0,
     "pitch_enhance_enabled": true,
-    "pitch_enhance_strength": 0.7000000000000001,
-    "noise_fading_comp": false,
+    "pitch_enhance_strength": 0.75,
     "noise_mcra_window_ms": 500.0,
+    "noise_fall_db_s": 30.0,
+    "noise_freeze_thr": 0.5,
     "noise_hf_boost": 0.5,
-    "noise_fading_change_db": 5.0,
-    "noise_fading_freeze_ms": 200.0,
     "voice_leveler_enabled": true,
     "voice_leveler_max_db": 12.0,
     "voice_leveler_gate_voice": false,

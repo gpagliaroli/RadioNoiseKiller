@@ -342,6 +342,30 @@ sobre `snr_post`, que depende de λ_d — medido sobre las grabaciones reales de
   escucha que **contradijo** una medición. Lo que hizo la diferencia acá fue medir sobre el material
   real del usuario desde el principio, no sobre señales sintéticas.
 
+**Post-v2.3: tres sliders del cancelador quedaban vivos y sin efecto en Perfil estático.** Pregunta
+del usuario (*"¿hay varios controles de avanzadas que no se utilizan en estático?"*) que resultó
+correcta. **Sale en la v2.4** — se arregla en `main`, pero no se re-publicaron los assets de la v2.3.
+- **Reactividad del piso, Freno de bajada y Congelar piso con voz** tocan **sólo a `λ_d`**, que
+  existe únicamente en modo Adaptativo (`_mcra_feed` se llama dentro del `if self._mode == "mcra"`).
+  En estático el piso sale del perfil aprendido y es fijo. Medido: con cualquier valor de los tres,
+  la salida del profiler en estático es **idéntica bit a bit**.
+- **`refresh_enabled_states` sólo miraba `noise_enabled`, nunca el modo**, así que los tres se veían
+  habilitados, se movían, mostraban su etiqueta y guardaban el valor en el preset sin producir nada.
+  Es el invariante 6 (chequear el modo en TODOS los efectos) aplicado a la UI, que era donde
+  faltaba. `_on_noise_mode_changed` ahora re-evalúa el gating; `reload()` ya lo hacía.
+- **Y había un error en el sentido contrario, que le escondía un control útil al usuario: el
+  Refuerzo en agudos SÍ funciona en estático.** Multiplica el `noise_mag` efectivo venga de donde
+  venga (línea fuera de la rama de modo), y medido pesa lo mismo en los dos modos. Los **manuales**
+  lo listaban como "(solo Adaptativo)" — el tooltip y la nota del slider estaban bien. Corregido, y
+  de paso los manuales explican por qué los otros tres aparecen grises.
+- **Método:** la pregunta se contestó **midiendo** —correr el profiler en estático variando cada
+  slider y comparar la salida muestra a muestra— y no leyendo el código. Leer alcanzaba para los
+  tres muertos, pero es lo que hubiera repetido el error del manual sobre el cuarto: la línea del
+  refuerzo está lejos de la rama de modo y "se parece" a un parámetro de MCRA.
+- Test `test_ui::test_sliders_de_lambda_d_solo_en_adaptativo`: los tres grises en estático, vivos en
+  Adaptativo, **el refuerzo en agudos vivo en los dos** (si no, el fix se pasaría de largo), y que el
+  gating sobreviva a apagar y prender el cancelador. `test_noise_fall_slider` sumó la dimensión modo.
+
 **Post-v2.2: los 4 presets de fábrica de AM/SSB reafinados con los controles nuevos** (agosto 2026,
 afinados al aire por el usuario — ver [[project_factory_presets]]). Cambian `AM Local - RuidoMedio`,
 `AM SW - Ruido Alto y Fading`, `AM SW - Ruido Medio y Fading` y `SSB - Ruido ALto -Perfil Adaptativo`.
