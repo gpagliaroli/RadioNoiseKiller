@@ -320,7 +320,11 @@ sobre `snr_post`, que depende de λ_d — medido sobre las grabaciones reales de
   paga la normalización por `snapshot()` (invariante 10), y **no se regeneraron a propósito**.
 - El gate corre **después del limitador** y se saltea en Preview (es una etapa que se dispara con la
   señal, como las cuatro que ya se salteaban). Diagrama del pipeline regenerado.
-- **PENDIENTE: validación en el aire.** Todo lo de arriba está medido sobre grabaciones y banco.
+- **VALIDADO EN EL AIRE** (agosto 2026: *"funciona como lo esperado"*). El diseño se decidió entero
+  sobre grabaciones y banco —incluido el vuelco de relativo a absoluto— y la escucha lo confirmó sin
+  correcciones, que en este proyecto es la excepción: casi todos los fixes de la v2.2 salieron de una
+  escucha que **contradijo** una medición. Lo que hizo la diferencia acá fue medir sobre el material
+  real del usuario desde el principio, no sobre señales sintéticas.
 
 **Post-v2.2: los 4 presets de fábrica de AM/SSB reafinados con los controles nuevos** (agosto 2026,
 afinados al aire por el usuario — ver [[project_factory_presets]]). Cambian `AM Local - RuidoMedio`,
