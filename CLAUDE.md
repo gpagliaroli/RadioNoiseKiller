@@ -343,8 +343,13 @@ sobre `snr_post`, que depende de λ_d — medido sobre las grabaciones reales de
   real del usuario desde el principio, no sobre señales sintéticas.
 
 **Post-v2.3 — el supresor de impulsos en valores agresivos SÍ ayuda con los subidones del fading, y
-un limitador dedicado NO lo mejora (medido, agosto 2026).** Observación del usuario ajustando
-presets. Se midió sobre 4 de sus grabaciones reales, con la cadena **sincrónica** (blanker → AGC →
+un limitador dedicado NO lo mejora (medido, agosto 2026). VALIDADO EN EL AIRE** con el control ya
+re-escalado: *"dimos en la tecla, es notorio la reducción del efecto que estábamos persiguiendo"*.
+**Cierra el hilo del salto del fondo**, que llevaba diez enfoques descartados — y no lo cerró una
+búsqueda mía sino que el usuario notó el efecto ajustando presets, con un mecanismo que ya estaba en
+el código desde siempre y que nadie había mirado para esto. **Regla de método: cuando una búsqueda
+larga se queda sin ideas, preguntarle al operador qué encontró tocando; el que escucha todos los
+días prueba combinaciones que ningún banco propone.** Observación del usuario ajustando presets. Se midió sobre 4 de sus grabaciones reales, con la cadena **sincrónica** (blanker → AGC →
 pasabanda → MCRA), nunca por el pipeline con su hilo.
 - **Existe el efecto, pero no es el que parecía.** El **pico** del subidón no se mueve (+9,7 → +8,9
   dB en el extremo). Lo que baja es la **brusquedad** — el p95 del escalón de nivel entre bloques de
