@@ -342,6 +342,25 @@ sobre `snr_post`, que depende de λ_d — medido sobre las grabaciones reales de
   escucha que **contradijo** una medición. Lo que hizo la diferencia acá fue medir sobre el material
   real del usuario desde el principio, no sobre señales sintéticas.
 
+**Post-v2.3: tres presets de fábrica más, reafinados en el aire con el gate ya validado** (agosto
+2026 — ver [[project_factory_presets]]). Cambian `AM SW - Ruido Alto y Fading`,
+`SSB - Ruido ALto -Perfil Adaptativo` y `SSB - Ruido Medio -Perfil Adaptativo`. **Salen en la v2.4.**
+- **El gate queda activado en dos de los tres** (`AM SW Ruido Alto` y `SSB Ruido Medio`, los dos con
+  umbral **−40 dBFS**, hold 300 ms y profundidad 20 dB), así que ya van tres de siete con el gate
+  puesto y todos con un umbral calibrado en la estación del usuario. Confirma que el control se usa
+  y que el valor **no es portable**: −30 dBFS en AM Local contra −40 en los otros dos.
+- **Los dos SSB pasan a `bandpass_preset: "Personalizado"`**: la migración les conservó los Hz del
+  modo SSB que tenían (100–2700), que no coinciden con ningún ancho del catálogo. Es exactamente el
+  comportamiento buscado — el combo no miente sobre lo que suena.
+- Patrón del resto: **piso perceptual más suave** (`perceptual_floor_boost` 1.0 → 0.5 en dos) y
+  **`noise_freeze_thr` bien por encima del default** (0.75 y 0.50 contra 0.30), que es el control
+  nuevo haciendo lo que se esperaba con voz continua. `AM SW Ruido Alto` además afloja el cancelador
+  (`noise_alpha` 0.75 → 0.6, `noise_floor` 0.15 → 0.10) y acelera el AGC a `fast`.
+- **Se colaron en el commit del fix de gating por un `git add -A`** — el mismo descuido que ya
+  costó una vez con `errores_dsp.log`, y encima contra el acuerdo explícito de no commitear presets
+  del usuario sin su OK. El usuario decidió conservarlos. **Regla operativa: al commitear con
+  cambios del usuario en el árbol, listar los archivos a mano.**
+
 **Post-v2.3: tres sliders del cancelador quedaban vivos y sin efecto en Perfil estático.** Pregunta
 del usuario (*"¿hay varios controles de avanzadas que no se utilizan en estático?"*) que resultó
 correcta. **Sale en la v2.4** — se arregla en `main`, pero no se re-publicaron los assets de la v2.3.
