@@ -297,16 +297,16 @@ Both are enabled/disabled independently from **Active Modules**.
 >
 > **Widths available in the combo:**
 >
-> | | Low cutoff | High cutoff |
+> | Width | Low cutoff | High cutoff |
 > |---|---|---|
-> | SSB very narrow | 400 Hz | 2100 Hz |
-> | SSB narrow | 300 Hz | 2400 Hz |
-> | SSB normal | 200 Hz | 2700 Hz |
-> | SSB wide | 200 Hz | 3000 Hz |
-> | AM 3 kHz | 200 Hz | 3000 Hz |
-> | AM 4 kHz | 150 Hz | 4000 Hz |
-> | AM 6 kHz | 100 Hz | 6000 Hz |
-> | AM 8 kHz | 100 Hz | 8000 Hz |
+> | SSB very narrow | 400 Hz | 2100 Hz |
+> | SSB narrow | 300 Hz | 2400 Hz |
+> | SSB normal | 200 Hz | 2700 Hz |
+> | SSB wide | 200 Hz | 3000 Hz |
+> | AM 3 kHz | 200 Hz | 3000 Hz |
+> | AM 4 kHz | 150 Hz | 4000 Hz |
+> | AM 6 kHz | 100 Hz | 6000 Hz |
+> | AM 8 kHz | 100 Hz | 8000 Hz |
 >
 > *SSB wide* and *AM 3 kHz* are the same hertz under two names: the label is there so you can pick by
 > what you are hearing, not so you have to translate in your head. And beware of the wide settings:

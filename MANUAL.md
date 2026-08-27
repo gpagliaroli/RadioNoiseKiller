@@ -297,16 +297,16 @@ Ambos se activan/desactivan de forma independiente desde **Módulos Activos**.
 >
 > **Anchos disponibles en el combo:**
 >
-> | | Corte inferior | Corte superior |
+> | Ancho | Corte inferior | Corte superior |
 > |---|---|---|
-> | SSB muy angosto | 400 Hz | 2100 Hz |
-> | SSB angosto | 300 Hz | 2400 Hz |
-> | SSB normal | 200 Hz | 2700 Hz |
-> | SSB ancho | 200 Hz | 3000 Hz |
-> | AM 3 kHz | 200 Hz | 3000 Hz |
-> | AM 4 kHz | 150 Hz | 4000 Hz |
-> | AM 6 kHz | 100 Hz | 6000 Hz |
-> | AM 8 kHz | 100 Hz | 8000 Hz |
+> | SSB muy angosto | 400 Hz | 2100 Hz |
+> | SSB angosto | 300 Hz | 2400 Hz |
+> | SSB normal | 200 Hz | 2700 Hz |
+> | SSB ancho | 200 Hz | 3000 Hz |
+> | AM 3 kHz | 200 Hz | 3000 Hz |
+> | AM 4 kHz | 150 Hz | 4000 Hz |
+> | AM 6 kHz | 100 Hz | 6000 Hz |
+> | AM 8 kHz | 100 Hz | 8000 Hz |
 >
 > *SSB ancho* y *AM 3 kHz* son los mismos hercios con dos nombres: la etiqueta está para elegir por
 > lo que uno escucha, no para que haya que traducir mentalmente. Y ojo con los anchos grandes: no
