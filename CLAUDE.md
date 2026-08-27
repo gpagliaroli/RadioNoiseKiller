@@ -342,6 +342,37 @@ sobre `snr_post`, que depende de λ_d — medido sobre las grabaciones reales de
   escucha que **contradijo** una medición. Lo que hizo la diferencia acá fue medir sobre el material
   real del usuario desde el principio, no sobre señales sintéticas.
 
+**Post-v2.3 — el supresor de impulsos en valores agresivos SÍ ayuda con los subidones del fading, y
+un limitador dedicado NO lo mejora (medido, agosto 2026).** Observación del usuario ajustando
+presets. Se midió sobre 4 de sus grabaciones reales, con la cadena **sincrónica** (blanker → AGC →
+pasabanda → MCRA), nunca por el pipeline con su hilo.
+- **Existe el efecto, pero no es el que parecía.** El **pico** del subidón no se mueve (+9,7 → +8,9
+  dB en el extremo). Lo que baja es la **brusquedad** — el p95 del escalón de nivel entre bloques de
+  20 ms — y eso sí es monótono con el umbral.
+- **NO es específico del fading, y me corregí a mí mismo.** En la grabación que miré primero la
+  especificidad (cuánto más baja adentro de los subidones que afuera) daba −0,88 dB; replicada en
+  las 4 da **−0,47 de media con el signo dado vuelta en una**. Es un **suavizador de transitorios
+  general**; se luce en el fading porque los subidones son los saltos más bruscos que hay. **Regla:
+  una diferencia entre dos zonas de UNA grabación no es una propiedad hasta replicarla.**
+- **El prototipo dedicado midió PEOR y se descarta.** Un limitador propio (umbral en dB, ventana de
+  0,5 s, ataque/release propios) da especificidad **+0,00 a +0,48** — o sea que actúa MÁS afuera de
+  los subidones — contra −0,88 del blanker, y no mejora la brusquedad a igual costo de voz. Se
+  probaron releases de 5, 20 y 250 ms: los tres igual. **No reimplementarlo.**
+- **El que trabaja es el umbral de TRAMA; el de MINI es contraproducente.** Bajar sólo trama
+  (**4/7**) da brusquedad **−0,62 dB** por −0,01 dB de voz; bajar los dos (**4/4**) da **−0,56** —
+  *peor* — por −0,18 de voz. La etapa de trama es, funcionalmente, un limitador de transitorios con
+  referencia de ~0,5 s (mediana de 25 bloques), y dispara **6× más seguido dentro de los subidones**
+  (19,8 % contra 3,2 % de los bloques).
+- **RIESGO CONCRETO, y es el hallazgo que hay que conservar:** con el umbral **mini** en 4, la
+  distorsión sobre **voz limpia sin un solo impulso** es **−8,7 dB**, y en 2/2 **−6,3 dB** — *peor
+  que el diseño roto de antes de la v2.2* (−6,6 dB), el que el usuario reportó como "distorsión
+  notoria de la voz". Con mini en 7 y trama en 4 queda en −21,3 dB, comparable al default. **Bajar
+  el mini para perseguir este efecto es volver al bug que la v2.2 arregló.**
+- **Lo que queda para hacer, y no es un módulo nuevo:** la zona útil del umbral de trama para esto
+  es **3–6**, o sea el **4 % inferior** de un recorrido 2–100 — se ajusta a ciegas. Y ni el manual ni
+  el tooltip dicen que la etapa de trama sirva para las ráfagas de nivel: el módulo se presenta
+  entero como "impulsos". Candidatos: re-escalar el slider de trama, y documentar el uso.
+
 **Post-v2.3: tres presets de fábrica más, reafinados en el aire con el gate ya validado** (agosto
 2026 — ver [[project_factory_presets]]). Cambian `AM SW - Ruido Alto y Fading`,
 `SSB - Ruido ALto -Perfil Adaptativo` y `SSB - Ruido Medio -Perfil Adaptativo`. **Salen en la v2.4.**
