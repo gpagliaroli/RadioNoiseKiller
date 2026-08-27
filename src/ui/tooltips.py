@@ -156,7 +156,12 @@ SLIDER_TIPS = {
         "contra el nivel de al lado, no contra el piso: la voz es sostenida, así\n"
         "que sus vecinos están igual de fuertes y no dispara.\n"
         "Agresivo puede comerse consonantes fuertes; suave deja pasar impulsos.\n"
-        "15 es un buen punto de partida."
+        "15 es un buen punto de partida.\n"
+        "Abajo de 6 esta etapa hace además otra cosa: le pone un techo a las\n"
+        "RÁFAGAS de nivel, comparando cada bloque contra el nivel del último medio\n"
+        "segundo. Sirve contra los subidones bruscos del fading, y es el control\n"
+        "correcto para eso — bajar el umbral micro persiguiendo el mismo efecto\n"
+        "rinde menos y opaca la voz."
     ),
     "_s_blanker_mini": (
         "Lo mismo pero para micro-impulsos de menos de 1 ms: cerco eléctrico,\n"

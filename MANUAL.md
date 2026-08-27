@@ -257,16 +257,35 @@ El indicador **Actividad** muestra en tiempo real cuántos impulsos por segundo 
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
-| **Umbral de trama (10 ms)** | 5× – 100× | 15× | Sensibilidad del detector de trama larga. Valor bajo = más agresivo (captura más impulsos pero puede afectar la voz). Valor alto = solo blanquea pulsos muy intensos. **Bajar** si quedan descargas audibles; **subir** si la voz suena recortada. |
+| **Umbral de trama (10 ms)** | 2× – 30× | 15× | Sensibilidad del detector de trama larga. Valor bajo = más agresivo (captura más impulsos pero puede afectar la voz). Valor alto = solo blanquea pulsos muy intensos. **Bajar** si quedan descargas audibles; **subir** si la voz suena recortada. **Por debajo de 6× hace además otra cosa** — ver la nota de abajo. |
 | **Umbral micro (0,67 ms)** | 3× – 30× | 8× | Sensibilidad para frituras y crackles muy cortos. Funciona igual que el anterior pero a escala de microsegundos. |
 
 ### Valores recomendados por situación
 
 | Situación | Umbral trama | Umbral micro |
 |-----------|-------------|--------------|
-| Banda limpia, sin QRN | 50× | 20× |
+| Banda limpia, sin QRN | 30× | 20× |
 | QRN moderado | 15× | 8× |
 | Tormenta eléctrica cercana | 8× | 5× |
+| Subidones bruscos de fading | **4×** | sin cambio |
+
+> **El umbral de trama tiene una segunda función: le pone un techo a las ráfagas de nivel.** Además
+> de borrar impulsos, esta etapa compara cada bloque de audio contra el nivel del **último medio
+> segundo** y, si lo supera por más de lo que dice el umbral, lo recorta. Por debajo de 6× eso
+> empieza a actuar sobre los **subidones bruscos del fading**: medido sobre grabaciones reales, con
+> 4× la brusquedad de los saltos de nivel baja 0,6 dB a un costo de 0,01 dB de voz.
+>
+> **Es el control correcto para eso, y el micro NO lo es.** Bajar el umbral micro persiguiendo el
+> mismo efecto rinde *menos* (0,56 dB contra 0,62) y cuesta mucho más: con el micro en 4× la
+> distorsión sobre voz limpia —sin un solo impulso presente— llega a **−8,7 dB**, peor que el
+> defecto que se corrigió en la v2.2 y que se escuchaba como voz opacada. Dejá el micro en su valor
+> y movete sólo con el de trama.
+>
+> El rango del control era 5×–100× hasta la v2.3. Se cambió a **2×–30×** porque arriba de 20× esta
+> etapa prácticamente no dispara —o sea que la mayor parte del recorrido no hacía nada— y la zona
+> útil contra el fading quedaba *por debajo* del mínimo, imposible de alcanzar. El paso es de 0,25×
+> para poder afinar ahí abajo.
+
 
 ---
 

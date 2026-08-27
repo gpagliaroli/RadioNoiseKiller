@@ -257,16 +257,35 @@ The **Activity** indicator shows in real time how many impulses per second are b
 
 | Control | Range | Default | Description |
 |---------|-------|---------|-------------|
-| **Frame threshold (10 ms)** | 5× – 100× | 15× | Sensitivity of the long-frame detector. Low = more aggressive (catches more impulses but may affect the voice). High = only blanks very strong pulses. **Lower it** if discharges remain audible; **raise it** if the voice sounds clipped. |
+| **Frame threshold (10 ms)** | 2× – 30× | 15× | Sensitivity of the long-frame detector. Low = more aggressive (catches more impulses but may affect the voice). High = only blanks very strong pulses. **Lower it** if discharges remain audible; **raise it** if the voice sounds clipped. **Below 6× it also does something else** — see the note below. |
 | **Micro threshold (0.67 ms)** | 3× – 30× | 8× | Sensitivity for very short crackle. Works like the previous control but on a microsecond scale. |
 
 ### Recommended values by situation
 
 | Situation | Frame threshold | Micro threshold |
 |-----------|-----------------|-----------------|
-| Clean band, no QRN | 50× | 20× |
+| Clean band, no QRN | 30× | 20× |
 | Moderate QRN | 15× | 8× |
 | Nearby thunderstorm | 8× | 5× |
+| Abrupt fading surges | **4×** | unchanged |
+
+> **The frame threshold has a second job: it puts a ceiling on level bursts.** Besides erasing
+> impulses, this stage compares each block of audio against the level of the **last half second**
+> and, if it exceeds it by more than the threshold says, it clips it back. Below 6× that starts to
+> act on the **abrupt surges of fading**: measured on real recordings, at 4× the abruptness of the
+> level jumps drops by 0.6 dB at a cost of 0.01 dB of voice.
+>
+> **This is the right control for that, and the micro threshold is not.** Lowering the micro
+> threshold chasing the same effect gives *less* (0.56 dB against 0.62) and costs far more: with the
+> micro at 4× the distortion on clean voice —with not a single impulse present— reaches **−8.7 dB**,
+> worse than the defect fixed in v2.2 that was heard as a dulled voice. Leave the micro where it is
+> and move only the frame threshold.
+>
+> The control's range was 5×–100× up to v2.3. It was changed to **2×–30×** because above 20× this
+> stage barely triggers at all —so most of the travel did nothing— and the useful zone against
+> fading was *below* the minimum, impossible to reach. The step is 0.25× so it can be trimmed
+> down there.
+
 
 ---
 

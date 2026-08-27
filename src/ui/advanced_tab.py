@@ -530,19 +530,29 @@ class AdvancedImpulseTab(QWidget):
         hits_row.addStretch()
         layout.addLayout(hits_row)
 
+        # Rango 5–100 hasta la v2.3, y estaba mal por los dos lados. Medido sobre
+        # las grabaciones del usuario, esta etapa **deja de disparar** arriba de
+        # ~20 (el 80% del recorrido no hacía nada) y su zona interesante para las
+        # ráfagas de nivel del fading es **3–6**, o sea que arrancaba POR DEBAJO
+        # del mínimo: no se podía llegar desde la UI. El usuario terminó bajando
+        # el umbral MICRO para compensar, que es lo que le opacaba la voz (con el
+        # micro en 4 la distorsión sobre voz limpia es −8,7 dB, peor que el bug
+        # que arregló la v2.2). El paso de 0,25 es para poder afinar ahí abajo.
+        # El clamp del DSP sigue en 2–100, MÁS ancho que el slider a propósito:
+        # así un preset viejo con un valor alto no se recorta al cargarlo.
         self._s_blanker_frame = SliderRow(
             tr("Umbral de trama (10 ms):"),
-            min_val=5.0, max_val=100.0,
+            min_val=2.0, max_val=30.0,
             default=_DSP_DEF.blanker_frame,
-            step=1.0, unit="×", fmt="{:.0f}",
+            step=0.25, unit="×", fmt="{:g}",
         )
         self._s_blanker_frame._update_label = lambda v: self._s_blanker_frame._val_lbl.setText(
-            f"{int(v)}×  ({tr('agresivo') if v < 10 else tr('normal') if v < 35 else tr('suave')})"
+            f"{v:g}×  ({tr('muy agresivo') if v < 4 else tr('agresivo') if v < 8 else tr('normal') if v < 18 else tr('suave')})"
         )
-        self._s_blanker_frame._val_lbl.setFixedWidth(110)
+        self._s_blanker_frame._val_lbl.setFixedWidth(130)
         self._s_blanker_frame.valueChanged.connect(self._pipeline.set_blanker_frame)
         layout.addWidget(self._s_blanker_frame)
-        layout.addWidget(_note(tr("  ↳ Agresivo = captura más impulsos (QRN fuerte). Suave = solo blancos muy grandes.")))
+        layout.addWidget(_note(tr("  ↳ Agresivo = captura más impulsos (QRN fuerte). Suave = solo blancos muy grandes. Abajo de 6 esta etapa además le pone un techo a las ráfagas de nivel: ayuda con los subidones del fading, y es el ajuste correcto para eso — bajar el umbral micro para lo mismo opaca la voz.")))
 
         self._s_blanker_mini = SliderRow(
             tr("Umbral micro (0.67 ms):"),

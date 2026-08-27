@@ -881,13 +881,28 @@ CATALOG = {
     "contra el nivel de al lado, no contra el piso: la voz es sostenida, así\n"
     "que sus vecinos están igual de fuertes y no dispara.\n"
     "Agresivo puede comerse consonantes fuertes; suave deja pasar impulsos.\n"
-    "15 es un buen punto de partida.":
+    "15 es un buen punto de partida.\n"
+    "Abajo de 6 esta etapa hace además otra cosa: le pone un techo a las\n"
+    "RÁFAGAS de nivel, comparando cada bloque contra el nivel del último medio\n"
+    "segundo. Sirve contra los subidones bruscos del fading, y es el control\n"
+    "correcto para eso — bajar el umbral micro persiguiendo el mismo efecto\n"
+    "rinde menos y opaca la voz.":
         "How many times above ITS IMMEDIATE NEIGHBOURS a 10 ms peak has to be for\n"
         "it to be erased (clicks, engine starts). It compares against the level\n"
         "right next to it, not against the floor: speech is sustained, so its\n"
         "neighbours are just as loud and it does not trigger.\n"
         "Aggressive may eat strong consonants; soft lets impulses through.\n"
-        "15 is a good starting point.",
+        "15 is a good starting point.\n"
+        "Below 6 this stage does something else as well: it puts a ceiling on level\n"
+        "BURSTS, comparing each block against the level of the last half second. It\n"
+        "helps against the abrupt surges of fading, and it is the right control for\n"
+        "that — lowering the micro threshold chasing the same effect gives less and\n"
+        "dulls the voice.",
+    "  ↳ Agresivo = captura más impulsos (QRN fuerte). Suave = solo blancos muy grandes. Abajo de 6 esta etapa además le pone un techo a las ráfagas de nivel: ayuda con los subidones del fading, y es el ajuste correcto para eso — bajar el umbral micro para lo mismo opaca la voz.":
+        "  ↳ Aggressive = catches more impulses (strong QRN). Soft = only very large "
+        "clicks. Below 6 this stage also puts a ceiling on level BURSTS: it helps "
+        "with the abrupt surges of fading, and it is the right control for that — "
+        "lowering the micro threshold for the same effect dulls the voice.",
     "Lo mismo pero para micro-impulsos de menos de 1 ms: cerco eléctrico,\n"
     "línea de alta tensión, chispas.\n"
     "Bajalo si escuchás 'tics' rápidos que el otro umbral no agarra, o si\n"

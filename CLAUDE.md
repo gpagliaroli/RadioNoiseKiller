@@ -368,10 +368,21 @@ pasabanda → MCRA), nunca por el pipeline con su hilo.
   que el diseño roto de antes de la v2.2* (−6,6 dB), el que el usuario reportó como "distorsión
   notoria de la voz". Con mini en 7 y trama en 4 queda en −21,3 dB, comparable al default. **Bajar
   el mini para perseguir este efecto es volver al bug que la v2.2 arregló.**
-- **Lo que queda para hacer, y no es un módulo nuevo:** la zona útil del umbral de trama para esto
-  es **3–6**, o sea el **4 % inferior** de un recorrido 2–100 — se ajusta a ciegas. Y ni el manual ni
-  el tooltip dicen que la etapa de trama sirva para las ráfagas de nivel: el módulo se presenta
-  entero como "impulsos". Candidatos: re-escalar el slider de trama, y documentar el uso.
+- **HECHO — el slider de trama se re-escala de 5–100 a 2–30, paso 0,25.** Y el problema era peor
+  que "poca resolución", que es lo que el usuario reportó (*"no podía hacer un ajuste fino"*): el
+  slider **arrancaba en 5** y la zona útil es **3–6**, o sea que arrancaba POR DEBAJO del mínimo y
+  desde la UI no se podía llegar. Por eso el usuario terminaba bajando el umbral MICRO, que es
+  justo lo que le opacaba la voz — el síntoma y la causa encajan exactamente.
+  - Arriba de ~20 la etapa no dispara, así que el 80 % del recorrido viejo no hacía nada. El nuevo
+    máximo de 30 es seguro: **ningún preset de fábrica ni el settings guarda más de 30** (se
+    verificó antes de tocarlo; si lo hubiera, cargarlo lo recortaría y marcaría "(modificado)").
+  - **El clamp del DSP se deja en 2–100, más ancho que el slider a propósito** — es el lado seguro
+    del invariante 1: un preset viejo con un valor alto no se recorta al cargarlo.
+  - Etiqueta cualitativa retocada (`muy agresivo` < 4, `agresivo` < 8, `normal` < 18, `suave`), y
+    tanto la nota como el tooltip y los dos manuales explican la segunda función y **advierten
+    explícitamente que el micro no es el camino**, con la cifra de distorsión al lado.
+  - Test `test_ui::test_umbral_de_trama_llega_a_la_zona_util`: el mínimo alcanza la zona útil, el
+    paso permite 4,00 y 4,25, y los dos extremos llegan enteros al DSP sin que el clamp los recorte.
 
 **Post-v2.3: tres presets de fábrica más, reafinados en el aire con el gate ya validado** (agosto
 2026 — ver [[project_factory_presets]]). Cambian `AM SW - Ruido Alto y Fading`,

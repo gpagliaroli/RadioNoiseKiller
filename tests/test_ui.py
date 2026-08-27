@@ -175,6 +175,42 @@ def test_canceller_subcontrols_require_noise():
     print("Sub-controles del cancelador gateados      OK")
 
 
+def test_umbral_de_trama_llega_a_la_zona_util():
+    """El umbral de trama del supresor tiene que llegar a 2-6 y con paso fino.
+
+    Hasta la v2.3 el slider iba de 5 a 100: medido, esta etapa deja de disparar
+    arriba de ~20 (el 80% del recorrido no hacia nada) y su zona util contra las
+    rafagas de nivel del fading es 3-6, o sea que arrancaba POR DEBAJO del minimo
+    y no se podia llegar desde la UI. El usuario terminaba bajando el umbral MICRO
+    para compensar, que rinde menos y opaca la voz (con micro en 4 la distorsion
+    sobre voz limpia es -8,7 dB, peor que el bug que arreglo la v2.2).
+    """
+    w = _win()
+    row = w._adv_impulse_tab._s_blanker_frame
+    bl = w._pipeline._blanker
+
+    assert row._min <= 3.0, "el minimo no llega a la zona util (3-6)"
+    assert row._max <= 30.0, "el maximo sigue en una zona donde la etapa no dispara"
+    # Ningun preset de fabrica ni el settings guardan mas de 30: si el maximo
+    # bajara de ahi, cargarlos los recortaria y marcarian (modificado).
+
+    # Paso fino: dos posiciones consecutivas de la zona util tienen que existir.
+    row.set_value(4.0, emit=True)
+    _app.processEvents()
+    assert abs(bl._frame_thr - 4.0) < 0.01, bl._frame_thr
+    row.set_value(4.25, emit=True)
+    _app.processEvents()
+    assert abs(bl._frame_thr - 4.25) < 0.01, "el paso no permite afinar en la zona util"
+    assert abs(w._config.dsp.blanker_frame - 4.25) < 0.01
+
+    # Los extremos llegan enteros al DSP (invariante 1: clamp >= rango del slider).
+    for v in (row._min, row._max):
+        row.set_value(v, emit=True)
+        _app.processEvents()
+        assert abs(bl._frame_thr - v) < 0.01, "el clamp del DSP recorta el slider (%g)" % v
+    print("Umbral de trama: alcanza la zona util       OK")
+
+
 def test_sliders_de_lambda_d_solo_en_adaptativo():
     """Los tres sliders que tocan lambda_d quedan grises en Perfil estatico.
 
@@ -1360,6 +1396,7 @@ if __name__ == "__main__":
     test_about_donate_button()
     test_auto_load_respects_saved_mode()
     test_canceller_subcontrols_require_noise()
+    test_umbral_de_trama_llega_a_la_zona_util()
     test_sliders_de_lambda_d_solo_en_adaptativo()
     test_bass_and_character_controls()
     test_agc_noise_ceiling_controls()
