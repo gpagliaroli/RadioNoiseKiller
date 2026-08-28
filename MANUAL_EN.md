@@ -30,7 +30,7 @@ The application applies a series of chained processes — the **pipeline** — w
 ### What the application does NOT do
 
 - It does not demodulate the RF signal — it receives already-demodulated audio.
-- It does not correct the level of propagation fading — that is what the **Voice leveler** (Ch. 7) is for: it evens out the level between rises and dips.
+- It does not bring back the signal that propagation fading took away. Once the signal sinks into the noise there is nothing left to rescue: raising the gain there only raises the noise. What it does do is **soften the effects** — the *Voice leveler* evens out the level between rises and dips (Ch. 7), the *Fall brake* keeps the estimated floor from sinking during the quiet stretches and arriving late to the rise (Ch. 7), and the suppressor's *Frame threshold* puts a ceiling on the abrupt surges (Ch. 4).
 - It does not improve signals with a very low signal level (S-meter) — it needs some signal to work with.
 
 ### In-app help

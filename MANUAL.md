@@ -30,7 +30,7 @@ La aplicación aplica una serie de procesos en cadena — el **pipeline** — do
 ### Lo que la aplicación NO hace
 
 - No demodula la señal de RF — recibe audio ya demodulado.
-- No corrige el nivel de los desvanecimientos (fading) de propagación — para eso está el **Nivelador de voz** (Cap. 7), que empareja el nivel entre subidas y bajadas.
+- No repone la señal que se llevó el desvanecimiento (fading) de propagación. Cuando la señal se hunde dentro del ruido no queda nada que rescatar: subir la ganancia ahí sólo sube el ruido. Lo que sí hace es **suavizar sus efectos** — el *Nivelador de voz* empareja el nivel entre subidas y bajadas (Cap. 7), el *Freno de bajada* evita que el piso estimado se hunda en los ratos tranquilos y llegue tarde a la subida (Cap. 7), y el *Umbral de trama* del supresor le pone un techo a los subidones bruscos (Cap. 4).
 - No mejora señales con nivel de señal (S-meter) muy bajo — necesita algo de señal para trabajar.
 
 ### Ayuda dentro de la aplicación
