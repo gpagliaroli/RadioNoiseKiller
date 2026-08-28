@@ -128,7 +128,7 @@ def _run_impulse(blanker_on: bool) -> tuple[float, int]:
         out_f = p._process(r.standard_normal(h).astype(np.float32) * 0.01)
         peak = max(peak, float(np.max(np.abs(out_f))))
         time.sleep(0.005)
-    hits = p.pop_blanker_hits()
+    hits = sum(p.pop_blanker_hits())   # (trama, mini): aca interesa el total
     p.stop()
     return peak, hits
 

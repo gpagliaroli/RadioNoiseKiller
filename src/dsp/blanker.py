@@ -50,7 +50,8 @@ class ImpulseBlanker:
         self._frame_thr: float = 15.0
         self._mini_thr:  float = 8.0
         self._enabled:   bool  = False
-        self._hits:      int   = 0
+        self._hits_frame: int  = 0     # disparos de la etapa de trama
+        self._hits_mini:  int  = 0     # mini-frames atenuados
 
         # Ventana de suavizado de la ganancia: rampa coseno normalizada. Sin
         # esto la corrección introduce su propio click, que era la mitad del
@@ -71,7 +72,7 @@ class ImpulseBlanker:
 
     def reset(self) -> None:
         self._reset_state()
-        self._hits = 0
+        self._hits_frame = self._hits_mini = 0
 
     def set_enabled(self, enabled: bool) -> None:
         self._enabled = bool(enabled)
@@ -84,10 +85,21 @@ class ImpulseBlanker:
         """Cuántas veces sobre el nivel local tiene que estar un MINI-FRAME."""
         self._mini_thr = float(np.clip(v, 2.0, 30.0))
 
-    def pop_hits(self) -> int:
-        """Contador de diagnóstico: lectura + reset sin lock (invariante 7)."""
-        h = self._hits
-        self._hits = 0
+    def pop_hits(self) -> tuple:
+        """Disparos de cada etapa desde la última lectura: `(trama, mini)`.
+
+        Van SEPARADOS porque las dos etapas hacen cosas distintas y se ajustan
+        con sliders distintos. Sumados —que es como estaba— el número lo domina
+        la mini (dispara por mini-frame, la trama una vez por bloque): medido
+        sobre una grabación real, con los umbrales por defecto la trama aportaba
+        el **9,8 %** del total, así que mover su umbral casi no movía el
+        indicador. Con la trama en 4, donde le pone un techo a las ráfagas de
+        nivel, pasa a ser el 44 % — y ahí hace falta poder verla sola.
+
+        Lectura + reset sin lock (invariante 7).
+        """
+        h = (self._hits_frame, self._hits_mini)
+        self._hits_frame = self._hits_mini = 0
         return h
 
     @property
@@ -146,14 +158,14 @@ class ImpulseBlanker:
             # 0,2% de disparos en la etapa mini). La etapa mini es la que
             # reemplaza impulsos; esta solo le pone un techo a las rafagas.
             frame_gain = float(np.sqrt(self._frame_thr * med_f / (fe + 1e-20)))
-            self._hits += 1
+            self._hits_frame += 1
 
         if not np.any(over_mini) and frame_gain >= 1.0:
             self._ctx_mini = e_all[-(self._CTX_MINI):]
             self._gain_tail = np.ones(self._RAMP // 2, dtype=np.float32)
             return chunk
 
-        self._hits += int(np.sum(over_mini))
+        self._hits_mini += int(np.sum(over_mini))
 
         # --- ganancia por muestra + suavizado (nunca un escalón) ---
         # El minimo(...,1.0) NO es decorativo: al dilatar la mascara, los

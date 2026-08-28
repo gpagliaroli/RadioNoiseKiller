@@ -175,6 +175,50 @@ def test_canceller_subcontrols_require_noise():
     print("Sub-controles del cancelador gateados      OK")
 
 
+def test_supresor_tiene_un_indicador_por_etapa():
+    """Cada etapa del supresor tiene su indicador, y cada uno cuenta lo suyo.
+
+    Antes habia UNO solo con la suma de los dos contadores, y ese numero lo
+    domina la etapa mini (dispara por mini-frame; la de trama, una vez por
+    bloque): medido sobre una grabacion real, con los umbrales por defecto la
+    trama aportaba el 9,8% del total. Encima el indicador estaba arriba del
+    slider de trama, que era justo el que menos reflejaba.
+    """
+    w = _win()
+    tab = w._adv_impulse_tab
+    bl = w._pipeline._blanker
+
+    # Con los dos contadores en cero, los dos indicadores en reposo.
+    w._pipeline.pop_blanker_hits()
+    tab._update_stats()
+    _app.processEvents()
+    assert tab._lbl_blanker_hits.text() == "—"
+    assert tab._lbl_blanker_hits_mini.text() == "—"
+
+    # Solo trama: se enciende el de trama y el de micro NO.
+    bl._hits_frame, bl._hits_mini = 7, 0
+    tab._update_stats()
+    _app.processEvents()
+    assert "14" in tab._lbl_blanker_hits.text(), tab._lbl_blanker_hits.text()  # 7 por tick = 14/s
+    assert tab._lbl_blanker_hits_mini.text() == "—", "el de micro contó disparos de trama"
+
+    # Solo micro: al reves.
+    bl._hits_frame, bl._hits_mini = 0, 9
+    tab._update_stats()
+    _app.processEvents()
+    assert tab._lbl_blanker_hits.text() == "—", "el de trama contó disparos de micro"
+    assert tab._lbl_blanker_hits_mini.text() != "—"
+
+    # Un solo pop por tick: si se leyera una etapa por vez, la primera lectura
+    # le vaciaria el contador a la otra y una de las dos nunca se encenderia.
+    bl._hits_frame, bl._hits_mini = 3, 4
+    tab._update_stats()
+    _app.processEvents()
+    assert tab._lbl_blanker_hits.text() != "—" and tab._lbl_blanker_hits_mini.text() != "—", \
+        "una etapa se quedo sin conteo: el pop de la otra lo limpio"
+    print("Supresor: un indicador por etapa            OK")
+
+
 def test_umbral_de_trama_llega_a_la_zona_util():
     """El umbral de trama del supresor tiene que llegar a 2-6 y con paso fino.
 
@@ -1396,6 +1440,7 @@ if __name__ == "__main__":
     test_about_donate_button()
     test_auto_load_respects_saved_mode()
     test_canceller_subcontrols_require_noise()
+    test_supresor_tiene_un_indicador_por_etapa()
     test_umbral_de_trama_llega_a_la_zona_util()
     test_sliders_de_lambda_d_solo_en_adaptativo()
     test_bass_and_character_controls()

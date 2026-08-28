@@ -790,7 +790,12 @@ class ProcessingPipeline:
         """Reducción aplicada por el limitador en el último frame. 0.0 = sin actividad."""
         return self._limiter.last_reduction_db
 
-    def pop_blanker_hits(self) -> int:
+    def pop_blanker_hits(self) -> tuple:
+        """Disparos del supresor desde la última lectura: `(trama, mini)`.
+
+        Separados a propósito: cada etapa tiene su slider y su función, y
+        sumados el número lo domina la mini (ver `ImpulseBlanker.pop_hits`).
+        """
         # Lectura+reset no atómico: puede perder un conteo si el hilo DSP
         # incrementa entre ambas líneas. Aceptado a propósito — un lock aquí
         # agregaría contención al hilo de audio para proteger un contador

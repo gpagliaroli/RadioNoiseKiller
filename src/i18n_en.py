@@ -401,6 +401,8 @@ CATALOG = {
     # --- Avanzada Impulsos ---
     "Supresor de impulsos  (se aplica en tiempo real)": "Impulse suppressor  (applied in real time)",
     "Actividad:": "Activity:",
+    "Actividad de trama:": "Frame activity:",
+    "Actividad micro:": "Micro activity:",
     "Umbral de trama (10 ms):": "Frame threshold (10 ms):",
     "  ↳ Agresivo = captura más impulsos (QRN fuerte). Suave = solo blancos muy grandes.":
         "  ↳ Aggressive = catches more impulses (heavy QRN). Soft = only very large hits.",

@@ -388,6 +388,23 @@ pasabanda → MCRA), nunca por el pipeline con su hilo.
     explícitamente que el micro no es el camino**, con la cifra de distorsión al lado.
   - Test `test_ui::test_umbral_de_trama_llega_a_la_zona_util`: el mínimo alcanza la zona útil, el
     paso permite 4,00 y 4,25, y los dos extremos llegan enteros al DSP sin que el clamp los recorte.
+  - **VALIDADO EN EL AIRE**: *"dimos en la tecla, es notorio la reducción del efecto que estábamos
+    persiguiendo"*.
+- **Y el indicador de Actividad era uno solo para las DOS etapas** — lo preguntó el usuario
+  (*"¿el medidor de arriba es sólo para ese control? ¿el micro no tiene?"*) y la respuesta era peor
+  que "es de los dos": **el número lo domina la etapa mini**, porque suma un disparo por cada
+  mini-trama de 0,67 ms mientras la de trama suma uno por bloque. Medido sobre una grabación real:
+  con los umbrales por defecto la trama aportaba el **9,8 %** del total; con la trama en 4 sube al
+  **44 %**. O sea que el único indicador disponible estaba **arriba del slider que menos reflejaba**,
+  y mover ese umbral casi no movía la aguja.
+  - `pop_hits()` pasa a devolver `(trama, mini)` y hay **un indicador por etapa, arriba de su
+    slider**. Es la misma clase de defecto que tenía el squelch: un control que se ajusta sin poder
+    observar lo que hace — y pesa más ahora que a la etapa de trama se le documentó una segunda
+    función.
+  - **Un solo `pop` por tick, y las dos etapas juntas**: si se leyera una por vez, la primera lectura
+    le vaciaría el contador a la otra y una de las dos no se encendería nunca. El test lo fija.
+  - Test `test_ui::test_supresor_tiene_un_indicador_por_etapa`: cada indicador cuenta lo suyo (con la
+    otra etapa en cero el suyo queda en "—") y las dos se encienden en el mismo tick.
 
 **Post-v2.3: tres presets de fábrica más, reafinados en el aire con el gate ya validado** (agosto
 2026 — ver [[project_factory_presets]]). Cambian `AM SW - Ruido Alto y Fading`,

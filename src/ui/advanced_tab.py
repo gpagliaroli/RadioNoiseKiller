@@ -522,13 +522,19 @@ class AdvancedImpulseTab(QWidget):
         group = QGroupBox(tr("Supresor de impulsos  (se aplica en tiempo real)"))
         layout = QVBoxLayout(group)
 
-        hits_row = QHBoxLayout()
-        hits_row.addWidget(QLabel(tr("Actividad:")))
+        # UN indicador POR ETAPA, cada uno arriba de su slider. Antes había uno
+        # solo con la SUMA de los dos contadores, y ese número lo domina la etapa
+        # mini (dispara por mini-frame, la de trama una vez por bloque): medido
+        # sobre una grabación real, con los umbrales por defecto la trama aportaba
+        # el 9,8 % del total, así que mover su umbral casi no movía el indicador.
+        # Encima estaba arriba del slider de trama, que era el que menos reflejaba.
+        frame_hits_row = QHBoxLayout()
+        frame_hits_row.addWidget(QLabel(tr("Actividad de trama:")))
         self._lbl_blanker_hits = QLabel("—")
         self._lbl_blanker_hits.setStyleSheet("color: #888;")
-        hits_row.addWidget(self._lbl_blanker_hits)
-        hits_row.addStretch()
-        layout.addLayout(hits_row)
+        frame_hits_row.addWidget(self._lbl_blanker_hits)
+        frame_hits_row.addStretch()
+        layout.addLayout(frame_hits_row)
 
         # Rango 5–100 hasta la v2.3, y estaba mal por los dos lados. Medido sobre
         # las grabaciones del usuario, esta etapa **deja de disparar** arriba de
@@ -553,6 +559,14 @@ class AdvancedImpulseTab(QWidget):
         self._s_blanker_frame.valueChanged.connect(self._pipeline.set_blanker_frame)
         layout.addWidget(self._s_blanker_frame)
         layout.addWidget(_note(tr("  ↳ Agresivo = captura más impulsos (QRN fuerte). Suave = solo blancos muy grandes. Abajo de 6 esta etapa además le pone un techo a las ráfagas de nivel: ayuda con los subidones del fading, y es el ajuste correcto para eso — bajar el umbral micro para lo mismo opaca la voz.")))
+
+        mini_hits_row = QHBoxLayout()
+        mini_hits_row.addWidget(QLabel(tr("Actividad micro:")))
+        self._lbl_blanker_hits_mini = QLabel("—")
+        self._lbl_blanker_hits_mini.setStyleSheet("color: #888;")
+        mini_hits_row.addWidget(self._lbl_blanker_hits_mini)
+        mini_hits_row.addStretch()
+        layout.addLayout(mini_hits_row)
 
         self._s_blanker_mini = SliderRow(
             tr("Umbral micro (0.67 ms):"),
@@ -614,13 +628,17 @@ class AdvancedImpulseTab(QWidget):
     # ------------------------------------------------------------------
 
     def _update_stats(self) -> None:
-        hits = self._pipeline.pop_blanker_hits()
-        if hits == 0:
-            self._lbl_blanker_hits.setText("—")
-            self._lbl_blanker_hits.setStyleSheet("color: #888;")
-        else:
-            self._lbl_blanker_hits.setText(f"⚡ {hits * 2} /s")
-            self._lbl_blanker_hits.setStyleSheet("color: #ff9800; font-weight: bold;")
+        # Un pop por tick: devuelve las dos etapas juntas y resetea las dos. Si se
+        # leyera una por vez, la primera lectura le vaciaría el contador a la otra.
+        hits_frame, hits_mini = self._pipeline.pop_blanker_hits()
+        for lbl, n in ((self._lbl_blanker_hits, hits_frame),
+                       (self._lbl_blanker_hits_mini, hits_mini)):
+            if n == 0:
+                lbl.setText("—")
+                lbl.setStyleSheet("color: #888;")
+            else:
+                lbl.setText(f"⚡ {n * 2} /s")
+                lbl.setStyleSheet("color: #ff9800; font-weight: bold;")
 
         bins = self._pipeline.anf_notched_bins
         if bins == 0:

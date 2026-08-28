@@ -448,7 +448,8 @@ def _pasar_blanker(sig, thr_f=20.0, thr_m=12.0):
     b.set_mini_threshold(thr_m)
     o = np.concatenate([b.process(sig[i * _hop_b:(i + 1) * _hop_b])
                         for i in range(len(sig) // _hop_b)])
-    return o, b.pop_hits()
+    # pop_hits devuelve (trama, mini); aca interesa el total de intervenciones.
+    return o, sum(b.pop_hits())
 
 
 def _distorsion(out, ref):
