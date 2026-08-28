@@ -405,6 +405,9 @@ pasabanda → MCRA), nunca por el pipeline con su hilo.
     le vaciaría el contador a la otra y una de las dos no se encendería nunca. El test lo fija.
   - Test `test_ui::test_supresor_tiene_un_indicador_por_etapa`: cada indicador cuenta lo suyo (con la
     otra etapa en cero el suyo queda en "—") y las dos se encienden en el mismo tick.
+  - **VALIDADO EN EL AIRE.** Con los dos indicadores separados, bajar el umbral de trama se ve subir
+    la Actividad de trama sin mover la de micro: la confirmación visual de que se está tocando la
+    etapa que corresponde y no la que opaca la voz.
 
 **Post-v2.3: tres presets de fábrica más, reafinados en el aire con el gate ya validado** (agosto
 2026 — ver [[project_factory_presets]]). Cambian `AM SW - Ruido Alto y Fading`,
