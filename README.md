@@ -37,7 +37,9 @@ panorama general y las notas para quien quiera tocar el código.
   ajustables para el ruido cíclico de onda corta
 - **Post-filtro espectral** — segunda pasada que hunde el piso sólo en los bins de ruido
 - **Supresor de impulsos** — dos niveles en cascada (10 ms y 0,67 ms) para QRN atmosférico,
-  detectados por contraste contra el audio vecino (no contra el piso), así la voz no dispara
+  detectados por contraste contra el audio vecino (no contra el piso), así la voz no dispara.
+  El umbral de trama, además, le pone un techo a las ráfagas de nivel: suaviza los subidones
+  bruscos del fading
 - **ANF** — filtro de muesca espectral adaptativo para heterodinos, portadoras y zumbidos
 - **Gate de ruido** — baja el fondo entre transmisiones cuando el nivel de entrada no llega al
   umbral, con cierre progresivo; umbral en dBFS, así se calibra mirando el indicador de nivel

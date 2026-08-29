@@ -272,6 +272,24 @@ Bugs reales encontrados en revisión — cada uno es un patrón que puede reapar
    `test_post_filter_on_principal_autoenable`, falla intermitente según el estado del disco). Al
    testear un handler de slider, partir de un valor distinto conocido.
 
+**v2.4 publicada (agosto 2026)** — release en GitHub con distribuibles Windows y Linux. Versión de
+app 2.4.0, manuales `MANUAL_RadioNoiseKiller_v2.4.pdf` (ES, 44 págs) y `..._v2.4_EN.pdf` (EN, 43
+págs). Título "v2.4 by LU6APA". **Salto de menor**: no cambia el significado de ningún control ni el
+DSP del cancelador. Es una versión de **afinado y de hacer visible lo que ya pasaba**, y con eso
+cierra el hilo del salto del fondo que llevaba abierto desde la v2.2.
+- **El umbral de trama del supresor pasa de 5–100 a 2–30, paso 0,25.** Es el cambio con efecto
+  audible de la versión: su zona útil contra las ráfagas del fading (3–6) **quedaba por debajo del
+  mínimo viejo**, o sea inalcanzable desde la UI.
+- **Un indicador de actividad por etapa** del supresor, cada uno arriba de su slider.
+- **Los tres sliders que tocan λ_d quedan grises en Perfil estático**, donde no hacen nada.
+- **Presets de fábrica de 7 a 5** (se van los dos `Voz natural`), los 5 reafinados en el aire.
+- Tres correcciones de documentación que estaban mintiendo: el Refuerzo en agudos listado como
+  "solo Adaptativo" cuando funciona en los dos modos, la tabla de anchos rota en el PDF, y el bullet
+  de "lo que la app NO hace" que decía no corregir el fading y apuntaba a un módulo que sí lo hace.
+- Y un bug de fondo: **el guard de `apply_config` que conserva el nombre del ancho de pasabanda era
+  inerte** — habría dado "(modificado)" espurio permanente en los dos anchos que comparten Hz.
+- Todo lo audible está validado en el aire. Los bloques "Post-v2.3" de abajo son el detalle.
+
 **v2.3 publicada (agosto 2026)** — release en GitHub con distribuibles Windows y Linux. Versión de
 app 2.3.0, manuales `MANUAL_RadioNoiseKiller_v2.3.pdf` (ES, 44 págs) y `..._v2.3_EN.pdf` (EN, 42
 págs). Título "v2.3 by LU6APA". **Salto de menor**: no cambia el significado numérico de ningún

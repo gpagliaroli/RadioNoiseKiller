@@ -1,6 +1,6 @@
 ﻿# RadioNoiseKiller — User Manual
 
-**Version 2.3**
+**Version 2.4**
 
 ---
 
@@ -1195,4 +1195,4 @@ The file is capped at a few errors per session, so it does not grow without boun
 
 ---
 
-*RadioNoiseKiller — version 2.3*
+*RadioNoiseKiller — version 2.4*

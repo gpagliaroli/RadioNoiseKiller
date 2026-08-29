@@ -1,6 +1,6 @@
 ﻿# RadioNoiseKiller — Manual de Usuario
 
-**Versión 2.3**
+**Versión 2.4**
 
 ---
 
@@ -1194,4 +1194,4 @@ El archivo se limita a unos pocos errores por sesión, así que no crece sin con
 
 ---
 
-*RadioNoiseKiller — versión 2.3*
+*RadioNoiseKiller — versión 2.4*
