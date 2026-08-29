@@ -1002,8 +1002,7 @@ These on-air techniques help get the most out of the app without degrading the v
 3. **Low Intensity + high post-filter (natural voice).** Lower the Intensity to **50–60%** and
    compensate with the **post-filter at 5–8**. This usually gives better cancellation with a more
    natural voice than raising the Intensity alone: low Intensity doesn't dull the voice, and the
-   post-filter cleans the noise acting only on the bins the VAD marks as noise. This recipe ships as
-   factory presets **"Voz natural — AM"** and **"Voz natural — SSB"**.
+   post-filter cleans the noise acting only on the bins the VAD marks as noise.
 4. **ANF Depth: you can raise it now.** The reason to keep it low (it muffled the voice) was a detection flaw fixed in v2.2. Raise it
    if a heterodyne stays audible.
 5. **Perceptual floor on SSB.** If you enable the perceptual spectral floor on SSB and don't notice

@@ -56,8 +56,12 @@ assert not os.path.abspath(presets_dir()).startswith(_PROJECT_ROOT + os.sep), \
 assert not os.path.abspath(settings_path()).startswith(_PROJECT_ROOT + os.sep), \
     f"Los tests apuntan al settings.json real: {settings_path()}"
 
+_PRESET_DE_PRUEBA = "___preset_de_prueba___"
+
 # Preset semilla en la carpeta temporal (test_window_title_reflects_preset lo usa).
-PresetManager(presets_dir()).save("Voz natural - SSB", AppConfig())
+# El nombre es PROPIO del test a proposito: antes se llamaba como uno de fabrica
+# y se leia como si el test dependiera de el, cuando en realidad lo crea aca.
+PresetManager(presets_dir()).save(_PRESET_DE_PRUEBA, AppConfig())
 
 
 # ---------------------------------------------------------------------- #
@@ -524,7 +528,7 @@ def test_window_title_reflects_preset():
     assert "RadioNoiseKiller" in w.windowTitle()
 
     # Preset activo sin modificar: cargar sus valores en config
-    name = "Voz natural - SSB"
+    name = _PRESET_DE_PRUEBA
     if w._preset_manager.exists(name):
         w._preset_manager.load_into(name, w._config)
         w._config.last_preset = name

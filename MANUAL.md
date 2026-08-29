@@ -1001,8 +1001,7 @@ Estas técnicas, probadas en el aire, ayudan a sacar el máximo sin degradar la 
 3. **Intensidad baja + post-filtro alto (voz natural).** Bajar la Intensidad a **50–60%** y compensar
    con el **post-filtro en 5–8** suele dar mejor cancelación con voz más natural que subir la
    Intensidad sola: la Intensidad baja no opaca la voz y el post-filtro limpia el ruido actuando solo
-   sobre los bins que el VAD marca como ruido. Esta receta está lista como presets de fábrica
-   **"Voz natural — AM"** y **"Voz natural — SSB"**.
+   sobre los bins que el VAD marca como ruido.
 4. **Profundidad del ANF: ya se puede subir.** El motivo por el que convenía mantenerla baja (opacaba la voz) era un defecto de detección corregido en la v2.2. Subir
    si un heterodino queda audible.
 5. **Piso perceptual en SSB.** Si activás el piso espectral perceptual en SSB y no notás el rolloff,

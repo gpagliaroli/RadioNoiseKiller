@@ -409,6 +409,25 @@ pasabanda → MCRA), nunca por el pipeline con su hilo.
     la Actividad de trama sin mover la de micro: la confirmación visual de que se está tocando la
     etapa que corresponde y no la que opaca la voz.
 
+**Post-v2.3: los presets de fábrica pasan de 7 a 5, y los 5 se reafinan con el umbral de trama nuevo**
+(agosto 2026 — ver [[project_factory_presets]]). El usuario borró **`Voz natural - AM` y
+`Voz natural - SSB`**: *"no tenían sentido de tener y mantener"*. Eran de la v1.7, cuando la receta
+"Intensidad baja + post-filtro alto" era un hallazgo nuevo; hoy esa receta está en los otros presets
+y en el capítulo de calibración, así que los dos eran una copia que había que mantener al día en cada
+cambio de esquema. **La receta se conserva en el manual, sin la referencia a los presets.**
+- Los 5 que quedan traen ya el **umbral de trama en su zona útil**: 3 en `AM SW Ruido Alto`, 5 en
+  `AM Local`, 7 en `AM SW Ruido Medio`, contra los 15–30 de antes. Los dos de SSB quedan en 10 y 15,
+  o sea que ahí el techo a las ráfagas no se busca — coherente con que el fading fuerte es de las
+  bandas de AM de onda corta.
+- **El gate quedó activado en los 5**, con umbrales de estación distintos. Confirma otra vez que ese
+  valor no viaja: el default de fábrica sigue siendo "desactivado" por eso mismo.
+- **Barrido de todo lo que afirmaba "7"**, que es donde se cuela el error silencioso: README (dos
+  lugares), el comentario de `noise_floor` en `config.py`, el paso de verificación del zip en el
+  skill de release, y la receta del manual ES+EN que decía "está lista como presets de fábrica".
+- De paso, el preset semilla de `test_ui` se llamaba **igual que uno de fábrica** y se leía como si
+  el test dependiera de él, cuando en realidad lo crea el propio test. Renombrado a
+  `___preset_de_prueba___`. **Regla: un fixture no debe llamarse como un dato real del usuario.**
+
 **Post-v2.3: tres presets de fábrica más, reafinados en el aire con el gate ya validado** (agosto
 2026 — ver [[project_factory_presets]]). Cambian `AM SW - Ruido Alto y Fading`,
 `SSB - Ruido ALto -Perfil Adaptativo` y `SSB - Ruido Medio -Perfil Adaptativo`. **Salen en la v2.4.**

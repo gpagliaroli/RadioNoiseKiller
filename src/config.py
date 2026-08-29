@@ -107,7 +107,7 @@ class DSPConfig:
     # 0.10 a 0.15 cuesta 1.7 dB de supresión de ruido; con fading reduce el vaivén
     # de nivel. Se eligió 0.15 y no 0.20 porque a 0.20 el costo en banda estable
     # sube a 3.1 dB, que es mucho para quien no tiene fading. 0.15 además ya es el
-    # valor de 3 de los 7 presets de fábrica.
+    # valor de 3 de los 5 presets de fábrica.
     noise_floor:  float = 0.15
     noise_smooth:    float = 0.96   # Anti-gorgojeo: β DD + suavizado p_speech (útil 96-98%; ver noise_profiler)
     noise_attack:    float = 0.80   # beta_fast DD asimétrico: bajo=ataque rápido en bins de voz (0.50-0.92)

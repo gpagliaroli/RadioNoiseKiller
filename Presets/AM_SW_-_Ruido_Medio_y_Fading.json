@@ -2,36 +2,24 @@
   "name": "AM SW - Ruido Medio y Fading",
   "version": 1,
   "dsp": {
-    "mode": "AM",
+    "bandpass_preset": "Personalizado",
     "agc_preset": "medium",
     "agc_noise_ceiling_enabled": true,
     "agc_noise_ceiling_db": -40.0,
     "blanker_enabled": true,
-    "blanker_frame": 15.0,
+    "blanker_frame": 7.0,
     "blanker_mini": 15.0,
     "bandpass_pre_enabled": true,
     "bandpass_post_enabled": true,
-    "bandpass_limits": {
-      "AM": [
-        50,
-        6000
-      ],
-      "SSB": [
-        200,
-        3000
-      ]
-    },
+    "bandpass_limits": [
+      50,
+      6000
+    ],
     "bandpass_out_independent": true,
-    "bandpass_out_limits": {
-      "AM": [
-        50,
-        8000
-      ],
-      "SSB": [
-        200,
-        3000
-      ]
-    },
+    "bandpass_out_limits": [
+      50,
+      8000
+    ],
     "filter_order": 6,
     "anf_enabled": true,
     "anf_threshold": 2.5,
@@ -42,9 +30,10 @@
     "noise_floor": 0.15000000000000002,
     "noise_smooth": 0.97,
     "noise_attack": 0.7,
-    "squelch_enabled": false,
-    "squelch_threshold": 0.15000000000000002,
-    "squelch_hold_ms": 250.0,
+    "gate_enabled": true,
+    "gate_threshold_db": -35.0,
+    "gate_hold_ms": 300.0,
+    "gate_depth_db": 20.0,
     "exciter_enabled": true,
     "exciter_drive": 2.5,
     "exciter_mix": 0.4,

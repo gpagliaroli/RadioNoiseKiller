@@ -63,7 +63,7 @@ panorama general y las notas para quien quiera tocar el código.
   marcadores de los tonos que está cancelando el ANF
 - **Cascada en modo Diferencia** — pinta cuánto quita el procesamiento en cada frecuencia y
   momento, para ver de un vistazo si el cancelador está tocando la voz
-- **Presets** — 7 perfiles de fábrica afinados en el aire, más los propios
+- **Presets** — 5 perfiles de fábrica afinados en el aire, más los propios
 - **Perfiles de ruido nombrados** — guardar y recuperar el ruido de cada banda o cada hora del día
 - **Grabación a WAV** — con opción de grabar en paralelo la entrada sin procesar, para el antes/después
 - **Tamaño de interfaz ajustable** (100 / 125 / 150 %) y ayuda contextual en todos los sliders
@@ -180,7 +180,7 @@ src/
     ├── spectrum_widget.py# Espectro en tiempo real (FFT + EMA)
     └── waterfall_widget.py # Cascada tiempo-frecuencia
 
-Presets/                  # 7 presets de fábrica (JSON) + Presets.zip
+Presets/                  # 5 presets de fábrica (JSON) + Presets.zip
 tests/                    # Suites de regresión (run_all.py) y diagnósticos
 tools/                    # Generadores del manual PDF, el diagrama y el zip de presets
 Images/                   # Logo, ícono y diagramas del pipeline
