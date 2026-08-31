@@ -1108,37 +1108,79 @@ del usuario** (entrada + procesado sincronizados) después de que tres bancos si
   mismo"* o *"la dispersión se come la diferencia"*. Lo que destrabó el diagnóstico fue medir sobre
   la **grabación real del usuario**, que es para lo que existe el grabador con canal crudo. Con un
   síntoma que sólo aparece en el aire, grabar sale más barato que inventar la señal.
-**Post-v2.2 — EN CURSO: MCRA tarda ~15 s en recuperarse de un cambio grande de sintonía.**
-Reportado: *"si desintonizo la radio y la vuelvo a sintonizar, el piso de ruido nunca vuelve a la
-misma forma que la primera vez"*. **Reproducido y medido** sobre una grabación real con la secuencia
-completa (sintonizado → desintonizado → sintonizado en una sola toma).
-- **Primero medí mal:** comparé λ_d en instantes sueltos y concluí que no volvía nunca. λ_d fluctúa
-  frame a frame y caí en snapshots desafortunados. Promediando ventanas de 5 s y con control (dos
-  mitades del mismo tramo sintonizado: 1,30 dB de diferencia de forma), el cuadro real es:
-  desintonizado 7,50 dB de forma y +12,1 de nivel; **+12 a +17 s después de volver, 1,19 dB y
-  +1,1 dB — o sea recuperado.** Vuelve, pero tarda.
-- **El contraste que explica el reporte del usuario:** al **detener y activar** el estimador se
-  arma en <1 s porque el warmup está **exento del freeze por voz**. Al desintonizar y volver no hay
-  warmup, y con voz presente el freeze bloquea el **~80 % de los frames** (medido: sólo alimentan el
-  19 %). Las dos pruebas no son comparables, y esa es la observación correcta que había detrás.
-- **Consecuencia real:** durante esos 12-17 s λ_d queda hasta **+8 dB demasiado alto** → el
-  cancelador resta de más → suena a distorsión. Encaja con el otro síntoma reportado.
-- **Detector de estimado obsoleto — MEDIDO, pendiente de implementar.** Señal: la mediana móvil (2 s)
-  de `potencia_del_frame / λ_d`. En régimen sano el piso queda bien por debajo de la potencia total;
-  con el estimado viejo y alto ese margen se cierra. Medido sobre la grabación real: **d' = 2,18**, y
-  con umbral **+1 dB detecta el 54 % del período obsoleto con 0 % de falsos positivos** en 10 s de
-  operación normal. No hace falta detectar todos los frames: con destrabar la mitad del tiempo alcanza
-  para re-converger.
-- **DISEÑO: re-entrar en warmup, NO levantar el freeze.** Es el punto que hace viable la idea. Si el
-  detector se equivoca y levanta el freeze, **entra voz a λ_d** — el bug que el freeze existe para
-  evitar, que costó varias sesiones diagnosticar. Si en cambio resetea el estado MCRA para que
-  reconstruya como en un arranque limpio, el modo de falla es ~0,4 s sin supresión: molesto pero
-  inocuo. **Regla: cuando un detector nuevo puede equivocarse, elegir la acción cuyo fallo sea
-  benigno, aunque detecte lo mismo.** Además reusa un camino ya probado en vez de inventar uno.
-- **Bloqueado a propósito por falta de evidencia:** el 0 % de falsos positivos está medido sobre
-  **10 s de UNA grabación con UN tipo de perturbación**. Antes de implementar hacen falta 2-3
-  grabaciones de escucha normal (sin desintonizar, incluyendo música y señales fuertes) para
-  confirmar que no dispara en falso. El usuario está juntando ese material.
+
+**Post-v2.3 — DESCARTADO por medición: el detector de estimado obsoleto. Y el síntoma dejó de
+reproducirse (agosto 2026).** El reporte original era *"si desintonizo la radio y la vuelvo a
+sintonizar, el piso de ruido nunca vuelve a la misma forma que la primera vez"*. **El síntoma es
+real y está medido**; lo que se cae es el detector que se había diseñado para corregirlo. Decisión
+del usuario al cerrar: **no se implementa nada** — *"no me volvió a pasar esto, por ahora no
+pondría el botón, ya no he reproducido ese caso"*.
+- **El síntoma, medido** (grabación real con la secuencia completa sintonizado → desintonizado →
+  sintonizado en una sola toma): desintonizado da 7,50 dB de diferencia de forma y +12,1 de nivel;
+  **+12 a +17 s después de volver, 1,19 dB y +1,1 dB — o sea recuperado.** Vuelve, pero tarda, y en
+  ese rato λ_d queda hasta +8 dB alto → el cancelador resta de más → suena a distorsión.
+  - **Primero medí mal:** comparé λ_d en instantes sueltos y concluí que no volvía nunca. λ_d
+    fluctúa frame a frame y caí en snapshots desafortunados. Con ventanas de 5 s y un control (dos
+    mitades del mismo tramo sintonizado: 1,30 dB) el cuadro real es el de arriba.
+  - **El contraste que explica el reporte:** al **detener y activar** se arma en <1 s porque el
+    warmup está **exento del freeze por voz**. Al desintonizar y volver no hay warmup, y con voz
+    presente el freeze bloquea el ~80 % de los frames (sólo alimentan el 19 %). Las dos pruebas no
+    son comparables, y esa era la observación correcta que había detrás del reporte.
+- **EL DETECTOR NO SEPARA. Tres estadísticos, los tres muertos.** Medido sobre **10 grabaciones de
+  control** (304 s, diez sesiones distintas, incluida una AM local fuerte) contra la ventana
+  obsoleta confirmada por el usuario (desintonía 16–23 s → obsoleto 24–41 s) de la única grabación
+  con re-sintonía:
+
+  | estadístico | d' control vs obsoleto | mejor separación |
+  |---|---|---|
+  | potencia del frame / λ_d (el diseñado) | **0,25** | 20 puntos |
+  | λ_d vs S_min — nivel | 0,15 | 26 puntos |
+  | λ_d vs S_min — forma | 0,28 | 23 puntos |
+
+  Contra el **d' = 2,18** que se había medido sobre 10 s de UNA grabación. No es un problema de
+  calibrar el umbral: **no hay punto de operación**. Los ajustes que detectan el evento real a
+  tiempo cuestan 2,8–4,3 disparos espurios por minuto (un re-warmup cada 14–21 s de escucha
+  normal); los que no disparan en falso, no detectan.
+- **Las dos razones son estructurales, y por eso no hay que volver por este camino:**
+  1. **`potencia/λ_d` presupone que el piso queda muy por debajo de la potencia total.** En el
+     material del usuario eso no pasa: es voz continua a S/N bajo con QRN de banda, así que la
+     potencia del frame está dominada por el mismo ruido que λ_d estima. El margen real vive entre
+     1 y 5 dB con 1,6 dB de dispersión — no hay dónde poner un umbral.
+  2. **λ_d y S_min están acoplados por construcción**: λ_d se actualiza con un α_d que sale de
+     `S_f/S_min` y queda anclado al min-tracking, así que no puede apartarse ni en nivel ni en
+     forma. Es la **quinta** vez que este proyecto se topa con un detector que mira la salida del
+     estimador que quiere vigilar (van: freeze de MCRA por vp en la v2.0, congelamiento del AGC
+     por VAD en la v2.1, el detector de estimado obsoleto + resync de la tabla del salto del fondo,
+     el squelch de portadora contra λ_d, y éste). Acá es peor: **todo** lo que MCRA tiene adentro está
+     acoplado a λ_d, así que la regla se endurece — **no hay ningún estadístico interno de MCRA que
+     pueda decir que λ_d está obsoleto.** Si alguna vez se retoma, la referencia tiene que venir de
+     afuera del estimador.
+- **Lo que SÍ sobrevive — exigir persistencia como filtro de falsos positivos.** El estimado
+  obsoleto dura 12–17 s por naturaleza y los pozos de la escucha normal duran menos de 1,5 s, así
+  que pedir que la condición **se sostenga** baja los espurios de 8,73/min a **0 en 304 s**
+  (umbral +0,5 dB, 2 s sostenidos). Mismo principio que arregló el ANF: lo que separa es el TIEMPO,
+  no el valor instantáneo. La técnica sirve; en este caso no hay señal debajo que filtrar.
+- **DISEÑO que quedó sin usar pero vale la regla:** la acción elegida era **re-entrar en warmup**,
+  no levantar el freeze. Si el detector se equivoca y levanta el freeze, entra voz a λ_d — el bug
+  que el freeze existe para evitar. Re-entrando en warmup el modo de falla es ~0,4 s sin supresión:
+  molesto pero inocuo. **Regla: cuando un detector nuevo puede equivocarse, elegir la acción cuyo
+  fallo sea benigno, aunque detecte lo mismo.**
+- **Lección de método, y es la que más paga:** el 0 % de falsos positivos y el d' = 2,18 salieron de
+  **10 s de UNA grabación con UN tipo de perturbación**. Sobre 304 s de diez sesiones el d' se
+  desplomó a 0,25. El ítem estuvo **bloqueado a propósito** esperando ese material, y el bloqueo
+  evitó publicar un detector que re-entraba en warmup cada 15 s de escucha normal. Es la misma
+  regla que este archivo repite en tres lugares (*"una diferencia entre dos zonas de UNA grabación
+  no es una propiedad hasta replicarla"*), ahora pagada del lado bueno.
+  - **Trampa propia en el camino:** al medir la detección conté los **46 s enteros** de la grabación
+    positiva como "período obsoleto", cuando el obsoleto son sólo los ~15 s posteriores a volver a
+    sintonizar. Diluía la detección y casi me hace declarar muerto al detector por el motivo
+    equivocado. **Al evaluar un detector de un evento acotado, segmentar la ventana del evento
+    ANTES de medir la tasa de detección** — y confirmar la segmentación con el usuario, no
+    deducirla: las dos lecturas plausibles de esa grabación daban veredictos opuestos.
+- **Descartado también el botón de "recalibrar el piso"** (un clic que hiciera lo mismo que el
+  toggle Perfil estático → Adaptativo, que es como el usuario lo resuelve hoy a mano). No por
+  técnica sino porque **el síntoma dejó de aparecer**. Si vuelve, ése es el camino: cero detectores,
+  modo de falla ya conocido, y el operador es el único que sabe que movió el dial.
 - Otros dos chequeos, negativos: el tope del AGC recupera al instante (con y sin el freno nuevo, o
   sea **no es culpa del cambio del techo**), y la curva amarilla del espectro se refresca cada 500 ms
   en Adaptativo (no es un problema de display).
