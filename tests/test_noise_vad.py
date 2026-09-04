@@ -13,6 +13,7 @@ El ruido gaussiano estacionario y los tonos puros dan falsos OK (paso dos veces)
 import sys
 sys.path.insert(0, "src")
 import numpy as np
+from scipy.signal import butter as _butter, sosfilt as _sosfilt
 from dsp.noise_profiler import NoiseProfiler
 
 HOP, SR = 480, 48000
@@ -453,7 +454,12 @@ def _mk_mcra(win=500.0):
 
 # 13. Con voz sostenida, el estimador NO debe subir hasta el nivel de la voz.
 nz_conv = fluct_noise(300)
-vsus = voice_sig(200)
+# La voz va SOBRE el piso de ruido, no sola: con voz pura (sin ruido) la exclusion
+# de armonicos sostenidos marca casi todos los bins con energia y lambda_d solo se
+# alimenta de los huecos entre armonicos, que casi no tienen — el estimado CAE 6 dB
+# y el guard mediria una situacion que no existe en el aire. Es la trampa de la
+# senal demasiado limpia, que este archivo ya documenta en dos lugares.
+vsus = voice_sig(200) + fluct_noise(200)
 pv = _mk_mcra()
 for f in nz_conv:
     pv.process(f)
@@ -524,6 +530,10 @@ check("en 1.00 no congela nunca (%.0f%% alimenta)" % (100*_alim_max), _alim_max 
 # Y el control tiene que MOVER lo que dice mover: en 1.00 la voz sostenida SI
 # contamina el estimador. Es el riesgo que el slider expone a proposito — el
 # guard 13 verifica que el default protege; este verifica que el extremo no.
+# OJO: desde que la exclusion de armonicos sostenidos es constante, el extremo del
+# slider es MENOS riesgoso que antes — la contaminacion a 1.00 bajo de ~+9,7 dB a
+# ~+3,5 dB. El control sigue moviendo lo que dice mover (3,4 dB entre 0,30 y 1,00),
+# pero el umbral del guard se ajusto a la contaminacion que queda.
 pc = _mk_mcra()
 pc.set_freeze_thr(1.00)
 for f in nz_conv:
@@ -533,7 +543,7 @@ for f in vsus:
     pc.process(f)
 _sube_max = 10 * np.log10(float(np.mean(pc._mcra_ld)) / _ld0)
 check("en 1.00 la voz sostenida si entra al estimador (%+.1f dB)" % _sube_max,
-      _sube_max > 3.0)
+      _sube_max > subida + 1.0)
 
 # ---------------------------------------------------------------------------
 print()
@@ -791,13 +801,24 @@ check("el freno vale lo mismo en dB/s a cualquier hop (%.1f-%.1f)" % (min(_r), m
 #    tiene que seguir reportando el piso medido (el manual lo documenta con
 #    bandas). De eso se ocupa la recursion paralela `_mcra_ld_medido`; sin ella el
 #    indicador caia ~1.8 dB y dejaba de discriminar voz de ruido.
+# Las senales se generan UNA VEZ y se comparten entre las dos corridas. Antes se
+# generaban adentro de la funcion, asi que cada llamada usaba ruido aleatorio
+# DISTINTO y la comparacion incluia la varianza de la senal, no solo el efecto del
+# freno: medido con las mismas senales, las dos recursiones se apartan 0,00 dB.
+# Es la misma clase de defecto que el 'impulso aislado' con una sola semilla.
+# La voz va ademas SOBRE el piso de ruido: con voz pura la exclusion de armonicos
+# sostenidos deja a lambda_d sin material, y esa situacion no existe en la radio.
+_snr_nz = fluct_noise(300)
+_snr_vz = voice_sig(120) + fluct_noise(120)
+
+
 def _snr_con_voz(fall_db_s):
     p = NoiseProfiler(HOP)
     p.set_mode("mcra"); p.set_enabled(True)
     p.set_fall_db_s(fall_db_s)
-    for f in fluct_noise(300):
+    for f in _snr_nz:
         p.process(f)
-    for f in voice_sig(120):
+    for f in _snr_vz:
         p.process(f)
     return p.snr_db
 
@@ -865,6 +886,118 @@ check("la mascara no impone un piso global de p_speech (media %.2f)" % _media_96
 _dif = abs(_media_960 - _mask_stats(1920, 150.0)[0])
 check("la mascara no depende del tamaño de bloque (%.2f de diferencia)" % _dif,
       _dif < 0.20)
+
+# ===========================================================================
+print()
+print("=== Exclusion de armonicos sostenidos (constante, sin control) ===")
+# MCRA decide que bin tiene voz con S_f/S_min, pero la voz continua empuja TAMBIEN
+# a S_min (+5,34 dB de sesgo a S/N +24, MAS que el propio lambda_d), asi que se le
+# escapa el 62 % de los bins con voz. _picos_sostenidos marca por contraste
+# espectral SOSTENIDO, calculado sobre el espectro crudo.
+#
+# No hay interruptor (es constante a proposito, ver el docstring del metodo), asi
+# que los guards prueban el DETECTOR y sus dos riesgos, no un on/off.
+#
+# Corre a hop 960: la deteccion es por contraste LOCAL y necesita bins entre
+# armonicos. A hop 480 la separacion es ~2,6 bins y la mediana local queda
+# contaminada por los propios armonicos. Medido con las MISMAS senales: -3,01 dB
+# de ventaja a hop 960 contra +0,10 a hop 480 — el primer guard de esta feature
+# corria a 480 y por eso decia que el control empeoraba.
+_HS = 960
+
+
+def _voz_armonica(dur_s=6, f0=140.0, hop=_HS):
+    """Voz con entonacion: los armonicos SE MUEVEN, como en el habla real."""
+    n = dur_s * SR
+    tt = np.arange(n) / SR
+    f = f0 + 18.0 * np.sin(2 * np.pi * 0.7 * tt)
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    s = np.zeros(n)
+    for k in range(1, 26):
+        if k * f0 >= 3600:
+            break
+        s += (1.0 / k) * np.sin(k * ph + 0.6 * k)
+    s /= np.sqrt(np.mean(s ** 2))
+    return (s * (0.55 + 0.45 * np.abs(np.sin(2 * np.pi * 1.7 * tt))) * 0.05).astype(np.float32)
+
+
+def _ruido_banda(dur_s=6, amp=0.02, seed=3):
+    r = np.random.default_rng(seed)
+    x = _sosfilt(_butter(2, [200 / (SR / 2), 4000 / (SR / 2)], btype="band",
+                         output="sos"), r.standard_normal(dur_s * SR))
+    return (x / np.sqrt(np.mean(x ** 2)) * amp).astype(np.float32)
+
+
+def _marcados(x, hop=_HS):
+    """Fraccion media de bins marcados EN LA BANDA DE VOZ, frame a frame.
+
+    Tiene que ser en banda: los armonicos viven en 200-3500 Hz, que a hop 960 son
+    132 de los 961 bins (14 %). Promediando sobre el espectro entero la diferencia
+    entre voz y ruido se diluye hasta desaparecer (medido: 10,8 % contra 9,6 %,
+    cuando en banda son 39 % contra 11 %).
+    """
+    p = NoiseProfiler(hop)
+    p.set_mode("mcra"); p.set_enabled(True); p.set_freeze_thr(1.0)
+    w = np.sqrt(np.hanning(2 * hop)).astype(np.float32)
+    fq = np.fft.rfftfreq(2 * hop, 1 / SR)
+    bv = (fq >= 200) & (fq <= 3500)
+    fr = []
+    for i in range(1, len(x) // hop):
+        pot = np.abs(np.fft.rfft(x[(i - 1) * hop:(i + 1) * hop] * w, n=2 * hop)) ** 2
+        fr.append(float(np.mean(p._picos_sostenidos(pot)[bv])))
+    return float(np.mean(fr[len(fr) // 4:]))
+
+
+_mv = _marcados(_voz_armonica() + _ruido_banda())
+_mn = _marcados(_ruido_banda(seed=9))
+
+# 1. Tiene que marcar bastante mas con voz que sin voz. Sin este check un detector
+#    que devuelve siempre 0 (o siempre 1) pasaria los demas guards.
+check("marca mas con voz que con ruido solo (%.1f%% vs %.1f%%)" % (100 * _mv, 100 * _mn),
+      _mv > 1.4 * _mn and _mv > 0.12)
+
+# 2. RIESGO PRINCIPAL: sobre ruido PURO no puede marcar mucho. La potencia por bin
+#    es exponencial, asi que P(X > 2*mediana) = 2^-2 = 25 % — un cuarto de los bins
+#    de ruido puro ya "parece" un pico y solo la persistencia los descarta. Sin
+#    ella, medido en la radio, el resultado se da vuelta (+0,88 dB, peor).
+# 11 % NO es "poco" en abstracto: es lo que deja la estadistica del ruido. Con
+# umbral 2x la mediana, P(pico) = 2^-2 = 25 % por bin y por frame; exigir 3 frames
+# seguidos (con tolerancia de +-1 bin) lo baja a ~11 %. Sin la persistencia queda
+# en 25-33 % y en la radio eso mide PEOR (+0,88 dB). El guard vigila que no se
+# vuelva a ese regimen.
+check("con ruido solo marca poco (%.1f%%, la persistencia filtra los picos)" % (100 * _mn),
+      _mn < 0.20)
+
+# 3. Y lambda_d tiene que seguir un cambio REAL de ruido: si el detector marcara de
+#    mas, el estimador se queda sin material y deja de adaptarse — el modo de falla
+#    que ya mordio con el freeze por vp (v2.0) y con el AGC (v2.1).
+_rr = _ruido_banda(dur_s=14, seed=5)
+_rr = np.concatenate([_rr[:7 * SR], (_rr[7 * SR:] * 10 ** (10.0 / 20.0)).astype(np.float32)])
+_pp = NoiseProfiler(_HS)
+_pp.set_mode("mcra"); _pp.set_enabled(True); _pp.set_freeze_thr(1.0)
+_lds = []
+for i in range(len(_rr) // _HS):
+    _pp.process(_rr[i * _HS:(i + 1) * _HS].copy())
+    if _pp._mcra_ld is not None and _pp._mcra_frames >= _pp._mcra_warmup:
+        _lds.append(float(np.mean(_pp._mcra_ld)))
+_lds = np.array(_lds)
+_sube = 10 * np.log10(np.mean(_lds[int(0.80 * len(_lds)):]) /
+                      max(np.mean(_lds[int(0.25 * len(_lds)):int(0.45 * len(_lds))]), 1e-30))
+check("sigue un salto real de +10 dB de ruido (%.2f dB)" % _sube, _sube > 8.5)
+
+# 4. La persistencia va en ms y se convierte a frames por hop (invariante 9): el
+#    detector tiene que durar lo mismo en tiempo con cualquier tamano de bloque.
+_f960, _f480 = NoiseProfiler(960)._sust_frames, NoiseProfiler(480)._sust_frames
+check("la persistencia escala con el hop (%d fr a 960, %d a 480)" % (_f960, _f480),
+      abs(_f960 * 20.0 - _f480 * 10.0) < 5.0)
+
+# 5. El estado por-bin se rearma en reset (invariante 9): si sobreviviera con el
+#    tamano viejo, habria shape mismatch al cambiar el bloque.
+_pr = NoiseProfiler(960)
+_pr.process(np.zeros(960, dtype=np.float32))
+_pr.reset(480)
+check("reset limpia la racha del detector",
+      _pr._sust_run is None or _pr._sust_run.shape[0] == 481)
 
 # ---------------------------------------------------------------------------
 print()

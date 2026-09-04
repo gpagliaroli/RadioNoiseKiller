@@ -1178,74 +1178,154 @@ arreglo que se probó **no transfiere al material real y se revirtió**.
   el efecto sobre las grabaciones del usuario** — una medición de tres corridas que se podría haber
   hecho antes de escribir una línea. La regla ya estaba escrita en tres lugares de este archivo.
   **Antes de implementar algo validado sólo en banco sintético, medirlo sobre el material real.**
-- **DESCARTADA TAMBIÉN la dirección "mejorar la detección de bins de voz" — con razón estructural
-  (septiembre 2026).** Pedido del usuario tras el fracaso de la máscara: dejar el detector actual y
-  **sumar alternativas seleccionables para comparar de oído**. Se hizo el screening ANTES de tocar la
-  UI (la lección de la vuelta anterior) y **ninguna llegó**: no se implementó ningún combo.
-  - **Cuatro detectores probados, todos externos a λ_d y a S_min** (la regla dura). Detección y fuga
-    sobre banco con verdad conocida; **balance = cuánto mejora la voz respecto del fondo sobre las 11
-    grabaciones reales**, que es la métrica que predijo bien lo que el usuario escuchó:
+- **La dirección "mejorar la detección de bins de voz": PRIMERO SE DESCARTÓ MAL, y la corrección de
+  la MEDICIÓN la reabrió (septiembre 2026).** Pedido del usuario tras el fracaso de la máscara: dejar
+  el detector actual y **sumar alternativas seleccionables para comparar de oído**. El screening se
+  hizo antes de tocar la UI (la lección de la vuelta anterior), pero **con una métrica equivocada**;
+  al arreglarla el veredicto cambió de "todo falla" a "hay ~1 dB". El recorrido completo, porque los
+  errores son más instructivos que el resultado:
+  - **Cuatro detectores, todos externos a λ_d y a S_min** (la regla dura). Sobre banco con verdad
+    conocida:
 
-    | detector | detecta bins de voz | energía fugada | falsos sin voz | **balance real** |
-    |---|---|---|---|---|
-    | actual (`I_min`) | 38 % | 43 % | 0 % | — |
-    | A contraste espectral local | **65 %** | **1 %** | 33 % | **−2,64 dB** |
-    | B peine cepstral | 49 % | 24 % | 4 % | −0,02 dB |
-    | C continuidad temporal por bin | 38 % | 43 % | 0,4 % | idéntico al actual |
-    | D contraste + persistencia (3 fr) | 53 % | 1 % | 8 % | −0,74 dB |
-    | D con persistencia de 8 frames | — | — | 2 % | −0,32 dB |
+    | detector | detecta bins de voz | energía fugada | falsos sin voz |
+    |---|---|---|---|
+    | actual (`I_min`) | 38 % | 43 % | 0 % |
+    | A contraste espectral local | **65 %** | **1 %** | 33 % |
+    | B peine cepstral | 49 % | 24 % | 4 % |
+    | C continuidad temporal por bin | 38 % | 43 % | 0,4 % |
+    | **D contraste + persistencia (3 fr)** | 53 % | 1 % | 8 % |
 
-  - **Los que detectan MÁS, empeoran, y el daño es monótono**: la serie de D da −0,74 / −0,49 / −0,32
-    al pedir 3 / 5 / 8 frames de persistencia, convergiendo a cero = no hacer nada. El detector A,
-    que es el mejor del banco (65 % de detección, 1 % de fuga), es el **peor** en la radio.
-  - **POR QUÉ FALLA GATEAR:** excluir un bin **no es** conocer la verdad. El oráculo *sustituía* λ_d
-    por el valor correcto; un gate sólo lo **congela**, y entonces λ_d se queda con el valor viejo.
-    Sobre ruido estacionario un valor viejo ≈ el correcto (por eso el banco daba positivo); sobre
-    HF con fading el valor viejo está **desactualizado y sesgado hacia abajo**, porque dejó de seguir
-    el ruido que subía. Medido: al gatear, λ_d **baja** 0,13–1,39 dB → se suprime menos → el fondo
-    sube. Y como los bins de voz ya están cerca de ganancia 1 y no pueden subir mucho mientras los de
-    ruido sí, **un λ_d más bajo levanta el fondo más que la voz** — exactamente lo medido, en los
-    cuatro detectores y las once grabaciones. **Todo gate cambia contaminación por desactualización,
-    y en ruido no estacionario la desactualización cuesta más.**
-  - **PROBADO Y DESCARTADO: SUSTITUIR en vez de congelar** (idea que surgió de ese diagnóstico y que
-    el usuario pidió probar). En vez de congelar el bin, se le da a λ_d una estimación del ruido que
-    hay debajo del armónico — interpolando en dominio log desde los bins vecinos limpios, o
-    recortando al mediano local — **a la entrada de `_mcra_update`**, así también limpia S_f y S_min
-    (la causa raíz). λ_d sigue actualizándose, o sea que no hay desactualización.
-    **Sale PEOR que gatear: balance −1,07 (interp 5 fr), −1,43 (interp 3 fr), −2,15 (recorte), con
-    λ_d 1,5 a 2,9 dB por debajo.**
-  - **LA RAZÓN DE FONDO, y es de primeros principios: el ruido ES picudo.** La potencia por bin de
-    ruido es **exponencial**, así que `P(X > k · mediana local) = 2^-k` exacto — verificado contra
-    simulación: **25 % teórico contra 22,7 % medido** a k=2, 12,5 % contra 11,5 % a k=3, 6,2 % contra
-    6,1 % a k=4. O sea que **con umbral 2, un cuarto de los bins de ruido PURO parece un pico de
-    voz**. Ningún detector basado en picos puede evitarlo, y por eso:
-    - gatear congela también esos bins → λ_d se desactualiza;
-    - sustituir les borra la cola superior a la distribución del ruido → λ_d **subestima** el piso.
-    Subir el umbral achica los falsos (2^-k cae rápido) pero los armónicos de voz a S/N bajo tampoco
-    lo superan: los dos histogramas se solapan por construcción.
-  - **CONCLUSIÓN GENERAL — no reabrir por acá.** Ningún esquema que decida *bin a bin sobre el
-    espectro instantáneo* puede capturar la ventaja del oráculo, ni gateando ni sustituyendo. Es la
-    misma forma que el oráculo de VAD de la v2.0 (un detector perfecto era el PEOR de los tres):
-    **mejorar la detección es justamente lo que empeora el resultado**, porque el estimador termina
-    con menos datos o con datos sesgados. Si alguna vez se retoma, tendría que ser con información
-    que NO salga del espectro instantáneo de un frame — y validado sobre grabaciones reales midiendo
-    **balance voz/fondo**, nunca sobre banco sintético.
-  - **De método, lo que sí funcionó:** el screening costó dos corridas y **evitó una segunda
-    implementación completa**. La regla queda: cuando el usuario pide "opciones para comparar de
-    oído", medir primero el balance sobre el material real y llevar a la UI sólo lo que mueva la
-    aguja — un combo con tres opciones que suenan igual o peor es peor que no tener combo.
-- **Qué queda para el próximo que agarre este hilo:** el margen de 2–4 dB **existe y está acotado**,
-  la causa raíz está identificada, y **está cerrado todo el espacio de soluciones que decide bin a
-  bin sobre el espectro instantáneo**. Lo que NO sirve, todo medido: escalar λ_d (uniforme o por
-  máscara armónica), la ventana de mínimos, mejorar la velocidad de seguimiento, cualquier
-  estadístico interno de MCRA (acoplados a λ_d), **mejorar el detector de bins de voz** (gateando o
-  sustituyendo — el ruido es picudo por estadística y ningún detector de picos lo esquiva), y el
-  híbrido con perfil estático (descartado por el usuario: la independencia de banda es *la* propiedad
-  del MCRA, y para lo otro ya está el modo estático).
-  Lo único que quedaría es información que **no salga del espectro instantáneo de un frame** — p. ej.
-  decisión retrospectiva con una cuarentena larga (150–200 ms), que permite juzgar la sílaba entera
-  en vez del frame suelto, a costa de latencia. No se probó. Cualquier cosa que se intente se valida
-  **sobre grabaciones reales midiendo balance voz/fondo**, antes de tocar la UI.
+    C no hace nada (idéntico al actual). D es A con el fix del ANF —exigir que el pico **se
+    sostenga**— y con eso los falsos sobre ruido caen de 33 % a 8 % conservando la detección.
+  - **EL RUIDO ES PICUDO, y eso acota a cualquier detector de picos.** La potencia por bin de ruido
+    es **exponencial**, así que `P(X > k · mediana local) = 2^-k` exacto — verificado: **25,0 %
+    teórico contra 22,7 % medido** a k=2, 12,5 vs 11,5 a k=3, 6,2 vs 6,1 a k=4. Con umbral 2, **un
+    cuarto de los bins de ruido PURO parece un pico de voz**. Subir el umbral achica los falsos rápido
+    pero los armónicos a S/N bajo tampoco lo superan: los histogramas se solapan por construcción.
+    Por eso A (el mejor del banco) es el peor en la radio, y por eso hace falta la persistencia.
+  - **ERROR DE MEDICIÓN Nº1 — dos sesgos propios en el estimador de sustitución.** Al probar
+    *sustituir* el valor del bin en vez de congelarlo, las dos primeras versiones medían **mi sesgo,
+    no la idea**: interpolar en dominio **log** da la media geométrica, que para una exponencial vale
+    `e^-γ` = **−2,5 dB**; y promediar los bins **no marcados** es una muestra **CENSURADA**
+    (`E[X | X < 2·mediana] = 0,54·μ` = **−2,1 dB** medido), porque condicionar en "no es pico" trunca
+    la cola superior. El estimador correcto es **`mediana local / ln2`**: robusto a la voz (ignora la
+    cola) e insesgado para exponencial (**+0,30 dB** medido). **Regla: al sustituir muestras de una
+    distribución sesgada, verificar el sesgo del estimador ANTES de evaluar la idea — si no, se mide
+    el sesgo propio.**
+  - **ERROR DE MEDICIÓN Nº2, el grave — la métrica penalizaba corregir λ_d.** El "balance voz/fondo"
+    crudo (p90 − p10 de la salida) **castiga cualquier bajada de λ_d, sea correcta o no**: si el
+    estimado estaba inflado por voz y se corrige, la ganancia de Wiener sube y suben fondo **y** voz
+    — y el fondo sube más porque los bins de voz ya están cerca de ganancia 1 y no pueden subir. O
+    sea que medía **cuánta** supresión, no **cuán buena**. Es exactamente el error que este archivo
+    ya documentaba (*"la comparación original no normalizaba por daño de voz"*), repetido.
+    **La comparación válida es a IGUAL NIVEL DE VOZ**: subir la Intensidad del candidato hasta
+    igualar la voz del baseline y recién ahí comparar el fondo. Validada con un control obligatorio —
+    el baseline contra sí mismo por la misma interpolación da **0,000 exacto** en las 11 grabaciones.
+  - **RESULTADO con la métrica corregida** (11 grabaciones reales, a igual voz; negativo = deja el
+    fondo más bajo, o sea mejor):
+
+    | enfoque | métrica cruda (MAL) | **a igual voz (correcta)** | latencia |
+    |---|---|---|---|
+    | A gate agresivo | −2,64 | **+0,88** (peor) | 0 |
+    | D gate + persistencia | −0,74 | **−0,66** | 0 |
+    | sustitución (mediana/ln2) | −1,19 | **−0,67** | 0 |
+    | **retro: cuarentena 200 ms + interpolación temporal** | −1,02 | **−1,08** | **200 ms** |
+
+  - **Lo que sí sobrevive del descarte anterior:** A (el gate agresivo, sin persistencia) **empeora**
+    de verdad, y el mecanismo por el que fallaba está bien identificado — gatear cambia contaminación
+    por **desactualización** (λ_d se queda con el valor viejo y llega tarde cuando el ruido sube), y
+    en HF con fading eso cuesta más. Lo que estaba mal era concluir que TODO el espacio fallaba.
+  - **La cuarentena retrospectiva es lo mejor que apareció** (~1 dB, un tercio del techo del oráculo):
+    con L frames de retardo se tiene el **después**, así que el valor del bin contaminado se
+    interpola **en el tiempo** entre la última observación limpia anterior y la primera posterior —
+    que sigue la tendencia en vez de quedarse atrás. Es justo lo que un filtro causal no puede hacer.
+    **Cuesta 200 ms de latencia**, y por eso la decisión no es técnica: para escucha pura no se nota,
+    operando con PTT sí. Queda medido y sin implementar.
+  - **IMPLEMENTADO como CONSTANTE, sin control de UI (`_picos_sostenidos`, siempre activo).
+    VALIDADO EN EL AIRE** (septiembre 2026: *"es muy sutil el efecto pero se nota esa diferencia, al
+    menos yo la puedo percibir, usando el control al 100 %"*). Es lo **único de todo este hilo que
+    sobrevivió a la escucha**, y el veredicto coincide con la medición: −0,66 dB sobre el material
+    real es exactamente "sutil pero perceptible".
+    - **Y el punto de operación se movió, que es evidencia más fuerte que la percepción sola:** al
+      guardar su preset con el control en 100 %, el usuario **subió la Intensidad de 0,60 a 0,75**.
+      Es lo que predice el mecanismo —si el cancelador se lleva menos voz, se puede empujar más
+      supresión— y es el mismo patrón que dejó el fix del ANF (ahí subió `anf_depth`). Cuando un
+      control nuevo mueve el ajuste de OTRO en la dirección que predice su mecanismo, vale más que
+      un "se nota la diferencia".
+    - **Se implementó primero como slider 0-100 % y el usuario pidió fijarlo**: *"no creo que el
+      control sea necesario, ya que no hay un cambio mayor en el recorrido y al 100 % mejora sin
+      traer problemas"*. Se verificaron las dos premisas antes de fijarlo, medido a igual voz sobre
+      las 11 grabaciones: **25 % → −0,19 dB, 50 % → −0,38, 75 % → −0,58,
+      100 % → −0,89** (monótono, el extremo es el mejor). La segunda premisa tiene un
+      matiz: **al 100 % dos grabaciones empeoran** (+0,81 y +0,44 dB) y son justo las de voz más fuerte y continua (el detector de
+      pitch dispara 92 % y 66 % ahí, contra 28–40 % en las demás) — con voz muy sostenida se marcan
+      más bins y λ_d se queda con menos material. Se acepta: ≤0,8 dB de daño en 2 de 11 contra hasta
+      3,4 dB de beneficio, y ocurre donde el cancelador importa menos. **Un control cuyo extremo es
+      casi siempre el mejor es una constante mal puesta** (la regla del freno del techo del AGC).
+    - Se fueron el slider, la clave i18n, el tooltip, el campo `noise_sustained_gate` de DSPConfig y
+      su gating por modo. **Los 5 presets de fábrica cargan con `matches()==True`** y el preset del
+      usuario, que ya tenía la clave guardada, la ignora sin marcar "(modificado)" — **octava vez que
+      paga la normalización por `snapshot()`** (invariante 10).
+    - Medido a igual nivel de voz: **−3,9 dB** en banco con verdad conocida y **−0,66 dB** sobre las
+      11 grabaciones. CPU del profiler completo: **325 µs/frame**.
+    - **PIDE BLOQUE 960 o 1920.** A 480 los armónicos quedan a ~2,6 bins, la mediana local los
+      incluye y el contraste no discrimina. Es el **mismo límite de resolución ya documentado para el
+      refuerzo de pitch**, por la misma razón: un detector que compara un bin contra sus vecinos
+      necesita que haya vecinos limpios. Está en el docstring del método.
+    - La mediana se submuestrea de a 4 bins (`_SUST_STEP`): el piso es suave en frecuencia y sin eso
+      el filtro cuesta ~4× más CPU. La persistencia se fija en **ms** (`_SUST_MS = 60`) y se
+      convierte a frames por hop (invariante 9): 3 frames a 960, 6 a 480.
+  - **EFECTO COLATERAL, y hay que saberlo: el detector constante ALIVIA el extremo del slider
+    "Congelar piso con voz".** Con `noise_freeze_thr = 1.00` (no congelar nunca) la voz continua
+    contaminaba λ_d **+9,7 dB**; ahora contamina **+1,9 dB** en el banco realista. El control **no
+    quedó inerte** —sigue habiendo 3,4 dB entre 0,30 y 1,00— pero su extremo riesgoso es menos
+    riesgoso, lo cual es coherente con que el usuario lo tenga en 1,00 en sus presets.
+  - **TRES GUARDS PREEXISTENTES ALIMENTABAN VOZ PURA SIN PISO DE RUIDO**, y el detector nuevo los
+    destapó: con voz sola marca casi todos los bins con energía, λ_d se queda sin material y el
+    estimado CAE. Es una situación que **no existe en el aire** (un estimador de ruido siempre ve un
+    piso). Los tres pasaron a alimentar voz SOBRE el piso. **Regla: un guard de un estimador de ruido
+    nunca debe alimentar señal sin piso de ruido — es la trampa de la señal demasiado limpia, ahora
+    vista por tercera vez y en su forma más cara.**
+  - **Y un cuarto guard comparaba dos corridas sobre RUIDO ALEATORIO DISTINTO:** `_snr_con_voz`
+    generaba las señales adentro de la función, así que las dos llamadas (freno puesto y sin freno)
+    usaban realizaciones distintas y la diferencia incluía la varianza de la señal. Con las mismas
+    señales, las dos recursiones se apartan **0,00 dB** antes y después del cambio. Misma clase de
+    defecto que el "impulso aislado" con una sola semilla. **Regla: dos configuraciones se comparan
+    sobre la MISMA señal; si el generador está adentro de la función bajo prueba, no lo están.**
+  - **EPISODIO DEL GUARD, y es la lección más cara de la tanda: el test corría al ÚNICO tamaño de
+    bloque donde el control no puede funcionar.** El primer guard daba +2,29 dB (o sea, "empeora") y
+    se persiguieron tres hipótesis equivocadas —normalización del S/N, banda de la medición,
+    transitorio de arranque—, cada una con su corrección, y ninguna movió el resultado. La variable
+    real apareció **cruzando señales y funciones**: las mismas señales del banco, por la misma
+    función del test, dan **−3,01 dB a hop 960 y +0,10 a hop 480**. `test_noise_vad` tiene
+    `HOP = 480` global y el bloque nuevo lo heredó.
+    **Regla: cuando un guard contradice a una medición que ya se replicó, sospechar primero de los
+    parámetros que el test hereda del archivo —hop, sample rate, duración— y aislarlos cruzando
+    señales y funciones entre los dos bancos, en vez de corregir la señal a ciegas.** Sin ese cruce
+    se habría concluido que el control no sirve, por segunda vez en el mismo hilo y por un motivo
+    equivocado. El guard ahora fija `_HS = 960` con el porqué escrito al lado.
+  - **De método, y es la lección cara de esta tanda:** el screening evitó implementar A (que empeora),
+    pero **la primera conclusión —"todo falla, dirección cerrada"— era un artefacto de la métrica** y
+    quedó commiteada antes de detectarlo. Dos reglas que salen de acá:
+    1. **Antes de creerle a una métrica nueva, correr el control trivial**: el baseline contra sí
+       mismo tiene que dar cero. Acá lo dio (0,000 exacto) y por eso el resultado corregido se puede
+       sostener; el problema es que ese control se corrió **después** de sacar la primera conclusión.
+    2. **Toda comparación contra un control existente va en el punto que IGUALA el costo.** Está
+       escrito en este archivo desde la v2.2 y se volvió a fallar. Si el candidato mueve la
+       Intensidad efectiva, hay que igualarla antes de comparar, o se mide la perilla y no la idea.
+- **Qué queda para el próximo que agarre este hilo:** el margen de 2–4 dB **existe y está acotado** y
+  la causa raíz está identificada. Lo que NO sirve, todo medido: escalar λ_d (uniforme o por máscara
+  armónica), la ventana de mínimos, mejorar la velocidad de seguimiento, cualquier estadístico interno
+  de MCRA (acoplados a λ_d), el gate agresivo sin persistencia (empeora), y el híbrido con perfil
+  estático (descartado por el usuario: la independencia de banda es *la* propiedad del MCRA, y para lo
+  otro ya está el modo estático).
+  Lo que SÍ funcionó: **D (gate con persistencia) está IMPLEMENTADO como CONSTANTE, sin control de
+  UI, y validado en el aire** — ver
+  arriba. Queda medida y sin implementar **la cuarentena retrospectiva** (−1,08 dB, la mejor cifra del
+  hilo), que interpola el bin contaminado **en el tiempo** entre la última observación limpia anterior
+  y la primera posterior; cuesta **200 ms de latencia**, y por eso la decisión no es técnica: para
+  escucha pura no se nota, operando con PTT sí. Cualquier cosa que se intente se valida **sobre
+  grabaciones reales, a igual nivel de voz**, antes de tocar la UI.
 
 **Post-v2.3 — DESCARTADO por medición: el detector de estimado obsoleto. Y el síntoma dejó de
 reproducirse (agosto 2026).** El reporte original era *"si desintonizo la radio y la vuelvo a

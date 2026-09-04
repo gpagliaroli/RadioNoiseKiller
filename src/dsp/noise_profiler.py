@@ -3,6 +3,7 @@ from collections import deque
 
 import numpy as np
 from scipy.special import exp1 as _exp1
+from scipy.ndimage import median_filter as _median_filter
 
 
 class NoiseProfiler:
@@ -76,6 +77,12 @@ class NoiseProfiler:
     _PITCH_SIGMA_MIN: float = 1.0   # piso en bins: por debajo no cubre ni el pico
 
     # Parámetros MCRA
+    # --- Exclusión de armónicos sostenidos (ver _picos_sostenidos) ---
+    _SUST_THR:   float = 2.0    # veces la mediana local para contar como pico
+    _SUST_WIN:   int   = 9      # ventana de la mediana, en bins SUBMUESTREADOS
+    _SUST_STEP:  int   = 4      # submuestreo de la mediana (el piso es suave)
+    _SUST_MS:    float = 60.0   # cuánto debe sostenerse el pico (→ frames por hop)
+
     _MCRA_ALPHA_S:       float = 0.9    # suavizado espectral
     _MCRA_ALPHA_D0:      float = 0.85   # velocidad de actualización del ruido (sin habla)
     # Umbral del ratio S_f/S_min para declarar habla en un bin. NO es constante:
@@ -339,6 +346,8 @@ class NoiseProfiler:
         # más rápido a subidas de ruido (menos lag → menos vaivén con ruido cíclico).
         self._mcra_window_ms: float = 800.0     # slider 250-800 ms (default = comportamiento previo)
         self._fall_db_s: float = self._MCRA_FALL_DB_S   # slider 2-30 dB/s
+        # Exclusión de armónicos sostenidos: SIEMPRE activa (ver _picos_sostenidos).
+        self._sust_run:  "np.ndarray | None" = None
         self._freeze_thr: float = self._MCRA_PITCH_THR  # slider 0.30-1.00 (1.00 = nunca)
         self._mcra_M:         int   = self._calc_mcra_M()
 
@@ -459,6 +468,7 @@ class NoiseProfiler:
         self._snr_post_prev   = None
         self._p_speech_prev   = None
         self._gain_out_prev   = None      # por-bin: se rearma solo (invariante 9)
+        self._sust_run        = None      # por-bin: idem
         self._post_factor_prev = None     # idem
         self._voice_prob         = 0.0
         self._voice_prob_sq      = 0.0
@@ -805,6 +815,69 @@ class NoiseProfiler:
     # MCRA — estimación adaptativa de ruido
     # ------------------------------------------------------------------
 
+    def _picos_sostenidos(self, power: np.ndarray) -> np.ndarray:
+        """Bins que son pico local Y vienen sosteniéndose: armónicos de voz que NO
+        deben entrar en λ_d. Siempre activo, sin control de UI (ver más abajo).
+
+        POR QUÉ HACE FALTA. MCRA decide qué bin tiene voz con `S_f/S_min > δ`, pero
+        **S_min lo empuja la propia voz**: medido con ruido conocido, a S/N +24 el
+        sesgo de S_min es +5,34 dB contra +4,06 del propio λ_d — la referencia está
+        más contaminada que lo que protege. Ese gate detecta sólo el 38 % de los
+        bins donde la voz domina, y los que se fugan traen la voz 30 dB sobre el
+        ruido. El resultado es que el piso queda alto y el cancelador resta de más,
+        **y empeora cuanto MEJOR es la señal**, que es lo que lo hace difícil de
+        notar.
+
+        POR QUÉ LAS DOS CONDICIONES. El contraste solo NO alcanza: la potencia por
+        bin de ruido es exponencial, así que `P(X > k·mediana) = 2^-k` — con k=2 un
+        cuarto de los bins de ruido PURO parece un pico (25,0 % teórico, 22,7 %
+        medido). Marcarlos congela λ_d de más y en la radio eso mide PEOR (+0,88 dB).
+        La persistencia los descarta: un pico de ruido es aislado, un armónico dura
+        la sílaba. Es el mismo fix que arregló el ANF, al revés — allá para NO marcar
+        armónicos, acá para marcar sólo los que persisten.
+
+        POR QUÉ ES CONSTANTE Y NO UN SLIDER. Medido a igual nivel de voz sobre las
+        11 grabaciones del usuario, el recorrido es monótono y el extremo es el mejor
+        punto: 25 % → −0,19 dB, 50 % → −0,38, 75 % → −0,58, **100 % → −0,89**. Al
+        100 % dos grabaciones empeoran (+0,81 y +0,44 dB) y son justo las de voz más
+        fuerte y continua (el detector de pitch dispara 92 % y 66 % ahí, contra
+        28–40 % en las demás): con voz muy sostenida se marcan más bins y λ_d se
+        queda con menos material. Se acepta — el daño es ≤0,8 dB en 2 de 11 contra
+        hasta 3,4 dB de beneficio, y ocurre donde el cancelador importa menos.
+        Decisión del usuario tras escucharlo: *"no creo que el control sea necesario,
+        ya que no hay un cambio mayor en el recorrido y al 100 % mejora sin traer
+        problemas"*. Un control cuyo extremo es casi siempre el mejor es una
+        constante mal puesta.
+
+        LÍMITE: pide bloque **960 o 1920**. A hop 480 los armónicos quedan a ~2,6
+        bins, la mediana local los incluye y el contraste no discrimina — medido con
+        las mismas señales: −3,01 dB de ventaja a hop 960 contra +0,10 a hop 480. Es
+        el mismo límite de resolución ya documentado para el refuerzo de pitch.
+
+        La racha tolera ±1 bin porque el armónico se corre con la entonación —
+        mismo motivo que en el ANF. La ventana de la mediana se submuestrea de a
+        `_SUST_STEP` bins: el piso de ruido es suave en frecuencia, así que la
+        mediana no cambia bin a bin, y sin eso el filtro cuesta ~4x más CPU.
+        """
+        n = power.shape[0]
+        sub = power[::self._SUST_STEP]
+        med_s = _median_filter(sub, size=self._SUST_WIN, mode="nearest")
+        med = np.interp(np.arange(n), np.arange(0, n, self._SUST_STEP)[:len(med_s)],
+                        med_s)
+        pico = power > (self._SUST_THR * med)
+        if self._sust_run is None or self._sust_run.shape != power.shape:
+            self._sust_run = np.zeros(n, dtype=np.float32)
+        vec = np.maximum(self._sust_run,
+                         np.maximum(np.roll(self._sust_run, 1),
+                                    np.roll(self._sust_run, -1)))
+        self._sust_run = np.where(pico, vec + 1.0, 0.0).astype(np.float32)
+        return (self._sust_run >= self._sust_frames).astype(np.float64)
+
+    @property
+    def _sust_frames(self) -> int:
+        """Persistencia en FRAMES: depende del hop (invariante 9)."""
+        return max(2, int(round(self._SUST_MS / (self._hop / 48.0))))
+
     def _mcra_current(self) -> "np.ndarray | None":
         """Estimado actual sin actualizar. None si el warmup no terminó."""
         if self._mcra_ld is not None and self._mcra_frames >= self._mcra_warmup:
@@ -942,6 +1015,10 @@ class NoiseProfiler:
         # 4. Indicador de presencia de habla por bin
         ratio = self._mcra_Sf / (S_min + 1e-12)
         I_min = (ratio > self._mcra_delta).astype(np.float64)
+
+        # Exclusión de armónicos sostenidos (ver _picos_sostenidos): amplía el gate
+        # por bin con los picos espectrales que se sostienen en el tiempo.
+        I_min = np.maximum(I_min, self._picos_sostenidos(power))
 
         # 5. α_d adaptativo: actualiza lento cuando hay habla, rápido en silencio
         alpha_d = self._MCRA_ALPHA_D0 + (1.0 - self._MCRA_ALPHA_D0) * I_min
