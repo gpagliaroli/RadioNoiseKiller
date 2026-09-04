@@ -1178,12 +1178,74 @@ arreglo que se probó **no transfiere al material real y se revirtió**.
   el efecto sobre las grabaciones del usuario** — una medición de tres corridas que se podría haber
   hecho antes de escribir una línea. La regla ya estaba escrita en tres lugares de este archivo.
   **Antes de implementar algo validado sólo en banco sintético, medirlo sobre el material real.**
-- **Qué queda para el próximo que agarre este hilo:** el margen de 2–4 dB **existe y está acotado**, y
-  la causa raíz está identificada. Lo que NO sirve: escalar λ_d (uniforme o por máscara), la ventana
-  de mínimos, mejorar la velocidad de seguimiento, y cualquier estadístico interno de MCRA (todos
-  acoplados a λ_d). Un arreglo tendría que corregir λ_d **bin a bin y frame a frame con precisión
-  que se sostenga a S/N bajo y con f0 real** — y validarse sobre grabaciones reales, midiendo
-  **balance voz/fondo**, antes de tocar la UI.
+- **DESCARTADA TAMBIÉN la dirección "mejorar la detección de bins de voz" — con razón estructural
+  (septiembre 2026).** Pedido del usuario tras el fracaso de la máscara: dejar el detector actual y
+  **sumar alternativas seleccionables para comparar de oído**. Se hizo el screening ANTES de tocar la
+  UI (la lección de la vuelta anterior) y **ninguna llegó**: no se implementó ningún combo.
+  - **Cuatro detectores probados, todos externos a λ_d y a S_min** (la regla dura). Detección y fuga
+    sobre banco con verdad conocida; **balance = cuánto mejora la voz respecto del fondo sobre las 11
+    grabaciones reales**, que es la métrica que predijo bien lo que el usuario escuchó:
+
+    | detector | detecta bins de voz | energía fugada | falsos sin voz | **balance real** |
+    |---|---|---|---|---|
+    | actual (`I_min`) | 38 % | 43 % | 0 % | — |
+    | A contraste espectral local | **65 %** | **1 %** | 33 % | **−2,64 dB** |
+    | B peine cepstral | 49 % | 24 % | 4 % | −0,02 dB |
+    | C continuidad temporal por bin | 38 % | 43 % | 0,4 % | idéntico al actual |
+    | D contraste + persistencia (3 fr) | 53 % | 1 % | 8 % | −0,74 dB |
+    | D con persistencia de 8 frames | — | — | 2 % | −0,32 dB |
+
+  - **Los que detectan MÁS, empeoran, y el daño es monótono**: la serie de D da −0,74 / −0,49 / −0,32
+    al pedir 3 / 5 / 8 frames de persistencia, convergiendo a cero = no hacer nada. El detector A,
+    que es el mejor del banco (65 % de detección, 1 % de fuga), es el **peor** en la radio.
+  - **POR QUÉ FALLA GATEAR:** excluir un bin **no es** conocer la verdad. El oráculo *sustituía* λ_d
+    por el valor correcto; un gate sólo lo **congela**, y entonces λ_d se queda con el valor viejo.
+    Sobre ruido estacionario un valor viejo ≈ el correcto (por eso el banco daba positivo); sobre
+    HF con fading el valor viejo está **desactualizado y sesgado hacia abajo**, porque dejó de seguir
+    el ruido que subía. Medido: al gatear, λ_d **baja** 0,13–1,39 dB → se suprime menos → el fondo
+    sube. Y como los bins de voz ya están cerca de ganancia 1 y no pueden subir mucho mientras los de
+    ruido sí, **un λ_d más bajo levanta el fondo más que la voz** — exactamente lo medido, en los
+    cuatro detectores y las once grabaciones. **Todo gate cambia contaminación por desactualización,
+    y en ruido no estacionario la desactualización cuesta más.**
+  - **PROBADO Y DESCARTADO: SUSTITUIR en vez de congelar** (idea que surgió de ese diagnóstico y que
+    el usuario pidió probar). En vez de congelar el bin, se le da a λ_d una estimación del ruido que
+    hay debajo del armónico — interpolando en dominio log desde los bins vecinos limpios, o
+    recortando al mediano local — **a la entrada de `_mcra_update`**, así también limpia S_f y S_min
+    (la causa raíz). λ_d sigue actualizándose, o sea que no hay desactualización.
+    **Sale PEOR que gatear: balance −1,07 (interp 5 fr), −1,43 (interp 3 fr), −2,15 (recorte), con
+    λ_d 1,5 a 2,9 dB por debajo.**
+  - **LA RAZÓN DE FONDO, y es de primeros principios: el ruido ES picudo.** La potencia por bin de
+    ruido es **exponencial**, así que `P(X > k · mediana local) = 2^-k` exacto — verificado contra
+    simulación: **25 % teórico contra 22,7 % medido** a k=2, 12,5 % contra 11,5 % a k=3, 6,2 % contra
+    6,1 % a k=4. O sea que **con umbral 2, un cuarto de los bins de ruido PURO parece un pico de
+    voz**. Ningún detector basado en picos puede evitarlo, y por eso:
+    - gatear congela también esos bins → λ_d se desactualiza;
+    - sustituir les borra la cola superior a la distribución del ruido → λ_d **subestima** el piso.
+    Subir el umbral achica los falsos (2^-k cae rápido) pero los armónicos de voz a S/N bajo tampoco
+    lo superan: los dos histogramas se solapan por construcción.
+  - **CONCLUSIÓN GENERAL — no reabrir por acá.** Ningún esquema que decida *bin a bin sobre el
+    espectro instantáneo* puede capturar la ventaja del oráculo, ni gateando ni sustituyendo. Es la
+    misma forma que el oráculo de VAD de la v2.0 (un detector perfecto era el PEOR de los tres):
+    **mejorar la detección es justamente lo que empeora el resultado**, porque el estimador termina
+    con menos datos o con datos sesgados. Si alguna vez se retoma, tendría que ser con información
+    que NO salga del espectro instantáneo de un frame — y validado sobre grabaciones reales midiendo
+    **balance voz/fondo**, nunca sobre banco sintético.
+  - **De método, lo que sí funcionó:** el screening costó dos corridas y **evitó una segunda
+    implementación completa**. La regla queda: cuando el usuario pide "opciones para comparar de
+    oído", medir primero el balance sobre el material real y llevar a la UI sólo lo que mueva la
+    aguja — un combo con tres opciones que suenan igual o peor es peor que no tener combo.
+- **Qué queda para el próximo que agarre este hilo:** el margen de 2–4 dB **existe y está acotado**,
+  la causa raíz está identificada, y **está cerrado todo el espacio de soluciones que decide bin a
+  bin sobre el espectro instantáneo**. Lo que NO sirve, todo medido: escalar λ_d (uniforme o por
+  máscara armónica), la ventana de mínimos, mejorar la velocidad de seguimiento, cualquier
+  estadístico interno de MCRA (acoplados a λ_d), **mejorar el detector de bins de voz** (gateando o
+  sustituyendo — el ruido es picudo por estadística y ningún detector de picos lo esquiva), y el
+  híbrido con perfil estático (descartado por el usuario: la independencia de banda es *la* propiedad
+  del MCRA, y para lo otro ya está el modo estático).
+  Lo único que quedaría es información que **no salga del espectro instantáneo de un frame** — p. ej.
+  decisión retrospectiva con una cuarentena larga (150–200 ms), que permite juzgar la sílaba entera
+  en vez del frame suelto, a costa de latencia. No se probó. Cualquier cosa que se intente se valida
+  **sobre grabaciones reales midiendo balance voz/fondo**, antes de tocar la UI.
 
 **Post-v2.3 — DESCARTADO por medición: el detector de estimado obsoleto. Y el síntoma dejó de
 reproducirse (agosto 2026).** El reporte original era *"si desintonizo la radio y la vuelvo a
