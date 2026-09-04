@@ -1320,12 +1320,29 @@ arreglo que se probó **no transfiere al material real y se revirtió**.
   estático (descartado por el usuario: la independencia de banda es *la* propiedad del MCRA, y para lo
   otro ya está el modo estático).
   Lo que SÍ funcionó: **D (gate con persistencia) está IMPLEMENTADO como CONSTANTE, sin control de
-  UI, y validado en el aire** — ver
-  arriba. Queda medida y sin implementar **la cuarentena retrospectiva** (−1,08 dB, la mejor cifra del
-  hilo), que interpola el bin contaminado **en el tiempo** entre la última observación limpia anterior
-  y la primera posterior; cuesta **200 ms de latencia**, y por eso la decisión no es técnica: para
-  escucha pura no se nota, operando con PTT sí. Cualquier cosa que se intente se valida **sobre
-  grabaciones reales, a igual nivel de voz**, antes de tocar la UI.
+  UI, y validado en el aire** — ver arriba.
+  **DESCARTADA la cuarentena retrospectiva, y el motivo es que la exclusión ya se la comió.**
+  La idea: con L frames de retardo se tiene también el **después**, así que el bin contaminado se
+  interpola **en el tiempo** entre la última observación limpia anterior y la primera posterior —
+  que sigue la tendencia en vez de quedarse atrás, que es la falla de congelar. Medida **antes** de
+  que la exclusión de armónicos fuera constante daba **−1,08 dB**, la mejor cifra del hilo.
+  - **Re-medida sobre el código actual da la mitad: −0,45 dB (L=10, 200 ms) y −0,51 dB (L=16,
+    320 ms)** sobre 12 grabaciones a igual voz. Es esperable y vale como regla: **el retro usa el
+    MISMO detector que ahora corre siempre**, así que buena parte de lo que aportaba ya lo hace la
+    exclusión. Lo que queda es sólo lo que el "después" puede dar por sí solo.
+  - **Decisión del usuario: no implementarlo** — planteó el checkbox y aceptó la latencia (*"sumar
+    200 ms para escucha solamente no sería un problema"*), pero al ver que el beneficio se había
+    reducido a la mitad prefirió cerrar el hilo. El criterio es el mismo con el que convirtió el
+    slider en constante: **si el beneficio no justifica el control, es mejor no tenerlo.**
+  - **Regla de método que deja: al evaluar una mejora incremental, re-medirla DESPUÉS de integrar la
+    anterior.** Dos mecanismos que comparten detector no suman sus beneficios — el segundo hereda
+    sólo el residuo. La cifra vieja seguía siendo cierta y aun así era engañosa para decidir.
+  - Si alguna vez se retoma: L=16 medía mejor que L=10 (−0,51 contra −0,45) y bastante más
+    consistente (9 de 12 grabaciones a favor contra 6 de 12). Y no es sólo el checkbox: la cuarentena
+    pasa de 3 a 16 frames, o sea que hay que revisar el reporte de latencia de la UI, el drenado de
+    la cola y los resets.
+  Cualquier cosa que se intente se valida **sobre grabaciones reales, a igual nivel de voz**, antes
+  de tocar la UI.
 
 **Post-v2.3 — DESCARTADO por medición: el detector de estimado obsoleto. Y el síntoma dejó de
 reproducirse (agosto 2026).** El reporte original era *"si desintonizo la radio y la vuelvo a
