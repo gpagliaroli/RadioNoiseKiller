@@ -760,10 +760,11 @@ medir por qué el usuario escucha distorsión. En sus 8 grabaciones el S/N de la
 - **Diagnóstico útil que sale de camino: el post-filtro NO era el principal culpable.** Con post 0 el
   daño a la voz ya es **−6,5 dB**; a post 5 (el del usuario) es −9,1. O sea que el **cancelador base
   se lleva 6,5 dB y el post-filtro agrega 2,6**. El margen grande está en la etapa base — Intensidad,
-  piso espectral y sobre todo **la exactitud de λ_d**. Ése es el próximo hilo, y hay que abrirlo
-  midiendo el sesgo de λ_d **con ruido conocido**: todas las referencias derivadas del propio audio
-  (percentil por bin, mínimo por ventana) están estadísticamente sesgadas y dan números que cambian
-  con el hop y la ventana sin significar nada.
+  piso espectral y sobre todo **la exactitud de λ_d**. **HILO CERRADO post-v2.4** — se abrió como
+  dice acá (midiendo con ruido conocido, porque toda referencia derivada del propio audio está
+  sesgada y da números que cambian con el hop y la ventana sin significar nada), se midió el techo
+  con un oráculo y se encontró la causa raíz, pero el arreglo se descartó. Ver el bloque "Post-v2.4
+  — el cancelador se lleva 6,5 dB de voz" antes de retomarlo.
 - **Qué SÍ se comió el post-filtro, medido:** consonantes **−11,5 dB** contra vocales −6,5 (las
   fricativas son anchas y aperiódicas, así que a `p_speech` le parecen ruido), y dentro de las
   vocales, bins de entremedio −8,3 contra picos armónicos −3,7. El desglose fue lo que hizo pensar
@@ -929,7 +930,9 @@ mejor que 10.
   domina, y el **93 % de los bins de voz sale atenuado más de 6 dB**. El balance entre lo que se le
   quita al fondo y lo que se le quita a la voz es de apenas **3,2 dB**. Es mucho más margen que el que
   quedaba en el salto del fondo, y probablemente sea la distorsión que el usuario viene reportando
-  desde el principio. **Próximo hilo a tirar.**
+  desde el principio. **Tirado y CERRADO post-v2.4**: el margen es real (2–4 dB, medido con oráculo)
+  y la causa raíz está identificada, pero ningún arreglo probado transfiere al material real. Ver el
+  bloque "Post-v2.4 — el cancelador se lleva 6,5 dB de voz".
 
 - **Expuesto como slider "Freno de bajada" (2–30 dB/s, default 30 = sin freno)** en Avanzada Cancelador, a
   pedido del usuario para comparar valores de oído. Califica según la regla de la v2.1 porque los dos
@@ -1108,6 +1111,79 @@ del usuario** (entrada + procesado sincronizados) después de que tres bancos si
   mismo"* o *"la dispersión se come la diferencia"*. Lo que destrabó el diagnóstico fue medir sobre
   la **grabación real del usuario**, que es para lo que existe el grabador con canal crudo. Con un
   síntoma que sólo aparece en el aire, grabar sale más barato que inventar la señal.
+
+**Post-v2.4 — el cancelador se lleva 6,5 dB de voz: medido el TECHO, encontrada la CAUSA RAÍZ, y
+DESCARTADO el arreglo (septiembre 2026).** Es el hilo que quedaba abierto desde la v2.2 ("el margen
+grande está en la etapa base — Intensidad, piso espectral y sobre todo la exactitud de λ_d"). Se
+abrió como decía la nota: **midiendo el sesgo de λ_d con ruido CONOCIDO**, generado aparte y con la
+verdad tomada del ruido solo por la misma STFT. La causa raíz está identificada y es sólida; el
+arreglo que se probó **no transfiere al material real y se revirtió**.
+- **El sesgo existe y CRECE CON EL S/N** (voz continua, banda de voz): −0,44 dB a S/N −6, +0,24 a
+  +6, **+2,26 a +18** y **+3,95 a +24**. Con **ruido solo** el sesgo es −0,62 dB, o sea que **todo el
+  sesgo positivo es voz filtrándose al estimado**. El material del usuario vive en +13,5 a +25,8 dB,
+  justo donde se dispara. Mismo patrón que el squelch de portadora: **el defecto crece con la calidad
+  de la señal**, que es lo que lo hace invisible. Las pausas casi no ayudan (0,1–0,4 dB), coherente
+  con que el material es voz continua.
+- **ORÁCULO — hay margen real y NO es la perilla vieja.** Con un λ_d perfecto, comparado **a igual
+  daño de voz** contra la curva de la Intensidad: **−1,94 dB** a S/N 0, −2,57 a +6, −3,60 a +12,
+  **−4,08 a +18** y −3,77 a +24. A diferencia del hilo del post-filtro (cinco caminos, todos sobre la
+  misma línea), acá el oráculo está **fuera de la curva**. Ojo con la trampa de la interpolación: la
+  primera comparación extrapolaba contra el extremo del barrido de alpha y daba −0,79 en vez de
+  −4,08. **Al comparar a igual costo, el barrido del control tiene que CUBRIR el punto del rival.**
+- **NO es velocidad de seguimiento ni detalle por bin — mi hipótesis inicial era falsa.** Degradando
+  el oráculo con suavizado de 1 s, o dándole la forma espectral promedio en vez del detalle por bin,
+  **la ventaja se mantiene entera** (2,7–4,7 dB). La única propiedad que importa es que **λ_d no
+  tenga voz adentro**.
+- **CAUSA RAÍZ, y es la trampa autorreferencial por SEXTA vez — ahora DENTRO del algoritmo.** El gate
+  por bin de MCRA (`I_min = S_f/S_min > δ`) detecta **sólo el 38 %** de los bins donde la voz domina,
+  constante en todo el rango de S/N; los que se fugan cargan el **44 % de la energía de voz** y traen
+  la voz **30 dB sobre el ruido**. El motivo: **`S_min` está MÁS contaminado que el propio λ_d**
+  (+5,34 contra +4,06 dB a S/N +24) — la referencia con la que se detecta la voz la empuja esa misma
+  voz. Las cinco anteriores eran detectores *agregados* sobre MCRA; ésta es su mecánica original.
+- **Y por eso alargar la ventana no alcanza:** de 250 a 800 ms limpia `S_min` (3,02 → 1,08 dB) pero
+  deja λ_d casi igual (2,43 → 2,15), porque **δ escala con la ventana** y se come la mejora. El
+  slider *Reactividad del piso* captura +0,09 a −0,15 dB del margen: nada.
+- **DESCARTADO: máscara armónica como gate por bin.** La idea era usar la autocorrelación —externa al
+  estimador, la única referencia que la voz no contamina, el mismo motivo por el que el freeze usa
+  periodicidad y no el vp— reusando `_harmonic_mask`, que ya existe para PROTEGER armónicos en el
+  refuerzo de pitch. **Se implementó entera** (slider *Excluir armónicos del piso*, default 0,
+  gateado a Adaptativo, tests, tooltip, i18n; CPU +31 µs/frame) y **se revirtió tras probarla en el
+  aire**: *"no noto diferencia pasando el control de un extremo a otro"*.
+  - **En el banco sintético andaba**: peso 1.0 daba **−1,45 dB** a igual daño de voz y bajaba el
+    sesgo de 2,29 a 1,53 dB, ~35 % del oráculo. Sin voz no costaba nada (0 % de disparos, seguía un
+    salto de +10 dB idéntico).
+  - **Sobre las 11 grabaciones reales el efecto perceptual es CERO**: el fondo sube +0,34 dB y la voz
+    +0,27 dB, o sea **balance −0,06 dB**. Sube todo por igual: cambia el volumen un pelo y nada más.
+  - **Por qué falla, y encaja con algo ya medido:** en el banco la máscara era *selectiva* (voz limpia,
+    f0 estable, armónicos nítidos). Sobre material real —S/N bajo, fading, f0 moviéndose— esa
+    precisión se pierde y el efecto neto degenera en **bajar λ_d de forma pareja**… que es exactamente
+    lo que la prueba de "descontar el sesgo con un factor constante" ya había medido como inútil
+    (0,10–0,21 dB, sobre la curva de la Intensidad). Los dos resultados eran consistentes y faltó
+    conectarlos ANTES de escribir el código.
+- **Trampas de medición propias en este recorrido** (las tres son reutilizables):
+  1. **La señal de diferencia en dB NO mide saliencia perceptual.** El gate daba −20 dB de señal de
+     diferencia, que traducido a "equivale a mover Intensidad 0,12–0,20" hacía parecer que el efecto
+     era grande. Dos salidas pueden diferir −20 dB de forma perfectamente inaudible. **Lo que se
+     escucha es el BALANCE voz/fondo**, no cuánto cambió la forma de onda.
+  2. **Re-simular la recursión de λ_d afuera del profiler no la reproduce**: se escapan la cuarentena,
+     el freno de caída y el squelch de portadora (daba −6,25 dB de voz donde el real da −1,75). Hay
+     que enganchar DENTRO del código real — se hizo con una copia del módulo con un hook de una
+     línea, y el control obligatorio es que sin el hook dé **diferencia exactamente cero**.
+  3. **Una voz de test demasiado limpia da el resultado DADO VUELTA.** Con armónicos 1/k puros y sin
+     fricativas, el check "baja el sesgo" daba +0,89 dB (subía). Con tilt glotal, formantes y
+     fricativas, baja. Es la trampa ya documentada, vista otra vez en el sentido malo.
+- **LECCIÓN DE MÉTODO, y es la que hay que no repetir:** el riesgo estaba **flagueado desde el
+  principio** (*"mi banco da 1,2–2,7 dB de daño a la voz contra los 6,5 medidos sobre tu material;
+  las cifras absolutas son optimistas"*) y aun así se implementó sobre esas cifras **sin medir antes
+  el efecto sobre las grabaciones del usuario** — una medición de tres corridas que se podría haber
+  hecho antes de escribir una línea. La regla ya estaba escrita en tres lugares de este archivo.
+  **Antes de implementar algo validado sólo en banco sintético, medirlo sobre el material real.**
+- **Qué queda para el próximo que agarre este hilo:** el margen de 2–4 dB **existe y está acotado**, y
+  la causa raíz está identificada. Lo que NO sirve: escalar λ_d (uniforme o por máscara), la ventana
+  de mínimos, mejorar la velocidad de seguimiento, y cualquier estadístico interno de MCRA (todos
+  acoplados a λ_d). Un arreglo tendría que corregir λ_d **bin a bin y frame a frame con precisión
+  que se sostenga a S/N bajo y con f0 real** — y validarse sobre grabaciones reales, midiendo
+  **balance voz/fondo**, antes de tocar la UI.
 
 **Post-v2.3 — DESCARTADO por medición: el detector de estimado obsoleto. Y el síntoma dejó de
 reproducirse (agosto 2026).** El reporte original era *"si desintonizo la radio y la vuelvo a
