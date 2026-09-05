@@ -1112,6 +1112,53 @@ del usuario** (entrada + procesado sincronizados) después de que tres bancos si
   la **grabación real del usuario**, que es para lo que existe el grabador con canal crudo. Con un
   síntoma que sólo aparece en el aire, grabar sale más barato que inventar la señal.
 
+**Post-v2.4: los 5 presets de fábrica reafinados con la exclusión de armónicos, y los CINCO suben la
+Intensidad** (septiembre 2026 — ver [[project_factory_presets]]). Afinados al aire por el usuario
+después de validar el detector nuevo. **Es la confirmación más fuerte del mecanismo**, más que la
+percepción: si el cancelador se lleva menos voz, se puede empujar más supresión, y eso es exactamente
+lo que hizo el punto de operación en los cinco.
+
+| preset | Intensidad | Congelar piso con voz |
+|---|---|---|
+| AM Local - RuidoMedio | 0,75 → **0,80** | 1,00 (ya estaba) |
+| AM SW - Ruido Alto y Fading | 0,60 → **0,75** | 1,00 (ya estaba) |
+| AM SW - Ruido Medio y Fading | 0,60 → **0,70** | 1,00 (ya estaba) |
+| SSB - Ruido Alto -Perfil Adaptativo | 0,75 → **0,85** | 0,70 → **1,00** |
+| SSB - Ruido Medio -Perfil Adaptativo | 0,70 → **0,75** | 0,50 → **1,00** |
+
+- **Es el mismo patrón que dejó el fix del ANF** (ahí subió `anf_depth` y bajó `anf_threshold`).
+  **Regla: cuando un control nuevo mueve el ajuste de OTRO en la dirección que predice su mecanismo,
+  vale más que un "se nota la diferencia"** — la percepción sola era "muy sutil", y el punto de
+  operación se movió en los cinco presets sin excepción.
+- **`noise_freeze_thr` converge a 1,00 en los CINCO, y eso corrige parcialmente una conclusión vieja
+  de este archivo.** Cuando se expuso el control, los presets terminaron con un umbral **distinto en
+  cada uno** (0,3 a 1,0) y eso se documentó como "la confirmación de que el valor correcto depende de
+  la condición y de que el control tenía que existir". Con la exclusión de armónicos siempre activa
+  los cinco se fueron al extremo *no congelar nunca*. Es coherente con lo medido: el detector
+  **alivia ese extremo** (la contaminación de λ_d a 1,00 pasó de +9,7 a +1,9 dB en banco realista).
+  El control **no quedó inerte** —siguen habiendo 3,4 dB entre 0,30 y 1,00— pero ya no hay un preset
+  de fábrica que lo use fuera del tope. Si en la próxima tanda sigue igual, vale preguntarse si no es
+  otra constante mal puesta.
+- **Un renombre destapó un bug de portabilidad, y es el hallazgo técnico de la tanda.** El usuario
+  corrigió `SSB - Ruido ALto` → `SSB - Ruido Alto` (la L de más). La app renombró el archivo en
+  disco, pero **git en Windows no ve el cambio de mayúscula** (case-insensitive) y lo iba a commitear
+  con el nombre viejo. En Linux —case-sensitive— el preset habría aparecido en el combo (porque
+  `list_names()` lee el campo `name` de adentro del JSON) pero **`_path_for()` habría buscado
+  `..._Alto_...json` contra un archivo `..._ALto_...json` y fallado al cargar**. Se arregló con un
+  `git mv` explícito. **Regla: un renombre que sólo cambia mayúsculas necesita `git mv` explícito;
+  el status de Windows no lo delata y el síntoma aparece únicamente en Linux.**
+- Cambios propios de cada uno, todos de escucha: `SSB Ruido Alto` afloja el supresor (trama 15 → 10,
+  mini 8 → 7), abre el pasabanda de salida abajo (100 → 50 Hz), sube `anf_depth` 0,5 → 0,6 y
+  `noise_smooth` 0,97 → 0,98; `SSB Ruido Medio` baja `noise_hf_boost` 0,5 → 0,3 y **desmarca**
+  "Nivelar en continuo" (`voice_leveler_gate_voice` False → True), coherente con que es un preset de
+  voz y no de música. `AM SW Ruido Alto` además movió el gate a −40 dBFS.
+- **Los 5 cargan con `matches()==True`**, incluido el que arrastra la clave muerta
+  `noise_sustained_gate` de cuando el control era slider — novena vez que paga la normalización por
+  `snapshot()` (invariante 10). No se regeneran los archivos por cosmética.
+- **`blanker_mini` queda en 7 en tres de los cinco**, que está dentro de lo medido y no en la zona
+  peligrosa: con mini en 7 y trama en 4 la distorsión sobre voz limpia es −21,3 dB (comparable al
+  default); el problema documentado empieza en mini 4 (−8,7 dB). Ver el bloque del supresor.
+
 **Post-v2.4 — el cancelador se lleva 6,5 dB de voz: medido el TECHO, encontrada la CAUSA RAÍZ, y
 DESCARTADO el arreglo (septiembre 2026).** Es el hilo que quedaba abierto desde la v2.2 ("el margen
 grande está en la etapa base — Intensidad, piso espectral y sobre todo la exactitud de λ_d"). Se
@@ -1648,8 +1695,30 @@ con señal con voz — todos calibran.
   de warmup (≈1/s). Un aviso condicionado a "más de un error por tick" no lo habría mostrado.
 - Tests: `test_pipeline` (cuenta, loguea, acota el log y **se recupera solo**) y `test_ui` (el aviso
   se ve y el timer de 500 ms no lo pisa, con el cartel volviendo a la normalidad después).
-- **Pendiente:** la causa que corrompió la curva en la máquina del usuario sigue sin identificarse.
-  El log es la herramienta para la próxima vez.
+- **CERRADO post-v2.4: la "curva corrupta" nunca se observó.** El ítem quedó abierto como *"la causa
+  que corrompió la curva sigue sin identificarse"*, lo cual sugería un bug suelto dando vueltas. La
+  evidencia dice otra cosa:
+  - `errores_dsp.log` acumula **tres entradas, todas de "MCRA no calibra" y todas con `errores=0`** —
+    ese campo es el contador de excepciones del hilo DSP, así que **nunca se registró una sola
+    excepción** en la máquina del usuario. Y las tres son anteriores al fix del bypass (les falta el
+    campo `bypass=`), o sea que son el caso **ya resuelto**: comparaba con Bypass puesto, el audio no
+    llegaba al hilo procesador, y el estimador quedaba en `frames=0 / ld=None` — la firma idéntica a
+    un fallo real.
+  - El archivo no se volvió a tocar en ~10 días de uso posteriores (hay grabaciones del 31/8 y del
+    4/9). Sin entradas nuevas: cero excepciones del DSP.
+  - Es lo que el propio docstring de `mcra_diag` ya decía: *"no era excepción del DSP (no había
+    log)"*.
+  - **Qué pasó realmente:** la corrupción de `_floor_curve` fue **una hipótesis** para explicar el
+    síntoma de la v2.2. Buscándola se encontró un bug **real y distinto** —`reset()` no rearmaba las
+    curvas por-bin si el hop no había cambiado, así que el reset de recuperación no podía reparar el
+    estado que causaba el error—, y ese fix se sostiene solo. Pero el síntoma que motivó buscarlo
+    tenía otra causa, ya identificada.
+  - **Regla de método: una hipótesis que lleva a encontrar un bug real no queda validada por eso.**
+    Son dos cosas distintas — el fix de `reset()` vale por sí mismo, y la corrupción que se suponía
+    que arreglaba nunca ocurrió. Dejar el ítem abierto como "causa desconocida" hacía buscar un
+    fantasma.
+  - El log y el diagnóstico **ya pagaron**: fueron los que permitieron cerrar el caso del bypass. Si
+    alguna vez aparece una excepción real, el archivo dice qué línea falló.
 
 **v2.2 — DESCARTADO por medición: criba armónica contra el splatter de SSB.** El usuario
 preguntó si había algo de DSP para el splatter (productos de IMD de un vecino sobreexcitado). El

@@ -26,7 +26,7 @@
     "anf_depth": 0.5,
     "noise_enabled": true,
     "noise_mode": "mcra",
-    "noise_alpha": 0.75,
+    "noise_alpha": 0.8,
     "noise_floor": 0.2,
     "noise_smooth": 0.97,
     "noise_attack": 0.7,
