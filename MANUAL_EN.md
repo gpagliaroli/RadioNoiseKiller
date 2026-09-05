@@ -1,6 +1,6 @@
 ﻿# RadioNoiseKiller — User Manual
 
-**Version 2.4**
+**Version 2.4.1**
 
 ---
 
@@ -525,11 +525,14 @@ This behavior is automatic and requires no adjustment. It triggers when the sign
 > following the changes in band noise: it sounds as if the cancellation arrived late to every rise.
 > Raising the control loosens that freeze.
 >
-> The price is real: with the control at 100%, sustained voice raises the estimated floor by some
-> 10 dB, and then the canceller subtracts too much. That is why the end of the travel is for trying,
-> not for leaving set. The factory presets use a **different value in each one** (between 30% and
-> 100%), which is the short way of saying that this is chosen per condition and there is no single
-> good value.
+> The price is real but **it shrank in version 2.4.1**. Up to 2.4, with the control at 100%
+> sustained voice raised the estimated floor by some 10 dB and the canceller ended up subtracting too
+> much; that is why the end of the travel was for trying, not for leaving set. Since 2.4.1 the
+> canceller keeps voice harmonics out of the estimated floor (automatic, nothing to configure) and
+> that contamination dropped to about 2 dB. **All five factory presets now ship at 100%.**
+>
+> The control still does its job — there are some 3 dB between 30% and 100% — so if voice sounds dull
+> on continuous transmissions, lower it.
 
 > **Tip — the Fall brake is chosen by S/N, not by taste.** It is the kind of control that is free on
 > one band and ruins the voice on another, so it is worth understanding what it charges. When band
@@ -558,6 +561,18 @@ This behavior is automatic and requires no adjustment. It triggers when the sign
 > **Tip — calibrating Intensity with the Preview:** enable **"Preview: listen to removed noise"** and raise the **Intensity** while listening to what is being removed: as long as the preview contains only noise, you can keep raising it; at the point where voice starts leaking into the removed audio, back off one step and leave it there. That is the maximum cancellation that does not touch the voice. Disable the preview when done.
 >
 > **Important:** the preview reflects the **total reduction (Intensity + Post-filter)**. To calibrate **Intensity alone**, first set the **Post-filter to 0** — that way what you hear in the preview is only what the Intensity removes. Once the Intensity is set, raise the Post-filter (and, if you like, re-check with the preview that the post-filter isn't taking voice either).
+
+> **Version 2.4.1 may let you raise the Intensity.** From this version the canceller keeps voice
+> harmonics **out of the estimated noise floor**: the floor sits slightly lower and the canceller
+> takes a little less voice. It is automatic, there is no control to touch. The effect is subtle, but
+> it has a practical consequence: if you had the Intensity calibrated right at the limit with the
+> method above, it will probably now tolerate one more step before voice leaks into the preview. The
+> **five factory presets were re-tuned this way, and all five went up in Intensity** by 5 to 15
+> points. It is worth redoing the preview calibration after updating.
+>
+> **It needs block size 960 or 1920** (Advanced Audio), for the same reason as the Pitch boost: with
+> small blocks the harmonics fall into adjacent bins and cannot be told apart from the noise next to
+> them. At block 480 the canceller behaves as it did up to v2.4.
 
 > **Recipe — shortwave noise that rises and falls in short cycles:** a typical problem is band noise fluctuating several dB cyclically and fast, while the signal stays at a steady level. Without tuning, the estimator lags: on the rise it lets noise through, on the fall it eats the voice — a "swaying" of the sound. The combination that fixes it, all in **Adaptive mode**:
 > 1. **Floor reactivity** at **250–350 ms** — so the floor follows the noise's rise and fall.
@@ -672,6 +687,10 @@ This module detects the voice's **fundamental pitch** (f0) in real time via auto
 > promises. If you want to use this module, use **block 960 or 1920**. Up to v2.2 the
 > effect was much worse, and it also changed on its own when you changed the block
 > size, with nothing to indicate it.
+>
+> The same limit applies to the **harmonic exclusion from the floor** that the
+> canceller applies on its own since v2.4.1 (Ch. 7): it is another mechanism that
+> compares a bin against its neighbours, so it also needs clean neighbours to look at.
 
 > **When to enable it:** when the voice sounds "ghostly" or "robotic" with the canceller in MCRA mode or at high intensity, on weak AM or SSB signals — it improves intelligibility in both modes. Under normal conditions, leave it off.
 
@@ -1195,4 +1214,4 @@ The file is capped at a few errors per session, so it does not grow without boun
 
 ---
 
-*RadioNoiseKiller — version 2.4*
+*RadioNoiseKiller — version 2.4.1*

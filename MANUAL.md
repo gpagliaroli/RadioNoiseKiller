@@ -1,6 +1,6 @@
 ﻿# RadioNoiseKiller — Manual de Usuario
 
-**Versión 2.4**
+**Versión 2.4.1**
 
 ---
 
@@ -527,10 +527,14 @@ Este comportamiento es automático y no requiere ningún ajuste. Se activa cuand
 > ruido de banda: se escucha como que la cancelación llega tarde a cada subida. Subir el control
 > afloja ese freno.
 >
-> El precio es real: con el control en 100%, la voz sostenida sube el piso estimado unos 10 dB, y
-> entonces el cancelador resta de más. Por eso el extremo del recorrido es para probar, no para
-> dejar puesto. Los presets de fábrica usan un valor **distinto en cada uno** (entre 30% y 100%),
-> que es la forma corta de decir que esto se elige por condición y no hay un valor bueno para todo.
+> El precio existe pero **se achicó en la versión 2.4.1**. Hasta la 2.4, con el control en 100% la
+> voz sostenida subía el piso estimado unos 10 dB y el cancelador terminaba restando de más; por eso
+> el extremo del recorrido era para probar y no para dejar puesto. Desde la 2.4.1 el cancelador
+> mantiene los armónicos de la voz fuera del piso estimado (automático, no hay nada que configurar) y
+> esa contaminación bajó a unos 2 dB. Los **cinco presets de fábrica lo traen ahora en 100%**.
+>
+> El control sigue haciendo lo suyo — hay unos 3 dB de diferencia entre 30% y 100% —, así que si con
+> voz continua notás que la voz se apaga, bajalo.
 
 > **Consejo — el Freno de bajada se elige según el S/N, no según el gusto.** Es la clase de control
 > que en una banda es gratis y en otra arruina la voz, así que conviene entender qué cobra. Cuando
@@ -558,6 +562,18 @@ Este comportamiento es automático y no requiere ningún ajuste. Se activa cuand
 > **Consejo — calibrar la Intensidad con el Preview:** activar **"Preview: escuchar ruido eliminado"** y subir la **Intensidad** escuchando lo que se elimina: mientras en el preview se escuche solo ruido, se puede seguir subiendo; en el punto donde empieza a filtrarse voz en lo eliminado, bajar un paso y dejarlo ahí. Ese es el máximo de cancelación que no modifica la voz. Desactivar el preview al terminar.
 >
 > **Importante:** el preview refleja la reducción **total (Intensidad + Post-Filtro)**. Para calibrar **solo la Intensidad**, poné antes el **Post-Filtro en 0** — así lo que escuchás en el preview es únicamente lo que quita la Intensidad. Una vez fijada la Intensidad, subí el Post-Filtro (y si querés, revisá de nuevo con el preview que el post-filtro tampoco se lleve voz).
+
+> **La versión 2.4.1 puede permitirte subir la Intensidad.** Desde esta versión el cancelador mantiene
+> los armónicos de la voz **fuera del piso de ruido estimado**: el piso queda un poco más bajo y el
+> cancelador se lleva algo menos de voz. Es automático, no hay ningún control que tocar. El efecto es
+> sutil, pero tiene una consecuencia práctica: si tenías la Intensidad calibrada justo en el límite
+> con el método de arriba, ahora probablemente tolere un paso más antes de que se filtre voz en el
+> preview. Los **cinco presets de fábrica se reajustaron así, y los cinco subieron la Intensidad**
+> entre 5 y 15 puntos. Vale la pena rehacer la calibración con el preview después de actualizar.
+>
+> **Pide bloque 960 o 1920** (Avanzada Audio), por el mismo motivo que el Refuerzo de pitch: con
+> bloques chicos los armónicos caen en bins contiguos y no se los puede distinguir del ruido de al
+> lado. Con bloque 480 el cancelador se comporta como hasta la v2.4.
 
 > **Receta — ruido de onda corta que sube y baja en ciclos cortos:** un problema típico es el ruido de banda que fluctúa varios dB de forma cíclica y rápida, mientras la señal queda a nivel parejo. Sin ajuste, el estimador llega tarde: en la subida deja pasar ruido y en la bajada se come la voz — un "vaivén" del sonido. La combinación que lo resuelve, todo en **modo Adaptativo**:
 > 1. **Reactividad del piso** en **250–350 ms** — para que el piso siga el sube-y-baja del ruido.
@@ -671,6 +687,10 @@ Este módulo detecta en tiempo real el **tono fundamental** (f0) de la voz media
 > sobre toda la banda, quita supresión de ruido y no aporta lo que promete. Si
 > querés usar este módulo, **bloque 960 o 1920**. Hasta la v2.2 el efecto era mucho
 > peor y además cambiaba solo al cambiar el bloque, sin que nada lo indicara.
+>
+> El mismo límite vale para la **exclusión de armónicos del piso** que el cancelador
+> aplica solo desde la v2.4.1 (Cap. 7): es otro mecanismo que compara un bin contra
+> sus vecinos, así que también necesita que haya vecinos limpios que mirar.
 
 > **Cuándo activarlo:** cuando la voz suena "fantasmal" o "robótica" con el cancelador en modo MCRA o con intensidad alta, en señales débiles de AM o SSB — mejora la inteligibilidad en ambos modos. En condiciones normales, dejarlo desactivado.
 
@@ -1194,4 +1214,4 @@ El archivo se limita a unos pocos errores por sesión, así que no crece sin con
 
 ---
 
-*RadioNoiseKiller — versión 2.4*
+*RadioNoiseKiller — versión 2.4.1*

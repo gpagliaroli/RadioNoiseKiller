@@ -272,6 +272,26 @@ Bugs reales encontrados en revisión — cada uno es un patrón que puede reapar
    `test_post_filter_on_principal_autoenable`, falla intermitente según el estado del disco). Al
    testear un handler de slider, partir de un valor distinto conocido.
 
+**v2.4.1 publicada (septiembre 2026)** — release de patch en GitHub con distribuibles Windows y
+Linux. Versión de app 2.4.1, manuales `MANUAL_RadioNoiseKiller_v2.4.1.pdf` (ES, 44 págs) y
+`..._v2.4.1_EN.pdf` (EN, 43 págs). Título "v2.4.1 by LU6APA". **Patch y no menor**: no suma ni saca
+ningún control, no cambia el significado numérico de nada, y los presets viejos cargan igual. Trae
+**un solo cambio de comportamiento**, que entra solo y no hay que configurar:
+- **El cancelador excluye del piso estimado los armónicos sostenidos de la voz** (constante interna,
+  siempre activa en modo Adaptativo). El piso queda menos contaminado, así que se lleva menos voz.
+  Medido a igual nivel de voz: **−0,66 dB de fondo** sobre las 11 grabaciones reales del usuario y
+  −3,9 dB en banco con verdad conocida. CPU del profiler completo 325 µs/frame. **Pide bloque 960 o
+  1920** — a 480 no discrimina, mismo límite que el refuerzo de pitch.
+- **Los 5 presets de fábrica reafinados, y los CINCO suben la Intensidad** (+0,05 a +0,15). Es la
+  confirmación más fuerte del mecanismo: el punto de operación se movió en la dirección que predice.
+- **Dos correcciones de manual que habían quedado falsas**: que la voz sostenida con "Congelar piso
+  con voz" al 100 % sube el piso ~10 dB (ahora ~2) y que los presets de fábrica usan un valor
+  distinto en cada uno (ahora los cinco están en 100 %).
+- Y un bug de portabilidad que destapó un renombre del usuario: **git en Windows no ve un cambio de
+  mayúscula en el nombre de archivo**, así que un preset renombrado se iba a commitear con el nombre
+  viejo y habría fallado al cargar **sólo en Linux**.
+Los bloques "Post-v2.4" de abajo son el detalle. Todo lo audible está validado en el aire.
+
 **v2.4 publicada (agosto 2026)** — release en GitHub con distribuibles Windows y Linux. Versión de
 app 2.4.0, manuales `MANUAL_RadioNoiseKiller_v2.4.pdf` (ES, 44 págs) y `..._v2.4_EN.pdf` (EN, 43
 págs). Título "v2.4 by LU6APA". **Salto de menor**: no cambia el significado de ningún control ni el

@@ -34,7 +34,8 @@ panorama general y las notas para quien quiera tocar el código.
   (Ephraim-Malah) y suavizado OMLSA, con anti-gorgojeo automático gateado por el detector de voz
 - **Dos modos de estimación** — perfil **estático** aprendido a mano, o **adaptativo (MCRA)** que
   sigue el piso de ruido en continuo sin intervención, con freno de bajada y umbral de congelado
-  ajustables para el ruido cíclico de onda corta
+  ajustables para el ruido cíclico de onda corta. El adaptativo mantiene además los **armónicos de
+  la voz fuera del piso estimado**, así el cancelador se lleva menos voz con señal cómoda
 - **Post-filtro espectral** — segunda pasada que hunde el piso sólo en los bins de ruido
 - **Supresor de impulsos** — dos niveles en cascada (10 ms y 0,67 ms) para QRN atmosférico,
   detectados por contraste contra el audio vecino (no contra el piso), así la voz no dispara.
