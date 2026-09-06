@@ -7,6 +7,7 @@ Todo el DSP es **numpy/scipy puro** — sin IA, sin modelos externos, sin GPU y 
 
 **Plataformas:** Windows 10/11 · Linux x86_64 · ARM64 / Raspberry Pi (experimental)
 **Idiomas:** español · inglés
+**En video:** [explicación de la aplicación en *Net de la Tecnología*](https://www.youtube.com/watch?v=o8AEuAEnQpY)
 
 ---
 
