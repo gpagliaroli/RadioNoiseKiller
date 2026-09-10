@@ -3010,9 +3010,14 @@ Cambios v1.8.1 (los que estaban pendientes post-v1.8):
     otros mensajes de estado (p. ej. "Perfil cargado") en el arranque. El chequeo del `start()`
     (excepción `IncompatibleDevicesError`) se conserva como red de seguridad. Test en `test_ui.py`
     (`test_incompatible_devices_disable_activate`, monkeypatchea `duplex_hostapi_mismatch`).
-  - **Pendiente / futuro:** soporte real de combinaciones cruzadas vía **dos streams separados**
-    (InputStream + OutputStream con ring buffer) — más complejo (latencia/sincronía), decisión del
-    usuario si vale la pena.
+  - **DESCARTADO (septiembre 2026): el cruce de APIs queda como está, bloqueado con aviso.** La
+    alternativa era soportarlo de verdad con **dos streams separados** (InputStream + OutputStream
+    con ring buffer). Decisión del usuario: *"va a quedar como está, no vamos a hacer la
+    modificación"*. **No reproponerlo.** El motivo de fondo es que el aviso proactivo ya resuelve el
+    problema que se reportó —el usuario no puede intentar una combinación inválida y el mensaje dice
+    qué elegir—, mientras que dos streams independientes traen relojes que derivan entre sí, y eso
+    pide un resampler o un buffer elástico: mucha maquinaria nueva en el camino del audio para
+    habilitar un caso que se evita eligiendo los dos dispositivos de la misma API.
 - **Ajustes de presets de fábrica del usuario** (afinados en uso real, se publican tal cual —
   ver [[project_factory_presets]]): `AM Local - RuidoMedio` pasa a perfil estático, intensidad 0.6,
   squelch on, más presencia (1500 Hz / 6 dB) y cuerpo (350 Hz / 3 dB), límite de picos −1.5 dB;
