@@ -1974,6 +1974,12 @@ configurado en algún Linux) el botón no haría nada visible. Test en `test_ui`
   `button_6` (celeste) elegida porque el negro se pierde contra el fondo oscuro de GitHub.
 - **VALIDADO por el usuario**: botón clickeado en la app real y badge del README revisado en las
   dos temáticas.
+- **DESCARTADO `.github/FUNDING.yml` (septiembre 2026).** Pondría el botón *Sponsor* en la página
+  del repo. Estuvo un tiempo en la lista de pendientes esperando la aprobación de GitHub Sponsors,
+  para listar las dos plataformas juntas en vez de sólo Cafecito. El usuario lo sacó de la lista:
+  *"no lo voy a hacer por el momento"*. **No reproponerlo** — el botón de Cafecito del "Acerca de"
+  y el badge del README ya cubren el caso. Si algún día se retoma: hay que convertir `_DONATE_URL`
+  (hoy una sola URL) en una lista de `(etiqueta, url)` para que el "Acerca de" muestre los dos.
 - **Tres presets de fábrica reajustados en la misma tanda** (ver [[project_factory_presets]]):
   `AM Local - RuidoMedio`, `AM SW - Ruido Alto y Fading` y `AM SW - Ruido Medio y Fading`. Además
   del ANF (arriba), el patrón es Intensidad más baja (0.7→0.6 en los tres) compensada con
@@ -3236,13 +3242,6 @@ Backlog v1.7 (acordado con el usuario tras la revisión de código de julio 2026
   conmutable, colormap SDR clásico, splitter arrastrable). **Validado en el aire.**
 
 Pendiente para Fase 2:
-- **`.github/FUNDING.yml` — diferido hasta tener GitHub Sponsors aprobado.** Pondría el botón
-  *Sponsor* en la página del repo. Decisión del usuario: esperar a la habilitación de Sponsors para
-  listar las dos plataformas juntas, en vez de hacerlo ahora sólo con Cafecito. **No proponerlo
-  suelto**; el disparador es que Sponsors quede aprobado (Argentina está entre las regiones
-  soportadas; el trámite pide 2FA, Stripe Connect y W-8BEN, y GitHub no cobra comisión).
-  Si eso pasa, además hay que ver si el "Acerca de" muestra un botón o dos: hoy `_DONATE_URL` es
-  una sola URL y habría que convertirla en una lista de `(etiqueta, url)`.
 - Validar build en Pi real (ARM64 Raspberry Pi OS Bookworm)
 - Reducir/optimizar el tamaño total de la app. **Primera pasada hecha y validada en ambas
   plataformas (v1.5):** recorte de módulos Qt sin uso en ambos specs (`QT_EXCLUDES` + filtro
