@@ -583,9 +583,18 @@ pide 122 px y `"⏹  Detener"` 134.
 - **140 y no 134** (el mínimo justo) porque **el ancho de los emoji depende de la fuente del
   sistema**: sin holgura, en otra máquina el texto sale con "...". Es el mismo tipo de cuidado que
   el resto de los anchos fijos de la UI.
-- **`"🔇  Silenciado"` (170 px) sigue recortándose** y se dejó a propósito: es una palabra que eligió
-  el usuario, y en 140 recorta MENOS que antes en 120. Queda como decisión suya cambiarla
-  (`"🔇  Mudo"` entra en 98) o ensanchar los tres.
+- **`"🔇  Silenciado"` NO recorta en la app real — CERRADO (septiembre 2026).** Se dejó a
+  propósito en su momento porque la medición headless decía que pedía 170 px en un botón de 140, y
+  la palabra la eligió el usuario. Al revisarlo él en la app real: *"Silenciado ya no recorta, está
+  ok"*. **No volver a "arreglarlo".**
+  - **La medición headless no sirve para esto y conviene saberlo.** Con `QT_QPA_PLATFORM=offscreen`
+    Qt toma una fuente de reemplazo (`Sans Serif 9pt`), no la real de Windows, y **el ancho de los
+    emoji depende de la fuente del sistema** — lo dice el bullet de arriba sobre por qué el ancho es
+    140 y no 134. Re-medido headless da 156 px, distinto de los 170 de la vez anterior y distinto de
+    lo que se ve en pantalla: el instrumento devuelve un número por corrida, no el de la app.
+  - **Regla: el recorte de un texto con emoji se verifica MIRANDO la app en la plataforma real.**
+    El guard `test_ui::test_botones_de_escucha_mismo_ancho_y_sin_recortes` sigue valiendo para
+    detectar regresiones relativas (que un texto nuevo no crezca), no para afirmar que algo recorta.
 - Test `test_ui::test_botones_de_escucha_mismo_ancho_y_sin_recortes`: mismo ancho los tres, y
   ningún texto de ningún estado se elide — **en los dos idiomas**, porque las traducciones cambian
   el largo (`"Detener"` mide 134 y `"Stop"` 98).
