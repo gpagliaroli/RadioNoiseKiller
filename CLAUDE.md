@@ -290,7 +290,10 @@ ningún control, no cambia el significado numérico de nada, y los presets viejo
 - Y un bug de portabilidad que destapó un renombre del usuario: **git en Windows no ve un cambio de
   mayúscula en el nombre de archivo**, así que un preset renombrado se iba a commitear con el nombre
   viejo y habría fallado al cargar **sólo en Linux**.
-Los bloques "Post-v2.4" de abajo son el detalle. Todo lo audible está validado en el aire.
+Los bloques "Post-v2.4" de abajo son el detalle. Todo lo audible está validado en el aire, y el
+**distribuible de Windows quedó revisado por el usuario** (septiembre 2026: *"la app 2.4.1 ya la
+revisé y todo funcional ok"*) — versión en el título, los 5 presets en su pestaña y el
+funcionamiento general.
 
 **v2.4 publicada (agosto 2026)** — release en GitHub con distribuibles Windows y Linux. Versión de
 app 2.4.0, manuales `MANUAL_RadioNoiseKiller_v2.4.pdf` (ES, 44 págs) y `..._v2.4_EN.pdf` (EN, 43
