@@ -272,6 +272,42 @@ Bugs reales encontrados en revisión — cada uno es un patrón que puede reapar
    `test_post_filter_on_principal_autoenable`, falla intermitente según el estado del disco). Al
    testear un handler de slider, partir de un valor distinto conocido.
 
+**Post-v2.4.1 — DESCARTADO por medición: UPX. Y los specs pasan a `upx=False`** (septiembre 2026).
+Los dos specs traían `upx=True` desde siempre, pero **UPX nunca estuvo instalado**, así que
+PyInstaller lo salteaba en silencio: era un no-op. Se evaluó de verdad, con UPX 5.2.1 portable.
+- **Comprime bien en disco, casi nada en la descarga**: bundle **168,6 → 83,7 MB** (la mitad), pero
+  el zip sólo **70,3 → 62,5 MB** (−7,8 MB, 11 %), porque el zip **ya** comprimía al 42 %.
+  - **Mi predicción previa era FALSA y conviene anotarlo**: había supuesto que la descarga podía
+    CRECER, porque lo comprimido no vuelve a comprimirse. UPX usa NRV/UCL, que deja suficiente
+    redundancia para que el deflate del zip todavía saque otro 25 %. La aritmética "alta entropía →
+    el zip no gana nada" no aplica a UPX.
+- **LO QUE LO MATA: Microsoft Defender marca las DLL comprimidas.** En VirusTotal, `openblas` da
+  **3/70** y `python314.dll` **2/70**, **con Microsoft entre los motores** en los dos. No es un motor
+  marginal de los que marcan cualquier cosa empaquetada: es el antivirus **por defecto** de Windows
+  10/11. El modo de falla es silencioso y caro — el usuario baja el zip, le ponen una DLL en
+  cuarentena, y la app no arranca sin que entienda por qué.
+- **TRAMPA DE MÉTODO, y es la lección reutilizable: el escaneo LOCAL con Defender dio LIMPIO en los
+  dos.** `MpCmdRun.exe -Scan` sobre el exe no encontró nada, y eso daba una falsa sensación de
+  seguridad: el motor de Microsoft en VirusTotal corre con heurística y nube más agresivas que un
+  análisis local a demanda. **Un escaneo local no sirve para estimar el riesgo de terceros** —
+  sólo dice "este Defender, con las firmas de hoy, en esta máquina".
+- **Segundo costo, independiente del antivirus: +88 MB de RAM (235 → 323, +37 %).** Las DLL
+  comprimidas se descomprimen en memoria privada y dejan de poder paginarse desde disco. La máquina
+  de referencia del proyecto es un **AMD A6 de 2 núcleos**. El arranque no se movió (3,5 s en los
+  dos), pero eso se midió con caché de disco caliente, o sea la medición favorable.
+- **Dato técnico que sorprende y acota el tema: UPX RECHAZA el ejecutable principal y todo Qt.**
+  `RadioNoiseKiller.exe`, `Qt6Core/Qt6Gui/Qt6Widgets.dll` y `ucrtbase.dll` dan
+  *"GUARD_CF enabled PE files are not supported"* — tienen Control Flow Guard, y sólo se pueden
+  forzar con `--force`, que desactiva la mitigación. De 199 binarios comprimió **137**; los otros 62
+  son el exe y los stubs `api-ms-win-*` de 10 KB. Toda la ganancia sale de **OpenBLAS ×2**
+  (19,5 → 4,6 MB, 76 %), `python314.dll` y los `.pyd` de numpy/scipy.
+- **Los specs quedan en `upx=False`, no en `True`.** Con `True` era una mina: el día que alguien o un
+  runner de CI tuviera UPX en el PATH, el build habría empezado a comprimir solo y a publicar
+  binarios que Defender marca, sin que nadie lo decidiera. **Regla: una opción de build que depende
+  de una herramienta ausente no está "desactivada", está esperando.** El porqué y los números están
+  en un comentario arriba del flag, en los dos specs.
+- Verificado que el build sigue dando idéntico con el flag en False (170 MB, igual que antes).
+
 **v2.4.1 publicada (septiembre 2026)** — release de patch en GitHub con distribuibles Windows y
 Linux. Versión de app 2.4.1, manuales `MANUAL_RadioNoiseKiller_v2.4.1.pdf` (ES, 44 págs) y
 `..._v2.4.1_EN.pdf` (EN, 43 págs). Título "v2.4.1 by LU6APA". **Patch y no menor**: no suma ni saca
@@ -3262,6 +3298,7 @@ Pendiente para Fase 2:
   `sin_basura_qt()`) — Windows dist 218→166 MB, artifact Linux 189→~170 MB (con libQt6OpenGL y
   plugins wayland restaurados tras el fix de decoraciones). Sin recorte posible en scipy (los
   imports de scipy.signal arrastran todo transitivamente — verificado) ni en las dos OpenBLAS
-  (ABIs distintas). Pendiente si se quiere más: UPX (no está instalado — el `upx=True` de los
-  specs hoy es no-op; ojo falsos positivos de antivirus) y re-recortar libQt6OpenGL en Linux
-  (bradient usa libGL del sistema, no la lib de Qt)
+  (ABIs distintas). **UPX quedó DESCARTADO por medición** (Defender marca las DLL comprimidas y
+  cuesta +88 MB de RAM — ver el bloque propio más arriba), y los specs pasaron a `upx=False`. Lo
+  único que queda si se quiere más: re-recortar libQt6OpenGL en Linux (bradient usa libGL del
+  sistema, no la lib de Qt)

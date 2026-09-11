@@ -164,7 +164,18 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    # UPX DESACTIVADO A PROPOSITO — medido en septiembre 2026, ver CLAUDE.md.
+    # Comprime bien (bundle 168 -> 84 MB) pero NO conviene, por dos motivos medidos:
+    #   1. Microsoft Defender marca las DLL comprimidas (openblas 3/70 y python314
+    #      2/70 en VirusTotal, con Microsoft entre los motores). Defender es el
+    #      antivirus por defecto de Windows: el usuario baja el zip, le ponen una DLL
+    #      en cuarentena y la app no arranca.
+    #   2. +88 MB de RAM (235 -> 323), porque las DLL se descomprimen en memoria y
+    #      dejan de paginarse desde disco. La maquina de referencia es un AMD A6.
+    # La descarga apenas baja (zip 70,3 -> 62,5 MB) porque el zip ya comprimia.
+    # Queda en False y no en True: con True era un no-op silencioso mientras UPX no
+    # estuviera instalado, y se habria activado solo el dia que alguien lo tuviera.
+    upx=False,
     console=False,
 )
 
@@ -174,7 +185,7 @@ coll = COLLECT(
     a.zipfiles,
     a.datas,
     strip=False,
-    upx=True,
+    upx=False,
     upx_exclude=[],
     name="RadioNoiseKiller",
 )
