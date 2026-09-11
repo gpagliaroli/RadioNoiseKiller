@@ -14,8 +14,9 @@ en orden; cada uno tiene su verificación. No publicar si algo falla.
 - **Cada feature/fix fue validado por el usuario en hardware real** (Windows multi-monitor,
   notebook Ubuntu/Wayland, interfaz USB según aplique — ver invariantes de empaquetado en
   CLAUDE.md). Si algo quedó sin validar, preguntarle al usuario antes de seguir.
-- CLAUDE.md tiene la lista "Cambios vX.Y (pendiente de release)" completa — es la fuente de
-  las notas del release.
+- CLAUDE.md tiene la lista "Cambios pendientes de release" completa (sección "Estado actual del
+  proyecto") — es la fuente de las notas del release. El detalle de cada cambio vive en
+  `docs/HISTORIAL_TECNICO.md`, sección "En curso".
 
 ## 1. Bump de versión (2 lugares)
 
@@ -78,8 +79,11 @@ diagnósticos — correrlos a mano si el release tocó enumeración de dispositi
 
 ## 4. Commit de release + tag
 
-- Actualizar CLAUDE.md: "Cambios vX.Y (pendiente de release)" → "**vX.Y publicada (mes año)**"
-  con la nota del manual.
+- Actualizar CLAUDE.md: "Estado actual del proyecto" pasa a "**vX.Y publicada (mes año)**" con
+  la nota del manual, y "Cambios pendientes de release" vuelve a "(ninguno)". En
+  `docs/HISTORIAL_TECNICO.md`: agregar la fila de la versión a la tabla del índice, y los bloques de
+  "En curso" pasan a una sección propia de la versión (`## vX.Y (mes año)`). CLAUDE.md tiene que
+  seguir bajo ~60k caracteres (el límite duro de Claude Code es 150k).
 - Commit `release: vX.Y — <resumen>` (sin comillas dobles en el mensaje — el quoting de
   PowerShell 5.1 hacia git las rompe). Co-Authored-By de rigor.
 - `git tag vX.Y && git push origin main vX.Y` — **el tag dispara el build Linux en CI**
