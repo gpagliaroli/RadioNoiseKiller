@@ -233,8 +233,20 @@ class NoiseProfiler:
     # flanco se recupera casi todo (−27.0 vs −28.0 dB y 9.54 vs 9.23) conservando el
     # ataque (−0.05 dB). El gate por vp_sq sigue siendo imprescindible: sin ningún
     # gate el residuo empeora 10 dB.
-    _PS_ATTACK_VP_SQ:  float = 0.30   # vp rápido que dispara la ventana de ataque
-    _PS_ATTACK_FRAMES: int   = 4      # duración de la ventana (40 ms) tras el flanco
+    # Post-v2.4.1: el flanco de vp_sq solo NO alcanza. Con ruido real de banda (no el
+    # gaussiano del banco) el VAD rápido cruza 0,30 entre 3 y 5 veces por segundo sin
+    # voz, y cada cruce abría la ventana: el ruido pasaba crudo 40 ms y, peor, el
+    # crudo quedaba guardado como estado del EMA (ver process). Ahora la ventana se
+    # arma cuando la confianza espectral cruda (peakiness o pitch del frame, sin
+    # release) supera _PS_ATTACK_CONF en _PS_ATTACK_CONF_FRAMES frames seguidos.
+    # Medido sobre la grabación SSB del 11/9 (a igual Intensidad): disparos en falso
+    # 3,8/s → 0,38/s, p95 del fondo en ruido −12,6 → −22,2 dB, arranque de sílaba
+    # −0,56 dB contra la meseta (3 frames sin ventana: −3,2 dB; sin ventana: −1,5 dB
+    # acá y −5,8 dB en el banco de la v2.0). Guard sintético: −0,44 dB.
+    _PS_ATTACK_VP_SQ:  float = 0.30   # vp rápido que habilita la ventana de ataque
+    _PS_ATTACK_FRAMES: int   = 4      # duración de la ventana (40 ms) tras armarse
+    _PS_ATTACK_CONF:   float = 0.50   # confianza espectral cruda que cuenta como confirmación
+    _PS_ATTACK_CONF_FRAMES: int = 2   # frames consecutivos confirmados para armar la ventana
 
     # --- Post-filtro espectral (supresión extra en bins de ruido) -------------
     # dB de profundidad extra por unidad del slider (0-10 → 0-45 dB bajo el piso).
@@ -349,6 +361,8 @@ class NoiseProfiler:
         # Exclusión de armónicos sostenidos: SIEMPRE activa (ver _picos_sostenidos).
         self._sust_run:  "np.ndarray | None" = None
         self._freeze_thr: float = self._MCRA_PITCH_THR  # slider 0.30-1.00 (1.00 = nunca)
+        self._conf_raw: float = 0.0
+        self._conf_run: int = 0
         self._mcra_M:         int   = self._calc_mcra_M()
 
         # Métricas para indicadores UI
@@ -485,6 +499,8 @@ class NoiseProfiler:
         self._mcra_voice_hold    = 0
         self._atk_window         = 0
         self._prev_vp_sq         = 0.0
+        self._conf_raw           = 0.0
+        self._conf_run           = 0
         if self._mode == "mcra":
             self._reset_mcra()
 
@@ -1175,6 +1191,7 @@ class NoiseProfiler:
             if mean_sig < mean_noise_prof * self._MCRA_SQUELCH_RATIO:
                 vp_raw    = 0.0
                 vp_raw_sq = 0.0
+                self._conf_raw = 0.0
             else:
                 # Tracker lento (OMLSA)
                 if self._vad_energy_fast is None:
@@ -1224,6 +1241,7 @@ class NoiseProfiler:
                     (pitch_conf - self._VAD_PITCH_BASE) / self._VAD_PITCH_SPAN, 0.0, 1.0
                 ))
                 conf_raw = max(conf_peak, conf_pitch)
+                self._conf_raw = conf_raw
                 # Ataque instantáneo, release ~100ms: cubre los valles entre
                 # sílabas (con ruido la confianza cruda es 0 y decae rápido)
                 if conf_raw >= self._spec_conf:
@@ -1322,25 +1340,36 @@ class NoiseProfiler:
                     self._ps_smooth
                     + (self._PS_SMOOTH_QUIET - self._ps_smooth) * (1.0 - vp_open)
                 )
-                # Ventana de ataque: sólo en los frames siguientes al FLANCO del VAD
-                # rápido (ver _PS_ATTACK_VP_SQ). Dentro de ella los bins que SUBEN no
-                # se suavizan → el arranque de sílaba pasa entero. Fuera de ella —
-                # incluidos los huecos entre palabras, donde el vp_sq sigue alto — todo
-                # se suaviza normalmente → anti-gorgojeo intacto.
+                # Ventana de ataque: unos frames tras el ARRANQUE de voz (ver
+                # _PS_ATTACK_VP_SQ). Dentro de ella los bins que SUBEN no se suavizan
+                # → el arranque de sílaba pasa entero. Fuera de ella — incluidos los
+                # huecos entre palabras, donde el vp_sq sigue alto — todo se suaviza
+                # normalmente → anti-gorgojeo intacto. El arranque se confirma por
+                # TIEMPO (regla 4): la confianza espectral CRUDA del frame (sin
+                # release) tiene que superar _PS_ATTACK_CONF dos frames seguidos. En
+                # ruido real de banda (grabación SSB del 11/9) el 80 % de las rachas
+                # de peakiness dura UN frame; en voz la mediana es de 4-6 frames.
+                if self._conf_raw >= self._PS_ATTACK_CONF:
+                    self._conf_run += 1
+                else:
+                    self._conf_run = 0
                 if (self._voice_prob_sq >= self._PS_ATTACK_VP_SQ
-                        and self._prev_vp_sq < self._PS_ATTACK_VP_SQ):
+                        and self._conf_run == self._PS_ATTACK_CONF_FRAMES):
                     self._atk_window = self._PS_ATTACK_FRAMES
                 elif self._atk_window > 0:
                     self._atk_window -= 1
-                self._prev_vp_sq = self._voice_prob_sq
+                p_smooth = (ps_a * self._p_speech_prev
+                            + (1.0 - ps_a) * p_speech).astype(np.float32)
+                # Dentro de la ventana los bins que suben pasan crudos a la SALIDA,
+                # pero el estado del EMA sigue siempre el valor suavizado. Antes el
+                # crudo se guardaba como estado: cada disparo en falso (ruido con
+                # espectro picudo) trababa p_speech arriba y sólo bajaba a 0,95 por
+                # frame → ráfagas de fondo de 300-500 ms entre palabras.
                 if self._atk_window > 0:
-                    ps_eff = np.where(p_speech > self._p_speech_prev,
-                                      np.float32(0.0), ps_a).astype(np.float32)
+                    p_speech = np.maximum(p_smooth, p_speech)
                 else:
-                    ps_eff = ps_a
-                p_speech = (ps_eff * self._p_speech_prev
-                            + (1.0 - ps_eff) * p_speech).astype(np.float32)
-                self._p_speech_prev = p_speech
+                    p_speech = p_smooth
+                self._p_speech_prev = p_smooth
 
             gain_out = (gain_dd ** p_speech) * (_eff_floor ** (1.0 - p_speech))
 

@@ -39,6 +39,54 @@ regla de método nueva.
 
 _(Los bloques nuevos de la próxima versión van acá, el más reciente arriba.)_
 
+**Post-v2.4.1: ráfagas de fondo entre palabras — la ventana de ataque de `p_speech` disparaba con
+ruido real.** Reportado con grabación (`RNK_2026-09-11_16-54-33`, SSB, ruido de banda a −20 dBFS
+constante, preset "SSB - Ruido Alto - Perfil Adaptativo"): *"unos ruidos molestos que se escuchan
+cuando no hay audio o está muy bajo"*. La grabación se pasó por la cadena real en sincrónico
+(`tools/replay_recording.py`, nuevo; réplica vs. grabación: corr 0,955 a lag 0) instrumentando el
+profiler por frame.
+- **Qué era.** En las zonas sin voz la entrada es plana (−20 ± 1 dB) y la salida salta 15-20 dB
+  entre frames. `p_speech` en banda pasaba de 0,3 a 0,8 y se quedaba ahí 300-500 ms. Causa doble:
+  (1) el VAD rápido `vp_sq` cruza 0,30 entre 3,5 y 4,6 veces por segundo **sin voz** — el ruido de
+  banda real tiene un 25-30 % de frames con espectro picudo (peakiness > 5,5; no es la rugosidad de
+  λ_d: suavizándolo en frecuencia baja sólo de 26 a 22 %) — y cada cruce abría la ventana de ataque;
+  (2) dentro de la ventana el valor crudo de los bins que suben **se guardaba como estado del EMA**,
+  así que subía al instante y bajaba a 0,95/frame: un trinquete. Los tests sintéticos no lo vieron
+  porque con ruido gaussiano el gate "no abre nunca sin voz" (así lo decía la nota de la v2.0).
+- **Fix (a).** El estado del EMA sigue siempre el valor suavizado; el crudo sólo va a la SALIDA de
+  los frames de la ventana. Solo: fondo medio −31,8 → −35,3 dB pero p95 apenas −22,0 → −24,4 y
+  picos de +17 dB de 20-80 ms a cada disparo en falso.
+- **Fix (b), regla 4.** La ventana se arma cuando la confianza espectral CRUDA del frame (peakiness
+  o pitch, sin release) supera 0,50 **dos frames seguidos** (y `vp_sq ≥ 0,30`). Medido en la
+  grabación: las rachas de confianza en ruido duran 1 frame el 80 % de las veces; en voz la mediana
+  es 4-6. Barrido sobre el MISMO conjunto de arranques de voz (ganancia del cancelador en banda,
+  3 frames de arranque contra la meseta):
+
+  | Variante | arranque−meseta | fondo p95 (ruido) | std | disparos en ruido |
+  |---|---|---|---|---|
+  | HEAD (flanco + trinquete) | — | −12,6 dB | 6,4 | 3,8/s |
+  | (a) solo | — | −15,8 | 5,6 | 3,8/s |
+  | (a) + 2 frames ≥ 0,30 | +0,37 dB | −19,6 | 4,2 | 0,75/s |
+  | **(a) + 2 frames ≥ 0,50** | **−0,56 dB** | **−22,2** | **3,6** | **0,38/s** |
+  | (a) + 3 frames ≥ 0,30 | −3,2 dB | −23,2 | 3,3 | 0,15/s |
+  | sin ventana | −1,5 dB | −23,4 | 3,2 | 0 |
+
+  Tres frames ya cuesta el arranque (−3,2 dB, el síntoma "limitada" de la v2.0 era −5,8); sin
+  ventana −1,5 dB acá pero −5,8 en el banco de la v2.0. Se queda **2 frames ≥ 0,50**.
+- **Resultado en la salida completa** (misma señal, misma config; zonas sin voz 12-16 / 24-28 /
+  43-48 s, zonas con voz 6-9 / 39-42 / 48-50 s): fondo medio −31,8 → **−38,0 dB**, p95 −22,0 →
+  **−30,5**, std 6,5 → 3,6; picos de voz (p95) −13,6 → −13,5. **A igual costo** (regla 6): HEAD con
+  Intensidad 1,0 llega a −37,0 de fondo con la misma voz (−25,3) pero con std 7,9 y p95 −24,6 — la
+  mejora está en el carácter del fondo (parejo en vez de a ráfagas), no en la cantidad.
+- Guard sintético de ataque de sílaba: −0,15 → −0,44 dB (umbral del test intacto). Suite completa
+  en verde. `pipeline._process_chunk()` se extrajo de `_run_processor` para poder correr la cadena
+  sin hilo. **Validado en el aire** (13/9): *"el ruido disminuyó bastante, aún siento algún que
+  otro ruido pero mucho mejor"*. Lo que queda son los disparos confirmados (0,38/s en la grabación:
+  pares de frames picudos seguidos) — si se persigue, grabar de nuevo con el código nuevo antes de
+  tocar nada.
+- Regla de método 34 (CLAUDE.md): un detector de transitorios que "nunca dispara sin voz" en el
+  banco hay que correrlo sobre ruido real antes de creerle.
+
 ---
 
 ## v1.2 → v1.4 (julio 2026)

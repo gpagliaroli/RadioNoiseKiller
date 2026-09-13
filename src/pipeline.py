@@ -1154,128 +1154,11 @@ class ProcessingPipeline:
                 break
 
             try:
-                # Referencia al chunk crudo para la grabación (ninguna etapa
-                # muta el array original in place — el blanker copia primero)
-                raw_chunk = chunk
-
-                chunk = self._blanker.process(chunk)
-
-                # Techo de ruido: limita cuánto puede amplificar el AGC, para que
-                # no levante el ruido de banda por encima del nivel elegido. Se
-                # calcula sobre la entrada CRUDA (pre-AGC), así el tope no depende
-                # de la propia ganancia que está limitando — si dependiera, se
-                # realimentaría (la lección del freeze de MCRA). Ver _track_input_noise.
-                self._track_input_noise(chunk)
-                if self._agc_noise_ceiling_enabled and self._in_noise_min > 1e-9:
-                    self._agc.set_max_gain_limit(self._agc_gain_cap_db())
-                else:
-                    self._agc.set_max_gain_limit(None)
-                    self._in_cap_db = None   # al reactivarlo, arranca sin freno
-
-                # Durante el aprendizaje del perfil: AGC congelado (si no, sube
-                # la ganancia sobre el ruido y el perfil captura un barrido de
-                # niveles en vez de un nivel estable)
-                learning = self._noise_profiler.is_learning
-                self._agc.set_hold(learning)
-                chunk = self._agc.process(chunk)
-
-                with self._lock:
-                    filtered = self._bandpass.process(chunk) if self._bandpass_pre_enabled else chunk
-
-                filtered = self._anf.process(filtered)
-                # Perfil independiente del filtro: durante el aprendizaje se alimenta
-                # el profiler con el espectro COMPLETO (post-AGC, PRE-pasabanda/ANF),
-                # así el noise_mag cubre todas las frecuencias. En reproducción el
-                # cancelador suprime bien los agudos aunque el pasabanda cambie, se
-                # ensanche o se apague (antes el perfil aprendía ~0 en los agudos —el
-                # filtro los quitaba— y al ensanchar/reiniciar el siseo agudo pasaba
-                # sin suprimir). El pasabanda/ANF igual corren arriba para no congelar
-                # su estado IIR; su salida se descarta para el aprendizaje. El monitoreo
-                # del aprendizaje se atenúa -12dB, así que no importa que sea sin filtrar.
-                prof_in = chunk if learning else filtered
-                self._spec_pre_frames.append(prof_in.copy())    # lo que ve el profiler
-                # El VAD del profiler descuenta la ganancia del AGC (nivel de antena)
-                self._noise_profiler.set_agc_gain(self._agc.gain_lin)
-                filtered = self._noise_profiler.process(prof_in)
-
-                # Monitoreo atenuado durante el aprendizaje: sin perfil todavía
-                # no hay supresión y el ruido de banda sale a pleno — molesto y
-                # puede saturar. -12 dB con rampa por frame (sin clicks).
-                learn_gain = self._LEARN_DUCK_GAIN if learning else 1.0
-                if learn_gain != self._learn_gain_prev or learn_gain < 1.0:
-                    ramp = np.linspace(self._learn_gain_prev, learn_gain,
-                                       len(filtered), dtype=np.float32)
-                    filtered = filtered * ramp
-                    self._learn_gain_prev = learn_gain
-
-                # Preview ("escuchar ruido eliminado"): lo que sale del cancelador es
-                # lo que RESTA, y es material de diagnóstico — tiene que llegar al
-                # oído tal cual. Las etapas de coloreo posteriores lo falsean, y
-                # justamente todas se disparan cuando hay voz:
-                #   - gate de ruido: cierra sin señal → no se escucharía el ruido
-                #   - nivelador: AGC de hasta +20 dB sobre una señal de bajo nivel
-                #   - EQ presencia/cuerpo: realza 1.5 kHz, plena banda de legibilidad
-                #   - excitador: con el gate por VAD ABRE con voz y le agrega armónicos
-                # Con eso, un resto de voz apenas audible salía nivelado, realzado y
-                # con armónicos nuevos: sonaba mucho más presente de lo que realmente
-                # se está quitando. Se conservan el pasabanda de salida (define la
-                # banda que se escucha) y el limitador (protección).
-                preview = self._preview_mode
-
-                # Nivelador de voz (el vp requiere cancelador activo — invariante 2).
-                # Con gate por VAD: solo adapta con voz presente (evita perseguir el
-                # ruido residual entre palabras). Sin gate: adapta en continuo, para
-                # música / audio continuo donde no hay estructura de voz que detectar.
-                if (self._voice_leveler_enabled and self._noise_enabled
-                        and not preview
-                        and self._noise_profiler.has_profile):
-                    hold = (self._voice_leveler_gate_voice
-                            and self._noise_profiler.voice_prob < self._LEVELER_VP_THR)
-                    self._agc_voice.set_hold(hold)
-                    filtered = self._agc_voice.process(filtered)
-
-                # Gate del excitador por VAD: corre al final del pipeline, así que sin
-                # gate levanta el ruido residual tanto como la voz (siseo brillante
-                # entre palabras). Sin cancelador o sin perfil el vp no se actualiza
-                # (invariante 2) → 1.0 = sin gatear.
-                self._exciter.set_voice_gate(
-                    self._noise_profiler.voice_prob
-                    if (self._noise_enabled and self._noise_profiler.has_profile)
-                    else 1.0
-                )
-
-                with self._lock:
-                    mixed = self._bandpass_out.process(filtered) if self._bandpass_post_enabled else filtered
-                    if self._presence_enabled and not preview:
-                        mixed = self._presence.process(mixed)
-                        mixed = self._body.process(mixed)
-                    if not preview:
-                        mixed = self._exciter.process(mixed)
-                        # DESPUÉS del pasabanda de salida: si fuera antes, el propio
-                        # filtro se comería el fundamental que acabamos de sintetizar
-                        # (es justo la banda que la radio ya había cortado).
-                        mixed = self._bass.process(mixed)
-                    out_frame = self._limiter.process(mixed, self._config.audio.sample_rate)
-
-                # Gate de ruido: decide con el nivel de ENTRADA (que es lo que el
-                # operador ve en el VU y contra lo que calibra el umbral) y actúa
-                # acá, sobre la salida ya procesada. En preview no corre: ahí lo
-                # que se escucha es material de diagnóstico, no la señal.
-                if not preview:
-                    out_frame = self._gate.process(out_frame, self.input_level_db)
-
-                self._spec_post_frames.append(out_frame.copy())
-
-                if self._recorder.recording:
-                    self._recorder.feed(
-                        out_frame,
-                        raw_chunk if self._recorder.wants_raw else None)
-
+                out_frame = self._process_chunk(chunk)
                 try:
                     self._out_queue.put_nowait(out_frame)
                 except queue.Full:
                     pass
-
             except Exception as exc:
                 # Contador de diagnóstico: sin lock a propósito (invariante 7).
                 # Un fallo acá se repite CADA frame y el reset de abajo deja al
@@ -1297,6 +1180,131 @@ class ProcessingPipeline:
                     self._body.reset()
                     self._exciter.reset()
         
+    def _process_chunk(self, chunk: np.ndarray) -> np.ndarray:
+        """La cadena DSP completa para un hop, sincrónica: entra el chunk crudo
+        (post ganancia de entrada), sale el frame procesado. Es lo que corre el
+        hilo procesador para cada chunk; separada para poder pasar una grabación
+        por la cadena real sin hilo ni colas (regla de método 11: la dispersión
+        del hilo se come cualquier diferencia que se quiera medir)."""
+        # Referencia al chunk crudo para la grabación (ninguna etapa
+        # muta el array original in place — el blanker copia primero)
+        raw_chunk = chunk
+
+        chunk = self._blanker.process(chunk)
+
+        # Techo de ruido: limita cuánto puede amplificar el AGC, para que
+        # no levante el ruido de banda por encima del nivel elegido. Se
+        # calcula sobre la entrada CRUDA (pre-AGC), así el tope no depende
+        # de la propia ganancia que está limitando — si dependiera, se
+        # realimentaría (la lección del freeze de MCRA). Ver _track_input_noise.
+        self._track_input_noise(chunk)
+        if self._agc_noise_ceiling_enabled and self._in_noise_min > 1e-9:
+            self._agc.set_max_gain_limit(self._agc_gain_cap_db())
+        else:
+            self._agc.set_max_gain_limit(None)
+            self._in_cap_db = None   # al reactivarlo, arranca sin freno
+
+        # Durante el aprendizaje del perfil: AGC congelado (si no, sube
+        # la ganancia sobre el ruido y el perfil captura un barrido de
+        # niveles en vez de un nivel estable)
+        learning = self._noise_profiler.is_learning
+        self._agc.set_hold(learning)
+        chunk = self._agc.process(chunk)
+
+        with self._lock:
+            filtered = self._bandpass.process(chunk) if self._bandpass_pre_enabled else chunk
+
+        filtered = self._anf.process(filtered)
+        # Perfil independiente del filtro: durante el aprendizaje se alimenta
+        # el profiler con el espectro COMPLETO (post-AGC, PRE-pasabanda/ANF),
+        # así el noise_mag cubre todas las frecuencias. En reproducción el
+        # cancelador suprime bien los agudos aunque el pasabanda cambie, se
+        # ensanche o se apague (antes el perfil aprendía ~0 en los agudos —el
+        # filtro los quitaba— y al ensanchar/reiniciar el siseo agudo pasaba
+        # sin suprimir). El pasabanda/ANF igual corren arriba para no congelar
+        # su estado IIR; su salida se descarta para el aprendizaje. El monitoreo
+        # del aprendizaje se atenúa -12dB, así que no importa que sea sin filtrar.
+        prof_in = chunk if learning else filtered
+        self._spec_pre_frames.append(prof_in.copy())    # lo que ve el profiler
+        # El VAD del profiler descuenta la ganancia del AGC (nivel de antena)
+        self._noise_profiler.set_agc_gain(self._agc.gain_lin)
+        filtered = self._noise_profiler.process(prof_in)
+
+        # Monitoreo atenuado durante el aprendizaje: sin perfil todavía
+        # no hay supresión y el ruido de banda sale a pleno — molesto y
+        # puede saturar. -12 dB con rampa por frame (sin clicks).
+        learn_gain = self._LEARN_DUCK_GAIN if learning else 1.0
+        if learn_gain != self._learn_gain_prev or learn_gain < 1.0:
+            ramp = np.linspace(self._learn_gain_prev, learn_gain,
+                               len(filtered), dtype=np.float32)
+            filtered = filtered * ramp
+            self._learn_gain_prev = learn_gain
+
+        # Preview ("escuchar ruido eliminado"): lo que sale del cancelador es
+        # lo que RESTA, y es material de diagnóstico — tiene que llegar al
+        # oído tal cual. Las etapas de coloreo posteriores lo falsean, y
+        # justamente todas se disparan cuando hay voz:
+        #   - gate de ruido: cierra sin señal → no se escucharía el ruido
+        #   - nivelador: AGC de hasta +20 dB sobre una señal de bajo nivel
+        #   - EQ presencia/cuerpo: realza 1.5 kHz, plena banda de legibilidad
+        #   - excitador: con el gate por VAD ABRE con voz y le agrega armónicos
+        # Con eso, un resto de voz apenas audible salía nivelado, realzado y
+        # con armónicos nuevos: sonaba mucho más presente de lo que realmente
+        # se está quitando. Se conservan el pasabanda de salida (define la
+        # banda que se escucha) y el limitador (protección).
+        preview = self._preview_mode
+
+        # Nivelador de voz (el vp requiere cancelador activo — invariante 2).
+        # Con gate por VAD: solo adapta con voz presente (evita perseguir el
+        # ruido residual entre palabras). Sin gate: adapta en continuo, para
+        # música / audio continuo donde no hay estructura de voz que detectar.
+        if (self._voice_leveler_enabled and self._noise_enabled
+                and not preview
+                and self._noise_profiler.has_profile):
+            hold = (self._voice_leveler_gate_voice
+                    and self._noise_profiler.voice_prob < self._LEVELER_VP_THR)
+            self._agc_voice.set_hold(hold)
+            filtered = self._agc_voice.process(filtered)
+
+        # Gate del excitador por VAD: corre al final del pipeline, así que sin
+        # gate levanta el ruido residual tanto como la voz (siseo brillante
+        # entre palabras). Sin cancelador o sin perfil el vp no se actualiza
+        # (invariante 2) → 1.0 = sin gatear.
+        self._exciter.set_voice_gate(
+            self._noise_profiler.voice_prob
+            if (self._noise_enabled and self._noise_profiler.has_profile)
+            else 1.0
+        )
+
+        with self._lock:
+            mixed = self._bandpass_out.process(filtered) if self._bandpass_post_enabled else filtered
+            if self._presence_enabled and not preview:
+                mixed = self._presence.process(mixed)
+                mixed = self._body.process(mixed)
+            if not preview:
+                mixed = self._exciter.process(mixed)
+                # DESPUÉS del pasabanda de salida: si fuera antes, el propio
+                # filtro se comería el fundamental que acabamos de sintetizar
+                # (es justo la banda que la radio ya había cortado).
+                mixed = self._bass.process(mixed)
+            out_frame = self._limiter.process(mixed, self._config.audio.sample_rate)
+
+        # Gate de ruido: decide con el nivel de ENTRADA (que es lo que el
+        # operador ve en el VU y contra lo que calibra el umbral) y actúa
+        # acá, sobre la salida ya procesada. En preview no corre: ahí lo
+        # que se escucha es material de diagnóstico, no la señal.
+        if not preview:
+            out_frame = self._gate.process(out_frame, self.input_level_db)
+
+        self._spec_post_frames.append(out_frame.copy())
+
+        if self._recorder.recording:
+            self._recorder.feed(
+                out_frame,
+                raw_chunk if self._recorder.wants_raw else None)
+
+        return out_frame
+
     # ------------------------------------------------------------------
     # Callback de audio (hilo de alta prioridad)
     # ------------------------------------------------------------------

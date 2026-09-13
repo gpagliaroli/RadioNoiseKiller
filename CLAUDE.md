@@ -440,6 +440,11 @@ Las lecciones que más veces mordieron. Cada una tiene su caso concreto en `docs
     las variantes dan lo mismo" antes de que la grabación real destrabara el diagnóstico.
 33. **Cuando dos rondas de lectura de código no dan, instrumentar** (`mcra_diag`, `errores_dsp.log`).
     Y cuando el repro no falla, **el dato que sobra en el log es el que discrimina**.
+34. **Un detector de transitorios que en el banco "nunca dispara sin voz" hay que correrlo sobre
+    ruido REAL antes de creerle**: la ventana de ataque de `p_speech` no abría nunca con ruido
+    gaussiano y en el aire abría 4 veces por segundo (el ruido de banda tiene frames con espectro
+    picudo). Variante de la regla 9, del lado del detector; `tools/replay_recording.py` es la
+    herramienta.
 
 ## Descartado — NO reproponer
 
@@ -527,7 +532,9 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
   bloque 960/1920); cuarentena de 3 frames; **Freno de bajada** (default 30 = sin freno) y
   **Congelar piso con voz** (30–100 %) como controles por condición.
 - **Post-filtro** resta dB fijos en bins de ruido (4,5 dB/punto, retirada frenada a 12 dB/frame),
-  **después** de `gain^alpha`. Anti-gorgojeo automático gateado por el VAD.
+  **después** de `gain^alpha`. Anti-gorgojeo automático gateado por el VAD; la ventana de ataque
+  de `p_speech` se arma con **dos frames seguidos** de confianza espectral cruda (post-v2.4.1) y
+  nunca escribe el valor crudo en el estado del EMA.
 - **ANF** con persistencia temporal de 350 ms (lo que separa heterodino de armónico es el tiempo).
 - **Supresor de impulsos** por contraste local en el tiempo; el umbral de **trama** (2–30) además
   suaviza los subidones del fading; el de **mini** no se baja (vuelve la distorsión).
@@ -543,7 +550,12 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
 
 ### Cambios pendientes de release
 
-_(ninguno — la v2.4.1 es la última y no hay nada acumulado en `main` desde entonces)_
+- **Ventana de ataque de `p_speech` confirmada por tiempo + fin del "trinquete"** (ráfagas de
+  fondo entre palabras con ruido real): p95 del fondo en ruido −22,0 → −30,5 dB a igual
+  Intensidad, picos de voz sin cambio — `validado en el aire` (13/9: *"el ruido disminuyó
+  bastante, aún siento algún que otro ruido pero mucho mejor"*).
+- `tools/replay_recording.py`: pasa una `_entrada.wav` por la cadena real en sincrónico, con
+  overrides de config y traza por frame. `pipeline._process_chunk()` extraído del hilo para eso.
 
 Formato al acumular: una línea por cambio con su estado de validación (`validado en el aire` /
 `pendiente de validar`), y el bloque narrativo completo en el historial, sección "En curso". El
