@@ -39,6 +39,16 @@ regla de método nueva.
 
 _(Los bloques nuevos de la próxima versión van acá, el más reciente arriba.)_
 
+**Post-v2.4.1: FM broadcast — pasabanda hasta 15 kHz.** Pedido del usuario. El audio de FM
+broadcast llega a 15 kHz (Nyquist 24 kHz a 48 k, sin problema). Cambios: preset `"FM 15 kHz":
+(50, 15000)` al final de `BANDPASS_PRESETS` (el orden es el del combo); `_freq_slider(hi=15000)`
+para los dos "Hz superior" (invariante 1: `set_bandpass_limits` no clampea, el diseño Butterworth
+toma `hi/nyq` directo); `MAX_FREQ_HZ` de espectro y cascada 12 → 16 kHz y el slider Máx X 1–16
+(default 12 kHz sin cambio). Verificado: `BandpassFilter` estable en (50, 15000) a 48 k y 44,1 k
+con órdenes 2/4/6/8 (12 kHz a −0,0…−0,8 dB, 20 kHz de −16 a −92 dB). La curva de over-sustracción
+HF ya acotaba en ~14 kHz. Manuales ES/EN: rango del slider, fila del preset, consejo FM, Máx X.
+
+
 **Post-v2.4.1: el recuperador de graves se retira solo por periodicidad — IMPLEMENTADO y validado
 en el aire** (15/9: *"noto que todo funciona ok"*). Pregunta del usuario tras el bloque siguiente (*"se podría hacer algo para
 que el recuperador de graves, por esto?"*). Tres candidatos medidos sobre las
