@@ -534,6 +534,8 @@ class MainWindow(QMainWindow):
                "(un pasa-altos de 300 Hz deja un f0 de 120 Hz unos 32 dB abajo: no hay\n"
                "energía que una EQ pueda levantar). Lo DERIVA de los armónicos que sí\n"
                "pasaron, así que suena como parte de la voz y no como un tono agregado.\n"
+               "Con la voz enterrada en ruido se retira solo (por periodicidad, memoria\n"
+               "de 2 s): ahí el grave derivado es zumbido y tapa la voz.\n"
                "Nivel ajustable en Avanzada Audio."),
         )
 

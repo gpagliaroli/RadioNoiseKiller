@@ -39,8 +39,9 @@ regla de método nueva.
 
 _(Los bloques nuevos de la próxima versión van acá, el más reciente arriba.)_
 
-**Post-v2.4.1: automatizar el apagado del recuperador de graves con ruido — ANALIZADO, NO
-IMPLEMENTADO.** Pregunta del usuario tras el bloque siguiente. Tres candidatos medidos sobre las
+**Post-v2.4.1: el recuperador de graves se retira solo por periodicidad — IMPLEMENTADO, pendiente
+de validar en el aire.** Pregunta del usuario tras el bloque siguiente (*"se podría hacer algo para
+que el recuperador de graves, por esto?"*). Tres candidatos medidos sobre las
 cinco grabaciones con entrada cruda (09-04 confirmada por el usuario como limpia: *"algo de
 soplido, la voz se escucha sin problemas"*; 15:14 del 15/9 como la mala):
 - **Gate por VAD (como el excitador): NO.** `vp ≥ 0,30` en el 95 % de los frames fuertes de la
@@ -62,10 +63,18 @@ soplido, la voz se escucha sin problemas"*; 15:14 del 15/9 como la mala):
   Con memoria corta el detector sigue las sílabas (fricativas, huecos) y le roba 3,3 dB a la
   limpia con 14 % de frames fuertes a r < 0,5. Con **2 s** sigue la condición de la estación
   (regla 4) y la limpia queda intacta.
-- **Si se implementa**: constante + una línea en `BassRestorer`, el pipeline pasa la confianza
-  como pasa el vp al excitador, test (voz periódica → r 1, ruido → r 0), nota de manual en lugar
-  de "apagarlo con ruido alto". Sin slider (regla 19). **Reservas**: una sola grabación limpia y
-  una sola voz; los 2 s de memoria al sintonizar.
+- **Implementación** (tras despejar la música, abajo): `BassRestorer.set_periodicity(conf)` +
+  EMA de `_PERIOD_TAU_S = 2 s` que avanza en `process()` aunque el módulo esté apagado (al
+  encenderlo refleja la estación actual); rampa `_PERIOD_LO/HI = 0,20/0,40` multiplica `amount`;
+  property `periodicity_gate` para diagnóstico. `NoiseProfiler.pitch_confidence` expone el pico de
+  la autocorrelación (corre siempre, con o sin cancelador → sin fallback a 1.0 como el excitador).
+  El pipeline la pasa junto al gate del excitador. El EMA arranca en la primera confianza (≈0 con
+  el stream recién abierto): los graves entran en ~2 s. Sin slider (regla 19). Verificado con el
+  código real en replay: limpia 0,0 / música −0,6 / 09-11 −13,2 / mala −16,8 dB — coincide con la
+  simulación. Tests en `test_dsp`: conf 0,7 = sin informar, conf 0,3 = −6 dB, conf 0,1 = retirado;
+  transición limpio→enterrado con gate 1,00 a 0,5 s y 0,00 a 6 s; el EMA avanza apagado. Manuales
+  ES/EN ("Con ruido alto se retira solo"), tooltip del checkbox y nota del slider. **Reservas**:
+  una sola grabación limpia y una sola voz; los 2 s al sintonizar — lo dice el usuario en el aire.
 - **Música en AM — medida y despejada** (`RNK_2026-09-15_17-01-13`, AM local 60 s con música,
   preset AM Local, graves 20 %; y `17-00-53`, 16 s). Confianza media 0,40 (0,56 en pasajes
   fuertes), EMA 2 s entre 0,35 y 0,49 — zona intermedia, pero el efecto es chico. Grave retenido

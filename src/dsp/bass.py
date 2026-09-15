@@ -47,10 +47,28 @@ class BassRestorer:
         voz (−17 vs −19 dB rel. a la banda), y lo que agrega es ruido×ruido (picudez
         6,5 dB; un tono da 10) metido en 60–250 Hz, que la cadena había dejado
         limpio, justo debajo de la única banda donde la voz sobresale → la voz se
-        vuelve MENOS inteligible. Reportado y corregido por el usuario en el preset
-        SSB Ruido Alto (módulo apagado); documentado en el manual. No gatearlo por
-        VAD (regla 1: el VAD de acá ve la salida del cancelador): es un módulo para
-        señal limpia, y el manual lo dice.
+        vuelve MENOS inteligible. Reportado por el usuario: *"con alto ruido, el
+        recuperador de graves no ayuda, sino todo lo contrario"*.
+
+    RETIRADA AUTOMÁTICA POR PERIODICIDAD (`set_periodicity`). El nivel se escala por
+    una rampa sobre la confianza de la autocorrelación del profiler (pre-cancelador,
+    ya calculada para el pitch y el freeze de MCRA), con memoria de 2 s:
+        r = clip((ema(conf) − _PERIOD_LO) / (_PERIOD_HI − _PERIOD_LO), 0, 1)
+    Qué se midió antes de elegir esa señal (historial, "automatizar el apagado"):
+      · gate por VAD como el excitador: NO. El daño es DURANTE la voz (ruido×voz),
+        y ahí el vp está ≥ 0,30 el 95 % del tiempo; el zumbido de las pausas está a
+        −67 dBFS, inaudible.
+      · ganancia media del cancelador en 250-1000 Hz: NO discrimina (0,19-0,28 en
+        cinco grabaciones, limpias y sucias por igual).
+      · confianza de periodicidad: SÍ. Frames fuertes 0,67 (voz limpia) … 0,28
+        (enterrada). Con memoria CORTA (200 ms) el detector sigue las sílabas y le
+        roba 3,3 dB a la voz limpia; con 2 s sigue la condición de la estación
+        (regla 4). Grave retenido con esta rampa: voz limpia 0,0 dB, AM con música
+        −0,6 dB (r entre 0,78 y 1,0), voz enterrada −16,9 dB.
+    Falla benigna (regla 3): si la confianza no sube, el módulo se retira — que es
+    lo que el manual mandaba hacer a mano. Sin slider (regla 19): las dos puntas
+    no son defendibles por condición. El EMA arranca en la primera confianza que
+    recibe (con el stream recién abierto, ~0): los graves entran en ~2 s.
     """
 
     _BAND_LO_HZ: float = 250.0    # armónicos que sobreviven a un filtro SSB
@@ -73,6 +91,11 @@ class BassRestorer:
     # cuatro voces es de 2.7 dB (el mismo porcentaje suena parecido en voces
     # distintas).
     _REF_GAIN:   float = 0.37
+    # Rampa de retirada por periodicidad (ver docstring): por debajo de LO el módulo
+    # está apagado, por encima de HI entero. Memoria del EMA en segundos.
+    _PERIOD_LO:    float = 0.20
+    _PERIOD_HI:    float = 0.40
+    _PERIOD_TAU_S: float = 2.0
 
     def __init__(self, sample_rate: int = 48000):
         self._enabled = False
@@ -91,12 +114,18 @@ class BassRestorer:
         self._zi_lp:   np.ndarray | None = None
         self._zi_dc:   np.ndarray | None = None
         self._rms:     float = 0.0
+        self._sr:      float = float(sample_rate)
+        # Periodicidad: objetivo del frame (1.0 = sin retirar, para quien no la
+        # informe) y EMA (None hasta el primer frame → arranca sin rampa).
+        self._period_target: float = 1.0
+        self._period_ema: float | None = None
 
     def reset(self) -> None:
         self._zi_band = None
         self._zi_lp   = None
         self._zi_dc   = None
         self._rms     = 0.0
+        self._period_ema = None
 
     def set_enabled(self, enabled: bool) -> None:
         self._enabled = bool(enabled)
@@ -104,8 +133,32 @@ class BassRestorer:
     def set_amount(self, amount: float) -> None:
         self._amount = float(np.clip(amount, 0.0, 1.0))
 
+    def set_periodicity(self, confidence: float) -> None:
+        """Confianza de periodicidad del frame (0–1, la autocorrelación del profiler).
+        Se suaviza acá con memoria de _PERIOD_TAU_S; llamar una vez por chunk."""
+        self._period_target = float(np.clip(confidence, 0.0, 1.0))
+
+    @property
+    def periodicity_gate(self) -> float:
+        """Factor 0–1 que la rampa de periodicidad aplica al nivel (diagnóstico)."""
+        if self._period_ema is None:
+            return 1.0
+        return float(np.clip((self._period_ema - self._PERIOD_LO)
+                             / (self._PERIOD_HI - self._PERIOD_LO), 0.0, 1.0))
+
     def process(self, chunk: np.ndarray) -> np.ndarray:
+        # El EMA avanza aunque el módulo esté apagado: al encenderlo tiene que
+        # reflejar la estación actual, no la de cuando se apagó.
+        if self._period_ema is None:
+            self._period_ema = self._period_target
+        else:
+            a = float(np.exp(-len(chunk) / self._sr / self._PERIOD_TAU_S))
+            self._period_ema = a * self._period_ema + (1.0 - a) * self._period_target
+
         if not self._enabled or self._amount <= 0.0:
+            return chunk
+        r = self.periodicity_gate
+        if r <= 0.0:
             return chunk
 
         x = chunk.astype(np.float64)
@@ -127,5 +180,5 @@ class BassRestorer:
         low, self._zi_lp = sosfilt(self._sos_lp, band * band, zi=self._zi_lp)
         low, self._zi_dc = sosfilt(self._sos_dc, low, zi=self._zi_dc)
 
-        gain = self._amount * self._REF_GAIN / self._rms
+        gain = self._amount * r * self._REF_GAIN / self._rms
         return (x + gain * low).astype(np.float32)

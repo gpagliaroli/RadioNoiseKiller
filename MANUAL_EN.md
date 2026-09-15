@@ -872,7 +872,7 @@ That difference matters a lot to the ear:
 - **It is not late.** This is sample-by-sample processing, with no pitch detection and no envelope: **0 ms** latency. Synthesizing required detecting f0 (computed every 3 frames), smoothing it and opening an envelope — the low end came in several tens of milliseconds after the voice.
 - **It goes quiet by itself.** With no speech there are no harmonics to derive anything from. On noise alone the module adds **−19 dB** relative to the noise, i.e. nothing; the synthesizing version added **+3 dB**, because the pitch detector fires on anything periodic.
 
-That is why the module needs no voice detection, no confidence threshold, and does not depend on the canceller.
+That is why the module needs no voice detection and does not depend on the canceller. The only thing it looks at from outside is the signal's **periodicity**, and only to back off when the voice is buried in noise (see below).
 
 | Control | Range | Default | Description |
 |---------|-------|---------|-------------|
@@ -886,7 +886,9 @@ It makes sense on **SSB with a narrow filter**, and generally whenever the voice
 
 > **Watch your own low cut first:** before enabling it, check your bandpass's lower limit. If what is cutting the low end is *your* filter and not the radio, lowering it (to 100–150 Hz) restores **real** bass, which will always sound better than synthesized bass.
 
-> **With heavy noise, turn it off.** When the voice is buried in noise (S/N near 0 dB, voice "recognizable but deeply buried"), the module makes the voice **less** intelligible, not more. Measured on an SSB recording in those conditions: what it adds during the pauses (−17 dB relative to the 250–1000 Hz band) is the same as what it adds with voice (−19 dB) — the band it derives the bass from is noise, and the difference of noise with noise is a rumble, not a fundamental (peakiness 6.5 dB versus 10 for a pure tone). That rumble lands in 60–250 Hz, which the noise canceller had left clean, right below the only band where the voice still rises above the noise, and masks it. The "it goes quiet on its own" above holds when the noise is low: the −19 dB is relative to the noise, not to silence. Rule of thumb: if the canceller is removing more than 20 dB, keep this module off.
+> **With heavy noise it backs off on its own.** When the voice is buried in noise (S/N near 0 dB, voice "recognizable but deeply buried"), the derived bass makes the voice **less** intelligible, not more. Measured on an SSB recording in those conditions: what the deriver adds during the pauses (−17 dB relative to the 250–1000 Hz band) is the same as what it adds with voice (−19 dB) — the band it derives the bass from is noise, and the difference of noise with noise is a rumble, not a fundamental (peakiness 6.5 dB versus 10 for a pure tone). That rumble lands in 60–250 Hz, which the noise canceller had left clean, right below the only band where the voice still rises above the noise, and masks it. The "it goes quiet on its own" above holds when the noise is low: the −19 dB is relative to the noise, not to silence.
+>
+> That is why the module's level is scaled by the signal's **periodicity** (the same autocorrelation the pitch enhancer uses), with a memory of **2 seconds**: a clean voice is periodic and the module stays at full level; a voice buried in noise barely is, and the module backs off. The long memory is deliberate — it follows the condition of the *station*, not the syllable: with a short memory the detector dropped on consonants and between words and stole bass from a clean voice. Measured: clean voice 0.0 dB lost, AM with music −0.6 dB (music is less periodic than a voice, but stays almost whole), buried voice −17 dB. There is no control for it: neither extreme is defensible by condition. The only thing you will notice is that, when the stream opens or you change station, the bass takes a couple of seconds to come in.
 
 ---
 
@@ -990,7 +992,7 @@ On the right of the same row, the **"🔇 Mute"** button silences the speaker ou
 | Noise gate | ⬜ Optional | Threshold between the level the indicator reads in the gaps and the level it reads with signal; depth 15–25 dB |
 | Voice EQ | ✅ On | Presence +4 dB at 2000 Hz; body +3 dB at 350 Hz if the voice sounds thin |
 | Harmonic exciter | ⬜ Optional | Drive 2.0×, mix 25% |
-| Restore bass | ⬜ Optional | If the voice sounds thin **and the signal is clean**. Start at 35% and raise it gradually. With heavy noise, off: it makes the voice less intelligible |
+| Restore bass | ⬜ Optional | If the voice sounds thin. Start at 35% and raise it gradually. With the voice buried in noise it backs off on its own (by periodicity, 2 s memory) |
 
 ### AM (medium wave or shortwave)
 

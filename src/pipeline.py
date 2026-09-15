@@ -1270,6 +1270,10 @@ class ProcessingPipeline:
         # gate levanta el ruido residual tanto como la voz (siseo brillante
         # entre palabras). Sin cancelador o sin perfil el vp no se actualiza
         # (invariante 2) → 1.0 = sin gatear.
+        # Retirada de los graves por periodicidad: la autocorrelación del profiler
+        # corre siempre (no depende del cancelador ni del perfil), así que no
+        # hace falta el fallback a 1.0 del excitador.
+        self._bass.set_periodicity(self._noise_profiler.pitch_confidence)
         self._exciter.set_voice_gate(
             self._noise_profiler.voice_prob
             if (self._noise_enabled and self._noise_profiler.has_profile)

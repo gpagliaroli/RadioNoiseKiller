@@ -542,7 +542,8 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
   desactivado (umbral por estación). **AGC** con techo de ruido (cierre instantáneo, apertura a
   0,5 dB/s), también por estación y desactivado en los presets de fábrica.
 - **Combo Pasabanda** (8 anchos) en lugar del modo AM/SSB; nivelador de voz con modo continuo;
-  excitador con armónicos reales gateado por VAD; recuperación de graves derivada de los armónicos.
+  excitador con armónicos reales gateado por VAD; recuperación de graves derivada de los armónicos,
+  que se retira sola por periodicidad (EMA 2 s) cuando la voz está enterrada en ruido.
 - **5 presets de fábrica** en `Presets/`, afinados en el aire (ver [[project_factory_presets]]):
   no se alinean con defaults ni se commitean con `git add -A`.
 - **UI**: cascada con modo Diferencia y marcadores de heterodino; Grabar/Bypass/Mute como botones
@@ -562,8 +563,12 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
   señal. Antes de buscar perillas por una queja de voz, medir la S/N POR BANDA (historial).
 - **Recuperar graves con ruido alto hace la voz menos inteligible** (encontrado por el usuario,
   medido: agrega −17 dB de ruido×ruido en 60–250 Hz tanto en pausas como con voz; el "se calla
-  solo" es relativo al ruido). Sin código: documentado en ambos manuales y `bass.py`; el preset
-  SSB Ruido Alto lo lleva apagado — `validado en el aire`.
+  solo" es relativo al ruido) → **se retira solo por periodicidad**: `BassRestorer.set_periodicity`
+  recibe la confianza de la autocorrelación del profiler (`pitch_confidence`, corre siempre) y
+  escala el nivel con rampa 0,20→0,40 sobre un EMA de **2 s** (sigue la estación, no la sílaba).
+  Medido en replay: voz limpia 0,0 dB, AM música −0,6, voz enterrada −16,9. Gate por VAD y
+  ganancia media del cancelador descartados por medición. Sin slider. Manuales, tooltips y
+  `test_dsp` actualizados — `pendiente de validar` en el aire.
 
 Formato al acumular: una línea por cambio con su estado de validación (`validado en el aire` /
 `pendiente de validar`), y el bloque narrativo completo en el historial, sección "En curso". El

@@ -364,7 +364,7 @@ class AdvancedAudioTab(QWidget):
         self._s_bass._update_label = lambda v: self._s_bass._val_lbl.setText(f"{v*100:.0f}%")
         self._s_bass.valueChanged.connect(self._on_bass_amount)
         layout.addWidget(self._s_bass)
-        layout.addWidget(_note(tr("  ↳ Nivel del fundamental recuperado (100% ≈ el que tendría una voz natural). Se deriva de los armónicos de la propia voz: sin voz no hay de dónde derivarlo y se calla solo. Requiere el módulo «Recuperar graves» activo.")))
+        layout.addWidget(_note(tr("  ↳ Nivel del fundamental recuperado (100% ≈ el que tendría una voz natural). Se deriva de los armónicos de la propia voz: sin voz no hay de dónde derivarlo y se calla solo. Con la voz enterrada en ruido se retira solo (por periodicidad, memoria de 2 s). Requiere el módulo «Recuperar graves» activo.")))
         return group
 
     # ------------------------------------------------------------------

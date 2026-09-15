@@ -1501,6 +1501,13 @@ class NoiseProfiler:
         return self._pf_extra_db
 
     @property
+    def pitch_confidence(self) -> float:
+        """Confianza de periodicidad del último frame (pico de la autocorrelación,
+        0–1). Corre siempre, con o sin cancelador; la usan el freeze de MCRA y la
+        retirada del recuperador de graves."""
+        return float(self._pitch_cache[1]) if self._pitch_cache else 0.0
+
+    @property
     def pitch_f0(self) -> "float | None":
         """f0 detectado (Hz) por el refuerzo de pitch SSB, o None si no hay detección activa."""
         return self._pitch_f0

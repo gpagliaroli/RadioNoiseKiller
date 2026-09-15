@@ -274,6 +274,50 @@ _rumble = (20 * np.log10(np.sqrt(np.mean(_sosfilt(_lp200, _added) ** 2)) + 1e-12
            - 20 * np.log10(np.sqrt(np.mean(_nzf ** 2)) + 1e-12))
 print(f"  Con ruido solo agrega {_rumble:.1f} dB bajo 200 Hz")
 assert _rumble < -10.0, "retumba con ruido (deberia callarse sin voz)"
+
+# Retirada por periodicidad: con la banda llena de ruido el "se calla solo" de
+# arriba es relativo al ruido (agrega -17 dB de ruido x ruido en 60-250 Hz tanto
+# en pausas como con voz, medido en el aire con S/N ~ 0 dB). El nivel se escala
+# por una rampa sobre la confianza de la autocorrelacion con memoria de 2 s:
+# limpia (conf alta) -> entero; enterrada (conf baja) -> se retira.
+def _bass_run_conf(src, amount, conf, settle_s=0.0):
+    br = BassRestorer(SR)
+    br.set_enabled(True); br.set_amount(amount)
+    zeros = np.zeros(480, dtype=np.float32)
+    br.set_periodicity(conf)
+    for _ in range(int(settle_s * SR / 480)):     # deja converger el EMA
+        br.process(zeros)
+    return np.concatenate([br.process(src[i:i + 480]) for i in range(0, len(src), 480)])
+
+
+_full = _f0_db(_bass_run(_vbf, 1.0) - _vbf)
+_hi   = _f0_db(_bass_run_conf(_vbf, 1.0, 0.7) - _vbf)
+_lo   = _f0_db(_bass_run_conf(_vbf, 1.0, 0.10) - _vbf)
+_mid  = _f0_db(_bass_run_conf(_vbf, 1.0, 0.30) - _vbf)
+print(f"  Rampa por periodicidad: sin informar {_full:.1f} dB, conf 0.7 {_hi:.1f}, "
+      f"conf 0.3 {_mid:.1f}, conf 0.1 {_lo:.1f} dB")
+assert abs(_hi - _full) < 0.5, "con periodicidad alta la rampa no debe tocar el nivel"
+assert _lo < _full - 40.0, "con periodicidad baja el modulo debe retirarse"
+assert abs(_mid - (_full - 6.0)) < 1.0, "a mitad de rampa deberia dar -6 dB"
+
+# El EMA es de 2 s (regla 4: sigue la estacion, no la silaba). Pasar de limpio a
+# enterrado tarda: a los 0,5 s la retirada apenas empezo; a los 6 s ya esta.
+_br = BassRestorer(SR); _br.set_enabled(True); _br.set_amount(1.0)
+_br.set_periodicity(0.7); _br.process(np.zeros(480, dtype=np.float32))
+_br.set_periodicity(0.1)
+_g = []
+for _i in range(int(6 * SR / 480)):
+    _br.process(np.zeros(480, dtype=np.float32)); _g.append(_br.periodicity_gate)
+_g05, _g6 = _g[int(0.5 * SR / 480)], _g[-1]
+print(f"  Transicion limpio->enterrado: gate a 0,5 s {_g05:.2f}, a 6 s {_g6:.2f}")
+assert _g05 > 0.6, "la retirada no debe seguir la silaba (memoria corta)"
+assert _g6 == 0.0, "a los 6 s el modulo tiene que estar retirado"
+# Con el modulo apagado el EMA sigue avanzando: al encenderlo refleja la estacion actual
+_br.set_enabled(False); _br.set_periodicity(0.7)
+for _i in range(int(6 * SR / 480)):
+    _br.process(np.zeros(480, dtype=np.float32))
+_br.set_enabled(True)
+assert _br.periodicity_gate == 1.0, "el EMA debe avanzar con el modulo apagado"
 print("  Recuperacion de graves: OK")
 
 # --- AGC: techo de ganancia (para que no persiga el ruido) -------------------

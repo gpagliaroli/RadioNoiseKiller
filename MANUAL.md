@@ -872,7 +872,7 @@ Esa diferencia importa mucho al oído:
 - **No llega tarde.** Es procesamiento muestra a muestra, sin detección de tono ni envolvente: latencia **0 ms**. Sintetizando hacía falta detectar el f0 (que se calcula cada 3 frames), suavizarlo y abrir una envolvente — el grave entraba varias decenas de milisegundos después de la voz.
 - **Se calla solo.** Sin voz no hay armónicos de donde derivar nada. Con ruido solo, el módulo agrega **−19 dB** respecto del ruido, o sea nada; la versión que sintetizaba agregaba **+3 dB** porque el detector de tono se dispara con cualquier cosa periódica.
 
-Por eso el módulo no necesita detección de voz, ni umbral de confianza, ni depende del cancelador.
+Por eso el módulo no necesita detección de voz ni depende del cancelador. Lo único que mira de afuera es la **periodicidad** de la señal, y sólo para retirarse cuando la voz está enterrada en ruido (ver más abajo).
 
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
@@ -886,7 +886,9 @@ Tiene sentido en **SSB con filtro angosto** y en general cuando la voz suena del
 
 > **Ojo con el corte de entrada:** antes de activarlo, revisá el límite inferior de tu pasabanda. Si el que está cortando los graves es *tu* filtro y no la radio, bajarlo (a 100–150 Hz) recupera graves **reales**, que siempre van a sonar mejor que los sintetizados.
 
-> **Con ruido alto, apagarlo.** Cuando la voz está enterrada en el ruido (S/N cerca de 0 dB, voz "distinguible pero muy enterrada"), el módulo hace la voz **menos** inteligible, no más. Medido sobre una grabación SSB en esas condiciones: lo que agrega en las pausas (−17 dB respecto de la banda 250–1000 Hz) es lo mismo que agrega con voz (−19 dB) — la banda de donde deriva el grave es ruido, y la diferencia de ruido con ruido es un zumbido, no un fundamental (picudez 6,5 dB contra 10 de un tono). Ese zumbido cae en 60–250 Hz, que el cancelador había dejado limpio, justo debajo de la única banda donde la voz todavía sobresale del ruido, y la enmascara. El "se calla solo" de arriba vale cuando el ruido es bajo: los −19 dB son respecto del ruido, no respecto del silencio. Regla práctica: si el cancelador está quitando más de 20 dB, este módulo va apagado.
+> **Con ruido alto se retira solo.** Cuando la voz está enterrada en el ruido (S/N cerca de 0 dB, voz "distinguible pero muy enterrada"), el grave derivado hace la voz **menos** inteligible, no más. Medido sobre una grabación SSB en esas condiciones: lo que el derivador agrega en las pausas (−17 dB respecto de la banda 250–1000 Hz) es lo mismo que agrega con voz (−19 dB) — la banda de donde deriva el grave es ruido, y la diferencia de ruido con ruido es un zumbido, no un fundamental (picudez 6,5 dB contra 10 de un tono). Ese zumbido cae en 60–250 Hz, que el cancelador había dejado limpio, justo debajo de la única banda donde la voz todavía sobresale del ruido, y la enmascara. El "se calla solo" de arriba vale cuando el ruido es bajo: los −19 dB son respecto del ruido, no respecto del silencio.
+>
+> Por eso el nivel del módulo se escala con la **periodicidad** de la señal (la misma autocorrelación que usa el refuerzo de pitch), con una memoria de **2 segundos**: una voz limpia es periódica y el módulo queda entero; una voz enterrada en ruido apenas lo es y el módulo se retira. La memoria larga es a propósito — sigue la condición de la *estación*, no la sílaba: con memoria corta el detector caía en las consonantes y entre palabras y le robaba graves a una voz limpia. Medido: voz limpia 0,0 dB de pérdida, AM con música −0,6 dB (la música es menos periódica que una voz, pero queda casi entera), voz enterrada −17 dB. No tiene control: las dos puntas no son defendibles por condición. Lo único que se nota es que al abrir el stream o cambiar de estación los graves tardan un par de segundos en entrar.
 
 ---
 
@@ -990,7 +992,7 @@ A la derecha de la misma fila, el botón **"🔇 Mute"** silencia la salida a lo
 | Gate de ruido | ⬜ Opcional | Umbral entre el nivel que marca el indicador en los huecos y el que marca con señal; profundidad 15–25 dB |
 | EQ Voz | ✅ Activo | Presencia +4 dB a 2000 Hz; cuerpo +3 dB a 350 Hz si la voz suena delgada |
 | Excitador armónico | ⬜ Opcional | Drive 2,0×, mezcla 25% |
-| Recuperar graves | ⬜ Opcional | Si la voz suena delgada **y la señal es limpia**. Empezar en 35% y subir de a poco. Con ruido alto, apagado: hace la voz menos inteligible |
+| Recuperar graves | ⬜ Opcional | Si la voz suena delgada. Empezar en 35% y subir de a poco. Con la voz enterrada en ruido se retira solo (por periodicidad, memoria de 2 s) |
 
 ### AM (ondas medias o cortas)
 
