@@ -538,6 +538,7 @@ CATALOG = {
     "AM 4 kHz": "AM 4 kHz",
     "AM 6 kHz": "AM 6 kHz",
     "AM 8 kHz": "AM 8 kHz",
+    "FM 15 kHz": "FM 15 kHz",
     "Personalizado": "Custom",
     "Entrada – Hz inferior:": "Input – low Hz:",
     "Entrada – Hz superior:": "Input – high Hz:",

@@ -199,7 +199,7 @@ class AdvancedAudioTab(QWidget):
         # ancho se elige con el combo "Pasabanda" de Principal. Mover estos sliders
         # manda: el combo pasa solo a "Personalizado" (lo hace el pipeline).
         self._s_bp_lo = _freq_slider(tr("Entrada – Hz inferior:"), _DSP_DEF.bandpass_limits[0])
-        self._s_bp_hi = _freq_slider(tr("Entrada – Hz superior:"), _DSP_DEF.bandpass_limits[1], hi=10000)
+        self._s_bp_hi = _freq_slider(tr("Entrada – Hz superior:"), _DSP_DEF.bandpass_limits[1], hi=15000)
         self._s_bp_lo.valueChanged.connect(lambda v: self._on_bp(lo=int(v)))
         self._s_bp_hi.valueChanged.connect(lambda v: self._on_bp(hi=int(v)))
         for s in (self._s_bp_lo, self._s_bp_hi):
@@ -230,7 +230,7 @@ class AdvancedAudioTab(QWidget):
         layout.addWidget(self._chk_bp_out)
 
         self._s_out_lo = _freq_slider(tr("Salida – Hz inferior:"), _DSP_DEF.bandpass_out_limits[0])
-        self._s_out_hi = _freq_slider(tr("Salida – Hz superior:"), _DSP_DEF.bandpass_out_limits[1], hi=10000)
+        self._s_out_hi = _freq_slider(tr("Salida – Hz superior:"), _DSP_DEF.bandpass_out_limits[1], hi=15000)
         self._s_out_lo.valueChanged.connect(lambda v: self._on_bp_out(lo=int(v)))
         self._s_out_hi.valueChanged.connect(lambda v: self._on_bp_out(hi=int(v)))
         for s in (self._s_out_lo, self._s_out_hi):

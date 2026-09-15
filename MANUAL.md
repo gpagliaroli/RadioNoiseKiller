@@ -307,7 +307,7 @@ Ambos se activan/desactivan de forma independiente desde **Módulos Activos**.
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
 | **Entrada – Hz inferior** | 50–1000 Hz | 200 Hz | Corte inferior. Subirlo saca retumbe, zumbido de red y ruido de motor; bajarlo deja más cuerpo en la voz. |
-| **Entrada – Hz superior** | 1000–10000 Hz | 3000 Hz | Corte superior. Bajarlo saca siseo y QRM del canal de al lado; subirlo deja más brillo y consonantes. Hasta 10 kHz para emisoras de AM local con buen audio. |
+| **Entrada – Hz superior** | 1000–15000 Hz | 3000 Hz | Corte superior. Bajarlo saca siseo y QRM del canal de al lado; subirlo deja más brillo y consonantes. Hasta 10 kHz para emisoras de AM local con buen audio; 15 kHz para FM broadcast (el audio de FM llega hasta ahí). |
 | **Orden del filtro** | 2 / 4 / 6 / 8 | 4 | Pendiente del filtro. Mayor orden = corte más abrupto = mejor rechazo fuera de banda, pero mayor latencia de fase. Para uso normal, orden 4 es adecuado. |
 
 > **Estos sliders y el combo Pasabanda son el mismo ajuste visto de dos maneras.** Elegir un ancho en
@@ -326,6 +326,7 @@ Ambos se activan/desactivan de forma independiente desde **Módulos Activos**.
 > | AM 4 kHz | 150 Hz | 4000 Hz |
 > | AM 6 kHz | 100 Hz | 6000 Hz |
 > | AM 8 kHz | 100 Hz | 8000 Hz |
+> | FM 15 kHz | 50 Hz | 15000 Hz |
 >
 > *SSB ancho* y *AM 3 kHz* son los mismos hercios con dos nombres: la etiqueta está para elegir por
 > lo que uno escucha, no para que haya que traducir mentalmente. Y ojo con los anchos grandes: no
@@ -346,6 +347,7 @@ Regla práctica: la salida **igual o más ancha** que la entrada. Más angosta q
 ### Consejos
 
 - Para **AM locales con buena música** o audio de calidad: subir el Hz superior hasta 7000–10000 Hz.
+- Para **FM broadcast**: el preset *FM 15 kHz* abre todo el ancho del audio de FM (50 Hz a 15 kHz). Conviene subir también **Máx X** del espectro a 16 kHz para ver la banda entera.
 - Para **SSB DX** con mucho ruido: bajar el Hz inferior a 300–400 Hz y el superior a 2500 Hz para reducir el ruido de banda.
 - Cambiar el orden del filtro requiere reiniciar el procesamiento (el botón se deshabilita mientras está activo).
 
@@ -1094,7 +1096,7 @@ En modo Perfil estático, el piso amarillo se captura desde el botón **⏺ Apre
 | Control | Rango | Default | Descripción |
 |---------|-------|---------|-------------|
 | **Máx Y** | -60 dBFS a 0 dBFS | 0 dBFS | Ajusta el techo del eje vertical. Bajar (ej. -20 dBFS) comprime la escala y hace más visibles las diferencias entre curvas cuando la señal es débil. El valor se guarda automáticamente. |
-| **Máx X** | 1 kHz a 12 kHz | 12 kHz | Ajusta el límite derecho del eje de frecuencias. Reducir a 3–4 kHz hace zoom en la zona vocal y permite ver mejor los detalles en esa banda. El valor se guarda automáticamente. |
+| **Máx X** | 1 kHz a 16 kHz | 12 kHz | Ajusta el límite derecho del eje de frecuencias. Reducir a 3–4 kHz hace zoom en la zona vocal y permite ver mejor los detalles en esa banda. El valor se guarda automáticamente. |
 
 Los dos sliders reescalan **tanto el espectro como la cascada** a la vez.
 

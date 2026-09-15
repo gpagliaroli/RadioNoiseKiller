@@ -307,7 +307,7 @@ Both are enabled/disabled independently from **Active Modules**.
 | Control | Range | Default | Description |
 |---------|-------|---------|-------------|
 | **Input – low Hz** | 50–1000 Hz | 200 Hz | Lower cutoff. Raising it removes rumble, mains hum and motor noise; lowering it leaves more body in the voice. |
-| **Input – high Hz** | 1000–10000 Hz | 3000 Hz | Upper cutoff. Lowering it removes hiss and QRM from the adjacent channel; raising it leaves more brightness and consonants. Up to 10 kHz for local AM stations with good audio. |
+| **Input – high Hz** | 1000–15000 Hz | 3000 Hz | Upper cutoff. Lowering it removes hiss and QRM from the adjacent channel; raising it leaves more brightness and consonants. Up to 10 kHz for local AM stations with good audio; 15 kHz for FM broadcast (FM audio reaches that far). |
 | **Filter order** | 2 / 4 / 6 / 8 | 4 | Filter slope. Higher order = sharper cutoff = better out-of-band rejection, but more phase latency. For normal use, order 4 is adequate. |
 
 > **These sliders and the Bandpass combo are the same setting seen two ways.** Picking a width in the
@@ -326,6 +326,7 @@ Both are enabled/disabled independently from **Active Modules**.
 > | AM 4 kHz | 150 Hz | 4000 Hz |
 > | AM 6 kHz | 100 Hz | 6000 Hz |
 > | AM 8 kHz | 100 Hz | 8000 Hz |
+> | FM 15 kHz | 50 Hz | 15000 Hz |
 >
 > *SSB wide* and *AM 3 kHz* are the same hertz under two names: the label is there so you can pick by
 > what you are hearing, not so you have to translate in your head. And beware of the wide settings:
@@ -346,6 +347,7 @@ Rule of thumb: output **equal to or wider** than the input. Narrower than the in
 ### Tips
 
 - For **local AM stations with good music** or quality audio: raise the high Hz up to 7000–10000 Hz.
+- For **FM broadcast**: the *FM 15 kHz* preset opens the full width of FM audio (50 Hz to 15 kHz). It is worth raising the spectrum's **Max X** to 16 kHz too, to see the whole band.
 - For **SSB DX** with heavy noise: lower the low Hz to 300–400 Hz and the high to 2500 Hz to reduce band noise.
 - Changing the filter order requires restarting processing (the control is disabled while active).
 
@@ -1094,7 +1096,7 @@ In Static profile mode, the yellow floor is captured from the **⏺ Learn noise*
 | Control | Range | Default | Description |
 |---------|-------|---------|-------------|
 | **Max Y** | -60 dBFS to 0 dBFS | 0 dBFS | Adjusts the vertical axis ceiling. Lowering it (e.g. -20 dBFS) compresses the scale and makes differences between curves more visible when the signal is weak. The value is saved automatically. |
-| **Max X** | 1 kHz to 12 kHz | 12 kHz | Adjusts the right edge of the frequency axis. Reducing it to 3–4 kHz zooms into the vocal zone for better detail. The value is saved automatically. |
+| **Max X** | 1 kHz to 16 kHz | 12 kHz | Adjusts the right edge of the frequency axis. Reducing it to 3–4 kHz zooms into the vocal zone for better detail. The value is saved automatically. |
 
 Both sliders rescale **the spectrum and the waterfall** at the same time.
 

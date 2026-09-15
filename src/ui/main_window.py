@@ -983,7 +983,7 @@ class MainWindow(QMainWindow):
         ))
         zoom_layout.addLayout(_slider_row(
             tr("Máx X:"), "_lbl_freq_range", "_sld_freq_range",
-            1, 12, 1, 2, self._config.window.spectrum_max_freq_hz // 1000,
+            1, 16, 1, 2, self._config.window.spectrum_max_freq_hz // 1000,
             f"{self._config.window.spectrum_max_freq_hz // 1000} kHz", 40,
             self._on_freq_range_changed,
         ))

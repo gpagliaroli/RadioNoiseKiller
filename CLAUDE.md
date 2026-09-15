@@ -541,7 +541,7 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
 - **Gate de ruido** por nivel de entrada en dBFS, actúa sobre la salida, atenúa 20 dB, viene
   desactivado (umbral por estación). **AGC** con techo de ruido (cierre instantáneo, apertura a
   0,5 dB/s), también por estación y desactivado en los presets de fábrica.
-- **Combo Pasabanda** (8 anchos) en lugar del modo AM/SSB; nivelador de voz con modo continuo;
+- **Combo Pasabanda** (9 anchos, hasta FM 15 kHz) en lugar del modo AM/SSB; nivelador de voz con modo continuo;
   excitador con armónicos reales gateado por VAD; recuperación de graves derivada de los armónicos,
   que se retira sola por periodicidad (EMA 2 s) cuando la voz está enterrada en ruido.
 - **5 presets de fábrica** en `Presets/`, afinados en el aire (ver [[project_factory_presets]]):
@@ -570,6 +570,9 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
   ganancia media del cancelador descartados por medición. Sin slider; indicador "Actividad"
   bajo el slider en Avanzada Audio (periodicidad y nivel efectivo). Manuales, tooltips,
   `test_dsp` y `test_ui` actualizados — `validado en el aire` (15/9: *"noto que todo funciona ok"*).
+- **FM broadcast**: preset de pasabanda "FM 15 kHz" (50–15000), sliders de Hz superior hasta
+  15 kHz, Máx X del espectro/cascada hasta 16 kHz. Filtro verificado estable en 48 k y 44,1 k
+  con los 4 órdenes — `pendiente de validar`.
 
 Formato al acumular: una línea por cambio con su estado de validación (`validado en el aire` /
 `pendiente de validar`), y el bloque narrativo completo en el historial, sección "En curso". El

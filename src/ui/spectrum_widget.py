@@ -23,7 +23,7 @@ class SpectrumWidget(QWidget):
 
     FFT_SIZE    = 2048
     SAMPLE_RATE = 48_000
-    MAX_FREQ_HZ = 12_000
+    MAX_FREQ_HZ = 16_000   # cubre el pasabanda FM (15 kHz)
     DB_MIN      = -80.0
     ALPHA       = 0.35    # suavizado EMA
 

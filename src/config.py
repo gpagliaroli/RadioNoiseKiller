@@ -17,6 +17,7 @@ BANDPASS_PRESETS: "dict[str, tuple[int, int]]" = {
     "AM 4 kHz":        (150, 4000),
     "AM 6 kHz":        (100, 6000),
     "AM 8 kHz":        (100, 8000),
+    "FM 15 kHz":       (50, 15000),   # FM broadcast: audio de 30 Hz a 15 kHz
 }
 BANDPASS_CUSTOM = "Personalizado"
 
