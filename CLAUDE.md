@@ -569,7 +569,7 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
   Medido en replay: voz limpia 0,0 dB, AM música −0,6, voz enterrada −16,9. Gate por VAD y
   ganancia media del cancelador descartados por medición. Sin slider; indicador "Actividad"
   bajo el slider en Avanzada Audio (periodicidad y nivel efectivo). Manuales, tooltips,
-  `test_dsp` y `test_ui` actualizados — `pendiente de validar` en el aire.
+  `test_dsp` y `test_ui` actualizados — `validado en el aire` (15/9: *"noto que todo funciona ok"*).
 
 Formato al acumular: una línea por cambio con su estado de validación (`validado en el aire` /
 `pendiente de validar`), y el bloque narrativo completo en el historial, sección "En curso". El

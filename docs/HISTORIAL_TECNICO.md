@@ -39,8 +39,8 @@ regla de método nueva.
 
 _(Los bloques nuevos de la próxima versión van acá, el más reciente arriba.)_
 
-**Post-v2.4.1: el recuperador de graves se retira solo por periodicidad — IMPLEMENTADO, pendiente
-de validar en el aire.** Pregunta del usuario tras el bloque siguiente (*"se podría hacer algo para
+**Post-v2.4.1: el recuperador de graves se retira solo por periodicidad — IMPLEMENTADO y validado
+en el aire** (15/9: *"noto que todo funciona ok"*). Pregunta del usuario tras el bloque siguiente (*"se podría hacer algo para
 que el recuperador de graves, por esto?"*). Tres candidatos medidos sobre las
 cinco grabaciones con entrada cruda (09-04 confirmada por el usuario como limpia: *"algo de
 soplido, la voz se escucha sin problemas"*; 15:14 del 15/9 como la mala):
