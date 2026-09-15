@@ -39,6 +39,35 @@ regla de método nueva.
 
 _(Los bloques nuevos de la próxima versión van acá, el más reciente arriba.)_
 
+**Post-v2.4.1: verificación con SSB en condiciones malas — "voz que se come" es la señal, no el
+software.** Grabación `RNK_2026-09-15_15-14-47` (conversación con pausas, voz "distinguible pero
+muy enterrada", mejor en 39–50 s; preset "SSB - Ruido Alto" con los ajustes vivos: Intensidad 0,75,
+post 4, gate −30, techo AGC −35, anti-gorgojeo 0,98). Reporte: *"voz que se come, y algún que otro
+ruido metálico (el cual mejoró mucho desde esta versión)"*. Replay sincrónico corr 0,968, 0 errores.
+- **Qué hay en la señal.** Ruido de banda estacionario (−19,2 ± 0,9 dBFS): sirve como ruido de
+  referencia (regla 7) tomado de las pausas (6–12 / 30,5–34 / 51,5–54 s). Voz sobre ruido por
+  banda en 39–50 s: 250–700 Hz **+3,7 dB** (35 % de frames activos, +7,2 dB en ellos);
+  700–1500 Hz **−4,6**; 1500–2800 Hz **−6,4**. La voz sólo existe sobre el ruido en los graves;
+  el segundo formante y las consonantes están 5–6 dB debajo — irrecuperable por bin.
+- **Método.** Se capturó `spec` de entrada y el gain final del profiler por frame (wrapper de
+  `NoiseProfiler.process`). Voz estimada `V = max(|Y|²−N, 0)`; retención de voz
+  `Σg²V/ΣV` en 250–700 Hz sobre frames activos, retención de ruido `Σg²N/ΣN`. El baseline contra
+  sí mismo da 0,0 exacto (regla 6). Sesgo por seguir fluctuaciones (medido con una "V falsa" en
+  la otra mitad de las pausas): 3,9 dB en HEAD, 4,5 con anti-gorgojeo 0,92 — descontado abajo.
+- **HEAD**: voz −5,1 dB, ruido en la misma banda/frames −9,8 (neta +4,7), 700–2800 Hz −20,0,
+  pausas −25,3. Ventana de ataque: 3,1 disparos/s (0,38 en la del 11/9 — el ruido es peor), pero
+  **sin ventana la voz cae a −8,4 dB** y la voz débil pierde 5 dB más de p95: trabaja a favor.
+  Fondo de pausas parejo (std 3,5, p95 −30,3).
+- **Barrido de todos los controles** (Intensidad 0,4–1,0, post 0–6, piso 0,08–0,25, freno 5,
+  congelar 0,2–1,0, agudos 0–1, reactividad 250–800, pitch 0–1, ataque, blanker, ANF, piso
+  perceptual): todos sobre la MISMA curva, neta +4,2…+4,9 dB. Lo único fuera de la curva es
+  **Anti-gorgojeo**: 0,92 da voz −2,6 / pausas −22,9; a igual costo (Intensidad interpolada) HEAD
+  daría voz ≈ −4,8 → +2,2 dB de voz, ≈ +1,5 descontando el sesgo. Es el control que devuelve el
+  gorgojeo; queda como opción de oído (0,94 intermedio), no como cambio.
+- **Decisión: sin cambios de código.** Bancos en `tests/_tmp/r0915/` (`bench.py` niveles por
+  segmento con AGC; `oracle.py` / `oracle2.py` retención por bin; `spec.png`).
+
+
 **Post-v2.4.1: ráfagas de fondo entre palabras — la ventana de ataque de `p_speech` disparaba con
 ruido real.** Reportado con grabación (`RNK_2026-09-11_16-54-33`, SSB, ruido de banda a −20 dBFS
 constante, preset "SSB - Ruido Alto - Perfil Adaptativo"): *"unos ruidos molestos que se escuchan

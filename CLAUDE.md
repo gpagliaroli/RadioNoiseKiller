@@ -556,6 +556,10 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
   bastante, aún siento algún que otro ruido pero mucho mejor"*).
 - `tools/replay_recording.py`: pasa una `_entrada.wav` por la cadena real en sincrónico, con
   overrides de config y traza por frame. `pipeline._process_chunk()` extraído del hilo para eso.
+- Verificación con SSB en condiciones malas (15/9, `RNK_2026-09-15_15-14-47`): la voz sólo supera
+  al ruido en 250–700 Hz (+7 dB); arriba está 5–6 dB debajo. Todos los controles del cancelador
+  caen sobre la misma curva voz/ruido; **sin cambios de código** — la "voz que se come" es la
+  señal. Antes de buscar perillas por una queja de voz, medir la S/N POR BANDA (historial).
 
 Formato al acumular: una línea por cambio con su estado de validación (`validado en el aire` /
 `pendiente de validar`), y el bloque narrativo completo en el historial, sección "En curso". El
