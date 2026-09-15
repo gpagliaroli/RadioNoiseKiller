@@ -39,6 +39,37 @@ regla de método nueva.
 
 _(Los bloques nuevos de la próxima versión van acá, el más reciente arriba.)_
 
+**Post-v2.4.1: automatizar el apagado del recuperador de graves con ruido — ANALIZADO, NO
+IMPLEMENTADO.** Pregunta del usuario tras el bloque siguiente. Tres candidatos medidos sobre las
+cinco grabaciones con entrada cruda (09-04 confirmada por el usuario como limpia: *"algo de
+soplido, la voz se escucha sin problemas"*; 15:14 del 15/9 como la mala):
+- **Gate por VAD (como el excitador): NO.** `vp ≥ 0,30` en el 95 % de los frames fuertes de la
+  mala — el daño es DURANTE la voz (ruido×voz, ruido×ruido); el zumbido de las pausas está a
+  −67 dBFS, inaudible. Regla 22.
+- **Ganancia media del cancelador en 250–1000 Hz como proxy de S/N: NO discrimina** (0,19–0,28 en
+  las cinco; la dominan los bins entre armónicos que el post-filtro hunde siempre).
+- **Confianza de periodicidad (autocorrelación pre-cancelador, ya calculada): SÍ.** Frames fuertes:
+  0,67 limpia / 0,48 / 0,46 / 0,35 / 0,28 mala. Rampa `r = clip((ema(conf) − lo)/(hi − lo), 0, 1)`
+  sobre `amount`; grave retenido (Σr²·grave/Σgrave en frames fuertes), columnas limpia→mala:
+
+  | rampa | tau | 09-04 | 08-31 | 16:29 | 09-11 | 15:14 |
+  |---|---|---|---|---|---|---|
+  | 0,25→0,60 | 0,2 s | −3,3 | −7,6 | −9,7 | −13,1 | −21,4 |
+  | 0,20→0,50 | 0,5 s | −1,1 | −4,4 | −8,2 | −11,6 | −18,5 |
+  | **0,20→0,40** | **2 s** | **−0,0** | −2,0 | −6,8 | −13,1 | **−17,8** |
+  | 0,15→0,35 | 2 s | −0,0 | −0,7 | −3,5 | −7,4 | −9,9 |
+
+  Con memoria corta el detector sigue las sílabas (fricativas, huecos) y le roba 3,3 dB a la
+  limpia con 14 % de frames fuertes a r < 0,5. Con **2 s** sigue la condición de la estación
+  (regla 4) y la limpia queda intacta.
+- **Si se implementa**: constante + una línea en `BassRestorer`, el pipeline pasa la confianza
+  como pasa el vp al excitador, test (voz periódica → r 1, ruido → r 0), nota de manual en lugar
+  de "apagarlo con ruido alto". Sin slider (regla 19). **Reservas**: una sola grabación limpia y
+  una sola voz; los 2 s de memoria al sintonizar; y **música en AM sin medir** (si la
+  periodicidad da valores medios, bajaría los graves de los presets AM que lo llevan al 15–20 %)
+  — medir sobre música o limitar al pasabanda SSB antes de tocar nada.
+
+
 **Post-v2.4.1: el recuperador de graves con ruido alto hace la voz MENOS inteligible.** Lo
 encontró el usuario tocando el preset SSB Ruido Alto (regla 16): *"con alto ruido, el recuperador
 de graves no ayuda, sino todo lo contrario"*. Medido sobre `RNK_2026-09-15_15-14-47` (S/N ≈ 0 dB)
