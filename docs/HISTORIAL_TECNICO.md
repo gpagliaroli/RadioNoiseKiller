@@ -73,7 +73,10 @@ soplido, la voz se escucha sin problemas"*; 15:14 del 15/9 como la mala):
   código real en replay: limpia 0,0 / música −0,6 / 09-11 −13,2 / mala −16,8 dB — coincide con la
   simulación. Tests en `test_dsp`: conf 0,7 = sin informar, conf 0,3 = −6 dB, conf 0,1 = retirado;
   transición limpio→enterrado con gate 1,00 a 0,5 s y 0,00 a 6 s; el EMA avanza apagado. Manuales
-  ES/EN ("Con ruido alto se retira solo"), tooltip del checkbox y nota del slider. **Reservas**:
+  ES/EN ("Con ruido alto se retira solo"), tooltip del checkbox y nota del slider. Indicador
+  "Actividad" bajo el slider de Avanzada Audio (pedido del usuario para observarlo en el aire):
+  periodicidad suavizada y nivel efectivo (entero / al N % / retirado), pintado en `_tick_levels`
+  y con reposo en `_reset_live_indicators` (regla 25, cubierto en `test_ui`). **Reservas**:
   una sola grabación limpia y una sola voz; los 2 s al sintonizar — lo dice el usuario en el aire.
 - **Música en AM — medida y despejada** (`RNK_2026-09-15_17-01-13`, AM local 60 s con música,
   preset AM Local, graves 20 %; y `17-00-53`, 16 s). Confianza media 0,40 (0,56 en pasajes

@@ -2001,6 +2001,8 @@ class MainWindow(QMainWindow):
         self._lbl_leveler.setStyleSheet(self._IDLE_LBL_STYLE)
         self._adv_audio_tab._lbl_leveler_act.setText("—")
         self._adv_audio_tab._lbl_leveler_act.setStyleSheet("color: #555;")
+        self._adv_audio_tab._lbl_bass_act.setText("—")
+        self._adv_audio_tab._lbl_bass_act.setStyleSheet("color: #555;")
         self._lbl_agc_ceiling.setText("—")
         self._lbl_agc_ceiling.setStyleSheet("color: #555; font-size: 8pt;")
         self._lbl_snr.setText(tr("S/N: —"))
@@ -2045,6 +2047,25 @@ class MainWindow(QMainWindow):
         self._lbl_leveler.setStyleSheet(f"color: {lev_color}; font-size: 8pt; font-weight: bold;")
         self._adv_audio_tab._lbl_leveler_act.setText(lev_text)
         self._adv_audio_tab._lbl_leveler_act.setStyleSheet(f"color: {lev_color}; font-weight: bold;")
+
+        # Retirada del recuperador de graves por periodicidad (Avanzada Audio):
+        # periodicidad suavizada (2 s) y qué fracción del nivel queda. Verde =
+        # entero, amarillo = a medias, naranja = retirado (la banda es ruido).
+        if self._config.dsp.bass_enabled and self._pipeline.is_running():
+            per, gate = self._pipeline.bass_periodicity, self._pipeline.bass_gate
+            if gate >= 0.98:
+                bass_text = tr("periodicidad {p:.2f} → nivel entero").format(p=per)
+                bass_color = "#69f0ae"
+            elif gate <= 0.0:
+                bass_text = tr("periodicidad {p:.2f} → retirado (la banda es ruido)").format(p=per)
+                bass_color = "#ffab40"
+            else:
+                bass_text = tr("periodicidad {p:.2f} → nivel al {n:.0f}%").format(p=per, n=gate * 100)
+                bass_color = "#ffd740"
+        else:
+            bass_text, bass_color = "—", "#555"
+        self._adv_audio_tab._lbl_bass_act.setText(bass_text)
+        self._adv_audio_tab._lbl_bass_act.setStyleSheet(f"color: {bass_color}; font-weight: bold;")
 
         # Techo de ruido del AGC: cuánto puede amplificar ahora mismo. En 0 dB el
         # techo quedó por debajo del piso real de entrada y está ahogando la señal

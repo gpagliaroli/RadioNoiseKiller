@@ -139,6 +139,11 @@ class BassRestorer:
         self._period_target = float(np.clip(confidence, 0.0, 1.0))
 
     @property
+    def periodicity(self) -> float:
+        """EMA (2 s) de la confianza de periodicidad que alimenta la rampa (diagnóstico)."""
+        return 1.0 if self._period_ema is None else float(self._period_ema)
+
+    @property
     def periodicity_gate(self) -> float:
         """Factor 0–1 que la rampa de periodicidad aplica al nivel (diagnóstico)."""
         if self._period_ema is None:

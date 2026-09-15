@@ -364,6 +364,15 @@ class AdvancedAudioTab(QWidget):
         self._s_bass._update_label = lambda v: self._s_bass._val_lbl.setText(f"{v*100:.0f}%")
         self._s_bass.valueChanged.connect(self._on_bass_amount)
         layout.addWidget(self._s_bass)
+        # Indicador vivo de la retirada por periodicidad: lo pinta
+        # MainWindow._tick_levels y lo deja en reposo _reset_live_indicators.
+        bass_row = QHBoxLayout()
+        bass_row.addWidget(QLabel(tr("Actividad:")))
+        self._lbl_bass_act = QLabel("—")
+        self._lbl_bass_act.setStyleSheet("color: #888;")
+        bass_row.addWidget(self._lbl_bass_act)
+        bass_row.addStretch()
+        layout.addLayout(bass_row)
         layout.addWidget(_note(tr("  ↳ Nivel del fundamental recuperado (100% ≈ el que tendría una voz natural). Se deriva de los armónicos de la propia voz: sin voz no hay de dónde derivarlo y se calla solo. Con la voz enterrada en ruido se retira solo (por periodicidad, memoria de 2 s). Requiere el módulo «Recuperar graves» activo.")))
         return group
 

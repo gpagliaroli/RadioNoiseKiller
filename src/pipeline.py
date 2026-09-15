@@ -229,6 +229,16 @@ class ProcessingPipeline:
         return self._agc_voice.gain_db
 
     @property
+    def bass_periodicity(self) -> float:
+        """EMA de periodicidad (0–1) que gobierna la retirada del recuperador de graves."""
+        return self._bass.periodicity
+
+    @property
+    def bass_gate(self) -> float:
+        """Factor 0–1 que la rampa de periodicidad aplica al nivel de graves."""
+        return self._bass.periodicity_gate
+
+    @property
     def snr_db(self) -> float:
         """S/N banda completa (dB, suavizado ~1s) estimado por el cancelador."""
         return self._noise_profiler.snr_db

@@ -406,6 +406,9 @@ CATALOG = {
     # --- Avanzada Impulsos ---
     "Supresor de impulsos  (se aplica en tiempo real)": "Impulse suppressor  (applied in real time)",
     "Actividad:": "Activity:",
+    "periodicidad {p:.2f} → nivel entero": "periodicity {p:.2f} → full level",
+    "periodicidad {p:.2f} → retirado (la banda es ruido)": "periodicity {p:.2f} → backed off (the band is noise)",
+    "periodicidad {p:.2f} → nivel al {n:.0f}%": "periodicity {p:.2f} → level at {n:.0f}%",
     "Actividad de trama:": "Frame activity:",
     "Actividad micro:": "Micro activity:",
     "Umbral de trama (10 ms):": "Frame threshold (10 ms):",

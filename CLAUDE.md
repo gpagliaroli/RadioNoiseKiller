@@ -567,8 +567,9 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
   recibe la confianza de la autocorrelación del profiler (`pitch_confidence`, corre siempre) y
   escala el nivel con rampa 0,20→0,40 sobre un EMA de **2 s** (sigue la estación, no la sílaba).
   Medido en replay: voz limpia 0,0 dB, AM música −0,6, voz enterrada −16,9. Gate por VAD y
-  ganancia media del cancelador descartados por medición. Sin slider. Manuales, tooltips y
-  `test_dsp` actualizados — `pendiente de validar` en el aire.
+  ganancia media del cancelador descartados por medición. Sin slider; indicador "Actividad"
+  bajo el slider en Avanzada Audio (periodicidad y nivel efectivo). Manuales, tooltips,
+  `test_dsp` y `test_ui` actualizados — `pendiente de validar` en el aire.
 
 Formato al acumular: una línea por cambio con su estado de validación (`validado en el aire` /
 `pendiente de validar`), y el bloque narrativo completo en el historial, sección "En curso". El
