@@ -886,6 +886,8 @@ Tiene sentido en **SSB con filtro angosto** y en general cuando la voz suena del
 
 > **Ojo con el corte de entrada:** antes de activarlo, revisá el límite inferior de tu pasabanda. Si el que está cortando los graves es *tu* filtro y no la radio, bajarlo (a 100–150 Hz) recupera graves **reales**, que siempre van a sonar mejor que los sintetizados.
 
+> **Con ruido alto, apagarlo.** Cuando la voz está enterrada en el ruido (S/N cerca de 0 dB, voz "distinguible pero muy enterrada"), el módulo hace la voz **menos** inteligible, no más. Medido sobre una grabación SSB en esas condiciones: lo que agrega en las pausas (−17 dB respecto de la banda 250–1000 Hz) es lo mismo que agrega con voz (−19 dB) — la banda de donde deriva el grave es ruido, y la diferencia de ruido con ruido es un zumbido, no un fundamental (picudez 6,5 dB contra 10 de un tono). Ese zumbido cae en 60–250 Hz, que el cancelador había dejado limpio, justo debajo de la única banda donde la voz todavía sobresale del ruido, y la enmascara. El "se calla solo" de arriba vale cuando el ruido es bajo: los −19 dB son respecto del ruido, no respecto del silencio. Regla práctica: si el cancelador está quitando más de 20 dB, este módulo va apagado.
+
 ---
 
 ## Capítulo 11 — Niveles y Ganancia
@@ -988,7 +990,7 @@ A la derecha de la misma fila, el botón **"🔇 Mute"** silencia la salida a lo
 | Gate de ruido | ⬜ Opcional | Umbral entre el nivel que marca el indicador en los huecos y el que marca con señal; profundidad 15–25 dB |
 | EQ Voz | ✅ Activo | Presencia +4 dB a 2000 Hz; cuerpo +3 dB a 350 Hz si la voz suena delgada |
 | Excitador armónico | ⬜ Opcional | Drive 2,0×, mezcla 25% |
-| Recuperar graves | ⬜ Opcional | Si la voz suena delgada. Empezar en 35% y subir de a poco |
+| Recuperar graves | ⬜ Opcional | Si la voz suena delgada **y la señal es limpia**. Empezar en 35% y subir de a poco. Con ruido alto, apagado: hace la voz menos inteligible |
 
 ### AM (ondas medias o cortas)
 

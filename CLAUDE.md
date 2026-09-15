@@ -560,6 +560,10 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
   al ruido en 250–700 Hz (+7 dB); arriba está 5–6 dB debajo. Todos los controles del cancelador
   caen sobre la misma curva voz/ruido; **sin cambios de código** — la "voz que se come" es la
   señal. Antes de buscar perillas por una queja de voz, medir la S/N POR BANDA (historial).
+- **Recuperar graves con ruido alto hace la voz menos inteligible** (encontrado por el usuario,
+  medido: agrega −17 dB de ruido×ruido en 60–250 Hz tanto en pausas como con voz; el "se calla
+  solo" es relativo al ruido). Sin código: documentado en ambos manuales y `bass.py`; el preset
+  SSB Ruido Alto lo lleva apagado — `validado en el aire`.
 
 Formato al acumular: una línea por cambio con su estado de validación (`validado en el aire` /
 `pendiente de validar`), y el bloque narrativo completo en el historial, sección "En curso". El

@@ -41,6 +41,16 @@ class BassRestorer:
         derivado agrega **−19.1 dB** en el mismo caso: sin voz no hay armónicos de
         donde derivar, así que se calla solo. Por eso tampoco necesita gate ni
         umbral de confianza.
+        LÍMITE (medido en el aire, SSB con S/N ≈ 0 dB, 15/9/2026): ese "se calla
+        solo" es RELATIVO AL RUIDO. Como `k` normaliza por el RMS de la banda, con
+        la banda llena de ruido el módulo agrega en las pausas lo mismo que con
+        voz (−17 vs −19 dB rel. a la banda), y lo que agrega es ruido×ruido (picudez
+        6,5 dB; un tono da 10) metido en 60–250 Hz, que la cadena había dejado
+        limpio, justo debajo de la única banda donde la voz sobresale → la voz se
+        vuelve MENOS inteligible. Reportado y corregido por el usuario en el preset
+        SSB Ruido Alto (módulo apagado); documentado en el manual. No gatearlo por
+        VAD (regla 1: el VAD de acá ve la salida del cancelador): es un módulo para
+        señal limpia, y el manual lo dice.
     """
 
     _BAND_LO_HZ: float = 250.0    # armónicos que sobreviven a un filtro SSB

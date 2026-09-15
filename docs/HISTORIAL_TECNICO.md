@@ -39,6 +39,25 @@ regla de método nueva.
 
 _(Los bloques nuevos de la próxima versión van acá, el más reciente arriba.)_
 
+**Post-v2.4.1: el recuperador de graves con ruido alto hace la voz MENOS inteligible.** Lo
+encontró el usuario tocando el preset SSB Ruido Alto (regla 16): *"con alto ruido, el recuperador
+de graves no ayuda, sino todo lo contrario"*. Medido sobre `RNK_2026-09-15_15-14-47` (S/N ≈ 0 dB)
+con la diferencia exacta ON(35 %)−OFF, todo lo demás idéntico:
+- Grave agregado relativo a la banda 250–700 Hz: **−16,7 dB en pausas, −19,0 con voz** — agrega lo
+  mismo con y sin voz. El "se calla solo" del docstring (−19 dB con ruido solo) es relativo AL
+  RUIDO: `k` normaliza por el RMS de la banda, y si la banda es ruido el módulo sigue entregando su
+  −17 dB de ruido×ruido.
+- Lo que agrega no es fundamental: picudez pico/media en 80–250 Hz de 6,5 dB en frames de voz
+  activa contra 10,0 de un tono puro y 4,9 en pausas (ruido puro).
+- Cae en 60–250 Hz, que la cadena había dejado limpio: **+25 dB en pausas, +29 con voz** respecto
+  de OFF, justo debajo de la única banda donde la voz sobresale del ruido (ver el bloque anterior)
+  → enmascaramiento hacia arriba.
+- **Sin cambio de código.** No se gatea por VAD (regla 1: el VAD ve la salida del cancelador) ni se
+  le pone umbral: es un módulo para señal limpia. Documentado en `MANUAL.md`/`MANUAL_EN.md`
+  ("Con ruido alto, apagarlo", regla práctica: cancelador quitando > 20 dB → apagado; fila del
+  checklist SSB) y en el docstring de `bass.py`. El preset SSB Ruido Alto lo lleva apagado.
+
+
 **Post-v2.4.1: verificación con SSB en condiciones malas — "voz que se come" es la señal, no el
 software.** Grabación `RNK_2026-09-15_15-14-47` (conversación con pausas, voz "distinguible pero
 muy enterrada", mejor en 39–50 s; preset "SSB - Ruido Alto" con los ajustes vivos: Intensidad 0,75,

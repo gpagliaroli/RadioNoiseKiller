@@ -886,6 +886,8 @@ It makes sense on **SSB with a narrow filter**, and generally whenever the voice
 
 > **Watch your own low cut first:** before enabling it, check your bandpass's lower limit. If what is cutting the low end is *your* filter and not the radio, lowering it (to 100–150 Hz) restores **real** bass, which will always sound better than synthesized bass.
 
+> **With heavy noise, turn it off.** When the voice is buried in noise (S/N near 0 dB, voice "recognizable but deeply buried"), the module makes the voice **less** intelligible, not more. Measured on an SSB recording in those conditions: what it adds during the pauses (−17 dB relative to the 250–1000 Hz band) is the same as what it adds with voice (−19 dB) — the band it derives the bass from is noise, and the difference of noise with noise is a rumble, not a fundamental (peakiness 6.5 dB versus 10 for a pure tone). That rumble lands in 60–250 Hz, which the noise canceller had left clean, right below the only band where the voice still rises above the noise, and masks it. The "it goes quiet on its own" above holds when the noise is low: the −19 dB is relative to the noise, not to silence. Rule of thumb: if the canceller is removing more than 20 dB, keep this module off.
+
 ---
 
 ## Chapter 11 — Levels & Gain
@@ -988,7 +990,7 @@ On the right of the same row, the **"🔇 Mute"** button silences the speaker ou
 | Noise gate | ⬜ Optional | Threshold between the level the indicator reads in the gaps and the level it reads with signal; depth 15–25 dB |
 | Voice EQ | ✅ On | Presence +4 dB at 2000 Hz; body +3 dB at 350 Hz if the voice sounds thin |
 | Harmonic exciter | ⬜ Optional | Drive 2.0×, mix 25% |
-| Restore bass | ⬜ Optional | If the voice sounds thin. Start at 35% and raise it gradually |
+| Restore bass | ⬜ Optional | If the voice sounds thin **and the signal is clean**. Start at 35% and raise it gradually. With heavy noise, off: it makes the voice less intelligible |
 
 ### AM (medium wave or shortwave)
 
