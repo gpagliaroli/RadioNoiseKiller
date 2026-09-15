@@ -65,9 +65,14 @@ soplido, la voz se escucha sin problemas"*; 15:14 del 15/9 como la mala):
 - **Si se implementa**: constante + una línea en `BassRestorer`, el pipeline pasa la confianza
   como pasa el vp al excitador, test (voz periódica → r 1, ruido → r 0), nota de manual en lugar
   de "apagarlo con ruido alto". Sin slider (regla 19). **Reservas**: una sola grabación limpia y
-  una sola voz; los 2 s de memoria al sintonizar; y **música en AM sin medir** (si la
-  periodicidad da valores medios, bajaría los graves de los presets AM que lo llevan al 15–20 %)
-  — medir sobre música o limitar al pasabanda SSB antes de tocar nada.
+  una sola voz; los 2 s de memoria al sintonizar.
+- **Música en AM — medida y despejada** (`RNK_2026-09-15_17-01-13`, AM local 60 s con música,
+  preset AM Local, graves 20 %; y `17-00-53`, 16 s). Confianza media 0,40 (0,56 en pasajes
+  fuertes), EMA 2 s entre 0,35 y 0,49 — zona intermedia, pero el efecto es chico. Grave retenido
+  en frames fuertes, descontando los 3 s de arranque del EMA (que sesgaba −1,6 dB en la primera
+  corrida): rampa **0,20→0,40**: −0,6 dB (r 0,78–1,0) en la de 60 s, −1,1 dB (r 0,47–1,0) en la
+  corta; rampa 0,15→0,35: −0,0 / −0,4 dB pero sólo −9,0 en la SSB mala (contra −16,9). Se queda
+  la 0,20→0,40 si se implementa. Sin reservas de medición; queda la validación en el aire.
 
 
 **Post-v2.4.1: el recuperador de graves con ruido alto hace la voz MENOS inteligible.** Lo
