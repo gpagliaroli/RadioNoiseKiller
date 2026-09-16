@@ -5,7 +5,7 @@
     "bandpass_preset": "FM 15 kHz",
     "agc_preset": "slow",
     "agc_noise_ceiling_enabled": true,
-    "agc_noise_ceiling_db": -40.0,
+    "agc_noise_ceiling_db": -50.0,
     "blanker_enabled": true,
     "blanker_frame": 5.0,
     "blanker_mini": 7.0,
