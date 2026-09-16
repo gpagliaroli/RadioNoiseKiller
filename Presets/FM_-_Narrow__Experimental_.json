@@ -3,7 +3,7 @@
   "version": 1,
   "dsp": {
     "bandpass_preset": "FM 15 kHz",
-    "agc_preset": "slow",
+    "agc_preset": "medium",
     "agc_noise_ceiling_enabled": true,
     "agc_noise_ceiling_db": -70.0,
     "blanker_enabled": true,
@@ -26,7 +26,7 @@
     "anf_depth": 0.5,
     "noise_enabled": true,
     "noise_mode": "mcra",
-    "noise_alpha": 0.5,
+    "noise_alpha": 0.6,
     "noise_floor": 0.25,
     "noise_smooth": 0.9400000000000001,
     "noise_attack": 0.7,
@@ -52,7 +52,7 @@
     "perceptual_floor_rolloff_hz": 3500.0,
     "perceptual_floor_rolloff_depth": 0.2,
     "post_filter_enabled": true,
-    "post_filter_strength": 1.5,
+    "post_filter_strength": 2.0,
     "pitch_enhance_enabled": true,
     "pitch_enhance_strength": 0.7000000000000001,
     "noise_mcra_window_ms": 500.0,
@@ -62,7 +62,7 @@
     "voice_leveler_enabled": true,
     "voice_leveler_max_db": 12.0,
     "voice_leveler_gate_voice": false,
-    "voice_leveler_release_ms": 1500.0
+    "voice_leveler_release_ms": 1000.0
   },
   "gain": {
     "input_gain_db": -3.0,
