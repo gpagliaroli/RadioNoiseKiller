@@ -1,6 +1,6 @@
 ﻿# RadioNoiseKiller — User Manual
 
-**Version 2.4.1**
+**Version 2.5**
 
 ---
 
@@ -532,7 +532,8 @@ This behavior is automatic and requires no adjustment. It triggers when the sign
 > sustained voice raised the estimated floor by some 10 dB and the canceller ended up subtracting too
 > much; that is why the end of the travel was for trying, not for leaving set. Since 2.4.1 the
 > canceller keeps voice harmonics out of the estimated floor (automatic, nothing to configure) and
-> that contamination dropped to about 2 dB. **All five factory presets now ship at 100%.**
+> that contamination dropped to about 2 dB. **The factory presets now ship at 100%** (except
+> *AM Banda Aérea*, at 70%).
 >
 > The control still does its job — there are some 3 dB between 30% and 100% — so if voice sounds dull
 > on continuous transmissions, lower it.
@@ -1179,6 +1180,20 @@ Typical use: a "weak SSB DX" preset with an aggressive canceller and pitch enhan
 
 Presets are stored as individual `.json` files in the `Presets/` folder next to the executable — they can be backed up or copied between machines.
 
+### Factory presets
+
+The application ships with **eight presets tuned on the air** (they are copied into `Presets/` the first time the folder is empty; they also come loose in `Presets.zip` inside the release, in case they get deleted):
+
+| Preset | What for |
+|--------|----------|
+| **SSB - Ruido Medio / Ruido Alto (Perfil Adaptativo)** | SSB on HF, canceller in adaptive mode. *Ruido Alto* (high noise) is the more aggressive one. |
+| **AM SW - Ruido Medio / Ruido Alto y Fading** | Shortwave with QSB; the voice leveler compensates the fading. |
+| **AM Local - Ruido Medio** | Local AM stations with good audio, wide bandpass. |
+| **AM Banda Aérea** | Aeronautical communications (AM on VHF, airband). |
+| **FM - Broadcast / Narrow (Experimental)** | New in 2.5: commercial FM with the 15 kHz bandpass, and narrow FM. Marked *experimental* because they have fewer hours on the air than the rest. |
+
+They are a starting point, not a final setting: the AGC *Noise ceiling* and the *Noise gate* are absolute dBFS thresholds that depend on each station and ship disabled (see chapters 2 and 8).
+
 ### Active preset and persistence
 
 The **"Active preset"** label shows the last preset loaded or saved. If any control is changed after loading it, the label adds the **"(modified)"** suffix — indicating that what you hear is the preset plus your tweaks, not the pure preset.
@@ -1222,4 +1237,4 @@ The file is capped at a few errors per session, so it does not grow without boun
 
 ---
 
-*RadioNoiseKiller — version 2.4.1*
+*RadioNoiseKiller — version 2.5*

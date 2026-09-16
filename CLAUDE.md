@@ -530,9 +530,9 @@ leer ese bloque es repetir trabajo que ya costó.
 
 ## Estado actual del proyecto
 
-**v2.4.1 publicada (septiembre 2026)** — última release en GitHub, distribuibles Windows y Linux,
-manuales `MANUAL_RadioNoiseKiller_v2.4.1.pdf` (ES, 44 págs) y `..._v2.4.1_EN.pdf` (EN, 43 págs),
-título "v2.4.1 by LU6APA". Validada en hardware real por el usuario. Cadena de versiones y qué
+**v2.5 publicada (septiembre 2026)** — última release en GitHub, distribuibles Windows y Linux,
+manuales `MANUAL_RadioNoiseKiller_v2.5.pdf` (ES, 46 págs) y `..._v2.5_EN.pdf` (EN, 45 págs),
+título "v2.5 by LU6APA". Validada en hardware real por el usuario. Cadena de versiones y qué
 trajo cada una: tabla al principio de `docs/HISTORIAL_TECNICO.md`.
 
 Lo que define el producto hoy, en una línea cada uno (el detalle está en el historial):
@@ -543,53 +543,32 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
   **Congelar piso con voz** (30–100 %) como controles por condición.
 - **Post-filtro** resta dB fijos en bins de ruido (4,5 dB/punto, retirada frenada a 12 dB/frame),
   **después** de `gain^alpha`. Anti-gorgojeo automático gateado por el VAD; la ventana de ataque
-  de `p_speech` se arma con **dos frames seguidos** de confianza espectral cruda (post-v2.4.1) y
-  nunca escribe el valor crudo en el estado del EMA.
+  de `p_speech` se arma con **dos frames seguidos** de confianza espectral cruda (v2.5) y nunca
+  escribe el valor crudo en el estado del EMA.
 - **ANF** con persistencia temporal de 350 ms (lo que separa heterodino de armónico es el tiempo).
 - **Supresor de impulsos** por contraste local en el tiempo; el umbral de **trama** (2–30) además
   suaviza los subidones del fading; el de **mini** no se baja (vuelve la distorsión).
 - **Gate de ruido** por nivel de entrada en dBFS, actúa sobre la salida, atenúa 20 dB, viene
   desactivado (umbral por estación). **AGC** con techo de ruido (cierre instantáneo, apertura a
   0,5 dB/s), también por estación y desactivado en los presets de fábrica.
-- **Combo Pasabanda** (9 anchos, hasta FM 15 kHz) en lugar del modo AM/SSB; nivelador de voz con modo continuo;
-  excitador con armónicos reales gateado por VAD; recuperación de graves derivada de los armónicos,
-  que se retira sola por periodicidad (EMA 2 s) cuando la voz está enterrada en ruido.
-- **5 presets de fábrica** en `Presets/`, afinados en el aire (ver [[project_factory_presets]]):
-  no se alinean con defaults ni se commitean con `git add -A`.
+- **Combo Pasabanda** (9 anchos, hasta FM 15 kHz) en lugar del modo AM/SSB; nivelador de voz con
+  modo continuo; excitador con armónicos reales gateado por VAD; **recuperación de graves** derivada
+  de los armónicos, que se retira sola por periodicidad (EMA 2 s) cuando la voz está enterrada en
+  ruido (v2.5).
+- **Robustez de audio** (v2.5): watchdog del callback + open/stop/close de PortAudio con timeout en
+  hilo auxiliar; el stream se abandona si el driver no vuelve y `main.py` sale con `os._exit`.
+- **8 presets de fábrica** en `Presets/`, afinados en el aire (ver [[project_factory_presets]]):
+  SSB ×2, AM SW ×2, AM Local, AM Banda Aérea, FM Broadcast/Narrow (experimentales). No se alinean
+  con defaults ni se commitean con `git add -A`.
 - **UI**: cascada con modo Diferencia y marcadores de heterodino; Grabar/Bypass/Mute como botones
   de 140 px; tooltips en los 45 sliders; escala 100/125/150 %; i18n ES/EN; "Acerca de" con Cafecito.
+- **Herramientas**: `tools/replay_recording.py` pasa una `_entrada.wav` por la cadena real en
+  sincrónico (`pipeline._process_chunk()`), con overrides de config y traza por frame — es la
+  herramienta para cualquier síntoma que sólo aparece en el aire (regla 32/34).
 
 ### Cambios pendientes de release
 
-- **Ventana de ataque de `p_speech` confirmada por tiempo + fin del "trinquete"** (ráfagas de
-  fondo entre palabras con ruido real): p95 del fondo en ruido −22,0 → −30,5 dB a igual
-  Intensidad, picos de voz sin cambio — `validado en el aire` (13/9: *"el ruido disminuyó
-  bastante, aún siento algún que otro ruido pero mucho mejor"*).
-- `tools/replay_recording.py`: pasa una `_entrada.wav` por la cadena real en sincrónico, con
-  overrides de config y traza por frame. `pipeline._process_chunk()` extraído del hilo para eso.
-- Verificación con SSB en condiciones malas (15/9, `RNK_2026-09-15_15-14-47`): la voz sólo supera
-  al ruido en 250–700 Hz (+7 dB); arriba está 5–6 dB debajo. Todos los controles del cancelador
-  caen sobre la misma curva voz/ruido; **sin cambios de código** — la "voz que se come" es la
-  señal. Antes de buscar perillas por una queja de voz, medir la S/N POR BANDA (historial).
-- **Recuperar graves con ruido alto hace la voz menos inteligible** (encontrado por el usuario,
-  medido: agrega −17 dB de ruido×ruido en 60–250 Hz tanto en pausas como con voz; el "se calla
-  solo" es relativo al ruido) → **se retira solo por periodicidad**: `BassRestorer.set_periodicity`
-  recibe la confianza de la autocorrelación del profiler (`pitch_confidence`, corre siempre) y
-  escala el nivel con rampa 0,20→0,40 sobre un EMA de **2 s** (sigue la estación, no la sílaba).
-  Medido en replay: voz limpia 0,0 dB, AM música −0,6, voz enterrada −16,9. Gate por VAD y
-  ganancia media del cancelador descartados por medición. Sin slider; indicador "Actividad"
-  bajo el slider en Avanzada Audio (periodicidad y nivel efectivo). Manuales, tooltips,
-  `test_dsp` y `test_ui` actualizados — `validado en el aire` (15/9: *"noto que todo funciona ok"*).
-- **FM broadcast**: preset de pasabanda "FM 15 kHz" (50–15000), sliders de Hz superior hasta
-  15 kHz, Máx X del espectro/cascada hasta 16 kHz. Filtro verificado estable en 48 k y 44,1 k
-  con los 4 órdenes — `pendiente de validar`.
-- **Protección contra driver de audio colgado** (el cuelgue que obligó a reiniciar el equipo):
-  watchdog del callback (`device_lost`, 3 s sin callback o `finished`), open/stop/close de
-  PortAudio en hilo auxiliar con timeout (8 s / 3 s; el stream se **abandona** si no vuelve),
-  cartel "El dispositivo de audio no responde" y `os._exit` al salir si quedó un stream abandonado
-  (el `atexit` de sounddevice se colgaría). `validado en el aire` (16/9, desenchufando la
-  interfaz USB con el proceso activo: detiene sola, cartel, ⟳ + ACTIVAR recuperan — *"todo eso
-  funcionó ok"*). El driver trabado a nivel del sistema queda sin reproducir.
+(ninguno)
 
 Formato al acumular: una línea por cambio con su estado de validación (`validado en el aire` /
 `pendiente de validar`), y el bloque narrativo completo en el historial, sección "En curso". El

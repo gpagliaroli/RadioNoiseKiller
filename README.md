@@ -52,14 +52,14 @@ panorama general y las notas para quien quiera tocar el código.
   amplifique el ruido de banda cuando la señal es débil
 - **Nivelador de voz** — segundo AGC post-cancelador gateado por el detector de voz, para emparejar
   estaciones de niveles dispares; con opción de nivelar en continuo para música
-- **Filtro de paso de banda** — 8 anchos de fábrica (4 de SSB y 4 de AM) elegibles con un combo, o
-  los cortes a mano; la salida se puede configurar independiente de la entrada para no apilar dos
+- **Filtro de paso de banda** — 9 anchos de fábrica (4 de SSB, 4 de AM y FM 15 kHz) elegibles con
+  un combo, o los cortes a mano; la salida se puede configurar independiente de la entrada para no apilar dos
   rolloffs sobre la voz
 - **EQ de voz** — presencia (consonantes) y cuerpo (fundamentales), paramétricos
 - **Excitador armónico** — genera armónicos reales para recuperar el brillo que cortó la radio, con
   control de carácter par/impar y gate por detección de voz
 - **Recuperar graves** — reconstruye el fundamental **derivándolo de los armónicos** que sobrevivieron
-  al filtro del receptor, sin sintetizar nada
+  al filtro del receptor, sin sintetizar nada; se retira solo cuando la voz está enterrada en ruido
 
 **Interfaz y operación**
 
@@ -67,11 +67,14 @@ panorama general y las notas para quien quiera tocar el código.
   marcadores de los tonos que está cancelando el ANF
 - **Cascada en modo Diferencia** — pinta cuánto quita el procesamiento en cada frecuencia y
   momento, para ver de un vistazo si el cancelador está tocando la voz
-- **Presets** — 5 perfiles de fábrica afinados en el aire, más los propios
+- **Presets** — 8 perfiles de fábrica afinados en el aire (SSB, AM SW, AM local, banda aérea y FM),
+  más los propios
 - **Perfiles de ruido nombrados** — guardar y recuperar el ruido de cada banda o cada hora del día
 - **Grabación a WAV** — con opción de grabar en paralelo la entrada sin procesar, para el antes/después
 - **Tamaño de interfaz ajustable** (100 / 125 / 150 %) y ayuda contextual en todos los sliders
 - **Standalone** — sin instalación de Python, sin internet, sin GPU
+- **Robusta ante el hardware** — si la interfaz de audio se desconecta o el driver se traba, la
+  aplicación lo detecta, detiene sola y sigue respondiendo (nunca queda congelada en PortAudio)
 
 ---
 
@@ -184,9 +187,10 @@ src/
     ├── spectrum_widget.py# Espectro en tiempo real (FFT + EMA)
     └── waterfall_widget.py # Cascada tiempo-frecuencia
 
-Presets/                  # 6 presets de fábrica (JSON) + Presets.zip
+Presets/                  # 8 presets de fábrica (JSON) + Presets.zip
 tests/                    # Suites de regresión (run_all.py) y diagnósticos
-tools/                    # Generadores del manual PDF, el diagrama y el zip de presets
+tools/                    # Generadores del manual PDF, el diagrama y el zip de presets;
+                          # replay_recording.py pasa una grabación por la cadena real
 Images/                   # Logo, ícono y diagramas del pipeline
 .github/workflows/        # Build de Linux (x86_64 y ARM64) en Actions
 ```

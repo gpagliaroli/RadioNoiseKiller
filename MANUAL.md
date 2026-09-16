@@ -1,6 +1,6 @@
 ﻿# RadioNoiseKiller — Manual de Usuario
 
-**Versión 2.4.1**
+**Versión 2.5**
 
 ---
 
@@ -534,7 +534,8 @@ Este comportamiento es automático y no requiere ningún ajuste. Se activa cuand
 > voz sostenida subía el piso estimado unos 10 dB y el cancelador terminaba restando de más; por eso
 > el extremo del recorrido era para probar y no para dejar puesto. Desde la 2.4.1 el cancelador
 > mantiene los armónicos de la voz fuera del piso estimado (automático, no hay nada que configurar) y
-> esa contaminación bajó a unos 2 dB. Los **cinco presets de fábrica lo traen ahora en 100%**.
+> esa contaminación bajó a unos 2 dB. Los **presets de fábrica lo traen ahora en 100%** (salvo
+> *AM Banda Aérea*, en 70%).
 >
 > El control sigue haciendo lo suyo — hay unos 3 dB de diferencia entre 30% y 100% —, así que si con
 > voz continua notás que la voz se apaga, bajalo.
@@ -1179,6 +1180,20 @@ Uso típico: un preset "SSB DX débil" con cancelador agresivo y pitch enhanceme
 
 Los presets se guardan como archivos `.json` individuales en la carpeta `Presets/` junto al ejecutable — se pueden respaldar o copiar entre equipos.
 
+### Presets de fábrica
+
+La aplicación trae **ocho presets afinados en el aire** (se copian a `Presets/` la primera vez que la carpeta está vacía; también vienen sueltos en `Presets.zip` dentro del release, por si se borran):
+
+| Preset | Para qué |
+|--------|----------|
+| **SSB - Ruido Medio / Ruido Alto (Perfil Adaptativo)** | SSB en HF, cancelador en modo adaptativo. El de *Ruido Alto* es más agresivo. |
+| **AM SW - Ruido Medio / Ruido Alto y Fading** | Onda corta con QSB; el nivelador de voz compensa el fading. |
+| **AM Local - Ruido Medio** | Emisoras de AM locales con buen audio, pasabanda ancho. |
+| **AM Banda Aérea** | Comunicaciones aeronáuticas (AM en VHF, banda aérea). |
+| **FM - Broadcast / Narrow (Experimental)** | Novedad 2.5: FM comercial con el pasabanda de 15 kHz, y FM angosta. Marcados *experimental* porque tienen menos horas de aire que el resto. |
+
+Son un punto de partida, no un ajuste final: el *Techo de ruido* del AGC y el *Gate de ruido* son umbrales absolutos en dBFS que dependen de cada estación y vienen desactivados (ver capítulos 2 y 8).
+
 ### Preset activo y persistencia
 
 La etiqueta **"Preset activo"** muestra el último preset cargado o guardado. Si después de cargarlo se modifica cualquier control, la etiqueta agrega el sufijo **"(modificado)"** — indica que lo que suena es el preset más tus retoques, no el preset puro.
@@ -1222,4 +1237,4 @@ El archivo se limita a unos pocos errores por sesión, así que no crece sin con
 
 ---
 
-*RadioNoiseKiller — versión 2.4.1*
+*RadioNoiseKiller — versión 2.5*

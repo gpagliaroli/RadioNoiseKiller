@@ -32,12 +32,24 @@ regla de método nueva.
 | v2.3 | ago 2026 | menor | Gate de ruido reemplaza al squelch, combo Pasabanda reemplaza a Modo, Freno de bajada, Congelar piso con voz |
 | v2.4 | ago 2026 | menor | Umbral de trama 2–30, indicador por etapa del supresor, sliders λ_d grises en estático, presets 7 → 5 |
 | v2.4.1 | sep 2026 | patch | Exclusión de armónicos sostenidos del piso (constante), 5 presets reafinados, git mv por mayúsculas |
+| v2.5 | sep 2026 | menor | Ventana de ataque confirmada por tiempo, graves se retiran por periodicidad, FM 15 kHz, protección driver colgado, replay_recording, 8 presets |
 
 ---
 
-## En curso (post-v2.4.1)
+## En curso (post-v2.5)
 
 _(Los bloques nuevos de la próxima versión van acá, el más reciente arriba.)_
+
+---
+
+## v2.5 (septiembre 2026)
+
+Cierre: ventana de ataque de `p_speech` confirmada por tiempo (fin del "trinquete"), retirada
+automática del recuperador de graves por periodicidad, pasabanda FM 15 kHz (validado en el aire
+por el usuario con FM broadcast; presets *FM - Broadcast* y *FM - Narrow*, ambos experimentales),
+protección contra driver de audio colgado, `tools/replay_recording.py`, 8 presets de fábrica
+(nuevos *AM Banda Aérea* y los dos FM; reajustes de AM Local y SSB Ruido Alto). Manuales v2.5
+(46/45 págs). Los bloques siguen abajo, el más reciente primero.
 
 **Post-v2.4.1: protección contra un driver de audio colgado (la app se congelaba y hubo que
 reiniciar el equipo).** El usuario reportó un cuelgue que atribuye a que *"las interfaces de audio
@@ -89,6 +101,7 @@ toma `hi/nyq` directo); `MAX_FREQ_HZ` de espectro y cascada 12 → 16 kHz y el s
 (default 12 kHz sin cambio). Verificado: `BandpassFilter` estable en (50, 15000) a 48 k y 44,1 k
 con órdenes 2/4/6/8 (12 kHz a −0,0…−0,8 dB, 20 kHz de −16 a −92 dB). La curva de over-sustracción
 HF ya acotaba en ~14 kHz. Manuales ES/EN: rango del slider, fila del preset, consejo FM, Máx X.
+**Validado en el aire** (16/9) — el usuario armó dos presets sobre FM (*Broadcast* y *Narrow*).
 
 
 **Post-v2.4.1: el recuperador de graves se retira solo por periodicidad — IMPLEMENTADO y validado
