@@ -14,6 +14,10 @@ en orden; cada uno tiene su verificación. No publicar si algo falla.
 - **Cada feature/fix fue validado por el usuario en hardware real** (Windows multi-monitor,
   notebook Ubuntu/Wayland, interfaz USB según aplique — ver invariantes de empaquetado en
   CLAUDE.md). Si algo quedó sin validar, preguntarle al usuario antes de seguir.
+- **Preguntarle al usuario si terminó de afinar presets** y pedirle que no toque más hasta el
+  cierre. En la v2.5 siguió ajustando FM Narrow desde la app con el tag ya pusheado: el spec
+  globea `Presets/*.json` del DISCO, así que el bundle de Windows salió distinto del tag y hubo
+  que mover el tag y rebuildear.
 - CLAUDE.md tiene la lista "Cambios pendientes de release" completa (sección "Estado actual del
   proyecto") — es la fuente de las notas del release. El detalle de cada cambio vive en
   `docs/HISTORIAL_TECNICO.md`, sección "En curso".
@@ -100,7 +104,10 @@ diagnósticos — correrlos a mano si el release tocó enumeración de dispositi
 5. Zip: `RadioNoiseKiller_vX.Y.zip`.
 6. Smoke test: lanzar el exe, confirmar vivo ~10 s, matar. (El título/ventana no son
    enumerables desde la sesión del agente — vivo alcanza; la verificación visual es del usuario.)
-7. **Verificar el CONTENIDO del zip antes de publicar**, no solo que exista:
+7. **Verificar que los presets bundleados sean los del tag**, no los del disco:
+   `for f in Presets/*.json; do diff -q --strip-trailing-cr <(git show HEAD:$f) dist_vXY/RadioNoiseKiller/_internal/$f; done`
+   (sin `--strip-trailing-cr` difieren todos por CRLF).
+8. **Verificar el CONTENIDO del zip antes de publicar**, no solo que exista:
    `RadioNoiseKiller/Presets/*.json` (los 5 de fábrica), los dos PDFs y el binario.
    En v2.0 se publicaron los dos zips **sin ningún preset** — el de Windows con la carpeta
    `Presets/` vacía (la crea el propio smoke test al ejecutar el exe, lo que la hace parecer
@@ -111,8 +118,9 @@ diagnósticos — correrlos a mano si el release tocó enumeración de dispositi
 ## 6. Build Linux (artifact del CI)
 
 - Esperar el run del tag en verde (poll por API con el token de `git credential fill`).
-- Descargar el artifact `RadioNoiseKiller-linux-x86_64`, renombrar a
-  `RadioNoiseKiller_vX.Y-linux-x86_64.zip`.
+- Descargar el artifact `RadioNoiseKiller-linux-x86_64` (viene como zip dentro de un zip),
+  renombrar a `RadioNoiseKiller_vX.Y-linux-x86_64.zip` y **agregarle los dos PDFs** bajo
+  `RadioNoiseKiller/` (el CI no los genera; las notas dicen que los dos paquetes los traen).
 - Si la versión tocó los specs o el recorte de Qt: verificar contenido del zip (plugins
   wayland presentes — ver invariantes de empaquetado en CLAUDE.md).
 
