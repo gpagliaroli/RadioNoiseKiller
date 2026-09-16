@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer, QPoint, QUrl
 from PySide6.QtGui import QFont, QDesktopServices
 
+from audio.stream import AudioDeviceError
 from audio.devices import (
     list_devices, rescan_devices, AudioDevice,
     IncompatibleDevicesError, duplex_hostapi_mismatch,
@@ -1908,6 +1909,15 @@ class MainWindow(QMainWindow):
                 ).format(in_api=e.input_api, out_api=e.output_api)
                 self._status_bar.showMessage(msg)
                 QMessageBox.warning(self, tr("Dispositivos incompatibles"), msg)
+            except AudioDeviceError:
+                self._btn_start.setChecked(False)
+                self._status_bar.showMessage(tr("El dispositivo de audio no responde."))
+                QMessageBox.warning(self, tr("El dispositivo de audio no responde"), tr(
+                    "El dispositivo de audio no respondió al intentar abrir el stream.\n\n"
+                    "Suele pasar cuando una interfaz USB se desconectó o el driver de "
+                    "audio quedó trabado. Probá desconectar y volver a conectar la "
+                    "interfaz y usar el botón ⟳ para re-enumerar los dispositivos. "
+                    "Si persiste, hace falta reiniciar el equipo."))
             except Exception as e:
                 self._btn_start.setChecked(False)
                 self._status_bar.showMessage(tr("Error: {msg}").format(msg=e))
@@ -2047,7 +2057,28 @@ class MainWindow(QMainWindow):
         self._lbl_snr.setStyleSheet("color: #888; font-weight: bold;")
         self._waterfall_widget.set_tone_freqs(None)
 
+    def _on_audio_device_lost(self) -> None:
+        """El dispositivo dejó de entregar audio en pleno procesamiento (interfaz
+        desconectada, driver colgado). Detiene como si el usuario hubiera pulsado
+        DETENER — stop() tiene timeout, así que la GUI no se congela aunque el
+        driver no responda — y avisa. Sin esto la app seguía en 'Procesando...'
+        con silencio, y el DETENER posterior se bloqueaba en PortAudio para
+        siempre (el cuelgue que obligó a reiniciar el equipo)."""
+        self._btn_start.setChecked(False)   # clicked no se emite por código:
+        self._on_toggle_processing(False)   # llamar el handler a mano
+        msg = tr("⚠ El dispositivo de audio dejó de responder — procesamiento detenido.")
+        self._status_bar.showMessage(msg)
+        QMessageBox.warning(self, tr("El dispositivo de audio no responde"), tr(
+            "El dispositivo de audio dejó de entregar señal y el procesamiento se "
+            "detuvo.\n\nSuele pasar cuando una interfaz USB se desconectó o el driver "
+            "de audio quedó trabado. Probá desconectar y volver a conectar la "
+            "interfaz y usar el botón ⟳ para re-enumerar los dispositivos. "
+            "Si persiste, hace falta reiniciar el equipo."))
+
     def _tick_levels(self) -> None:
+        if self._pipeline.audio_device_lost:
+            self._on_audio_device_lost()
+            return
         self._check_dsp_errors()
         self._vu_in.set_level(self._pipeline.db_in)
         self._vu_out.set_level(self._pipeline.db_out)

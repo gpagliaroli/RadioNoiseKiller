@@ -39,6 +39,48 @@ regla de método nueva.
 
 _(Los bloques nuevos de la próxima versión van acá, el más reciente arriba.)_
 
+**Post-v2.4.1: protección contra un driver de audio colgado (la app se congelaba y hubo que
+reiniciar el equipo).** El usuario reportó un cuelgue que atribuye a que *"las interfaces de audio
+dejaron de funcionar"*. Revisión del ciclo de vida del stream: la GUI llamaba a PortAudio en tres
+puntos **bloqueantes y sin timeout** — `Pa_OpenStream`+`start` en ACTIVAR, `Pa_StopStream`+
+`Pa_CloseStream` en DETENER y en `closeEvent`, y el `atexit` de sounddevice (`stop()`+`close()`
+del último stream + `Pa_Terminate`) al salir. Con el driver caído ninguna vuelve: la ventana queda
+"no responde" para siempre, y aun cerrándola el `.exe` quedaba vivo en el `atexit`. Además el
+pipeline no se enteraba de que el dispositivo había muerto: `finished_callback` sólo bajaba
+`_running` del `AudioStream` (nadie lo miraba) y si el driver ni siquiera lo dispara, el callback
+simplemente deja de llegar con la app en "Procesando..." y silencio.
+Cambios (`audio/stream.py`, `pipeline.py`, `main_window.py`, `main.py`):
+- **Watchdog**: `_callback` sella `_last_callback_t` (float, atómico) y `_on_finished` marca
+  `finished`. `AudioStream.device_lost` = stream arrancado y (`finished` o sin callback por más de
+  `STALL_TIMEOUT_S = 3 s`; los stalls de CPU legítimos son < 300 ms). `Pipeline.audio_device_lost`
+  replica la condición (invariante 3; en headless no hay stream → False). `_tick_levels` lo mira
+  primero y llama a `_on_audio_device_lost()`: detiene como DETENER (`setChecked(False)` no emite
+  `clicked` — se llama el handler a mano) y avisa con cartel + barra de estado.
+- **stop/close con timeout**: `AudioStream.stop()` corre `stop()`+`close()` en un hilo daemon y
+  espera `CLOSE_TIMEOUT_S = 3 s`; si no vuelve, el stream se da por **abandonado** (el hilo queda
+  colgado en el driver — no se puede matar — pero la GUI sigue). En hardware sano tarda 10–200 ms.
+- **open con timeout**: `_open_with_timeout` abre+arranca en un hilo, espera `OPEN_TIMEOUT_S = 8 s`
+  (sano: 65–320 ms) y levanta `AudioDeviceError` (cartel propio en `_on_toggle_processing`). Si el
+  driver termina abriendo DESPUÉS del timeout, el mismo hilo cierra ese stream huérfano (si no,
+  quedaba un stream vivo llamando al callback de un pipeline que ya no corre).
+- **Salida forzada**: `abandoned_streams()` (contador de módulo); `main.py` hace `os._exit(rc)` tras
+  `app.exec()` si hay alguno — `closeEvent` ya guardó settings — para saltarse el `atexit` de
+  sounddevice que se colgaría en el stream abandonado.
+- Bug al implementarlo, atrapado en el smoke con hardware real y no en el banco: el callback de
+  PortAudio tiene un parámetro que se llama `time` y pisaba el módulo (`time.monotonic()` →
+  `AttributeError` en cada callback, `device_lost=True` siempre). El módulo se importa como `_time`
+  y el test ahora **ejercita `_callback` con la firma real**.
+Tests: `test_pipeline` (watchdog stall+finished, `stop()` con driver colgado vuelve en ~300 ms y
+abandona, `start()` con apertura colgada → `AudioDeviceError`, apertura tardía cierra el huérfano;
+timeouts acortados a 0,2–0,3 s), `test_ui::test_dispositivo_perdido_detiene_y_avisa` (pipeline
+headless + stream doble con `device_lost=True` → detiene, desmarca ACTIVAR, para el timer, rehabilita
+combos, un solo cartel). Smoke con hardware real: open 65 ms, callback cada 20 ms, close 194 ms, 0
+abandonados. **Validado en el aire** (16/9): el usuario desenchufó la interfaz USB con el proceso
+activo — detención sola con cartel, ⟳ y ACTIVAR recuperaron al reenchufar (*"todo eso funcionó
+ok"*). El driver trabado a nivel del sistema (el cuelgue original) no se puede provocar; lo que
+queda garantizado es que ninguna llamada a PortAudio puede congelar la GUI más de 8 s. Lo que NO cubre: `rescan_devices()` (`Pa_Terminate`+`Pa_Initialize`,
+botón ⟳) sigue siendo bloqueante — sólo corre con el proceso detenido y a pedido del usuario.
+
 **Post-v2.4.1: FM broadcast — pasabanda hasta 15 kHz.** Pedido del usuario. El audio de FM
 broadcast llega a 15 kHz (Nyquist 24 kHz a 48 k, sin problema). Cambios: preset `"FM 15 kHz":
 (50, 15000)` al final de `BANDPASS_PRESETS` (el orden es el del combo); `_freq_slider(hi=15000)`

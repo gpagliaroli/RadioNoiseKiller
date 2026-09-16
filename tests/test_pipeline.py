@@ -512,5 +512,123 @@ assert _cb.dsp.bandpass_preset not in BANDPASS_PRESETS, \
     "editar los limites a mano no paso el preset a Personalizado"
 print("Pasabanda: combo, salida independiente y nombres: OK")
 
+# Driver de audio colgado (interfaz USB que se cae, servicio de audio trabado):
+# ninguna llamada a PortAudio puede dejar la GUI congelada. Sin hardware: se
+# reemplaza sd.Stream por dobles que se cuelgan o terminan tarde.
+import threading                       # noqa: E402
+import audio.stream as _st             # noqa: E402
+from audio.stream import AudioStream, AudioDeviceError, abandoned_streams  # noqa: E402
+
+_st.OPEN_TIMEOUT_S  = 0.3
+_st.CLOSE_TIMEOUT_S = 0.3
+_st.STALL_TIMEOUT_S = 0.2
+_base_abandoned = abandoned_streams()
+
+
+class _StreamColgado:
+    """Doble de sd.Stream cuyo stop() no vuelve nunca (driver caído)."""
+    def __init__(self, *a, **k):
+        self.closed = False
+        self.release = threading.Event()
+    def start(self): pass
+    def stop(self):  self.release.wait()
+    def close(self): self.closed = True
+
+
+class _StreamTardio(_StreamColgado):
+    """Abre bien, pero recién después del timeout de apertura."""
+    def __init__(self, *a, **k):
+        super().__init__()
+        time.sleep(0.6)
+        _tardios.append(self)
+    def stop(self): pass
+
+_tardios: list = []
+_sd_stream_real = _st.sd.Stream
+_ac = AppConfig().audio
+
+# 1) Watchdog: sin callback por más de STALL_TIMEOUT_S → device_lost; y con
+#    finished_callback del driver, idem. Antes de arrancar, nunca.
+_ws = AudioStream(_ac, lambda x: x)
+assert not _ws.device_lost, "device_lost sin stream arrancado"
+_ws._running = True
+_ws._last_callback_t = time.monotonic()
+assert not _ws.device_lost, "device_lost recién arrancado"
+_ws._last_callback_t = time.monotonic() - 1.0
+assert _ws.device_lost, "callback ausente > STALL_TIMEOUT_S y no detecta"
+# un callback real lo rearma (con la firma de PortAudio: el 4to parametro se
+# llama `time` y pisaba al modulo — paso, por eso se ejercita el callback)
+class _Status:
+    input_overflow = output_underflow = False
+_ws._callback(np.zeros((480, 1), np.float32), np.zeros((480, 1), np.float32),
+              480, object(), _Status())
+assert not _ws.device_lost, "el callback no rearma el watchdog"
+_ws._last_callback_t = time.monotonic()
+_ws._on_finished()
+assert _ws.device_lost, "finished_callback del driver y no detecta"
+# el pipeline replica la condición (invariante 3) y en headless no hay stream
+_pw = ProcessingPipeline(AppConfig())
+_pw.start(headless=True)
+assert not _pw.audio_device_lost
+_pw._stream = _ws
+assert _pw.audio_device_lost
+_pw._stream = None
+_pw.stop()
+print("Watchdog del dispositivo (stall + finished): OK")
+
+# 2) stop() con el driver colgado vuelve dentro del timeout y marca abandono.
+_cs = AudioStream(_ac, lambda x: x)
+_colgado = _StreamColgado()
+_cs._stream, _cs._running = _colgado, True
+_t0 = time.monotonic()
+_cs.stop()
+_dt = time.monotonic() - _t0
+assert _dt < 1.5, f"stop() tardó {_dt:.2f}s con el driver colgado"
+assert _cs.abandoned and abandoned_streams() == _base_abandoned + 1
+assert not _cs.is_running()
+_colgado.release.set()     # liberar el hilo auxiliar
+print(f"stop() con driver colgado: vuelve en {_dt*1000:.0f} ms y abandona: OK")
+
+# 3) start() con Pa_OpenStream colgado: AudioDeviceError dentro del timeout.
+_st.sd.Stream = _StreamColgado
+_os = AudioStream(_ac, lambda x: x)
+_os._device_max = staticmethod(lambda d, k: 1)
+_bloqueado = threading.Event()
+_orig_init = _StreamColgado.__init__
+def _init_colgado(self, *a, **k):
+    _orig_init(self)
+    _bloqueado.wait()
+_StreamColgado.__init__ = _init_colgado
+try:
+    _t0 = time.monotonic()
+    try:
+        _os.start()
+        assert False, "start() no levantó AudioDeviceError con la apertura colgada"
+    except AudioDeviceError:
+        pass
+    _dt = time.monotonic() - _t0
+    assert _dt < 1.5, f"start() tardó {_dt:.2f}s con la apertura colgada"
+    assert not _os.is_running() and _os.abandoned
+finally:
+    _StreamColgado.__init__ = _orig_init
+    _bloqueado.set()
+print(f"start() con apertura colgada: AudioDeviceError en {_dt*1000:.0f} ms: OK")
+
+# 4) La apertura llega TARDE (después del timeout): el hilo auxiliar cierra el
+#    stream huérfano — no queda un stream vivo llamando al callback.
+_st.sd.Stream = _StreamTardio
+_ts = AudioStream(_ac, lambda x: x)
+_ts._device_max = staticmethod(lambda d, k: 1)
+try:
+    _ts.start()
+    assert False, "start() no levantó AudioDeviceError con la apertura tardía"
+except AudioDeviceError:
+    pass
+time.sleep(0.6)
+assert _tardios and _tardios[0].closed, "el stream que llegó tarde no se cerró"
+assert not _ts.is_running()
+_st.sd.Stream = _sd_stream_real
+print("Apertura tardía cierra el stream huérfano: OK")
+
 print(f"\nErrores: {errors if errors else 'ninguno'}")
 print("\nPipeline: OK")

@@ -1021,6 +1021,15 @@ class ProcessingPipeline:
         return self._running
 
     @property
+    def audio_device_lost(self) -> bool:
+        """El dispositivo dejó de entregar audio con el procesamiento activo:
+        PortAudio terminó el stream por su cuenta o el callback no llega hace
+        más de STALL_TIMEOUT_S (ver AudioStream.device_lost). Lo consulta la GUI
+        desde su timer; en headless no hay stream y siempre es False."""
+        stream = self._stream
+        return self._running and stream is not None and stream.device_lost
+
+    @property
     def db_in(self) -> float:
         return self._db_in
 

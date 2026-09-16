@@ -101,6 +101,16 @@ excepción (NaN, shape mismatch, overflow numpy), el hilo **no muere**: notifica
 con el siguiente chunk. Sin esto, el hilo moría silenciosamente, `_in_queue` se llenaba,
 y el aprendizaje del perfil de ruido quedaba atascado en 0 frames.
 
+### Ninguna llamada a PortAudio bloquea la GUI sin timeout
+Con el driver colgado (interfaz USB caída, servicio de audio trabado), `Pa_OpenStream`,
+`Pa_StopStream` y `Pa_CloseStream` no vuelven nunca. `AudioStream` las corre en un hilo daemon y
+espera `OPEN_TIMEOUT_S` / `CLOSE_TIMEOUT_S`; si vencen, el stream queda **abandonado** (contador
+`abandoned_streams()`) y `main.py` sale con `os._exit` para esquivar el `atexit` de sounddevice.
+El watchdog `device_lost` (callback ausente > `STALL_TIMEOUT_S` o `finished_callback`) lo mira
+`_tick_levels` primero que nada y detiene con aviso. **El parámetro 4 del callback se llama
+`time`**: el módulo se importa como `_time` (pisarlo rompía cada callback y sólo se vio con
+hardware real). No agregar llamadas a PortAudio en el hilo de la GUI fuera de este esquema.
+
 ### Drenado de cola en stop()
 `_in_queue` tiene maxsize=30 (~300ms de audio). Si el hilo procesador se cuelga o muere,
 la cola se llena y `put_nowait(None)` (el sentinel de parada) falla silenciosamente.
@@ -573,6 +583,13 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
 - **FM broadcast**: preset de pasabanda "FM 15 kHz" (50–15000), sliders de Hz superior hasta
   15 kHz, Máx X del espectro/cascada hasta 16 kHz. Filtro verificado estable en 48 k y 44,1 k
   con los 4 órdenes — `pendiente de validar`.
+- **Protección contra driver de audio colgado** (el cuelgue que obligó a reiniciar el equipo):
+  watchdog del callback (`device_lost`, 3 s sin callback o `finished`), open/stop/close de
+  PortAudio en hilo auxiliar con timeout (8 s / 3 s; el stream se **abandona** si no vuelve),
+  cartel "El dispositivo de audio no responde" y `os._exit` al salir si quedó un stream abandonado
+  (el `atexit` de sounddevice se colgaría). `validado en el aire` (16/9, desenchufando la
+  interfaz USB con el proceso activo: detiene sola, cartel, ⟳ + ACTIVAR recuperan — *"todo eso
+  funcionó ok"*). El driver trabado a nivel del sistema queda sin reproducir.
 
 Formato al acumular: una línea por cambio con su estado de validación (`validado en el aire` /
 `pendiente de validar`), y el bloque narrativo completo en el historial, sección "En curso". El

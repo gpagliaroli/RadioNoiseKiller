@@ -118,6 +118,7 @@ Selecciona de dónde viene el audio (entrada) y a dónde va (salida). La aplicac
 - Si no se escucha nada con una interfaz USB estéreo, probar **Canal: Derecho** — es común que el audio de la radio venga cableado por ese canal.
 - La entrada y la salida deben ser de la **misma API de Windows** (ambas WASAPI, o ambas WDM-KS): un stream full-duplex no admite cruzar APIs. Si elegís una combinación incompatible (por ejemplo entrada WASAPI + una salida que solo existe en WDM-KS, como "Mezcla estéreo"), la aplicación **deshabilita el botón ACTIVAR**, marca ambos selectores con un borde de aviso y explica el motivo en la barra de estado. Elegí ambos dispositivos de la misma API para poder activar.
 - En radios con **doble receptor** (RX principal por el canal izquierdo, sub-RX por el derecho), el selector de Canal permite elegir cuál procesar. La salida procesada suena siempre en ambos oídos.
+- Si el dispositivo **deja de responder** con el procesamiento activo (una interfaz USB que se desconecta, un driver de audio que se traba), la aplicación lo detecta a los pocos segundos, detiene el procesamiento sola y muestra el aviso **"El dispositivo de audio no responde"**. Lo mismo si el dispositivo no responde al pulsar ACTIVAR. Desconectá y volvé a conectar la interfaz, usá **⟳** para re-enumerar y activá de nuevo; si el aviso se repite, el driver quedó trabado a nivel del sistema y hace falta reiniciar el equipo. La aplicación sigue respondiendo en todos los casos y se puede cerrar normalmente (la configuración se guarda).
 
 ---
 

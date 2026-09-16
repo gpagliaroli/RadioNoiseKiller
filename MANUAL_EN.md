@@ -118,6 +118,7 @@ Selects where the audio comes from (input) and where it goes (output). On Window
 - If you hear nothing from a stereo USB interface, try **Channel: Right** — radio audio is often wired to that channel.
 - The input and output must belong to the **same Windows API** (both WASAPI, or both WDM-KS): a full-duplex stream cannot mix APIs. If you pick an incompatible combination (for example a WASAPI input plus an output that only exists under WDM-KS, such as "Stereo Mix"), the application **disables the START button**, outlines both selectors with a warning border and explains the reason in the status bar. Pick both devices from the same API to be able to start.
 - On **dual-receiver** radios (main RX on the left channel, sub-RX on the right), the Channel selector picks which one to process. The processed output always plays in both ears.
+- If the device **stops responding** while processing is active (a USB interface that gets unplugged, an audio driver that gets stuck), the application detects it within a few seconds, stops processing by itself and shows the **"Audio device not responding"** warning. The same happens if the device does not respond when you press START. Unplug and reconnect the interface, use **⟳** to rescan and start again; if the warning repeats, the driver is stuck at the system level and the computer needs a restart. The application keeps responding in every case and can be closed normally (settings are saved).
 
 ---
 

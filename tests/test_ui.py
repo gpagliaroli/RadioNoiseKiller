@@ -944,6 +944,53 @@ def test_indicadores_vuelven_a_reposo_al_detener():
     print("Indicadores vuelven a reposo al detener      OK")
 
 
+def test_dispositivo_perdido_detiene_y_avisa():
+    """Si el dispositivo deja de responder en pleno proceso (interfaz USB caida,
+    driver trabado), el tick de la GUI lo detecta via `audio_device_lost`,
+    detiene como si se hubiera pulsado DETENER y avisa con un cartel. Antes la
+    app quedaba en 'Procesando...' con silencio y el DETENER posterior se
+    bloqueaba en PortAudio para siempre. Sin hardware: el pipeline arranca
+    headless y el stream es un doble con device_lost=True."""
+    from PySide6.QtWidgets import QMessageBox
+
+    w = _win()
+    orig_start = w._pipeline.start
+    w._pipeline.start = lambda: orig_start(headless=True)
+    cajas = []
+    orig_warn = QMessageBox.warning
+    QMessageBox.warning = staticmethod(lambda *a, **k: cajas.append(a[1]) or 0)
+    try:
+        w._btn_start.click()
+        _app.processEvents()
+        assert w._pipeline.is_running() and w._btn_start.isChecked()
+        assert w._level_timer.isActive()
+
+        class _StreamPerdido:
+            device_lost = True
+            def stop(self): pass
+
+        w._pipeline._stream = _StreamPerdido()
+        assert w._pipeline.audio_device_lost
+        w._tick_levels()
+        _app.processEvents()
+
+        assert not w._pipeline.is_running(), "el pipeline sigue corriendo"
+        assert not w._btn_start.isChecked(), "ACTIVAR sigue marcado"
+        assert "ACTIVAR" in w._btn_start.text()
+        assert not w._level_timer.isActive(), "el timer de niveles sigue activo"
+        assert w._combo_in.isEnabled() and w._btn_refresh_devices.isEnabled()
+        assert cajas and "no responde" in cajas[0], cajas
+        assert "dejó de responder" in w._status_bar.currentMessage()
+        # sin stream, el tick posterior no vuelve a disparar el aviso
+        w._tick_levels()
+        assert len(cajas) == 1
+    finally:
+        QMessageBox.warning = orig_warn
+        w._pipeline.start = orig_start
+        w.close()
+    print("Dispositivo perdido: detiene y avisa         OK")
+
+
 def test_boton_activo_letra_amarilla_y_negrita():
     """Cualquier boton activado se pone rojo (regla global QPushButton:checked):
     la letra tiene que ir en amarillo y negrita para que se lea.
@@ -1518,6 +1565,7 @@ if __name__ == "__main__":
     test_bypass_es_boton_junto_al_mute()
     test_botones_de_escucha_mismo_ancho_y_sin_recortes()
     test_indicadores_vuelven_a_reposo_al_detener()
+    test_dispositivo_perdido_detiene_y_avisa()
     test_boton_activo_letra_amarilla_y_negrita()
     test_mute_button_gating_and_state()
     test_bypass_remembers_output_gain()

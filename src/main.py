@@ -32,7 +32,16 @@ def main():
         app.setWindowIcon(QIcon(icon_path))
     window = MainWindow()
     window.show()
-    sys.exit(app.exec())
+    rc = app.exec()
+    # Si un stream quedó colgado en el driver (ver audio/stream.py), el atexit
+    # de sounddevice llamaría a Pa_StopStream/Pa_Terminate sobre él y el proceso
+    # no terminaría nunca — la ventana ya cerrada y el .exe vivo en segundo
+    # plano. La configuración ya se guardó en closeEvent: salir sin handlers.
+    from audio.stream import abandoned_streams
+    if abandoned_streams():
+        sys.stdout.flush()
+        os._exit(rc)
+    sys.exit(rc)
 
 
 if __name__ == "__main__":

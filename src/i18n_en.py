@@ -742,6 +742,30 @@ CATALOG = {
     "↺  Restaurar por defecto  ({val})": "↺  Restore default  ({val})",
     "Error: {msg}": "Error: {msg}",
     "Dispositivos incompatibles": "Incompatible devices",
+    "El dispositivo de audio no responde.": "The audio device is not responding.",
+    "El dispositivo de audio no responde": "Audio device not responding",
+    "El dispositivo de audio no respondió al intentar abrir el stream.\n\n"
+    "Suele pasar cuando una interfaz USB se desconectó o el driver de "
+    "audio quedó trabado. Probá desconectar y volver a conectar la "
+    "interfaz y usar el botón ⟳ para re-enumerar los dispositivos. "
+    "Si persiste, hace falta reiniciar el equipo.":
+        "The audio device did not respond while opening the stream.\n\n"
+        "This usually happens when a USB interface was unplugged or the audio "
+        "driver got stuck. Try unplugging and reconnecting the interface and "
+        "use the ⟳ button to rescan the devices. If it persists, the computer "
+        "needs a restart.",
+    "⚠ El dispositivo de audio dejó de responder — procesamiento detenido.":
+        "⚠ The audio device stopped responding — processing stopped.",
+    "El dispositivo de audio dejó de entregar señal y el procesamiento se "
+    "detuvo.\n\nSuele pasar cuando una interfaz USB se desconectó o el driver "
+    "de audio quedó trabado. Probá desconectar y volver a conectar la "
+    "interfaz y usar el botón ⟳ para re-enumerar los dispositivos. "
+    "Si persiste, hace falta reiniciar el equipo.":
+        "The audio device stopped delivering signal and processing was "
+        "stopped.\n\nThis usually happens when a USB interface was unplugged or "
+        "the audio driver got stuck. Try unplugging and reconnecting the "
+        "interface and use the ⟳ button to rescan the devices. If it persists, "
+        "the computer needs a restart.",
     "La entrada ({in_api}) y la salida ({out_api}) usan APIs de audio "
     "distintas y no se pueden combinar en un mismo stream. Elegí ambos "
     "dispositivos de la misma API (por ejemplo, los dos [WASAPI]).":
