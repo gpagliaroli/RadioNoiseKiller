@@ -965,6 +965,7 @@ En la misma fila, el botón **"⇄ Bypass"** pasa el audio directo de entrada a 
 - Al activarlo se pone en ámbar (**"⇄ Crudo"**) y la barra de estado lo indica.
 - La **Ganancia de salida** también actúa en bypass, y su valor se recuerda **por separado** para bypass ON y OFF, así se compara a nivel parejo sin reajustar. Los dos niveles **se guardan y sobreviven al reinicio**: se calibran una vez. Un preset no se lleva el nivel de bypass — describe cómo procesás, no a qué volumen escuchás la señal cruda.
 - Ojo con el **cancelador en modo Adaptativo**: en bypass el audio no pasa por el procesador, así que el estimador no puede calibrar. El cartel lo dice ("en Bypass no calibra"); no es una falla.
+- Por lo mismo, en bypass los indicadores del procesamiento (**Reducción activa**, **Reducción extra**, AGC, limitador, nivelador, S/N) muestran **"— (en Bypass)"** o su reposo: no hay medición nueva que mostrar. Sólo los VU y la latencia siguen vivos. Al soltar el Bypass vuelven los valores en tiempo real.
 
 ### Mute de salida
 

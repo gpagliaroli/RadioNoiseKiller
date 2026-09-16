@@ -527,6 +527,8 @@ CATALOG = {
         "If it sounds like voice, something is too high: lower the Strength\n"
         "(or the Post-Filter).",
     "Modo:": "Mode:",   # combo de estimacion del ruido (estatico/MCRA)
+    "Adaptativo (MCRA) — en Bypass (el cancelador no corre)":
+        "Adaptive (MCRA) — in Bypass (the canceller is not running)",
     "Adaptativo (MCRA) — en Bypass no calibra (el cancelador no corre)":
         "Adaptive (MCRA) — it cannot calibrate in Bypass (the canceller is not running)",
     "Pasabanda:": "Bandpass:",
@@ -701,6 +703,7 @@ CATALOG = {
     "ABIERTO": "OPEN",
     "CERRADO": "CLOSED",
     "—  (desactivado)": "—  (off)",
+    "—  (en Bypass)": "—  (in Bypass)",
     "sin perfil": "no profile",
     "0 dB  (sin ruido activo)": "0 dB  (no active noise)",
     "sin detección": "no detection",

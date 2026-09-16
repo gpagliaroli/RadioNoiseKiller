@@ -965,6 +965,7 @@ In the same row, the **"⇄ Bypass"** button passes audio straight from input to
 - When enabled it turns amber (**"⇄ Raw"**) and the status bar shows it.
 - The **Output gain** also acts in bypass, and its value is remembered **separately** for bypass ON and OFF, so you can compare at a matched level without readjusting. Both levels are **saved and survive restarts**: you calibrate once. A preset does not carry the bypass level — it describes how you process, not how loud you listen to the raw signal.
 - Note about the canceller in **Adaptive** mode: in bypass the audio does not go through the processor, so the estimator cannot calibrate. The label says so ("it cannot calibrate in Bypass"); it is not a fault.
+- For the same reason, in bypass the processing indicators (**Active reduction**, **Extra reduction**, AGC, limiter, leveler, S/N) show **"— (in Bypass)"** or their idle state: there is no new measurement to show. Only the VU meters and the latency stay live. Release Bypass and the real-time values come back.
 
 ### Output mute
 

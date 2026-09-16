@@ -1588,7 +1588,12 @@ class MainWindow(QMainWindow):
 
     def _update_pf_extra(self) -> None:
         """Indicador Reducción extra del post-filtro (movido de Avanzada a Principal)."""
-        if self._config.dsp.post_filter_enabled and self._pipeline.is_running():
+        if self._pipeline.is_running() and self._pipeline.bypass:
+            # En Bypass el hilo procesador no recibe audio: el valor que quedó
+            # es el del último frame procesado, no una medición actual.
+            self._lbl_pf_extra.setText(tr("—  (en Bypass)"))
+            self._lbl_pf_extra.setStyleSheet("color: #888;")
+        elif self._config.dsp.post_filter_enabled and self._pipeline.is_running():
             extra_db = self._pipeline.post_filter_extra_db
             if extra_db < -0.5:
                 self._lbl_pf_extra.setText(f"{extra_db:.1f} dB")
@@ -1617,6 +1622,29 @@ class MainWindow(QMainWindow):
             if mode == "mcra":
                 self._label_noise.setText(tr("Adaptativo (MCRA) — activar procesamiento para calibrar"))
                 self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
+            return
+
+        if self._pipeline.bypass:
+            # En Bypass el audio no entra al hilo procesador: el cancelador no
+            # corre y noise_reduction_db es el último valor medido, no uno vivo.
+            # Mostrarlo daba la sensación de que el cancelador seguía actuando
+            # (reportado por el usuario). El caso MCRA-sin-perfil ya lo cubría
+            # más abajo por otro motivo (el aviso rojo de "no calibra"); éste
+            # cubre los demás. No se cuentan ticks del warmup: al salir del
+            # bypass tiene que empezar de cero, no arrancar ya en rojo.
+            self._lbl_noise_db.setText(tr("—  (en Bypass)"))
+            self._lbl_noise_db.setStyleSheet("color: #888; font-weight: bold;")
+            if mode == "mcra":
+                self._mcra_wait = 0
+                if self._pipeline.noise_has_profile:
+                    self._label_noise.setText(
+                        tr("Adaptativo (MCRA) — en Bypass (el cancelador no corre)"))
+                else:
+                    self._label_noise.setText(
+                        tr("Adaptativo (MCRA) — en Bypass no calibra (el cancelador no corre)"))
+                self._label_noise.setStyleSheet("color: #888; font-size: 8pt;")
+            else:
+                self._refresh_noise_profile_ui()
             return
 
         if mode == "mcra":
@@ -1994,6 +2022,16 @@ class MainWindow(QMainWindow):
         self._vu_in.set_level(-60)
         self._vu_out.set_level(-60)
         self._label_latency.setText(tr("Latencia: --"))
+        self._reset_dsp_indicators()
+
+    def _reset_dsp_indicators(self) -> None:
+        """Reposo de los indicadores que sólo el hilo procesador alimenta.
+
+        Separado del reposo total porque en Bypass el stream sigue vivo (VU y
+        latencia son válidos) pero el hilo procesador no recibe audio: AGC,
+        limitador, nivelador, graves, techo, S/N y heterodinos quedarían
+        pegados en el último valor medido, sugiriendo que siguen actuando.
+        """
         self._label_agc_gain.setText("—")
         self._lbl_peak_active.setText("—")
         self._lbl_peak_active.setStyleSheet(self._IDLE_LBL_STYLE)
@@ -2015,6 +2053,12 @@ class MainWindow(QMainWindow):
         self._vu_out.set_level(self._pipeline.db_out)
         lat = self._pipeline.latency_ms
         self._label_latency.setText(tr("Latencia: {ms:.0f} ms").format(ms=lat) if lat > 0 else tr("Latencia: --"))
+        if self._pipeline.bypass:
+            # El hilo procesador no corre: todo lo que él alimenta va a reposo
+            # (ver _reset_dsp_indicators). La grabación sí sigue en bypass.
+            self._reset_dsp_indicators()
+            self._tick_recording()
+            return
         # Con if/else y no sólo if: sin el else, apagar el AGC dejaba el último
         # valor pegado en pantalla (invariante 5, el mismo caso que el reposo).
         if self._combo_agc.currentData() != "off":
@@ -2087,18 +2131,7 @@ class MainWindow(QMainWindow):
                 tr("piso {fl:.0f} dBFS · sin efecto").format(fl=floor))
             self._lbl_agc_ceiling.setStyleSheet("color: #888; font-size: 8pt;")
 
-        # Grabación: tiempo transcurrido, y detección de muerte por error de
-        # disco (el writer marca recording=False solo; el botón queda checked)
-        if self._btn_record.isChecked():
-            if self._pipeline.is_recording:
-                s = int(self._pipeline.recording_seconds)
-                self._lbl_rec_time.setText(f"REC {s // 60:02d}:{s % 60:02d}")
-            else:
-                err = self._pipeline.recording_error
-                self._finish_recording()
-                if err:
-                    self._status_bar.showMessage(
-                        tr("Error de grabación: {e}").format(e=err))
+        self._tick_recording()
 
         # Indicador S/N (pestaña Espectro) — requiere cancelador ACTIVO: el
         # profiler solo actualiza snr_db cuando procesa (desactivado = congelado)
@@ -2118,6 +2151,21 @@ class MainWindow(QMainWindow):
             self._waterfall_widget.set_tone_freqs(self._pipeline.anf_tone_freqs)
         else:
             self._waterfall_widget.set_tone_freqs(None)
+
+    def _tick_recording(self) -> None:
+        """Grabación: tiempo transcurrido, y detección de muerte por error de
+        disco (el writer marca recording=False solo; el botón queda checked).
+        Corre también en Bypass (la grabación sigue con la señal cruda)."""
+        if self._btn_record.isChecked():
+            if self._pipeline.is_recording:
+                s = int(self._pipeline.recording_seconds)
+                self._lbl_rec_time.setText(f"REC {s // 60:02d}:{s % 60:02d}")
+            else:
+                err = self._pipeline.recording_error
+                self._finish_recording()
+                if err:
+                    self._status_bar.showMessage(
+                        tr("Error de grabación: {e}").format(e=err))
 
     def _restore_or_center(self) -> None:
         # Pantalla de referencia: la que contiene la posición guardada (setups

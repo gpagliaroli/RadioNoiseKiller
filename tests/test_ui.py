@@ -1336,6 +1336,67 @@ def test_mcra_en_bypass_no_es_falla():
     print("MCRA en Bypass: no se reporta como falla     OK")
 
 
+def test_bypass_indicadores_en_reposo():
+    """En Bypass los indicadores del hilo procesador van a reposo.
+
+    En bypass el audio no entra al hilo procesador: Reduccion activa, Reduccion
+    extra, AGC, limitador, S/N... quedaban pegados en el ultimo valor medido y
+    el cartel MCRA seguia diciendo "estimando en tiempo real", dando la
+    sensacion de que el cancelador seguia actuando (reportado por el usuario).
+    VU y latencia SI son validos en bypass (los alimenta el callback).
+    """
+    w = _win()
+    w._config.dsp.noise_mode = "mcra"
+    w._config.dsp.noise_enabled = True
+    w._config.dsp.post_filter_enabled = True
+    w._pipeline.set_noise_mode("mcra")
+    w._pipeline.start(headless=True)
+
+    pipe_cls = type(w._pipeline)
+    patched = {
+        "noise_has_profile": property(lambda self: True),
+        "noise_reduction_db": property(lambda self: -12.0),
+        "post_filter_extra_db": property(lambda self: -6.0),
+        "peak_reduction_db": property(lambda self: -4.0),
+    }
+    orig = {k: getattr(pipe_cls, k) for k in patched}
+    for k, v in patched.items():
+        setattr(pipe_cls, k, v)
+    try:
+        # Procesando: los indicadores muestran los valores vivos
+        w._update_noise_db()
+        w._tick_levels()
+        assert "-12.0" in w._lbl_noise_db.text(), w._lbl_noise_db.text()
+        assert "-6.0" in w._lbl_pf_extra.text(), w._lbl_pf_extra.text()
+        assert "estimando" in w._label_noise.text(), w._label_noise.text()
+        assert "ACTIVO" in w._lbl_peak_active.text(), w._lbl_peak_active.text()
+
+        # Bypass: todo lo que alimenta el hilo procesador va a reposo
+        w._btn_bypass.setChecked(True)
+        _app.processEvents()
+        w._update_noise_db()
+        w._tick_levels()
+        assert "-12.0" not in w._lbl_noise_db.text(),             f"Reduccion activa sigue mostrando un valor: {w._lbl_noise_db.text()!r}"
+        assert "-6.0" not in w._lbl_pf_extra.text(),             f"Reduccion extra sigue mostrando un valor: {w._lbl_pf_extra.text()!r}"
+        assert "estimando" not in w._label_noise.text() and "Bypass" in w._label_noise.text(),             f"el cartel MCRA no dice que esta en bypass: {w._label_noise.text()!r}"
+        assert w._lbl_peak_active.text() == "—", w._lbl_peak_active.text()
+        assert w._lbl_snr.text() == tr("S/N: —"), w._lbl_snr.text()
+
+        # Al salir del bypass vuelven los valores vivos
+        w._btn_bypass.setChecked(False)
+        _app.processEvents()
+        w._update_noise_db()
+        w._tick_levels()
+        assert "-12.0" in w._lbl_noise_db.text()
+        assert "estimando" in w._label_noise.text()
+    finally:
+        for k, v in orig.items():
+            setattr(pipe_cls, k, v)
+        w._pipeline.stop()
+        w.close()
+    print("Bypass: indicadores del DSP en reposo        OK")
+
+
 def test_noise_freeze_slider():
     """El slider del freeze (Congelar piso con voz) llega al DSP en porcentaje.
 
@@ -1464,6 +1525,7 @@ if __name__ == "__main__":
     test_incompatible_devices_disable_activate()
     test_noise_fall_slider()
     test_mcra_en_bypass_no_es_falla()
+    test_bypass_indicadores_en_reposo()
     test_noise_freeze_slider()
     test_all_sliders_have_tooltip()
     test_dsp_error_is_visible()
