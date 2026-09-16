@@ -650,7 +650,12 @@ class AdvancedImpulseTab(QWidget):
                 lbl.setStyleSheet("color: #ff9800; font-weight: bold;")
 
         bins = self._pipeline.anf_notched_bins
-        if bins == 0:
+        if self._pipeline.is_running() and self._pipeline.bypass:
+            # En Bypass el ANF no corre: el conteo es el del último frame
+            # procesado, no un tono que esté cancelando ahora.
+            self._lbl_anf_activity.setText(tr("—  (en Bypass)"))
+            self._lbl_anf_activity.setStyleSheet("color: #888;")
+        elif bins == 0:
             self._lbl_anf_activity.setText("—")
             self._lbl_anf_activity.setStyleSheet("color: #888;")
         else:
@@ -1037,6 +1042,13 @@ class AdvancedCancellerTab(QWidget):
     # ------------------------------------------------------------------
 
     def _update_stats(self) -> None:
+        if self._pipeline.is_running() and self._pipeline.bypass:
+            # En Bypass el hilo procesador no recibe audio: todo lo que muestra
+            # esta pestaña (gate, reducción, vp, piso perceptual, pitch) sería
+            # el último valor medido, no uno vivo. Mismo criterio que la
+            # pestaña Principal (reportado por el usuario: "quedan pegados").
+            self._reposo_bypass()
+            return
         vp = self._pipeline.noise_voice_prob
         # Gate de ruido: el nivel de entrada es lo que se compara con el umbral,
         # así que hay que mostrarlo (invariante 5: se actualiza siempre).
@@ -1112,6 +1124,17 @@ class AdvancedCancellerTab(QWidget):
         else:
             self._lbl_pitch_f0.setText(tr("—  (desactivado)"))
             self._lbl_pitch_f0.setStyleSheet("color: #888;")
+
+    def _reposo_bypass(self) -> None:
+        """Todos los indicadores de la pestaña en reposo, marcados "en Bypass"."""
+        en_bypass = tr("—  (en Bypass)")
+        for lbl in (self._lbl_gate_floor, self._lbl_noise_db,
+                    self._lbl_pf_peak, self._lbl_pitch_f0):
+            lbl.setText(en_bypass)
+            lbl.setStyleSheet("color: #888;")
+        for lbl in (self._lbl_gate_state, self._lbl_noise_vp, self._lbl_pf_active):
+            lbl.setText("—")
+            lbl.setStyleSheet("color: #888;")
 
     # ------------------------------------------------------------------
     # Carga y reset

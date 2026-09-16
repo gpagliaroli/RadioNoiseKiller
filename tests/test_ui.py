@@ -1349,6 +1349,7 @@ def test_bypass_indicadores_en_reposo():
     w._config.dsp.noise_mode = "mcra"
     w._config.dsp.noise_enabled = True
     w._config.dsp.post_filter_enabled = True
+    w._config.dsp.pitch_enhance_enabled = True
     w._pipeline.set_noise_mode("mcra")
     w._pipeline.start(headless=True)
 
@@ -1358,7 +1359,11 @@ def test_bypass_indicadores_en_reposo():
         "noise_reduction_db": property(lambda self: -12.0),
         "post_filter_extra_db": property(lambda self: -6.0),
         "peak_reduction_db": property(lambda self: -4.0),
+        "noise_voice_prob": property(lambda self: 0.8),
+        "pitch_f0": property(lambda self: 150.0),
+        "anf_notched_bins": property(lambda self: 2),
     }
+    canc, imp = w._adv_canceller_tab, w._adv_impulse_tab
     orig = {k: getattr(pipe_cls, k) for k in patched}
     for k, v in patched.items():
         setattr(pipe_cls, k, v)
@@ -1370,12 +1375,24 @@ def test_bypass_indicadores_en_reposo():
         assert "-6.0" in w._lbl_pf_extra.text(), w._lbl_pf_extra.text()
         assert "estimando" in w._label_noise.text(), w._label_noise.text()
         assert "ACTIVO" in w._lbl_peak_active.text(), w._lbl_peak_active.text()
+        canc._update_stats(); imp._update_stats()
+        assert "-12.0" in canc._lbl_noise_db.text(), canc._lbl_noise_db.text()
+        assert "80%" in canc._lbl_noise_vp.text(), canc._lbl_noise_vp.text()
+        assert "150" in canc._lbl_pitch_f0.text(), canc._lbl_pitch_f0.text()
+        assert "2" in imp._lbl_anf_activity.text(), imp._lbl_anf_activity.text()
 
         # Bypass: todo lo que alimenta el hilo procesador va a reposo
         w._btn_bypass.setChecked(True)
         _app.processEvents()
         w._update_noise_db()
         w._tick_levels()
+        canc._update_stats(); imp._update_stats()
+        # Avanzada Cancelador y Supresor tambien (segunda vuelta del reporte)
+        for lbl in (canc._lbl_noise_db, canc._lbl_gate_floor, canc._lbl_pf_peak,
+                    canc._lbl_pitch_f0, imp._lbl_anf_activity):
+            assert "Bypass" in lbl.text(), f"indicador pegado en bypass: {lbl.text()!r}"
+        for lbl in (canc._lbl_noise_vp, canc._lbl_gate_state, canc._lbl_pf_active):
+            assert lbl.text() == "—", f"indicador pegado en bypass: {lbl.text()!r}"
         assert "-12.0" not in w._lbl_noise_db.text(),             f"Reduccion activa sigue mostrando un valor: {w._lbl_noise_db.text()!r}"
         assert "-6.0" not in w._lbl_pf_extra.text(),             f"Reduccion extra sigue mostrando un valor: {w._lbl_pf_extra.text()!r}"
         assert "estimando" not in w._label_noise.text() and "Bypass" in w._label_noise.text(),             f"el cartel MCRA no dice que esta en bypass: {w._label_noise.text()!r}"
@@ -1389,6 +1406,9 @@ def test_bypass_indicadores_en_reposo():
         w._tick_levels()
         assert "-12.0" in w._lbl_noise_db.text()
         assert "estimando" in w._label_noise.text()
+        canc._update_stats(); imp._update_stats()
+        assert "80%" in canc._lbl_noise_vp.text()
+        assert "2" in imp._lbl_anf_activity.text()
     finally:
         for k, v in orig.items():
             setattr(pipe_cls, k, v)
