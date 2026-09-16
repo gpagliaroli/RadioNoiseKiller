@@ -184,7 +184,7 @@ src/
     ├── spectrum_widget.py# Espectro en tiempo real (FFT + EMA)
     └── waterfall_widget.py # Cascada tiempo-frecuencia
 
-Presets/                  # 5 presets de fábrica (JSON) + Presets.zip
+Presets/                  # 6 presets de fábrica (JSON) + Presets.zip
 tests/                    # Suites de regresión (run_all.py) y diagnósticos
 tools/                    # Generadores del manual PDF, el diagrama y el zip de presets
 Images/                   # Logo, ícono y diagramas del pipeline
