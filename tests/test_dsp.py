@@ -441,6 +441,60 @@ print(f"  Heterodino 1350 Hz: {_d_tono:.1f} dB   |   voz fuera del tono: {_d_voz
 assert _d_tono < -10.0, f"el heterodino real ya no se cancela ({_d_tono:.1f} dB)"
 assert _d_voz > -0.5, f"cancelar el tono se lleva {_d_voz:.2f} dB de voz"
 
+# Enganche de portadora: un heterodino que hace FADING (bajones de 100 ms a -40 dB cada
+# 0,6 s, como en la grabacion de SW del 17/9) reseteaba la racha en cada bajon
+# y el notch se caia 350 ms cada vez ("lo detecta y se va, ciclico"). Con el
+# enganche por ocupacion, el bin queda retenido y notcheado con profundidad
+# plena. Control negativo: la voz sola (armonicos que se mueven) no engancha.
+_fade = np.ones(_n_anf, dtype=np.float32)
+_i = int(0.5 * SR)
+while _i + int(0.10 * SR) < _n_anf:
+    _fade[_i:_i + int(0.10 * SR)] = 10 ** (-40 / 20)
+    _i += int(0.6 * SR)
+_het_f = (0.05 * np.sin(2 * np.pi * 1350.0 * _t_anf) * _fade).astype(np.float32)
+_mez_f = (_vz + _het_f).astype(np.float32)
+_a3 = AdaptiveNotchFilter(SR, threshold=3.0, depth=0.5)   # profundidad a medias a proposito
+_a3.set_enabled(True)
+_out_f, _act, _lck = [], [], []
+for _i in range(len(_mez_f) // 960):
+    _out_f.append(_a3.process(_mez_f[_i * 960:(_i + 1) * 960]))
+    _act.append(_a3.notched_bins > 0)
+    _lck.append(_a3.locked_bins > 0)
+_out_f = np.concatenate(_out_f)
+_m2 = len(_out_f) // 2
+_act2, _lck2 = float(np.mean(_act[len(_act) // 2:])), float(np.mean(_lck[len(_lck) // 2:]))
+_d_tono_f = _energia(_out_f[_m2:], 1320, 1380) - _energia(_mez_f[_m2:len(_out_f)], 1320, 1380)
+_d_voz_f  = _energia(_out_f[_m2:], 200, 1300) - _energia(_mez_f[_m2:len(_out_f)], 200, 1300)
+print(f"  Heterodino con fading: notch activo {_act2*100:.0f}%, enganchado {_lck2*100:.0f}%, "
+      f"tono {_d_tono_f:.1f} dB, voz {_d_voz_f:+.2f} dB")
+assert _act2 > 0.90, f"el notch se cae con el fading del tono (activo {_act2*100:.0f}%)"
+assert _lck2 > 0.90, f"la portadora no queda enganchada ({_lck2*100:.0f}%)"
+assert _d_tono_f < -10.0, \
+    f"con profundidad 0,5 la portadora enganchada deberia ir a fondo igual ({_d_tono_f:.1f} dB)"
+assert _d_voz_f > -0.5, f"el enganche se lleva {_d_voz_f:.2f} dB de voz"
+# La voz sola NUNCA engancha (ocupacion 0,85: medido, 0,70 tomaba el fundamental)
+_a4 = AdaptiveNotchFilter(SR, threshold=3.0, depth=0.9)
+_a4.set_enabled(True)
+_lck_v = 0
+for _i in range(len(_vz) // 960):
+    _a4.process(_vz[_i * 960:(_i + 1) * 960])
+    _lck_v += _a4.locked_bins > 0
+assert _lck_v == 0, f"la voz sola engancho como portadora en {_lck_v} frames"
+# Ni la voz MONOTONA (f0 fijo, como la del test de integracion): su armonico mas
+# fuerte ocupa el bin igual que una portadora; lo que lo delata es que sube y
+# baja con la envolvente silabica (correlacion bin/frame ~0,95 vs ~0,3).
+_fase_m = 2 * np.pi * 150.0 * _t_anf
+_src_m = sum(np.sin(k * _fase_m) / k for k in range(1, 19))
+_vz_m = (_src_m * _env * 0.05 + _rng_anf.standard_normal(_n_anf) * 0.004).astype(np.float32)
+_a5 = AdaptiveNotchFilter(SR, threshold=3.0, depth=0.9)
+_a5.set_enabled(True)
+_lck_m = 0
+for _i in range(len(_vz_m) // 960):
+    _a5.process(_vz_m[_i * 960:(_i + 1) * 960])
+    _lck_m += _a5.locked_bins > 0
+assert _lck_m == 0, f"la voz monotona engancho como portadora en {_lck_m} frames"
+print("  Enganche de portadora (fading) y control con voz sola: OK")
+
 # La persistencia va en frames -> depende del hop (invariante 9)
 for _hp in (240, 480, 960, 1920):
     _a2 = AdaptiveNotchFilter(SR)
@@ -449,6 +503,10 @@ for _hp in (240, 480, 960, 1920):
     _ms = _a2._persist_frames * _hp / (SR / 1000.0)
     assert abs(_ms - AdaptiveNotchFilter._PERSIST_MS) < 30.0, \
         f"persistencia mal escalada con hop {_hp}: {_ms:.0f} ms"
+    _hms = _a2._hold_frames * _hp / (SR / 1000.0)
+    assert abs(_hms - AdaptiveNotchFilter._LOCK_HOLD_MS) < 30.0, \
+        f"hold del enganche mal escalado con hop {_hp}: {_hms:.0f} ms"
+    assert len(_a2._occ) == _hp + 1 and len(_a2._lock_hold) == _hp + 1
 print("  Persistencia recalculada por hop (invariante 9): OK")
 print("  ANF: OK")
 

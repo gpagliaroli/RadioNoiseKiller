@@ -397,9 +397,13 @@ lo que entró, entró.
 
 El **ANF** (Adaptive Notch Filter) detecta automáticamente tonos fijos o casi fijos en el espectro — heterodinos, portadoras AM de estaciones adyacentes, zumbidos de red (50/60 Hz y sus armónicos) — y los atenúa sin afectar el audio de voz circundante.
 
-El algoritmo compara la magnitud de cada bin FFT con la mediana de sus vecinos. Si un bin supera N veces el nivel del entorno, se considera un tono y se aplica una muesca (notch). No tiene estado entre frames, lo que lo hace muy reactivo pero también evita que "persiga" voces.
+El algoritmo compara la magnitud de cada bin FFT con la mediana de sus vecinos. Si un bin supera N veces el nivel del entorno **y viene haciéndolo desde hace 350 ms**, se considera un tono y se aplica una muesca (notch). Esa persistencia es lo que separa un heterodino de un armónico de la voz: la portadora se queda clavada en su frecuencia durante segundos; el armónico se mueve con la entonación y se apaga entre sílabas.
 
-El indicador **Actividad** muestra cuántos tonos están siendo muescados en este momento.
+**Enganche de portadora.** Un heterodino de onda corta hace fading igual que la señal. Con la persistencia sola, cada bajón del tono reiniciaba la cuenta y el notch se soltaba 350 ms cada vez: el tono "se detectaba y se iba", cíclico, y encima el cancelador de ruido —que había aprendido el piso con el tono ya muescado— lo dejaba pasar entero en esos huecos. Ahora un tono que lleva unos 3 segundos ocupando la misma frecuencia **queda enganchado**: se retiene 1 segundo aunque desaparezca, se muesca con umbral más bajo, un poco más ancho y **a fondo, sin importar la Profundidad** (que sigue mandando sobre los tonos recién detectados). Para no enganchar la parcial más fuerte de una nota sostenida (música en AM), el ANF comprueba que el tono **no suba y baje con el programa**: un armónico sigue la envolvente del audio; una portadora hace su propio fading. Medido sobre una grabación de SW con un heterodino de 5 kHz: el residuo audible pasó del 74 % al 29 % de los frames con la cadena completa; sobre grabaciones de voz sin heterodino, sin cambio (≤ 0,03 dB).
+
+El indicador **Actividad** muestra cuántos tonos están siendo muescados en este momento y, entre paréntesis, cuántos de ellos están **enganchados**.
+
+> **Heterodino cerca del borde del pasabanda.** Un filtro de orden 8 cortado en 4,5 kHz atenúa un tono de 5 kHz apenas **8 dB** (está a un 11 % del corte); para que el filtro solo lo mate haría falta bajar el corte a 3,5 kHz (~25 dB). No hace falta: dejá el pasabanda donde lo quiere el audio y que lo saque el ANF — con el enganche, a los pocos segundos queda a fondo. Si el tono es muy fuerte, subí la **Sensibilidad** un paso (bajar el valor, p. ej. 2,5×) para que el notch rápido lo tome antes de que se enganche.
 
 > **Importante:** No usar ANF con señales digitales (FT8, PSK31, WSPR, etc.). Esas señales tienen estructura espectral que el ANF interpreta como tonos a eliminar.
 

@@ -545,7 +545,10 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
   **después** de `gain^alpha`. Anti-gorgojeo automático gateado por el VAD; la ventana de ataque
   de `p_speech` se arma con **dos frames seguidos** de confianza espectral cruda (v2.5) y nunca
   escribe el valor crudo en el estado del EMA.
-- **ANF** con persistencia temporal de 350 ms (lo que separa heterodino de armónico es el tiempo).
+- **ANF** con persistencia temporal de 350 ms (lo que separa heterodino de armónico es el tiempo)
+  y **enganche de portadora** (post-v2.5): ocupación sostenida ~3 s + correlación bin–frame baja →
+  hold, histéresis, ±2 bins, profundidad plena. El chequeo "tiene pariente en 2k o k/2" NO sirvió
+  como discriminador (el armónico más fuerte queda solo tras el pasabanda).
 - **Supresor de impulsos** por contraste local en el tiempo; el umbral de **trama** (2–30) además
   suaviza los subidones del fading; el de **mini** no se baja (vuelve la distorsión).
 - **Gate de ruido** por nivel de entrada en dBFS, actúa sobre la salida, atenúa 20 dB, viene
@@ -568,7 +571,13 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
 
 ### Cambios pendientes de release
 
-(ninguno)
+- **ANF: enganche de portadora** (heterodino de 5 kHz con fading en SW, "lo detecta y se va,
+  cíclico"): ocupación EMA ≥ 0,85 (τ 1,5 s) → hold 1 s + histéresis 0,6× + ±2 bins + profundidad
+  plena + ataque instantáneo sólo en esos bins; discriminador portadora/parcial por **correlación
+  bin–frame < 0,5** (una parcial sube y baja con el programa). Medido: residuo audible 74 → 29 %
+  con la cadena completa; voz sin heterodino ≤ 0,03 dB; +40–110 µs/frame. Indicador "(n
+  enganchado)". `test_dsp` (fading, voz con vibrato y voz monótona como controles) —
+  `pendiente de validar`.
 
 Formato al acumular: una línea por cambio con su estado de validación (`validado en el aire` /
 `pendiente de validar`), y el bloque narrativo completo en el historial, sección "En curso". El

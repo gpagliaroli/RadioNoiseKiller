@@ -427,6 +427,8 @@ CATALOG = {
         "  ↳ Attenuation applied to the detected tone. 100%=silences, 50%=reduces 6 dB. You can raise it without dulling the voice: the ANF only acts on sustained tones.",
     "tono": "tone",
     "tonos": "tones",
+    "({n} enganchado)": "({n} locked)",
+    "({n} enganchados)": "({n} locked)",
 
     # --- Avanzada Cancelador ---
     "Cancelador de ruido estacionario  (Wiener Log-MMSE)":

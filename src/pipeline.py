@@ -618,6 +618,10 @@ class ProcessingPipeline:
         return self._anf.notched_bins
 
     @property
+    def anf_locked_bins(self) -> int:
+        return self._anf.locked_bins
+
+    @property
     def anf_tone_freqs(self) -> "np.ndarray | None":
         """Frecuencias (Hz) de los tonos que el ANF está cancelando. Las usa el
         marcador de heterodinos de la cascada."""

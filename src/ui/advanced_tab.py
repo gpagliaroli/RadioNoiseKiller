@@ -659,7 +659,14 @@ class AdvancedImpulseTab(QWidget):
             self._lbl_anf_activity.setText("—")
             self._lbl_anf_activity.setStyleSheet("color: #888;")
         else:
-            self._lbl_anf_activity.setText(f"🔇 {bins} {tr('tono') if bins == 1 else tr('tonos')}")
+            txt = f"🔇 {bins} {tr('tono') if bins == 1 else tr('tonos')}"
+            fijos = self._pipeline.anf_locked_bins
+            if fijos:
+                # Portadora enganchada (ocupación sostenida): se retiene aunque
+                # haga fading — distinto del notch rápido de 350 ms
+                txt += "  " + tr("({n} enganchado)").format(n=fijos) if fijos == 1 \
+                    else "  " + tr("({n} enganchados)").format(n=fijos)
+            self._lbl_anf_activity.setText(txt)
             self._lbl_anf_activity.setStyleSheet("color: #4fc3f7; font-weight: bold;")
 
     # ------------------------------------------------------------------

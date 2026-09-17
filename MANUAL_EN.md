@@ -395,9 +395,13 @@ same frequencies, and no filter removes it. The bandpass trims what fell outside
 
 The **ANF** (Adaptive Notch Filter) automatically detects steady or nearly steady tones in the spectrum — heterodynes, AM carriers from adjacent stations, mains hum (50/60 Hz and its harmonics) — and attenuates them without affecting the surrounding voice audio.
 
-The algorithm compares each FFT bin's magnitude with the median of its neighbors. If a bin exceeds N times the surrounding level, it is considered a tone and a notch is applied. It has no state between frames, which makes it very reactive but also keeps it from "chasing" voices.
+The algorithm compares each FFT bin's magnitude with the median of its neighbors. If a bin exceeds N times the surrounding level **and has been doing so for 350 ms**, it is considered a tone and a notch is applied. That persistence is what separates a heterodyne from a voice harmonic: the carrier stays nailed to its frequency for seconds; the harmonic moves with the intonation and dies between syllables.
 
-The **Activity** indicator shows how many tones are being notched at this moment.
+**Carrier lock.** A shortwave heterodyne fades just like the signal does. With persistence alone, every dip of the tone reset the count and the notch let go for 350 ms each time: the tone "got detected and went away", cyclically, and on top of that the noise canceller — which had learned the floor with the tone already notched — let it through in full during those gaps. Now a tone that has occupied the same frequency for about 3 seconds **gets locked**: it is held for 1 second even if it disappears, notched with a lower threshold, slightly wider and **all the way down, regardless of Depth** (which still governs newly detected tones). To avoid locking the strongest partial of a sustained note (music on AM), the ANF checks that the tone **does not rise and fall with the program**: a harmonic follows the audio envelope; a carrier fades on its own. Measured on a SW recording with a 5 kHz heterodyne: audible residue went from 74 % to 29 % of the frames through the full chain; on voice recordings without a heterodyne, no change (≤ 0.03 dB).
+
+The **Activity** indicator shows how many tones are being notched at this moment and, in parentheses, how many of them are **locked**.
+
+> **Heterodyne near the bandpass edge.** An 8th-order filter cut at 4.5 kHz attenuates a 5 kHz tone by only **8 dB** (it sits 11 % above the cutoff); for the filter alone to kill it you would have to lower the cutoff to 3.5 kHz (~25 dB). No need: leave the bandpass where the audio wants it and let the ANF take it out — with the lock, it goes all the way down within a few seconds. If the tone is very strong, raise **Sensitivity** one step (lower the value, e.g. 2.5×) so the fast notch catches it before it locks.
 
 > **Important:** Do not use the ANF with digital signals (FT8, PSK31, WSPR, etc.). Those signals have a spectral structure the ANF interprets as tones to remove.
 

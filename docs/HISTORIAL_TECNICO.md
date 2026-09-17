@@ -40,6 +40,52 @@ regla de método nueva.
 
 _(Los bloques nuevos de la próxima versión van acá, el más reciente arriba.)_
 
+**Post-v2.5: ANF — enganche de portadora (el heterodino que "se detecta y se va").** Reporte del
+usuario (17/9): grabación de SW con un heterodino en ~5 kHz, pasabanda 4,5 kHz orden 8 no lo saca
+y el ANF "cuando lo detecta ya se va y así queda cíclico". Grabación `RNK_2026-09-17_09-19-11`.
+- **Diagnóstico** (`scratchpad/anf_het.py`, traza por frame del ANF real tras el pasabanda): el
+  tono a 5000 Hz destaca +15 dB sobre la mediana (p50) el **91 %** de los frames, pero el notch
+  sólo actúa el **65 %**: 90 reinicios de racha en 51 s (uno cada 0,6 s). Cada bajón del fading
+  (ratio < 8 dB por 1–2 frames, p. ej. t=12,44 s: 5,4 dB) pone `_streak` en 0 y el tono vuelve
+  entero durante los 350 ms de re-confirmación. Además la profundidad 0,8 deja −14 dB de suelo y
+  el lóbulo de sqrt-Hann (±2 bins) no entra en `destaca`: aun enganchado quedaba residuo. Y el
+  pasabanda: 5 kHz está a un 11 % de 4,5 kHz → orden 8 da sólo ~8 dB (a 3,5 kHz serían 25).
+  Con la cadena completa era PEOR (residuo audible 74 %, p90 26 dB): MCRA aprende el piso con el
+  tono muescado, así que en los huecos el cancelador lo trata como voz y el AGC lo sube.
+- **Variantes medidas** (`anf_variants.py`, `anf_lock.py`; prominencia tono/mediana en la salida,
+  % de frames > 6 dB; daño = energía 200–4500 Hz sin el tono, y en 275–475 Hz):
+  hold 1 s sobre la racha: 78 → 69 % (poco: la profundidad y el lóbulo siguen). + histéresis 0,6
+  + ±2 bins + profundidad 1,0: 50 %. + **ataque instantáneo** de la ganancia: 13 % — el suavizado
+  simétrico 0,8 iba un frame atrás del fading. Pero aplicado a TODOS los bins subía el daño a la
+  voz (08-26_17-55: −0,72 → −1,19 dB) → sólo en bins enganchados. **Un hold sobre la racha de
+  350 ms enganchaba el fundamental de la voz** (17-01-13: 275–475 Hz notcheado 7 → 23 % de los
+  frames): el enganche tiene que exigir MÁS tiempo, no menos → ocupación EMA (τ 1,5 s) ≥ umbral.
+  Barrido del umbral sobre las 25 grabaciones: 0,70 y 0,75 toman voz (08-27: 2,7 → 33 %), **0,85
+  no cambia el % de voz notcheada en ninguna** y sólo engancha espurias reales (8000 Hz en 08-24,
+  6000 Hz en 09-15). Hold 2–3 s mejora 2–4 puntos el heterodino pero ya toca voz (08-27: 4 → 8 %)
+  → 1 s. Regla 3: la acción de fallo benigno.
+- **La ocupación sola no distingue una portadora de una nota sostenida.** `test_integration` (voz
+  sintética con f0 FIJO 3 s, pasabanda 200–3000) cayó de S/N 6,6 a 5,8 dB: el armónico de 300 Hz
+  quedó solo tras el filtro (el fundamental de 150 fuera de banda) y enganchó. Primer intento,
+  "tiene pariente estable en 2k o k/2": **NO sirvió** — el armónico más fuerte de una serie densa es
+  el único que supera la mediana de 15 bins. Segundo, **correlación EMA bin–frame** (log-nivel del
+  bin vs. log-nivel del frame sin el bin y sus ±2 vecinos, misma τ): heterodino real 0,28 (p90
+  0,48), espurias 0,05–0,12, parciales de la voz sintética 0,90–1,00, el bin de 225 Hz que tomaba
+  en 08-27: 0,54. Umbral **< 0,5**. Sin excluir el bin del nivel del frame, un tono fuerte se
+  correlacionaba consigo mismo (sintético con fading: lock 80 %). Regla 9 al revés: la señal
+  "demasiado limpia" del banco (f0 fijo) es justo la música sostenida que en el aire enganchaba.
+- **Resultado** (clase real): ANF solo, salida reconstruida: residuo p50 10,1 → 3,8 dB, audible
+  87 → 21 %. Cadena completa (`replay_recording`, settings + pasabanda 200–4500): p50 11,5 → 4,2,
+  audible **74 → 29 %** (lo que queda: ~3 s de armado y el fade profundo de 7–8 s). Daño en
+  275–475 Hz sobre 6 grabaciones sin heterodino: idéntico al ANF viejo (peor caso +0,03 dB). CPU:
+  +40–110 µs/frame (log de nb bins + 5 EMAs). Constantes `_LOCK_*` en `anf.py`; indicador
+  "(n enganchado)" en Avanzada Impulsos; el marcador de la cascada usa el núcleo (sin ensanche).
+- **Tests**: `test_dsp` — heterodino con fading (bajones de 100 ms a −40 dB cada 0,6 s; viejo:
+  notch 64 %, −1,6 dB; nuevo: 100 %, −29 dB con profundidad 0,5), voz con vibrato y voz MONÓTONA
+  con envolvente silábica nunca enganchan, `_hold_frames`/`_occ`/`_lock_hold` escalan con el hop
+  (inv. 9). `test_integration` vuelve a 6,6 dB. Manuales ES/EN: bloque "Enganche de portadora" y
+  nota del heterodino al borde del pasabanda. **Pendiente de validar en el aire.**
+
 ---
 
 ## v2.5 (septiembre 2026)
