@@ -354,16 +354,7 @@ class AdvancedAudioTab(QWidget):
         self._s_exciter_char.valueChanged.connect(self._on_exciter_char)
         layout.addWidget(self._s_exciter_char)
         layout.addWidget(_note(tr("  ↳ Qué armónicos se generan. Impar (tanh pura) = brillante y algo hueco, es el timbre metálico clásico. Par = más cálido y pleno, pero agrega productos de diferencia en los graves: subirlo mucho puede enturbiar. Mixto suele ser el mejor compromiso.")))
-        # Indicador vivo de la retirada por periodicidad (igual que el de graves):
-        # lo pinta MainWindow._tick_levels y lo apaga _reset_live_indicators.
-        exc_row = QHBoxLayout()
-        exc_row.addWidget(QLabel(tr("Actividad:")))
-        self._lbl_exciter_act = QLabel("—")
-        self._lbl_exciter_act.setStyleSheet("color: #888;")
-        exc_row.addWidget(self._lbl_exciter_act)
-        exc_row.addStretch()
-        layout.addLayout(exc_row)
-        layout.addWidget(_note(tr("  ↳ Cuánto de los armónicos generados llega a la salida. Se derivan de la banda de 1 a 3,5 kHz: si ahí hay más ruido que voz, lo que genera son armónicos DE RUIDO, así que con la voz enterrada se retira solo (por periodicidad, memoria de 2 s, igual que los graves). El gate por voz aparte ya lo calla entre palabras.")))
+        layout.addWidget(_note(tr("  ↳ Los armónicos se derivan de la banda de 1 a 3,5 kHz: si ahí hay más ruido que voz, lo que genera son armónicos DE RUIDO. Por eso el excitador se retira solo con la voz enterrada (ver «Periodicidad» abajo). El gate por voz aparte ya lo calla entre palabras.")))
 
         self._s_bass = SliderRow(
             tr("Recuperar graves:"),
@@ -374,16 +365,20 @@ class AdvancedAudioTab(QWidget):
         self._s_bass._update_label = lambda v: self._s_bass._val_lbl.setText(f"{v*100:.0f}%")
         self._s_bass.valueChanged.connect(self._on_bass_amount)
         layout.addWidget(self._s_bass)
-        # Indicador vivo de la retirada por periodicidad: lo pinta
+        layout.addWidget(_note(tr("  ↳ Nivel del fundamental recuperado (100% ≈ el que tendría una voz natural). Se deriva de los armónicos de la propia voz: sin voz no hay de dónde derivarlo y se calla solo. Requiere el módulo «Recuperar graves» activo.")))
+        # UN indicador para los DOS módulos del grupo: ambos derivan de los
+        # armónicos de la voz y se retiran con la MISMA rampa sobre la misma
+        # periodicidad, así que dos indicadores mostraban el mismo número uno
+        # debajo del otro (lo señaló el usuario). Lo pinta
         # MainWindow._tick_levels y lo deja en reposo _reset_live_indicators.
-        bass_row = QHBoxLayout()
-        bass_row.addWidget(QLabel(tr("Actividad:")))
-        self._lbl_bass_act = QLabel("—")
-        self._lbl_bass_act.setStyleSheet("color: #888;")
-        bass_row.addWidget(self._lbl_bass_act)
-        bass_row.addStretch()
-        layout.addLayout(bass_row)
-        layout.addWidget(_note(tr("  ↳ Nivel del fundamental recuperado (100% ≈ el que tendría una voz natural). Se deriva de los armónicos de la propia voz: sin voz no hay de dónde derivarlo y se calla solo. Con la voz enterrada en ruido se retira solo (por periodicidad, memoria de 2 s). Requiere el módulo «Recuperar graves» activo.")))
+        per_row = QHBoxLayout()
+        per_row.addWidget(QLabel(tr("Periodicidad:")))
+        self._lbl_period_act = QLabel("—")
+        self._lbl_period_act.setStyleSheet("color: #888;")
+        per_row.addWidget(self._lbl_period_act)
+        per_row.addStretch()
+        layout.addLayout(per_row)
+        layout.addWidget(_note(tr("  ↳ Cuánta voz periódica hay en la señal (memoria de 2 s: sigue a la estación, no a la sílaba). El excitador y la recuperación de graves derivan los dos de los armónicos de la voz, así que cuando la voz se entierra en el ruido lo que derivarían es ruido: los dos se retiran juntos con este valor.")))
         return group
 
     # ------------------------------------------------------------------

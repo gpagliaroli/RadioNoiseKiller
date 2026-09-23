@@ -379,7 +379,7 @@ CATALOG = {
         "metallic timbre. Even = warmer and fuller, but it adds difference products in the low end: "
         "raising it too far can muddy the sound. Mixed is usually the best compromise.",
     "Recuperar graves:": "Restore bass:",
-    "  ↳ Nivel del fundamental recuperado (100% ≈ el que tendría una voz natural). Se deriva de los armónicos de la propia voz: sin voz no hay de dónde derivarlo y se calla solo. Con la voz enterrada en ruido se retira solo (por periodicidad, memoria de 2 s). Requiere el módulo «Recuperar graves» activo.":
+    "  ↳ Nivel del fundamental recuperado (100% ≈ el que tendría una voz natural). Se deriva de los armónicos de la propia voz: sin voz no hay de dónde derivarlo y se calla solo. Requiere el módulo «Recuperar graves» activo.":
         "  ↳ Level of the recovered fundamental (100% ≈ what a natural voice would have). It is "
         "derived from the voice's own harmonics: with no speech there is nothing to derive it from, "
         "so it goes quiet by itself. With the voice buried in noise it backs off on its own (by "
@@ -409,8 +409,11 @@ CATALOG = {
     "periodicidad {p:.2f} → nivel entero": "periodicity {p:.2f} → full level",
     "periodicidad {p:.2f} → retirado (la banda es ruido)": "periodicity {p:.2f} → backed off (the band is noise)",
     "periodicidad {p:.2f} → nivel al {n:.0f}%": "periodicity {p:.2f} → level at {n:.0f}%",
-    "  ↳ Cuánto de los armónicos generados llega a la salida. Se derivan de la banda de 1 a 3,5 kHz: si ahí hay más ruido que voz, lo que genera son armónicos DE RUIDO, así que con la voz enterrada se retira solo (por periodicidad, memoria de 2 s, igual que los graves). El gate por voz aparte ya lo calla entre palabras.":
-        "  ↳ How much of the generated harmonics reaches the output. They are derived from the 1–3.5 kHz band: if there is more noise than voice there, what it generates are NOISE harmonics, so with the voice buried it backs off by itself (by periodicity, 2 s memory, same as the bass). The separate voice gate already silences it between words.",
+    "  ↳ Los armónicos se derivan de la banda de 1 a 3,5 kHz: si ahí hay más ruido que voz, lo que genera son armónicos DE RUIDO. Por eso el excitador se retira solo con la voz enterrada (ver «Periodicidad» abajo). El gate por voz aparte ya lo calla entre palabras.":
+        "  ↳ The harmonics are derived from the 1–3.5 kHz band: if there is more noise than voice there, what it generates are NOISE harmonics. That is why the exciter backs off by itself when the voice is buried (see «Periodicity» below). The separate voice gate already silences it between words.",
+    "Periodicidad:": "Periodicity:",
+    "  ↳ Cuánta voz periódica hay en la señal (memoria de 2 s: sigue a la estación, no a la sílaba). El excitador y la recuperación de graves derivan los dos de los armónicos de la voz, así que cuando la voz se entierra en el ruido lo que derivarían es ruido: los dos se retiran juntos con este valor.":
+        "  ↳ How much periodic voice there is in the signal (2 s memory: it follows the station, not the syllable). The exciter and the bass recovery both derive from the voice harmonics, so when the voice gets buried in the noise what they would derive is noise: both back off together based on this value.",
     "Actividad de trama:": "Frame activity:",
     "Actividad micro:": "Micro activity:",
     "Umbral de trama (10 ms):": "Frame threshold (10 ms):",

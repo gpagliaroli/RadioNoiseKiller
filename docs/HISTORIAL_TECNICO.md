@@ -66,7 +66,10 @@ mecanismo y llega a la misma solución, así que el bloque es corto.
 - Implementación: `AuralExciter.set_periodicity` + `periodicity_gate`, multiplicando junto al gate
   por VAD; el EMA avanza aunque el módulo esté apagado o el gate cerrado (invariante 6: el estado no
   queda pegado). `pipeline` lo alimenta con `pitch_confidence` en la misma línea que el de graves.
-  Indicador "Actividad" propio en Avanzada Audio, con los mismos textos (claves i18n reutilizadas).
+  Indicador de la retirada: primero se agregó uno propio del excitador, y el usuario señaló que
+  quedaba pegado al de graves mostrando el mismo número — los dos módulos leen la MISMA
+  periodicidad con la misma rampa. Quedó **uno solo**, "Periodicidad", al pie del grupo
+  (`_lbl_period_act`), y las notas de cada slider explican qué hace ese valor en cada módulo.
 - Tests: `test_dsp` (rampa: conf 0,7 = sin tocar, 0,3 = −6 dB, 0,1 = retirado; transición de 2 s; el
   EMA avanza apagado y con gate cerrado), `test_ui` (el indicador nuevo va a reposo al detener).
   **Pendiente de validar en el aire.**

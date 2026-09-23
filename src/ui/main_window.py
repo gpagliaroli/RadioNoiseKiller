@@ -2049,10 +2049,8 @@ class MainWindow(QMainWindow):
         self._lbl_leveler.setStyleSheet(self._IDLE_LBL_STYLE)
         self._adv_audio_tab._lbl_leveler_act.setText("—")
         self._adv_audio_tab._lbl_leveler_act.setStyleSheet("color: #555;")
-        self._adv_audio_tab._lbl_bass_act.setText("—")
-        self._adv_audio_tab._lbl_bass_act.setStyleSheet("color: #555;")
-        self._adv_audio_tab._lbl_exciter_act.setText("—")
-        self._adv_audio_tab._lbl_exciter_act.setStyleSheet("color: #555;")
+        self._adv_audio_tab._lbl_period_act.setText("—")
+        self._adv_audio_tab._lbl_period_act.setStyleSheet("color: #555;")
         self._lbl_agc_ceiling.setText("—")
         self._lbl_agc_ceiling.setStyleSheet("color: #555; font-size: 8pt;")
         self._lbl_snr.setText(tr("S/N: —"))
@@ -2125,43 +2123,32 @@ class MainWindow(QMainWindow):
         self._adv_audio_tab._lbl_leveler_act.setText(lev_text)
         self._adv_audio_tab._lbl_leveler_act.setStyleSheet(f"color: {lev_color}; font-weight: bold;")
 
-        # Retirada del recuperador de graves por periodicidad (Avanzada Audio):
-        # periodicidad suavizada (2 s) y qué fracción del nivel queda. Verde =
-        # entero, amarillo = a medias, naranja = retirado (la banda es ruido).
+        # Retirada por periodicidad (Avanzada Audio): UN indicador para el
+        # excitador y la recuperación de graves — los dos derivan de los
+        # armónicos de la voz y usan la misma rampa sobre la misma periodicidad.
+        # Verde = entero, amarillo = a medias, naranja = retirado (es ruido).
+        # Se lee del módulo que esté activo; con los dos activos el valor es el
+        # mismo (misma entrada, misma constante de tiempo).
         if self._config.dsp.bass_enabled and self._pipeline.is_running():
             per, gate = self._pipeline.bass_periodicity, self._pipeline.bass_gate
-            if gate >= 0.98:
-                bass_text = tr("periodicidad {p:.2f} → nivel entero").format(p=per)
-                bass_color = "#69f0ae"
-            elif gate <= 0.0:
-                bass_text = tr("periodicidad {p:.2f} → retirado (la banda es ruido)").format(p=per)
-                bass_color = "#ffab40"
-            else:
-                bass_text = tr("periodicidad {p:.2f} → nivel al {n:.0f}%").format(p=per, n=gate * 100)
-                bass_color = "#ffd740"
-        else:
-            bass_text, bass_color = "—", "#555"
-        self._adv_audio_tab._lbl_bass_act.setText(bass_text)
-        self._adv_audio_tab._lbl_bass_act.setStyleSheet(f"color: {bass_color}; font-weight: bold;")
-
-        # Lo mismo para el excitador: sus armónicos salen de la banda 1–3,5 kHz,
-        # que con la voz enterrada es ruido (misma rampa y mismos textos).
-        if self._config.dsp.exciter_enabled and self._pipeline.is_running():
+        elif self._config.dsp.exciter_enabled and self._pipeline.is_running():
             per, gate = (self._pipeline.exciter_periodicity,
                          self._pipeline.exciter_periodicity_gate)
-            if gate >= 0.98:
-                exc_text = tr("periodicidad {p:.2f} → nivel entero").format(p=per)
-                exc_color = "#69f0ae"
-            elif gate <= 0.0:
-                exc_text = tr("periodicidad {p:.2f} → retirado (la banda es ruido)").format(p=per)
-                exc_color = "#ffab40"
-            else:
-                exc_text = tr("periodicidad {p:.2f} → nivel al {n:.0f}%").format(p=per, n=gate * 100)
-                exc_color = "#ffd740"
         else:
-            exc_text, exc_color = "—", "#555"
-        self._adv_audio_tab._lbl_exciter_act.setText(exc_text)
-        self._adv_audio_tab._lbl_exciter_act.setStyleSheet(f"color: {exc_color}; font-weight: bold;")
+            per, gate = None, None
+        if gate is None:
+            per_text, per_color = "—", "#555"
+        elif gate >= 0.98:
+            per_text = tr("periodicidad {p:.2f} → nivel entero").format(p=per)
+            per_color = "#69f0ae"
+        elif gate <= 0.0:
+            per_text = tr("periodicidad {p:.2f} → retirado (la banda es ruido)").format(p=per)
+            per_color = "#ffab40"
+        else:
+            per_text = tr("periodicidad {p:.2f} → nivel al {n:.0f}%").format(p=per, n=gate * 100)
+            per_color = "#ffd740"
+        self._adv_audio_tab._lbl_period_act.setText(per_text)
+        self._adv_audio_tab._lbl_period_act.setStyleSheet(f"color: {per_color}; font-weight: bold;")
 
         # Techo de ruido del AGC: cuánto puede amplificar ahora mismo. En 0 dB el
         # techo quedó por debajo del piso real de entrada y está ahogando la señal

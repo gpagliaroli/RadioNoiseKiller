@@ -584,8 +584,9 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
   enterrada es ruido, así que genera armónicos DE RUIDO: descomponiendo `E(v+n)=E(v)+E(n)+cruce`,
   a S/N de banda +20 dB los de ruido están 16 dB abajo, a +5 empatan, a 0 ganan por 4 dB. Misma
   rampa y constantes que `BassRestorer` (0,20→0,40, EMA 2 s). Medido en la cadena real: limpias
-  −0,3/−0,4 dB, SSB media −0,9, voz enterrada −13,4/−16,5. Indicador "Actividad" propio en
-  Avanzada Audio. `test_dsp`, `test_ui` — `pendiente de validar`.
+  −0,3/−0,4 dB, SSB media −0,9, voz enterrada −13,4/−16,5. **Un solo** indicador "Periodicidad"
+  al pie del grupo para los dos módulos (`_lbl_period_act`): mostraban el mismo número uno debajo
+  del otro. `test_dsp`, `test_ui` — `pendiente de validar`.
 
 Formato al acumular: una línea por cambio con su estado de validación (`validado en el aire` /
 `pendiente de validar`), y el bloque narrativo completo en el historial, sección "En curso". El
