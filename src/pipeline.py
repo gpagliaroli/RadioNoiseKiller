@@ -622,6 +622,14 @@ class ProcessingPipeline:
         return self._anf.locked_bins
 
     @property
+    def exciter_periodicity(self) -> float:
+        return self._exciter.periodicity
+
+    @property
+    def exciter_periodicity_gate(self) -> float:
+        return self._exciter.periodicity_gate
+
+    @property
     def anf_tone_freqs(self) -> "np.ndarray | None":
         """Frecuencias (Hz) de los tonos que el ANF está cancelando. Las usa el
         marcador de heterodinos de la cascada."""
@@ -1297,6 +1305,9 @@ class ProcessingPipeline:
         # corre siempre (no depende del cancelador ni del perfil), así que no
         # hace falta el fallback a 1.0 del excitador.
         self._bass.set_periodicity(self._noise_profiler.pitch_confidence)
+        # El excitador se retira por lo mismo: con la voz enterrada, sus
+        # armónicos son de ruido (ver docstring de AuralExciter).
+        self._exciter.set_periodicity(self._noise_profiler.pitch_confidence)
         self._exciter.set_voice_gate(
             self._noise_profiler.voice_prob
             if (self._noise_enabled and self._noise_profiler.has_profile)

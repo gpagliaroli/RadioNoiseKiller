@@ -354,6 +354,16 @@ class AdvancedAudioTab(QWidget):
         self._s_exciter_char.valueChanged.connect(self._on_exciter_char)
         layout.addWidget(self._s_exciter_char)
         layout.addWidget(_note(tr("  ↳ Qué armónicos se generan. Impar (tanh pura) = brillante y algo hueco, es el timbre metálico clásico. Par = más cálido y pleno, pero agrega productos de diferencia en los graves: subirlo mucho puede enturbiar. Mixto suele ser el mejor compromiso.")))
+        # Indicador vivo de la retirada por periodicidad (igual que el de graves):
+        # lo pinta MainWindow._tick_levels y lo apaga _reset_live_indicators.
+        exc_row = QHBoxLayout()
+        exc_row.addWidget(QLabel(tr("Actividad:")))
+        self._lbl_exciter_act = QLabel("—")
+        self._lbl_exciter_act.setStyleSheet("color: #888;")
+        exc_row.addWidget(self._lbl_exciter_act)
+        exc_row.addStretch()
+        layout.addLayout(exc_row)
+        layout.addWidget(_note(tr("  ↳ Cuánto de los armónicos generados llega a la salida. Se derivan de la banda de 1 a 3,5 kHz: si ahí hay más ruido que voz, lo que genera son armónicos DE RUIDO, así que con la voz enterrada se retira solo (por periodicidad, memoria de 2 s, igual que los graves). El gate por voz aparte ya lo calla entre palabras.")))
 
         self._s_bass = SliderRow(
             tr("Recuperar graves:"),

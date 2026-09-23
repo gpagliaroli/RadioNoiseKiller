@@ -197,6 +197,63 @@ print(f"  Nivel vs caracter: {', '.join(f'{v:+.2f}' for v in _levels)} dB")
 assert max(_levels) - min(_levels) < 1.0, "el caracter cambia el nivel (deberia ser timbre)"
 print("  Caracter par/impar: OK")
 
+# Retirada por periodicidad: el gate por VAD calla el excitador ENTRE palabras,
+# pero el dano ocurre DURANTE la voz — la banda de trabajo (1-3,5 kHz) trae mas
+# ruido que voz y la no linealidad genera armonicos DE RUIDO. Medido sobre
+# grabaciones reales: a S/N de banda +20 dB los armonicos de ruido estan 16 dB
+# debajo de los de voz; a 0 dB los superan por 4 dB. Misma rampa (0,20-0,40 con
+# EMA de 2 s) y mismas constantes que BassRestorer, a proposito.
+def _ex_conf(x, conf, settle_s=0.0, drive=3.0, mix=0.3):
+    ex = AuralExciter(SR)
+    ex.set_drive(drive); ex.set_mix(mix); ex.set_enabled(True)
+    z = np.zeros(480, dtype=np.float32)
+    for _ in range(int(settle_s * SR / 480)):      # deja converger el EMA
+        ex.set_voice_gate(1.0); ex.set_periodicity(conf); ex.process(z)
+    out = []
+    for i in range(0, len(x), 480):
+        ex.set_voice_gate(1.0); ex.set_periodicity(conf)
+        out.append(ex.process(x[i:i + 480].astype(np.float32)))
+    return np.concatenate(out)
+
+
+def _harm_db(y, x):
+    """Energia de la rama de armonicos (salida - entrada) en 1-7 kHz."""
+    d = y[:len(x)] - x
+    return 20 * np.log10(np.sqrt(np.mean(d.astype(np.float64) ** 2)) + 1e-12)
+
+
+_e_full = _harm_db(_ex_run(_vv, drive=3.0, mix=0.3), _vv)   # sin informar periodicidad
+_e_hi   = _harm_db(_ex_conf(_vv, 0.7, settle_s=6.0), _vv)
+_e_mid  = _harm_db(_ex_conf(_vv, 0.30, settle_s=6.0), _vv)
+_e_lo   = _harm_db(_ex_conf(_vv, 0.10, settle_s=6.0), _vv)
+print(f"  Rampa por periodicidad: sin informar {_e_full:.1f} dB, conf 0.7 {_e_hi:.1f}, "
+      f"conf 0.3 {_e_mid:.1f}, conf 0.1 {_e_lo:.1f} dB")
+assert abs(_e_hi - _e_full) < 0.5, "con periodicidad alta la rampa no debe tocar el nivel"
+assert _e_lo < _e_full - 40.0, "con periodicidad baja el excitador debe retirarse"
+assert abs(_e_mid - (_e_full - 6.0)) < 1.0, "a mitad de rampa deberia dar -6 dB"
+
+# El EMA es de 2 s (regla 4: sigue la estacion, no la silaba) y avanza aunque el
+# modulo este apagado o el gate por voz cerrado: al encenderlo tiene que
+# reflejar la estacion actual (invariante 6, el estado no queda pegado).
+_ex2 = AuralExciter(SR); _ex2.set_enabled(True); _ex2.set_mix(0.3)
+_ex2.set_voice_gate(1.0); _ex2.set_periodicity(0.7)
+_ex2.process(np.zeros(480, dtype=np.float32))
+_ex2.set_periodicity(0.1)
+_gp = []
+for _i in range(int(6 * SR / 480)):
+    _ex2.process(np.zeros(480, dtype=np.float32)); _gp.append(_ex2.periodicity_gate)
+print(f"  Transicion limpio->enterrado: gate a 0,5 s {_gp[int(0.5 * SR / 480)]:.2f}, "
+      f"a 6 s {_gp[-1]:.2f}")
+assert _gp[int(0.5 * SR / 480)] > 0.6, "la retirada no debe seguir la silaba"
+assert _gp[-1] == 0.0, "a los 6 s el excitador tiene que estar retirado"
+_ex2.set_enabled(False); _ex2.set_voice_gate(0.0); _ex2.set_periodicity(0.7)
+for _i in range(int(6 * SR / 480)):
+    _ex2.process(np.zeros(480, dtype=np.float32))
+_ex2.set_enabled(True); _ex2.set_voice_gate(1.0)
+assert _ex2.periodicity_gate == 1.0, \
+    "el EMA debe avanzar con el modulo apagado y con el gate cerrado"
+print("  Retirada del excitador por periodicidad: OK")
+
 # --- Recuperacion de graves (derivada de los armonicos) ---------------------
 # Un pasa-altos de 300 Hz (filtro tipico de SSB) deja el fundamental de una voz de
 # 120 Hz unos 32 dB abajo: no hay energia que una EQ pueda levantar. Se recupera

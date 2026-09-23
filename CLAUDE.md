@@ -555,9 +555,10 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
   desactivado (umbral por estación). **AGC** con techo de ruido (cierre instantáneo, apertura a
   0,5 dB/s), también por estación y desactivado en los presets de fábrica.
 - **Combo Pasabanda** (9 anchos, hasta FM 15 kHz) en lugar del modo AM/SSB; nivelador de voz con
-  modo continuo; excitador con armónicos reales gateado por VAD; **recuperación de graves** derivada
-  de los armónicos, que se retira sola por periodicidad (EMA 2 s) cuando la voz está enterrada en
-  ruido (v2.5).
+  modo continuo. **Excitador** con armónicos reales gateado por VAD y **recuperación de graves**
+  derivada de los armónicos: los dos se retiran solos por periodicidad (misma rampa 0,20→0,40 con
+  EMA de 2 s) cuando la voz está enterrada en ruido — los dos derivan de una banda que en ese caso
+  es ruido, y una no linealidad alimentada con ruido da armónicos de ruido.
 - **Robustez de audio** (v2.5): watchdog del callback + open/stop/close de PortAudio con timeout en
   hilo auxiliar; el stream se abandona si el driver no vuelve y `main.py` sale con `os._exit`.
 - **8 presets de fábrica** en `Presets/`, afinados en el aire (ver [[project_factory_presets]]):
@@ -578,6 +579,13 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
   con la cadena completa; voz sin heterodino ≤ 0,03 dB; +40–110 µs/frame. Indicador "(n
   enganchado)". `test_dsp` (fading, voz con vibrato y voz monótona como controles) —
   `pendiente de validar`.
+- **El excitador se retira solo por periodicidad**, igual que los graves (reportado por el
+  usuario: "con mucho ruido tiene el mismo problema"). Su banda de trabajo (1–3,5 kHz) con voz
+  enterrada es ruido, así que genera armónicos DE RUIDO: descomponiendo `E(v+n)=E(v)+E(n)+cruce`,
+  a S/N de banda +20 dB los de ruido están 16 dB abajo, a +5 empatan, a 0 ganan por 4 dB. Misma
+  rampa y constantes que `BassRestorer` (0,20→0,40, EMA 2 s). Medido en la cadena real: limpias
+  −0,3/−0,4 dB, SSB media −0,9, voz enterrada −13,4/−16,5. Indicador "Actividad" propio en
+  Avanzada Audio. `test_dsp`, `test_ui` — `pendiente de validar`.
 
 Formato al acumular: una línea por cambio con su estado de validación (`validado en el aire` /
 `pendiente de validar`), y el bloque narrativo completo en el historial, sección "En curso". El

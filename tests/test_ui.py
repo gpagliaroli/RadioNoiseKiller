@@ -927,6 +927,7 @@ def test_indicadores_vuelven_a_reposo_al_detener():
         "nivelador":       (w._lbl_leveler, "+7.5 dB"),
         "nivelador (Avanzada)": (w._adv_audio_tab._lbl_leveler_act, "+7.5 dB"),
         "graves (Avanzada)":    (w._adv_audio_tab._lbl_bass_act, "periodicidad 0.62 → nivel entero"),
+        "excitador (Avanzada)": (w._adv_audio_tab._lbl_exciter_act, "periodicidad 0.62 → nivel entero"),
         "techo del AGC":   (w._lbl_agc_ceiling, "piso -45 dBFS · limitando a +9 dB"),
         "S/N":             (w._lbl_snr, "S/N: +12 dB"),
         "latencia":        (w._label_latency, "Latencia: 40 ms"),

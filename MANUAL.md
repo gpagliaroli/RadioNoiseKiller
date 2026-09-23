@@ -840,6 +840,10 @@ Con el **cancelador activo y con perfil**, el excitador solo actúa mientras hay
 
 > **Nota para quien viene de la v1.9.1:** el módulo cambió de comportamiento, así que los valores guardados en presets viejos ya no suenan igual — antes el efecto audible era el realce de agudos, no los armónicos. Conviene volver a ajustar Drive y Mezcla de oído. Si extrañás el brillo plano que hacía antes, eso es EQ: subilo con la **EQ de presencia**, que es la herramienta correcta para eso.
 
+> **Con la voz enterrada en ruido se retira solo.** Los armónicos salen de la banda de 1 a 3,5 kHz, así que **si ahí hay más ruido que voz, lo que el excitador genera son armónicos de ruido** — el mismo problema que tenía *Recuperar graves*, y el mismo remedio. Medido sobre grabaciones reales: con la voz 20 dB sobre el ruido en esa banda, los armónicos de ruido están 16 dB por debajo de los de voz (inofensivos); con la voz 5 dB arriba, empatan; y con la voz al mismo nivel que el ruido, los de ruido **superan** a los de voz por 4 dB. El excitador sigue la **periodicidad** de la señal con una memoria de 2 segundos (o sea la estación, no cada sílaba) y baja su aporte cuando deja de haber voz que enriquecer: sobre grabaciones limpias no lo toca (−0,4 dB), con la voz enterrada se retira del todo (−13 a −16 dB). El indicador **Actividad**, debajo de los controles, muestra qué está haciendo.
+>
+> Es independiente del gate por voz: ese calla el excitador **entre** palabras; esta rampa lo retira cuando **durante** la voz la banda es mayormente ruido.
+
 ### Síntomas y ajuste
 
 | Síntoma | Ajuste |
@@ -847,6 +851,7 @@ Con el **cancelador activo y con perfil**, el excitador solo actúa mientras hay
 | La voz suena "metálica" o "chirrillante" | Bajar Drive (a 1,5–2,0×). *tanh* es simétrica: genera solo armónicos impares (3°, 5°, 7°), que es el timbre hueco característico; cuanto más alto el Drive, más se nota |
 | El efecto no se nota | Subir Mezcla (a 40–50%) o Drive. Ojo: si venís de la v1.9.1, el módulo ahora agrega armónicos en vez de subir los agudos — el cambio se percibe distinto |
 | Agrega brillo al ruido de fondo | Activar el cancelador y aprender un perfil: con eso el excitador se cierra solo entre palabras |
+| Con mucho ruido ensucia más de lo que ayuda | No hace falta apagarlo: con la voz enterrada se retira solo. Mirá el indicador **Actividad** — si dice *retirado*, ya no está aportando. Si aun así molesta, bajá la Mezcla |
 | Suena brillante pero "frío" o hueco | Subir el **Carácter** hacia mixto (30–60%): agrega 2° armónico, que es el que da calidez |
 
 ---

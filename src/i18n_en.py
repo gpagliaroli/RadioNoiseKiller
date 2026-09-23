@@ -409,6 +409,8 @@ CATALOG = {
     "periodicidad {p:.2f} → nivel entero": "periodicity {p:.2f} → full level",
     "periodicidad {p:.2f} → retirado (la banda es ruido)": "periodicity {p:.2f} → backed off (the band is noise)",
     "periodicidad {p:.2f} → nivel al {n:.0f}%": "periodicity {p:.2f} → level at {n:.0f}%",
+    "  ↳ Cuánto de los armónicos generados llega a la salida. Se derivan de la banda de 1 a 3,5 kHz: si ahí hay más ruido que voz, lo que genera son armónicos DE RUIDO, así que con la voz enterrada se retira solo (por periodicidad, memoria de 2 s, igual que los graves). El gate por voz aparte ya lo calla entre palabras.":
+        "  ↳ How much of the generated harmonics reaches the output. They are derived from the 1–3.5 kHz band: if there is more noise than voice there, what it generates are NOISE harmonics, so with the voice buried it backs off by itself (by periodicity, 2 s memory, same as the bass). The separate voice gate already silences it between words.",
     "Actividad de trama:": "Frame activity:",
     "Actividad micro:": "Micro activity:",
     "Umbral de trama (10 ms):": "Frame threshold (10 ms):",

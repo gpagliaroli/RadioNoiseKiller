@@ -40,6 +40,21 @@ class AuralExciter:
     +2.07 dB sobre 1.5–6 kHz con o sin voz — el siseo brillante entre palabras).
     Con el gate, sin voz no agrega nada (+0.01 dB).
 
+    Retirada por periodicidad (`set_periodicity`, post-v2.5): el gate por VAD no
+    alcanza cuando la voz está ENTERRADA en ruido. El daño no ocurre entre
+    palabras (ahí el gate cierra) sino DURANTE la voz: la banda de trabajo
+    (1–3,5 kHz) trae más ruido que voz, y la no linealidad genera armónicos DE
+    RUIDO. Descomponiendo E(v+n) = E(v) + E(n) + cruce sobre grabaciones reales
+    (voz limpia del 09-04 + ruido de una pausa del 15-09), con drive 3 / mix 0,30:
+    a S/N +20 dB de banda los armónicos de ruido están 16 dB debajo de los de
+    voz, a +5 dB empatan, y a 0 dB los superan por 4 dB. Es el mismo mecanismo
+    que llevó al recuperador de graves a retirarse solo, y el usuario lo reportó
+    igual ("no es bueno usarlo con mucho ruido"). Mismo remedio y mismas
+    constantes que `BassRestorer`: rampa 0,20→0,40 sobre un EMA de 2 s de la
+    confianza de la autocorrelación del profiler — sigue a la estación, no a la
+    sílaba. Medido sobre 18 grabaciones: las limpias quedan en 1,00 (sin tocar) y
+    las de voz enterrada en 0,00.
+
     Nota: tanh es simétrica → genera solo armónicos IMPARES (H3, H5, H7), que es
     el timbre hueco/metálico clásico. Agregar pares (H2) requiere una no linealidad
     par, que además produce productos de diferencia en los graves (medido: −31 dB
@@ -54,6 +69,12 @@ class AuralExciter:
     _RMS_MIN:    float = 1e-6     # por debajo de esto no hay señal que excitar
     _GATE_SMOOTH: float = 0.70    # EMA del gate por VAD (~30 ms, sin clicks)
     _GATE_VP_THR: float = 0.30    # vp donde el gate ya está abierto del todo
+    # Retirada por periodicidad (ver docstring). Mismas constantes que
+    # BassRestorer a propósito: los dos módulos derivan de los armónicos y se
+    # retiran por lo mismo, así que conviene que lo hagan juntos y no a destiempo.
+    _PERIOD_LO:    float = 0.20
+    _PERIOD_HI:    float = 0.40
+    _PERIOD_TAU_S: float = 2.0
     # Rama PAR (armónicos 2°, 4° — timbre "cálido/pleno"): hace falta una no
     # linealidad PAR, u². OJO: cualquier no linealidad par genera productos de
     # DIFERENCIA (con parciales en 1.4 y 1.9 kHz aparece energía en 500 Hz), que
@@ -87,6 +108,11 @@ class AuralExciter:
         self._rms_even: float = 0.0   # un crossfade real y no un cambio de nivel
         self._gate:    float = 1.0
         self._gate_target: float = 1.0
+        self._sr:      float = float(sample_rate)
+        # Periodicidad: objetivo del frame (1.0 = sin retirar, para quien no la
+        # informe) y EMA (None hasta el primer frame → arranca sin rampa).
+        self._period_target: float = 1.0
+        self._period_ema: float | None = None
 
     def reset(self) -> None:
         self._zi_band = None
@@ -98,6 +124,7 @@ class AuralExciter:
         self._rms_even = 0.0
         self._gate    = 1.0
         self._gate_target = 1.0
+        self._period_ema = None
 
     def set_drive(self, drive: float) -> None:
         self._drive = float(np.clip(drive, 1.0, 10.0))
@@ -118,11 +145,39 @@ class AuralExciter:
         que es cuando el VAD no se actualiza — invariante 2)."""
         self._gate_target = float(np.clip(voice_prob / self._GATE_VP_THR, 0.0, 1.0))
 
+    def set_periodicity(self, confidence: float) -> None:
+        """Confianza de periodicidad del frame (0–1, la autocorrelación del
+        profiler). Se suaviza acá con memoria de _PERIOD_TAU_S; llamar una vez
+        por chunk. 1.0 = no retirar (para quien no la informe)."""
+        self._period_target = float(np.clip(confidence, 0.0, 1.0))
+
+    @property
+    def periodicity(self) -> float:
+        """EMA (2 s) de la confianza que alimenta la rampa (diagnóstico)."""
+        return 1.0 if self._period_ema is None else float(self._period_ema)
+
+    @property
+    def periodicity_gate(self) -> float:
+        """Factor 0–1 que la rampa de periodicidad aplica a la mezcla (diagnóstico)."""
+        if self._period_ema is None:
+            return 1.0
+        return float(np.clip((self._period_ema - self._PERIOD_LO)
+                             / (self._PERIOD_HI - self._PERIOD_LO), 0.0, 1.0))
+
     @property
     def gate(self) -> float:
         return self._gate
 
     def process(self, chunk: np.ndarray) -> np.ndarray:
+        # El EMA avanza aunque el módulo esté apagado o el gate cerrado: al
+        # encenderlo tiene que reflejar la estación actual, no la de cuando se
+        # apagó (mismo criterio que BassRestorer).
+        if self._period_ema is None:
+            self._period_ema = self._period_target
+        else:
+            a_p = float(np.exp(-len(chunk) / self._sr / self._PERIOD_TAU_S))
+            self._period_ema = a_p * self._period_ema + (1.0 - a_p) * self._period_target
+
         if not self._enabled or self._mix == 0.0:
             return chunk
 
@@ -131,7 +186,8 @@ class AuralExciter:
         # Gate suavizado por bloque (evita saltos audibles al abrir/cerrar)
         self._gate = (self._GATE_SMOOTH * self._gate
                       + (1.0 - self._GATE_SMOOTH) * self._gate_target)
-        if self._gate < 1e-3:
+        per = self.periodicity_gate
+        if self._gate * per < 1e-3:
             return chunk
 
         if self._zi_band is None:
@@ -180,4 +236,4 @@ class AuralExciter:
 
         harm, self._zi_lp = sosfilt(self._sos_lp, scale * branch, zi=self._zi_lp)
 
-        return (x + (self._mix * self._gate) * harm).astype(np.float32)
+        return (x + (self._mix * self._gate * per) * harm).astype(np.float32)

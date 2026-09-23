@@ -2051,6 +2051,8 @@ class MainWindow(QMainWindow):
         self._adv_audio_tab._lbl_leveler_act.setStyleSheet("color: #555;")
         self._adv_audio_tab._lbl_bass_act.setText("—")
         self._adv_audio_tab._lbl_bass_act.setStyleSheet("color: #555;")
+        self._adv_audio_tab._lbl_exciter_act.setText("—")
+        self._adv_audio_tab._lbl_exciter_act.setStyleSheet("color: #555;")
         self._lbl_agc_ceiling.setText("—")
         self._lbl_agc_ceiling.setStyleSheet("color: #555; font-size: 8pt;")
         self._lbl_snr.setText(tr("S/N: —"))
@@ -2141,6 +2143,25 @@ class MainWindow(QMainWindow):
             bass_text, bass_color = "—", "#555"
         self._adv_audio_tab._lbl_bass_act.setText(bass_text)
         self._adv_audio_tab._lbl_bass_act.setStyleSheet(f"color: {bass_color}; font-weight: bold;")
+
+        # Lo mismo para el excitador: sus armónicos salen de la banda 1–3,5 kHz,
+        # que con la voz enterrada es ruido (misma rampa y mismos textos).
+        if self._config.dsp.exciter_enabled and self._pipeline.is_running():
+            per, gate = (self._pipeline.exciter_periodicity,
+                         self._pipeline.exciter_periodicity_gate)
+            if gate >= 0.98:
+                exc_text = tr("periodicidad {p:.2f} → nivel entero").format(p=per)
+                exc_color = "#69f0ae"
+            elif gate <= 0.0:
+                exc_text = tr("periodicidad {p:.2f} → retirado (la banda es ruido)").format(p=per)
+                exc_color = "#ffab40"
+            else:
+                exc_text = tr("periodicidad {p:.2f} → nivel al {n:.0f}%").format(p=per, n=gate * 100)
+                exc_color = "#ffd740"
+        else:
+            exc_text, exc_color = "—", "#555"
+        self._adv_audio_tab._lbl_exciter_act.setText(exc_text)
+        self._adv_audio_tab._lbl_exciter_act.setStyleSheet(f"color: {exc_color}; font-weight: bold;")
 
         # Techo de ruido del AGC: cuánto puede amplificar ahora mismo. En 0 dB el
         # techo quedó por debajo del piso real de entrada y está ahogando la señal

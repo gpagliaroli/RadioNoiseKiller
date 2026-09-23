@@ -40,6 +40,37 @@ regla de método nueva.
 
 _(Los bloques nuevos de la próxima versión van acá, el más reciente arriba.)_
 
+**Post-v2.5: el excitador armónico también se retira por periodicidad.** Reporte del usuario
+(23/9), después de probar el enganche del ANF: *"al igual que la recuperación de graves no es bueno
+utilizarlo con mucho ruido, el excitador de armónicos tiene el mismo problema"*. Es el mismo
+mecanismo y llega a la misma solución, así que el bloque es corto.
+- **Confirmación del mecanismo** (`scratchpad/exciter_noise.py`): la rama armónica es una no
+  linealidad, así que `E(v+n) = E(v) + E(n) + cruce`. Con voz limpia real (09-04, confirmada por el
+  usuario) + un segmento de pausa de la grabación ruidosa (15-09 15:14), mezclados a S/N de banda
+  controlado, drive 3 / mix 0,30, energía en 1–7 kHz: a **+20 dB** los armónicos de ruido están
+  **16,4 dB** debajo de los de voz; a **+10 dB**, 6,2 debajo; a **+5 dB** empatan (−1,1); a **0 dB**
+  los **superan por 4,1 dB**; a −5 dB, por 9,2. El gate por VAD no ayuda: cierra ENTRE palabras y el
+  daño es DURANTE la voz (misma lección que los graves, regla 22).
+- **¿Qué grabaciones caen en esa zona?** (regla: medir la S/N POR BANDA). S/N de banda estimada por
+  frame (p90/p10 de la energía) en 1–3,5 kHz sobre 18 grabaciones: de **16,6 dB** (08-24 17:23,
+  limpia) a **3,4 dB** (09-11 y 09-15 15:14, las de voz enterrada). O sea: la zona donde los
+  armónicos son mayormente de ruido no es hipotética, es la mitad mala del archivo.
+- **La misma rampa que los graves discrimina**: EMA 2 s de `pitch_confidence` con rampa 0,20→0,40,
+  mediana del factor por grabación: 1,00 en las cuatro limpias (S/N 10–17 dB), 0,00–0,21 en las tres
+  enterradas (S/N 3,4). Se reusaron las constantes de `BassRestorer` a propósito —los dos módulos
+  derivan de armónicos y conviene que se retiren juntos, no a destiempo.
+- **Medición en la cadena real** (`replay_recording`, aporte del excitador = salida con − sin, en
+  1–7 kHz): limpias **−0,4 / −0,3 dB** (no las toca), SSB media (17-01) −0,9, SW con heterodino
+  (09-17) −7,4, voz enterrada **−13,4 y −16,5 dB**. El mismo perfil que dio la retirada de los
+  graves, que el usuario ya validó en el aire.
+- Implementación: `AuralExciter.set_periodicity` + `periodicity_gate`, multiplicando junto al gate
+  por VAD; el EMA avanza aunque el módulo esté apagado o el gate cerrado (invariante 6: el estado no
+  queda pegado). `pipeline` lo alimenta con `pitch_confidence` en la misma línea que el de graves.
+  Indicador "Actividad" propio en Avanzada Audio, con los mismos textos (claves i18n reutilizadas).
+- Tests: `test_dsp` (rampa: conf 0,7 = sin tocar, 0,3 = −6 dB, 0,1 = retirado; transición de 2 s; el
+  EMA avanza apagado y con gate cerrado), `test_ui` (el indicador nuevo va a reposo al detener).
+  **Pendiente de validar en el aire.**
+
 **Post-v2.5: ANF — enganche de portadora (el heterodino que "se detecta y se va").** Reporte del
 usuario (17/9): grabación de SW con un heterodino en ~5 kHz, pasabanda 4,5 kHz orden 8 no lo saca
 y el ANF "cuando lo detecta ya se va y así queda cíclico". Grabación `RNK_2026-09-17_09-19-11`.
