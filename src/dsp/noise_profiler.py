@@ -412,8 +412,13 @@ class NoiseProfiler:
     # ------------------------------------------------------------------
 
     def set_mode(self, mode: str) -> None:
+        """Cambia el modo. Reinicia el estado MCRA solo si el modo cambia
+        de verdad: apply_config() llama esto en CADA carga de preset "en
+        caliente" con el modo que ya está activo, y resetear ahí tira el
+        warmup a la basura en cada preset — el síntoma es "no calibra"."""
         if mode not in ("static", "mcra"):
             return
+        changed = mode != self._mode
         self._mode = mode
         self._gain_prev      = None
         self._snr_post_prev  = None
@@ -421,7 +426,7 @@ class NoiseProfiler:
         self._voice_prob_sq  = 0.0
         self._spec_conf      = 0.0
         self._snr_db         = 0.0
-        if mode == "mcra":
+        if mode == "mcra" and changed:
             self._reset_mcra()
 
     def _reset_mcra(self) -> None:

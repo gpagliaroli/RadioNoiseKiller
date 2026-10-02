@@ -545,7 +545,11 @@ class ProcessingPipeline:
 
     def set_noise_mode(self, mode: str) -> None:
         self._config.dsp.noise_mode = mode
-        self._noise_profiler.set_mode(mode)
+        # set_mode() puede resetear arrays MCRA (_mcra_ld, etc.) en un cambio
+        # real de modo; _noise_profiler.process() los lee/escribe en el hilo
+        # de audio sin lock propio — con self._lock afuera.
+        with self._lock:
+            self._noise_profiler.set_mode(mode)
 
     def set_perceptual_floor_enabled(self, v: bool) -> None:
         self._config.dsp.perceptual_floor_enabled = bool(v)
@@ -1259,7 +1263,8 @@ class ProcessingPipeline:
         self._spec_pre_frames.append(prof_in.copy())    # lo que ve el profiler
         # El VAD del profiler descuenta la ganancia del AGC (nivel de antena)
         self._noise_profiler.set_agc_gain(self._agc.gain_lin)
-        filtered = self._noise_profiler.process(prof_in)
+        with self._lock:
+            filtered = self._noise_profiler.process(prof_in)
 
         # Monitoreo atenuado durante el aprendizaje: sin perfil todavía
         # no hay supresión y el ruido de banda sale a pleno — molesto y
