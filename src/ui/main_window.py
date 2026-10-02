@@ -1558,9 +1558,21 @@ class MainWindow(QMainWindow):
         self._out_gain_by_bypass[not checked] = self._s_gain_out.value()
         self._pipeline.set_bypass(checked)
         self._refresh_bypass_button(checked)
+        bypass_msg = tr("Bypass activo — se escucha la señal cruda, sin procesar.")
         if checked:
-            self._status_bar.showMessage(
-                tr("Bypass activo — se escucha la señal cruda, sin procesar."))
+            self._status_bar.showMessage(bypass_msg)
+        elif self._status_bar.currentMessage() == bypass_msg:
+            # Sin esto el aviso quedaba pegado en la barra de estado para
+            # siempre tras salir de Bypass (showMessage sin timeout no se
+            # borra solo — invariante 5, variante de la barra de estado).
+            # El chequeo evita pisar un aviso mas importante (p. ej. un
+            # error del DSP) que haya aparecido mientras tanto.
+            self._status_bar.clearMessage()
+            if self._pipeline.is_running():
+                # Restaurar el aviso de "Procesando..." que se ve el resto
+                # del tiempo mientras el proceso esta activo (lo pone
+                # _on_toggle_processing una sola vez, al arrancar).
+                self._status_bar.showMessage(tr("Procesando..."))
         target = self._out_gain_by_bypass[checked]
         if target != self._s_gain_out.value():
             self._s_gain_out.set_value(target)

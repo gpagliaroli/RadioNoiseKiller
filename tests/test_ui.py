@@ -1292,6 +1292,45 @@ def test_bypass_remembers_output_gain():
     print("Bypass recuerda ganancia de salida (A/B)   OK")
 
 
+def test_bypass_clears_status_bar_message():
+    """Al salir de Bypass, el aviso 'Bypass activo...' de la barra de estado
+    se borra — antes quedaba pegado para siempre (showMessage sin timeout no
+    se limpia solo). Con el proceso corriendo, además vuelve a mostrar
+    'Procesando...' (el estado real), no la barra en blanco."""
+    w = _win()
+    bypass_msg = tr("Bypass activo — se escucha la señal cruda, sin procesar.")
+
+    # Sin procesamiento activo: al salir de Bypass solo se limpia (no hay
+    # "Procesando..." que restaurar).
+    w._btn_bypass.setChecked(True)
+    assert w._status_bar.currentMessage() == bypass_msg
+    w._btn_bypass.setChecked(False)
+    assert w._status_bar.currentMessage() != bypass_msg, \
+        "el aviso de Bypass quedo pegado en la barra de estado"
+
+    # No debe pisar un aviso mas importante que haya aparecido en el medio
+    # (p. ej. un error del DSP).
+    w._btn_bypass.setChecked(True)
+    otro_aviso = tr("otro aviso mas importante")
+    w._status_bar.showMessage(otro_aviso)
+    w._btn_bypass.setChecked(False)
+    assert w._status_bar.currentMessage() == otro_aviso, \
+        "salir de Bypass piso un aviso que no era el suyo"
+
+    # Con el proceso corriendo: al salir de Bypass vuelve "Procesando...".
+    w._btn_bypass.setChecked(False)
+    w._pipeline.start(headless=True)
+    try:
+        w._btn_bypass.setChecked(True)
+        assert w._status_bar.currentMessage() == bypass_msg
+        w._btn_bypass.setChecked(False)
+        assert w._status_bar.currentMessage() == tr("Procesando..."), \
+            f"no volvio el aviso de Procesando: {w._status_bar.currentMessage()!r}"
+    finally:
+        w._pipeline.stop()
+    print("Bypass limpia su aviso de la barra de estado  OK")
+
+
 def test_dsp_error_is_visible():
     """Un fallo del hilo procesador tiene que VERSE, y el aviso no lo pisa el
     timer de 500 ms del cancelador.
@@ -1757,6 +1796,7 @@ if __name__ == "__main__":
     test_boton_activo_letra_amarilla_y_negrita()
     test_mute_button_gating_and_state()
     test_bypass_remembers_output_gain()
+    test_bypass_clears_status_bar_message()
     test_bypass_gain_persiste_entre_sesiones()
     test_about_dialog()
     test_about_donate_button()
