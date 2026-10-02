@@ -52,6 +52,14 @@ SLIDER_TIPS = {
         "−1 a −3 dB es lo habitual. El indicador de al lado avisa cuándo actúa:\n"
         "si está siempre encendido, bajá la ganancia de salida en vez de subir esto."
     ),
+    "_slider_gate_threshold": (
+        "Nivel de entrada, en dBFS, a partir del cual el gate abre.\n"
+        "Se calibra mirando el indicador de arriba: dejalo entre el nivel que marca\n"
+        "en los huecos y el que marca con señal. Si corta voz débil, bajalo; si abre\n"
+        "con el ruido solo, subilo.\n"
+        "Es un ajuste de TU estación (depende del nivel con que entra la radio), así\n"
+        "que revisalo al cambiar de banda, de antena o de hora."
+    ),
 
     # ---------------- Avanzada Audio ---------------- #
     "_s_block": (
@@ -200,14 +208,6 @@ SLIDER_TIPS = {
         "Qué tan rápido sube la ganancia en los bins donde aparece voz.\n"
         "Rápido conserva mejor el ataque de cada palabra; suave reduce artefactos.\n"
         "Si la voz suena recortada al arrancar, hacelo más rápido."
-    ),
-    "_s_gate_threshold": (
-        "Nivel de entrada, en dBFS, a partir del cual el gate abre.\n"
-        "Se calibra mirando el indicador de arriba: dejalo entre el nivel que marca\n"
-        "en los huecos y el que marca con señal. Si corta voz débil, bajalo; si abre\n"
-        "con el ruido solo, subilo.\n"
-        "Es un ajuste de TU estación (depende del nivel con que entra la radio), así\n"
-        "que revisalo al cambiar de banda, de antena o de hora."
     ),
     "_s_gate_depth": (
         "Cuánto baja el fondo mientras el gate está cerrado.\n"

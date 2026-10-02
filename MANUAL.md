@@ -233,7 +233,7 @@ Cada casilla de verificación activa o desactiva un módulo del pipeline de form
 | **EQ Voz (presencia + cuerpo)** | Dos bandas paramétricas: presencia (claridad, 1–2 kHz) y cuerpo (calidez, 150–800 Hz). Activar para modelar la voz con señales debilitadas o muy filtradas. |
 | **Excitador armónico** | Para señales de voz opacas, sin brillo. Añade presencia. Comparar con y sin para decidir. |
 | **Recuperar graves** | Devuelve el fundamental de la voz cuando el filtro de la radio lo cortó, derivándolo de los armónicos que sí pasaron. Para voces que suenan delgadas o "telefónicas" pese a tener buen nivel — sobre todo en SSB con filtro angosto. |
-| **Gate de ruido** | Módulo de primer nivel (no depende del cancelador). Baja el fondo entre transmisiones cuando el nivel de entrada no llega al umbral, con cierre progresivo y sin cortar de golpe. Corre al final de la cadena. Se calibra mirando el indicador de nivel en Avanzada Cancelador (ver Cap. 8). |
+| **Gate de ruido** | Módulo de primer nivel (no depende del cancelador). Baja el fondo entre transmisiones cuando el nivel de entrada no llega al umbral, con cierre progresivo y sin cortar de golpe. Corre al final de la cadena. Se calibra mirando el indicador de nivel en la pestaña Principal (ver Cap. 8). |
 
 > **Consejo — activar de a uno:** al armar una configuración (o al recibir una señal nueva), activar y desactivar los módulos **de a uno por vez**, escuchando el efecto que produce cada uno. Como todos los cambios aplican en vivo, se oye la diferencia al instante: eso permite ajustar mejor cada módulo — o directamente quitarlo si en esa señal no aporta. Activar todo junto de entrada hace imposible saber qué está ayudando y qué no.
 
@@ -729,8 +729,8 @@ La diferencia con el AGC general (Cap. 2) es el **gate por detección de voz**: 
 
 ## Capítulo 8 — Gate de Ruido
 
-**Ubicación:** Pestaña Módulos → "Gate de ruido"  
-**Configuración avanzada:** Pestaña Avanzada Cancelador → grupo "Gate de ruido"
+**Ubicación:** Pestaña Módulos → "Gate de ruido" (activar) · Pestaña Principal → grupo "Gate de ruido" (umbral + indicador)  
+**Ajuste fino:** Pestaña Avanzada Audio → grupo "Gate de ruido" (profundidad, retención)
 
 ### Descripción
 
@@ -752,7 +752,10 @@ El cierre es **progresivo**: al caer la señal, el gate mantiene el volumen plen
 
 **Con música** el gate no molesta como molestaba el squelch: no busca estructura de voz, sólo mira el nivel. Aun así, si la música tiene pasajes suaves que caen por debajo del umbral, los va a atenuar — en ese caso bajar el umbral o dejar la *Profundidad* en un valor chico.
 
-### Indicadores en tiempo real (grupo Gate de ruido, Avanzada Cancelador)
+### Indicadores en tiempo real (grupo Gate de ruido — Principal y Avanzada Audio)
+
+El mismo indicador aparece en los dos lugares (mismo dato, para verlo tanto de
+un vistazo como mientras se afina Profundidad/Retención en Avanzada Audio):
 
 | Indicador | Descripción |
 |-----------|-------------|
@@ -761,15 +764,15 @@ El cierre es **progresivo**: al caer la señal, el gate mantiene el volumen plen
 
 ### Controles
 
-| Control | Rango | Default | Descripción |
-|---------|-------|---------|-------------|
-| **Umbral** | −80 a −20 dBFS | −50 dBFS | Nivel de entrada a partir del cual el gate abre. Se elige entre el nivel que marca el indicador en los huecos y el que marca con señal. Si corta voz débil, bajarlo; si abre con el ruido solo, subirlo. **Es un ajuste de tu estación** — conviene repasarlo al cambiar de banda, de antena o de hora. |
-| **Profundidad** | 0 a 60 dB | 20 dB | Cuánto baja el fondo con el gate cerrado. En 0 dB el gate no atenúa nada (queda inerte); 15–25 dB es la zona natural en HF; el máximo silencia por completo. |
-| **Retención** | 50 a 2000 ms | 300 ms | Tiempo que el gate sigue abierto después de que la señal cae, para no cortar entre palabras. Volumen pleno la primera mitad, desvanecimiento la segunda. Corto para conversación rápida; 500–1000 ms para operadores con pausas largas. |
+| Control | Pestaña | Rango | Default | Descripción |
+|---------|---------|-------|---------|-------------|
+| **Umbral** | Principal | −80 a −20 dBFS | −50 dBFS | Nivel de entrada a partir del cual el gate abre. Se elige entre el nivel que marca el indicador en los huecos y el que marca con señal. Si corta voz débil, bajarlo; si abre con el ruido solo, subirlo. **Es un ajuste de tu estación** — conviene repasarlo al cambiar de banda, de antena o de hora. Por eso vive en Principal: es el control que más se retoca de los tres. |
+| **Profundidad** | Avanzada Audio | 0 a 60 dB | 20 dB | Cuánto baja el fondo con el gate cerrado. En 0 dB el gate no atenúa nada (queda inerte); 15–25 dB es la zona natural en HF; el máximo silencia por completo. |
+| **Retención** | Avanzada Audio | 50 a 2000 ms | 300 ms | Tiempo que el gate sigue abierto después de que la señal cae, para no cortar entre palabras. Volumen pleno la primera mitad, desvanecimiento la segunda. Corto para conversación rápida; 500–1000 ms para operadores con pausas largas. |
 
 ### Calibración
 
-1. Activar el gate en la pestaña Módulos y abrir **Avanzada Cancelador** para ver el indicador **Nivel de entrada**.
+1. Activar el gate en la pestaña Módulos — el indicador **Nivel de entrada** y el slider **Umbral** ya están ahí mismo, en la pestaña **Principal**.
 2. Con la radio en un hueco (sin transmisión), anotar el nivel que marca.
 3. Con una transmisión en curso, anotar el nivel que marca.
 4. Poner el **Umbral** entre esos dos valores, más cerca del de los huecos que del de la señal.

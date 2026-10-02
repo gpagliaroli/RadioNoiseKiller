@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (
     QLabel, QComboBox, QSlider, QPushButton, QStatusBar,
     QGroupBox, QCheckBox, QTabWidget, QApplication,
     QScrollArea, QFrame, QInputDialog, QMessageBox, QSplitter, QGridLayout,
+    QFileDialog,
 )
 from PySide6.QtCore import Qt, QTimer, QPoint, QUrl
 from PySide6.QtGui import QFont, QDesktopServices
@@ -18,6 +19,7 @@ from config import (AppConfig, GainConfig, DSPConfig, UI_SCALES,
 from i18n import tr, set_language
 from pipeline import ProcessingPipeline
 from ui.vu_meter import VuMeter
+from ui.cpu_meter import CpuMeter
 from ui.advanced_tab import AdvancedAudioTab, AdvancedImpulseTab, AdvancedCancellerTab
 from ui.presets_tab import PresetsTab
 from ui.slider_row import SliderRow
@@ -26,7 +28,8 @@ from ui.spectrum_widget import SpectrumWidget
 from ui.waterfall_widget import WaterfallWidget
 from presets import PresetManager
 from noise_profiles import NoiseProfileManager
-from utils import settings_path, presets_dir, noise_profiles_dir, seed_factory_presets
+from utils import (settings_path, presets_dir, noise_profiles_dir,
+                   seed_factory_presets, log_path, data_dir)
 
 # Borde de aviso para los combos de dispositivo cuando la combinación de APIs
 # es incompatible (entrada y salida en APIs de host distintas → -9993).
@@ -241,6 +244,14 @@ class MainWindow(QMainWindow):
         self._btn_about.clicked.connect(self._show_about)
         self._status_bar.addPermanentWidget(self._btn_about)
 
+        self._btn_export_diag = QPushButton("🩺")
+        self._btn_export_diag.setFixedWidth(32)
+        self._btn_export_diag.setToolTip(tr(
+            "Exportar diagnóstico: empaqueta settings.json, errores_dsp.log\n"
+            "y el preset activo en un .zip para enviar al desarrollador."))
+        self._btn_export_diag.clicked.connect(self._export_diagnostics)
+        self._status_bar.addPermanentWidget(self._btn_export_diag)
+
         apply_tooltips(self)
         self._apply_dark_style()
 
@@ -252,6 +263,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self._build_device_group())
         layout.addWidget(self._build_control_group())
         layout.addWidget(self._build_noise_group())
+        layout.addWidget(self._build_gate_group_main())
         layout.addWidget(self._build_level_group())
         # Scroll para pantallas bajas (notebooks 1366x768): sin esto la pestaña
         # fija la altura mínima de la ventana y no entra completa en el monitor
@@ -527,7 +539,8 @@ class MainWindow(QMainWindow):
             tr("Gate de ruido  (baja el fondo entre transmisiones)"),
             tr("Atenúa la salida cuando el nivel de entrada no llega al umbral.\n"
                "Se calibra mirando el indicador de nivel, no a ciegas como el\n"
-               "squelch que reemplaza. Ajustes en Avanzada Cancelador."),
+               "squelch que reemplaza. El umbral está en esta misma pestaña;\n"
+               "Profundidad y Retención (ajuste fino) en Avanzada Audio."),
         )
         self._chk_bass = _chk(
             tr("Recuperar graves"),
@@ -700,6 +713,41 @@ class MainWindow(QMainWindow):
 
         return group
 
+    def _build_gate_group_main(self) -> QGroupBox:
+        """Umbral del Gate de ruido + su indicador, en Principal: a diferencia
+        de Profundidad/Retención (se tocan una vez y quedan, viven en Avanzada
+        Audio), el umbral es sensible al ruido de RF del entorno y hay que
+        recalibrarlo seguido según el día o el lugar — el usuario lo pidió acá
+        para no tener que entrar a Avanzada cada vez."""
+        group = QGroupBox(tr("Gate de ruido  (activar en Módulos Activos)"))
+        layout = QVBoxLayout(group)
+
+        g_row = QHBoxLayout()
+        g_row.addWidget(QLabel(tr("Nivel de entrada:")))
+        self._lbl_gate_floor = QLabel("—")
+        self._lbl_gate_floor.setStyleSheet("color: #888;")
+        g_row.addWidget(self._lbl_gate_floor)
+        g_row.addSpacing(20)
+        g_row.addWidget(QLabel(tr("Gate:")))
+        self._lbl_gate_state = QLabel("—")
+        self._lbl_gate_state.setStyleSheet("color: #888;")
+        g_row.addWidget(self._lbl_gate_state)
+        g_row.addStretch()
+        layout.addLayout(g_row)
+
+        self._slider_gate_threshold = SliderRow(
+            tr("Umbral:"),
+            min_val=-80.0, max_val=-20.0,
+            default=DSPConfig().gate_threshold_db,
+            step=1.0, unit="dBFS", fmt="{:.0f}",
+        )
+        self._slider_gate_threshold.valueChanged.connect(self._on_gate_threshold_changed)
+        layout.addWidget(self._slider_gate_threshold)
+        self._slider_gate_threshold.set_value(self._config.dsp.gate_threshold_db)
+        self._slider_gate_threshold.set_enabled(self._config.dsp.gate_enabled)
+
+        return group
+
     def _build_level_group(self) -> QGroupBox:
         group = QGroupBox(tr("Niveles y Ganancia"))
         layout = QVBoxLayout(group)
@@ -709,6 +757,13 @@ class MainWindow(QMainWindow):
         self._vu_out.setFixedWidth(_FIELD_W)
         layout.addWidget(self._vu_in,  alignment=Qt.AlignLeft)
         layout.addWidget(self._vu_out, alignment=Qt.AlignLeft)
+        self._cpu_meter = CpuMeter(tr("CPU"))
+        self._cpu_meter.setFixedWidth(_FIELD_W)
+        self._cpu_meter.setToolTip(tr(
+            "Carga del hilo de audio: % del tiempo disponible por frame que\n"
+            "tarda el procesado. Cerca de 100% o más es la firma de un\n"
+            "underrun (útil sobre todo en Raspberry Pi)."))
+        layout.addWidget(self._cpu_meter, alignment=Qt.AlignLeft)
         self._label_latency = QLabel(tr("Latencia: --"))
         self._label_latency.setAlignment(Qt.AlignLeft)
         layout.addWidget(self._label_latency)
@@ -1188,6 +1243,7 @@ class MainWindow(QMainWindow):
         # --- Sliders Intensidad + Post-Filtro (sin emitir: no re-disparar handlers) ---
         self._slider_noise.set_value(cfg.noise_alpha * 100.0)
         self._slider_post.set_value(cfg.post_filter_strength)
+        self._slider_gate_threshold.set_value(cfg.gate_threshold_db)
         self._chk_leveler_continuous.blockSignals(True)
         self._chk_leveler_continuous.setChecked(not cfg.voice_leveler_gate_voice)
         self._chk_leveler_continuous.blockSignals(False)
@@ -1378,6 +1434,42 @@ class MainWindow(QMainWindow):
         if btn_donar is not None and box.clickedButton() is btn_donar:
             QDesktopServices.openUrl(QUrl(_DONATE_URL))
 
+    def _export_diagnostics(self) -> None:
+        """Empaqueta settings.json + errores_dsp.log + el preset activo + un
+        volcado de estado interno en un .zip, para que el usuario lo mande al
+        desarrollador sin tener que ir a buscar el log a mano (lo que pasó
+        justo con el bug de MCRA resuelto en 699606c)."""
+        import datetime
+        import json
+        import zipfile
+
+        stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        sugerido = os.path.join(data_dir(), f"diagnostico_RNK_{stamp}.zip")
+        path, _ = QFileDialog.getSaveFileName(
+            self, tr("Exportar diagnóstico"), sugerido, "ZIP (*.zip)")
+        if not path:
+            return
+        try:
+            with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zf:
+                sp = settings_path()
+                if os.path.exists(sp):
+                    zf.write(sp, "settings.json")
+                lp = log_path()
+                if os.path.exists(lp):
+                    zf.write(lp, "errores_dsp.log")
+                activo = self._presets_tab._active
+                if activo and self._preset_manager.exists(activo):
+                    zf.writestr(
+                        f"preset_{activo}.json",
+                        json.dumps(self._preset_manager.read(activo),
+                                   indent=2, ensure_ascii=False))
+                zf.writestr("diagnostico.txt", self._pipeline.dump_diag_text())
+        except Exception as e:
+            QMessageBox.warning(self, tr("Error al exportar diagnóstico"), str(e))
+            return
+        self._status_bar.showMessage(
+            tr("Diagnóstico exportado: {path}").format(path=path), 5000)
+
     def _on_bandpass_preset(self, idx: int) -> None:
         nombre = self._combo_bandpass.itemData(idx)
         if nombre == BANDPASS_CUSTOM:
@@ -1443,6 +1535,8 @@ class MainWindow(QMainWindow):
         d = self._config.dsp
         self._chk_leveler_continuous.setEnabled(
             d.noise_enabled and d.voice_leveler_enabled)
+        if hasattr(self, "_slider_gate_threshold"):
+            self._slider_gate_threshold.set_enabled(d.gate_enabled)
 
     def _on_gain_in_changed(self, val: float) -> None:
         self._config.gain.input_gain_db = val
@@ -1483,6 +1577,11 @@ class MainWindow(QMainWindow):
         alpha = value / 100.0
         self._config.dsp.noise_alpha = alpha
         self._pipeline.set_noise_alpha(alpha)
+        self._schedule_save()
+
+    def _on_gate_threshold_changed(self, value: float) -> None:
+        self._config.dsp.gate_threshold_db = value
+        self._pipeline.set_gate_threshold_db(value)
         self._schedule_save()
 
     # ------------------------------------------------------------------
@@ -1607,7 +1706,48 @@ class MainWindow(QMainWindow):
             self._lbl_pf_extra.setText(tr("—  (desactivado)"))
             self._lbl_pf_extra.setStyleSheet("color: #888;")
 
+    def _update_gate_indicator(self) -> None:
+        """Nivel de entrada + estado abierto/cerrado del Gate — en Principal Y
+        en Avanzada Audio (mismo dato, mismo patrón que el indicador del
+        nivelador de voz en _tick_levels). El gate no depende del cancelador
+        ni de su modo, así que se actualiza siempre, ANTES que cualquiera de
+        los returns tempranos de _update_noise_db (invariante 5)."""
+        pares = ((self._lbl_gate_floor, self._lbl_gate_state),
+                 (self._adv_audio_tab._lbl_gate_floor, self._adv_audio_tab._lbl_gate_state))
+        if self._pipeline.is_running() and self._pipeline.bypass:
+            # En Bypass el hilo procesador no recibe audio: mismo criterio que
+            # el resto de los indicadores de Avanzada ("quedan pegados").
+            for lbl_floor, lbl_state in pares:
+                lbl_floor.setText(tr("—  (en Bypass)"))
+                lbl_floor.setStyleSheet("color: #888;")
+                lbl_state.setText("—")
+                lbl_state.setStyleSheet("color: #888;")
+            return
+        nivel = self._pipeline.input_level_db
+        if self._config.dsp.gate_enabled and nivel is not None:
+            umbral = self._config.dsp.gate_threshold_db
+            texto_nivel = tr("{piso:.0f} dBFS · abre en {abre:.0f}").format(
+                piso=nivel, abre=umbral)
+            abierto = self._pipeline.gate_open
+            texto_estado = tr("ABIERTO") if abierto else tr("CERRADO")
+            color_estado = ("color: #69f0ae; font-weight: bold;" if abierto
+                            else "color: #888; font-weight: bold;")
+            for lbl_floor, lbl_state in pares:
+                lbl_floor.setText(texto_nivel)
+                lbl_floor.setStyleSheet("color: #888;")
+                lbl_state.setText(texto_estado)
+                lbl_state.setStyleSheet(color_estado)
+        else:
+            texto_nivel = (tr("—  (desactivado)")
+                           if not self._config.dsp.gate_enabled else "—")
+            for lbl_floor, lbl_state in pares:
+                lbl_floor.setText(texto_nivel)
+                lbl_floor.setStyleSheet("color: #888;")
+                lbl_state.setText("—")
+                lbl_state.setStyleSheet("color: #888;")
+
     def _update_noise_db(self) -> None:
+        self._update_gate_indicator()
         self._update_pf_extra()
         # Mientras el aviso de error del DSP esté vigente no se pisa el cartel
         # (ver _check_dsp_errors): decir "calibrando" cuando en realidad está
@@ -2056,6 +2196,7 @@ class MainWindow(QMainWindow):
         self._lbl_snr.setText(tr("S/N: —"))
         self._lbl_snr.setStyleSheet("color: #888; font-weight: bold;")
         self._waterfall_widget.set_tone_freqs(None)
+        self._cpu_meter.set_load(0.0)
 
     def _on_audio_device_lost(self) -> None:
         """El dispositivo dejó de entregar audio en pleno procesamiento (interfaz
@@ -2096,6 +2237,8 @@ class MainWindow(QMainWindow):
             self._label_agc_gain.setText(f"{self._pipeline.agc_gain_db:+.0f} dB")
         else:
             self._label_agc_gain.setText("—")
+
+        self._cpu_meter.set_load(self._pipeline.cpu_load_pct)
 
         red = self._pipeline.peak_reduction_db
         if red < -0.1:

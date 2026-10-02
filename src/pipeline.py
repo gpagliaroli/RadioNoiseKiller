@@ -159,6 +159,17 @@ class ProcessingPipeline:
         # Diagnostico del hilo procesador (ver _log_dsp_error)
         self._dsp_errors:     int = 0
         self._dsp_last_error: str = ""
+        # Carga del hilo procesador: tiempo de RELOJ que tarda _process_chunk
+        # sobre el presupuesto del frame (ver _run_processor), en %. Es tiempo
+        # de pared, no de CPU: lo que importa para un underrun es si el
+        # procesado tarda mas que el hueco real-time, no cuanto core consumio
+        # (time.process_time() en Windows redondea a ~15ms vía GetProcessTimes
+        # pese a reportar resolucion de 100ns, y un frame de ~10ms mide 0 casi
+        # siempre — probado, no sirve para esto). EMA para que el indicador no
+        # tiemble frame a frame. Sin lock a proposito, mismo criterio que
+        # _dsp_errors (invariante 7): un indicador de diagnostico no justifica
+        # contencion en el hilo de audio.
+        self._cpu_load_pct: float = 0.0
 
         self._in_acc:  np.ndarray = np.zeros(0, dtype=np.float32)
         self._out_acc: np.ndarray = np.zeros(0, dtype=np.float32)
@@ -455,7 +466,6 @@ class ProcessingPipeline:
         config.audio.record_raw_input). Devuelve la ruta base de los archivos.
         Requiere el procesamiento activo (sin audio fluyendo no hay qué grabar)."""
         import datetime
-        import os
         from utils import recordings_dir
         base_dir = directory if directory else recordings_dir()
         stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -850,6 +860,11 @@ class ProcessingPipeline:
         return self._dsp_last_error
 
     @property
+    def cpu_load_pct(self) -> float:
+        """Carga de CPU del último frame procesado, en % de un core."""
+        return self._cpu_load_pct
+
+    @property
     def mcra_diag(self) -> str:
         """Estado interno del estimador, para diagnosticar un warmup atascado.
 
@@ -871,13 +886,20 @@ class ProcessingPipeline:
                 f"hop={p._hop} block_cfg={self._config.audio.block_size} "
                 f"db_in={self._db_in:.1f} errores={self._dsp_errors}")
 
+    def dump_diag_text(self) -> str:
+        """Volcado legible del estado interno, para incluir en el zip de
+        diagnóstico (ver _export_diagnostics en main_window.py)."""
+        import datetime
+        return (f"RadioNoiseKiller — diagnóstico {datetime.datetime.now():%Y-%m-%d %H:%M:%S}\n"
+                f"{self.mcra_diag}\n"
+                f"ultimo_error={self.dsp_last_error or '(ninguno)'}\n")
+
     def log_diagnostic(self, titulo: str, detalle: str) -> None:
         """Anota una línea de diagnóstico en el mismo archivo que los errores."""
         try:
             import datetime
-            from utils import data_dir
-            with open(os.path.join(data_dir(), "errores_dsp.log"), "a",
-                      encoding="utf-8") as f:
+            from utils import log_path
+            with open(log_path(), "a", encoding="utf-8") as f:
                 f.write(f"\n===== {datetime.datetime.now():%Y-%m-%d %H:%M:%S} "
                         f"{titulo} =====\n{detalle}\n")
         except Exception:
@@ -898,9 +920,8 @@ class ProcessingPipeline:
         try:
             import datetime
             import traceback
-            from utils import data_dir
-            with open(os.path.join(data_dir(), "errores_dsp.log"), "a",
-                      encoding="utf-8") as f:
+            from utils import log_path
+            with open(log_path(), "a", encoding="utf-8") as f:
                 f.write(f"\n===== {datetime.datetime.now():%Y-%m-%d %H:%M:%S} "
                         f"(error #{self._dsp_errors}) =====\n")
                 f.write(f"modo={self._config.dsp.noise_mode} "
@@ -945,6 +966,7 @@ class ProcessingPipeline:
                 return
             self._dsp_errors     = 0
             self._dsp_last_error = ""
+            self._cpu_load_pct   = 0.0
             self._bandpass.reset()
             self._bandpass_out.reset()
             self._presence.reset()
@@ -990,6 +1012,7 @@ class ProcessingPipeline:
             if not self._running:
                 return
             self._running = False
+            self._cpu_load_pct = 0.0
             stream = self._stream
             self._stream = None
 
@@ -1176,6 +1199,7 @@ class ProcessingPipeline:
         self._spec_post_frames.clear()
 
     def _run_processor(self) -> None:
+        import time
 
         while True:
             try:
@@ -1189,7 +1213,15 @@ class ProcessingPipeline:
                 break
 
             try:
+                t0 = time.perf_counter()
                 out_frame = self._process_chunk(chunk)
+                frame_s = len(chunk) / self._config.audio.sample_rate
+                if frame_s > 0:
+                    pct_inst = 100.0 * (time.perf_counter() - t0) / frame_s
+                    # EMA 0.8: suaviza sin esconder una subida sostenida (se
+                    # nota en ~5 frames, ~50ms con el hop default).
+                    self._cpu_load_pct = (0.8 * self._cpu_load_pct
+                                          + 0.2 * pct_inst)
                 try:
                     self._out_queue.put_nowait(out_frame)
                 except queue.Full:

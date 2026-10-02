@@ -577,6 +577,98 @@ def test_overwrite_clears_modified_in_title():
         w._preset_manager.delete(tmp)
 
 
+def test_export_import_preset_buttons():
+    """Exportar escribe un .json suelto con el preset elegido; importarlo de
+    vuelta (con otro nombre, sin colisión) lo deja disponible en la lista."""
+    import json
+    import ui.presets_tab as pt_mod
+
+    w = _win()
+    pt = w._presets_tab
+    origen = "___test_export_origen___"
+    importado = "___test_export_importado___"
+    tmp_json = os.path.join(tempfile.gettempdir(), "___rnk_test_export___.json")
+    orig_save, orig_open = pt_mod.QFileDialog.getSaveFileName, pt_mod.QFileDialog.getOpenFileName
+    try:
+        w._preset_manager.save(origen, w._config)
+        pt._refresh_list()
+        pt._select_by_name(origen)
+
+        pt_mod.QFileDialog.getSaveFileName = staticmethod(lambda *a, **k: (tmp_json, ""))
+        pt._on_export()
+        assert os.path.exists(tmp_json), "export_to no escribio el archivo"
+        with open(tmp_json, encoding="utf-8") as f:
+            data = json.load(f)
+        assert data["name"] == origen
+
+        # Renombrar el nombre dentro del json antes de reimportar, para que no
+        # colisione con el original y testear el camino "sin colision".
+        data["name"] = importado
+        with open(tmp_json, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+
+        pt_mod.QFileDialog.getOpenFileName = staticmethod(lambda *a, **k: (tmp_json, ""))
+        pt._on_import()
+        _app.processEvents()
+        assert importado in w._preset_manager.list_names(), \
+            "el preset importado no aparece en la lista"
+        print("Exportar/importar preset (sin colision)     OK")
+    finally:
+        pt_mod.QFileDialog.getSaveFileName = orig_save
+        pt_mod.QFileDialog.getOpenFileName = orig_open
+        w._preset_manager.delete(origen)
+        w._preset_manager.delete(importado)
+        if os.path.exists(tmp_json):
+            os.remove(tmp_json)
+
+
+def test_import_preset_name_collision_overwrite():
+    """Importar un preset con un nombre que ya existe pregunta, y elegir
+    'Sobrescribir' reemplaza el preset existente con los datos importados."""
+    import json
+    from PySide6.QtWidgets import QMessageBox
+    import ui.presets_tab as pt_mod
+
+    w = _win()
+    pt = w._presets_tab
+    nombre = "___test_import_colision___"
+    tmp_json = os.path.join(tempfile.gettempdir(), "___rnk_test_import_colision___.json")
+    orig_open = pt_mod.QFileDialog.getOpenFileName
+    orig_exec = QMessageBox.exec
+    try:
+        app_viejo = AppConfig()
+        app_viejo.dsp.noise_alpha = 0.11
+        w._preset_manager.save(nombre, app_viejo)
+
+        app_nuevo = AppConfig()
+        app_nuevo.dsp.noise_alpha = 0.99
+        from presets import PresetManager as PM
+        with open(tmp_json, "w", encoding="utf-8") as f:
+            json.dump(PM._capture(nombre, app_nuevo), f)
+
+        pt_mod.QFileDialog.getOpenFileName = staticmethod(lambda *a, **k: (tmp_json, ""))
+
+        def _exec_click_overwrite(self):
+            for b in self.buttons():
+                if tr("Sobrescribir") in b.text():
+                    b.click()
+                    return 0
+            raise AssertionError("no se encontro el boton Sobrescribir")
+        QMessageBox.exec = _exec_click_overwrite
+
+        pt._on_import()
+        _app.processEvents()
+        assert w._preset_manager.snapshot(nombre)["dsp"]["noise_alpha"] == 0.99, \
+            "sobrescribir no aplico los datos importados"
+        print("Importar con colision -> Sobrescribir       OK")
+    finally:
+        pt_mod.QFileDialog.getOpenFileName = orig_open
+        QMessageBox.exec = orig_exec
+        w._preset_manager.delete(nombre)
+        if os.path.exists(tmp_json):
+            os.remove(tmp_json)
+
+
 def test_advanced_change_marks_modified():
     """Mover un slider de una pestaña Avanzada debe marcar el preset como
     '(modificado)' (esos sliders conectan directo al pipeline; sin la señal
@@ -933,6 +1025,7 @@ def test_indicadores_vuelven_a_reposo_al_detener():
     }
     for lbl, texto in vivos.values():
         lbl.setText(texto)
+    w._cpu_meter.set_load(87.0)
 
     w._reset_live_indicators()
 
@@ -941,6 +1034,7 @@ def test_indicadores_vuelven_a_reposo_al_detener():
     for n, (lbl, _) in vivos.items():
         assert "—" in lbl.text() or "--" in lbl.text(), \
             f"{n} no quedo en reposo: {lbl.text()!r}"
+    assert w._cpu_meter._load_pct == 0.0, "medidor de CPU no volvio a reposo al detener"
     print("Indicadores vuelven a reposo al detener      OK")
 
 
@@ -1111,6 +1205,49 @@ def _click_donar(box) -> None:
             return
 
 
+def test_export_diagnostics_button():
+    """El botón 🩺 de la barra de estado empaqueta settings.json,
+    errores_dsp.log (si existe), el preset activo y el volcado de estado
+    interno en un .zip."""
+    import zipfile
+    import ui.main_window as mw
+
+    w = _win()
+    tmp_zip = os.path.join(tempfile.gettempdir(), "___rnk_test_diag___.zip")
+    orig_save = mw.QFileDialog.getSaveFileName
+    try:
+        # Preset activo, para que aparezca dentro del zip.
+        w._preset_manager.save(_PRESET_DE_PRUEBA, w._config)
+        w._presets_tab._refresh_list()
+        w._presets_tab._select_by_name(_PRESET_DE_PRUEBA)
+        w._presets_tab._on_load()
+        _app.processEvents()
+
+        # Generar algo de errores_dsp.log, para que el zip tenga algo que
+        # empaquetar ahí también (si no existe, _export_diagnostics lo omite).
+        w._pipeline.log_diagnostic("test_export_diagnostics_button", "linea de prueba")
+
+        if os.path.exists(tmp_zip):
+            os.remove(tmp_zip)
+        mw.QFileDialog.getSaveFileName = staticmethod(lambda *a, **k: (tmp_zip, ""))
+        w._export_diagnostics()
+
+        assert os.path.exists(tmp_zip), "_export_diagnostics no escribio el .zip"
+        with zipfile.ZipFile(tmp_zip) as zf:
+            nombres = zf.namelist()
+            assert "settings.json" in nombres
+            assert "errores_dsp.log" in nombres
+            assert any(n.startswith("preset_") for n in nombres), \
+                f"falta el preset activo en el zip: {nombres}"
+            assert "diagnostico.txt" in nombres
+            assert zf.read("diagnostico.txt").decode("utf-8").strip()
+        print("Exportar diagnostico: boton -> .zip completo   OK")
+    finally:
+        mw.QFileDialog.getSaveFileName = orig_save
+        if os.path.exists(tmp_zip):
+            os.remove(tmp_zip)
+
+
 def test_auto_load_respects_saved_mode():
     """El auto-cargar un perfil nombrado fuerza estático; NO debe hacerlo si el
     modo guardado era MCRA (regresión: un last_noise_profile viejo pisaba el
@@ -1211,6 +1348,8 @@ def test_mcra_stall_reason():
         post_filter_extra_db = 0.0
         mcra_diag = "frames=0 warmup=80"
         volcados = []
+        input_level_db = None   # gate_enabled=False por default: no se usa
+        gate_open = False
 
         def is_running(self):
             return True
@@ -1348,6 +1487,45 @@ def test_noise_fall_slider():
     print("slider del freno de caida del piso            OK")
 
 
+def test_gate_threshold_slider_on_principal():
+    """El umbral del Gate vive SOLO en Principal (sin duplicado en Avanzada
+    Audio): mover el slider llega al DSP y a la config, y refresh_from_config
+    lo sincroniza tras cargar un preset con otro umbral — misma fuente única
+    de verdad que Intensidad y Post-Filtro."""
+    w = MainWindow()
+    gate = w._pipeline._gate
+
+    assert not hasattr(w._adv_audio_tab, "_s_gate_threshold"), \
+        "el umbral no deberia tener un slider duplicado en Avanzada Audio"
+
+    w._slider_gate_threshold.set_value(-60.0)
+    w._slider_gate_threshold.set_value(-35.0, emit=True)
+    _app.processEvents()
+    assert abs(gate._threshold_db - (-35.0)) < 0.01, gate._threshold_db
+    assert abs(w._config.dsp.gate_threshold_db - (-35.0)) < 0.01
+
+    # refresh_from_config (carga de preset en caliente) sincroniza el slider
+    w._config.dsp.gate_threshold_db = -70.0
+    w.refresh_from_config()
+    assert abs(w._slider_gate_threshold.value() - (-70.0)) < 0.01, \
+        w._slider_gate_threshold.value()
+
+    # Gating: desactivar el módulo en Módulos Activos deshabilita el slider
+    # (SliderRow deshabilita los hijos, no el contenedor — invariante del
+    # proyecto: testear con _slider, no con el widget entero).
+    w._chk_gate.setChecked(False)
+    _app.processEvents()
+    assert not w._slider_gate_threshold._slider.isEnabled(), \
+        "el umbral sigue habilitado con el gate apagado"
+    w._chk_gate.setChecked(True)
+    _app.processEvents()
+    assert w._slider_gate_threshold._slider.isEnabled(), \
+        "el umbral no se re-habilita al activar el gate"
+
+    w.close()
+    print("slider de Umbral del Gate, solo en Principal  OK")
+
+
 def test_mcra_en_bypass_no_es_falla():
     """En Bypass el estimador NO puede calibrar, y eso no es una falla.
 
@@ -1409,6 +1587,7 @@ def test_bypass_indicadores_en_reposo():
         "noise_voice_prob": property(lambda self: 0.8),
         "pitch_f0": property(lambda self: 150.0),
         "anf_notched_bins": property(lambda self: 2),
+        "cpu_load_pct": property(lambda self: 42.0),
     }
     canc, imp = w._adv_canceller_tab, w._adv_impulse_tab
     orig = {k: getattr(pipe_cls, k) for k in patched}
@@ -1422,6 +1601,7 @@ def test_bypass_indicadores_en_reposo():
         assert "-6.0" in w._lbl_pf_extra.text(), w._lbl_pf_extra.text()
         assert "estimando" in w._label_noise.text(), w._label_noise.text()
         assert "ACTIVO" in w._lbl_peak_active.text(), w._lbl_peak_active.text()
+        assert w._cpu_meter._load_pct == 42.0, w._cpu_meter._load_pct
         canc._update_stats(); imp._update_stats()
         assert "-12.0" in canc._lbl_noise_db.text(), canc._lbl_noise_db.text()
         assert "80%" in canc._lbl_noise_vp.text(), canc._lbl_noise_vp.text()
@@ -1435,16 +1615,23 @@ def test_bypass_indicadores_en_reposo():
         w._tick_levels()
         canc._update_stats(); imp._update_stats()
         # Avanzada Cancelador y Supresor tambien (segunda vuelta del reporte)
-        for lbl in (canc._lbl_noise_db, canc._lbl_gate_floor, canc._lbl_pf_peak,
+        for lbl in (canc._lbl_noise_db, canc._lbl_pf_peak,
                     canc._lbl_pitch_f0, imp._lbl_anf_activity):
             assert "Bypass" in lbl.text(), f"indicador pegado en bypass: {lbl.text()!r}"
-        for lbl in (canc._lbl_noise_vp, canc._lbl_gate_state, canc._lbl_pf_active):
+        for lbl in (canc._lbl_noise_vp, canc._lbl_pf_active):
             assert lbl.text() == "—", f"indicador pegado en bypass: {lbl.text()!r}"
+        # Gate: mismo criterio, ahora en Principal + Avanzada Audio (dual).
+        for lbl in (w._lbl_gate_floor, w._adv_audio_tab._lbl_gate_floor):
+            assert "Bypass" in lbl.text(), f"indicador de gate pegado en bypass: {lbl.text()!r}"
+        for lbl in (w._lbl_gate_state, w._adv_audio_tab._lbl_gate_state):
+            assert lbl.text() == "—", f"indicador de gate pegado en bypass: {lbl.text()!r}"
         assert "-12.0" not in w._lbl_noise_db.text(),             f"Reduccion activa sigue mostrando un valor: {w._lbl_noise_db.text()!r}"
         assert "-6.0" not in w._lbl_pf_extra.text(),             f"Reduccion extra sigue mostrando un valor: {w._lbl_pf_extra.text()!r}"
         assert "estimando" not in w._label_noise.text() and "Bypass" in w._label_noise.text(),             f"el cartel MCRA no dice que esta en bypass: {w._label_noise.text()!r}"
         assert w._lbl_peak_active.text() == "—", w._lbl_peak_active.text()
         assert w._lbl_snr.text() == tr("S/N: —"), w._lbl_snr.text()
+        assert w._cpu_meter._load_pct == 0.0, \
+            f"medidor de CPU pegado en bypass: {w._cpu_meter._load_pct}"
 
         # Al salir del bypass vuelven los valores vivos
         w._btn_bypass.setChecked(False)
@@ -1453,6 +1640,7 @@ def test_bypass_indicadores_en_reposo():
         w._tick_levels()
         assert "-12.0" in w._lbl_noise_db.text()
         assert "estimando" in w._label_noise.text()
+        assert w._cpu_meter._load_pct == 42.0, w._cpu_meter._load_pct
         canc._update_stats(); imp._update_stats()
         assert "80%" in canc._lbl_noise_vp.text()
         assert "2" in imp._lbl_anf_activity.text()
@@ -1572,6 +1760,7 @@ if __name__ == "__main__":
     test_bypass_gain_persiste_entre_sesiones()
     test_about_dialog()
     test_about_donate_button()
+    test_export_diagnostics_button()
     test_auto_load_respects_saved_mode()
     test_canceller_subcontrols_require_noise()
     test_supresor_tiene_un_indicador_por_etapa()
@@ -1587,11 +1776,14 @@ if __name__ == "__main__":
     test_refresh_from_config_restores_checkboxes()
     test_window_title_reflects_preset()
     test_overwrite_clears_modified_in_title()
+    test_export_import_preset_buttons()
+    test_import_preset_name_collision_overwrite()
     test_advanced_change_marks_modified()
     test_waterfall_toggle_and_source()
     test_waterfall_diff_mode()
     test_incompatible_devices_disable_activate()
     test_noise_fall_slider()
+    test_gate_threshold_slider_on_principal()
     test_mcra_en_bypass_no_es_falla()
     test_bypass_indicadores_en_reposo()
     test_noise_freeze_slider()

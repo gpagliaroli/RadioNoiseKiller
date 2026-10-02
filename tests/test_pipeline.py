@@ -143,6 +143,22 @@ assert hits_off == 0, "blanker OFF no debe contar hits"
 print("Supresor de impulsos: OK")
 
 # ------------------------------------------------------------------
+# cpu_load_pct: se actualiza con el hilo procesador corriendo y vuelve a
+# 0.0 al detener (indicador de CPU en vivo, pestaña Principal).
+# ------------------------------------------------------------------
+p_cpu = ProcessingPipeline(AppConfig())
+p_cpu.start(headless=True)
+rng_cpu = np.random.default_rng(13)
+h_cpu = p_cpu._config.audio.block_size
+for _ in range(30):
+    p_cpu._process(rng_cpu.standard_normal(h_cpu).astype(np.float32) * 0.05)
+time.sleep(0.1)   # dejar que el hilo procesador drene la cola
+assert p_cpu.cpu_load_pct > 0.0, "cpu_load_pct no se actualizo con el hilo corriendo"
+p_cpu.stop()
+assert p_cpu.cpu_load_pct == 0.0, "cpu_load_pct no vuelve a reposo tras stop()"
+print(f"cpu_load_pct: {p_cpu.cpu_load_pct:.1f}% tras stop() (en vivo fue > 0): OK")
+
+# ------------------------------------------------------------------
 # Grabación a WAV (headless): graba N frames y verifica los archivos
 # ------------------------------------------------------------------
 print("\nGrabacion WAV...")
@@ -629,6 +645,16 @@ assert _tardios and _tardios[0].closed, "el stream que llegó tarde no se cerró
 assert not _ts.is_running()
 _st.sd.Stream = _sd_stream_real
 print("Apertura tardía cierra el stream huérfano: OK")
+
+# ------------------------------------------------------------------
+# dump_diag_text(): volcado legible para el .zip de diagnóstico (botón de
+# la barra de estado, main_window._export_diagnostics). Reusa mcra_diag.
+# ------------------------------------------------------------------
+texto_diag = pipeline.dump_diag_text()
+assert texto_diag.strip(), "dump_diag_text() no debe devolver vacio"
+assert "modo_dsp=" in texto_diag, "dump_diag_text() no incluye el estado de mcra_diag"
+assert "ultimo_error=" in texto_diag, "dump_diag_text() no incluye el ultimo error"
+print("dump_diag_text(): OK (volcado legible)")
 
 print(f"\nErrores: {errors if errors else 'ninguno'}")
 print("\nPipeline: OK")

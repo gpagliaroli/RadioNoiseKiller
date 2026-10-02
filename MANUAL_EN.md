@@ -233,7 +233,7 @@ Each checkbox enables or disables one pipeline module independently and in real 
 | **Voice EQ (presence + body)** | Two parametric bands: presence (clarity, 1–2 kHz) and body (warmth, 150–800 Hz). Enable to shape the voice on weakened or heavily filtered signals. |
 | **Harmonic exciter** | For dull voice signals lacking brightness. Adds presence. Compare with and without to decide. |
 | **Restore bass** | Brings back the voice's fundamental when the radio's filter cut it, deriving it from the harmonics that did get through. For voices that sound thin or "telephone-like" despite a good level — above all on SSB with a narrow filter. |
-| **Noise gate** | Top-level module (it does not depend on the canceller). Lowers the background between transmissions when the input level does not reach the threshold, with a progressive close instead of an abrupt cut. Runs at the end of the chain. Calibrated by watching the level indicator in Advanced Canceller (see Ch. 8). |
+| **Noise gate** | Top-level module (it does not depend on the canceller). Lowers the background between transmissions when the input level does not reach the threshold, with a progressive close instead of an abrupt cut. Runs at the end of the chain. Calibrated by watching the level indicator on the Main tab (see Ch. 8). |
 
 > **Tip — enable one at a time:** when building a configuration (or on a new signal), enable and disable the modules **one at a time**, listening to the effect each one produces. Since all changes apply live, you hear the difference instantly: that lets you tune each module better — or simply drop it if it brings nothing on that signal. Enabling everything at once makes it impossible to tell what is helping and what is not.
 
@@ -729,8 +729,8 @@ The difference from the general AGC (Ch. 2) is the **voice-detection gate**: by 
 
 ## Chapter 8 — Noise Gate
 
-**Location:** Modules tab → "Noise gate"  
-**Advanced settings:** Advanced Canceller tab → "Noise gate" group
+**Location:** Modules tab → "Noise gate" (enable) · Main tab → "Noise gate" group (threshold + indicator)  
+**Fine-tuning:** Advanced Audio tab → "Noise gate" group (depth, hold)
 
 ### Description
 
@@ -752,7 +752,11 @@ The close is **progressive**: when the signal drops, the gate holds full volume 
 
 **With music** the gate is no longer the nuisance the squelch was: it does not look for voice structure, only at the level. Even so, if the music has quiet passages that fall below the threshold, it will attenuate them — in that case lower the threshold or leave *Depth* at a small value.
 
-### Real-time indicators (Noise gate group, Advanced Canceller)
+### Real-time indicators (Noise gate group — Main and Advanced Audio)
+
+The same indicator appears in both places (same data, so you can glance at it
+on the Main tab and also watch it live while fine-tuning Depth/Hold on
+Advanced Audio):
 
 | Indicator | Description |
 |-----------|-------------|
@@ -761,15 +765,15 @@ The close is **progressive**: when the signal drops, the gate holds full volume 
 
 ### Controls
 
-| Control | Range | Default | Description |
-|---------|-------|---------|-------------|
-| **Threshold** | −80 to −20 dBFS | −50 dBFS | Input level at which the gate opens. Pick it between the level the indicator reads in the gaps and the level it reads with signal. If it cuts weak voice, lower it; if it opens on noise alone, raise it. **It is a setting for your station** — worth reviewing when you change band, antenna or time of day. |
-| **Depth** | 0 to 60 dB | 20 dB | How much the background drops while the gate is closed. At 0 dB the gate attenuates nothing (it is inert); 15–25 dB is the natural range on HF; the maximum silences completely. |
-| **Hold** | 50 to 2000 ms | 300 ms | How long the gate stays open after the signal drops, so it does not cut between words. Full volume during the first half, fade during the second. Short for fast conversation; 500–1000 ms for operators with long pauses. |
+| Control | Tab | Range | Default | Description |
+|---------|-----|-------|---------|-------------|
+| **Threshold** | Main | −80 to −20 dBFS | −50 dBFS | Input level at which the gate opens. Pick it between the level the indicator reads in the gaps and the level it reads with signal. If it cuts weak voice, lower it; if it opens on noise alone, raise it. **It is a setting for your station** — worth reviewing when you change band, antenna or time of day. That is why it lives on the Main tab: of the three controls, it is the one you will touch most often. |
+| **Depth** | Advanced Audio | 0 to 60 dB | 20 dB | How much the background drops while the gate is closed. At 0 dB the gate attenuates nothing (it is inert); 15–25 dB is the natural range on HF; the maximum silences completely. |
+| **Hold** | Advanced Audio | 50 to 2000 ms | 300 ms | How long the gate stays open after the signal drops, so it does not cut between words. Full volume during the first half, fade during the second. Short for fast conversation; 500–1000 ms for operators with long pauses. |
 
 ### Calibration
 
-1. Enable the gate in the Modules tab and open **Advanced Canceller** to see the **Input level** indicator.
+1. Enable the gate in the Modules tab — the **Input level** indicator and the **Threshold** slider are right there, on the **Main** tab.
 2. With the radio on a gap (no transmission), note the level it reads.
 3. With a transmission under way, note the level it reads.
 4. Set the **Threshold** between those two values, closer to the gap reading than to the signal one.

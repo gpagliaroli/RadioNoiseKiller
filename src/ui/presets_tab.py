@@ -1,12 +1,13 @@
 ﻿from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem,
-    QPushButton, QLabel, QLineEdit, QMessageBox, QInputDialog,
+    QPushButton, QLabel, QLineEdit, QMessageBox, QInputDialog, QFileDialog,
 )
 from PySide6.QtCore import Signal
 from config import AppConfig
 from pipeline import ProcessingPipeline
 from presets import PresetManager
 from i18n import tr
+from utils import presets_dir
 
 
 class PresetsTab(QWidget):
@@ -86,6 +87,13 @@ class PresetsTab(QWidget):
         self._btn_rename = QPushButton(tr("Renombrar seleccionado"))
         root.addWidget(self._btn_rename)
 
+        btn3 = QHBoxLayout()
+        self._btn_export = QPushButton(tr("Exportar..."))
+        self._btn_import = QPushButton(tr("Importar..."))
+        btn3.addWidget(self._btn_export)
+        btn3.addWidget(self._btn_import)
+        root.addLayout(btn3)
+
         active_row = QHBoxLayout()
         lbl_act = QLabel(tr("Preset activo:"))
         lbl_act.setFixedWidth(90)
@@ -109,6 +117,8 @@ class PresetsTab(QWidget):
         self._btn_load.clicked.connect(self._on_load)
         self._btn_delete.clicked.connect(self._on_delete)
         self._btn_rename.clicked.connect(self._on_rename)
+        self._btn_export.clicked.connect(self._on_export)
+        self._btn_import.clicked.connect(self._on_import)
 
         self._update_button_states()
 
@@ -207,6 +217,69 @@ class PresetsTab(QWidget):
         except Exception as e:
             QMessageBox.warning(self, tr("Error al renombrar"), str(e))
 
+    def _on_export(self) -> None:
+        item = self._list.currentItem()
+        if not item:
+            return
+        name = item.text()
+        import os
+        suggested = os.path.join(presets_dir(), f"{name}.json")
+        path, _ = QFileDialog.getSaveFileName(
+            self, tr("Exportar preset"), suggested, "JSON (*.json)")
+        if not path:
+            return
+        try:
+            self._manager.export_to(name, path)
+        except Exception as e:
+            QMessageBox.warning(self, tr("Error al exportar"), str(e))
+
+    def _on_import(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, tr("Importar preset"), presets_dir(), "JSON (*.json)")
+        if not path:
+            return
+        try:
+            data, nombre = self._manager.import_from(path)
+        except Exception as e:
+            QMessageBox.warning(self, tr("Error al importar"), str(e))
+            return
+
+        final_name = nombre
+        if self._manager.exists(nombre):
+            box = QMessageBox(self)
+            box.setWindowTitle(tr("Nombre en uso"))
+            box.setText(tr("Ya existe un preset llamado '{name}'.").format(name=nombre))
+            btn_overwrite = box.addButton(tr("Sobrescribir"),
+                                          QMessageBox.ButtonRole.DestructiveRole)
+            btn_rename    = box.addButton(tr("Renombrar"),
+                                          QMessageBox.ButtonRole.ActionRole)
+            box.addButton(QMessageBox.StandardButton.Cancel)
+            box.exec()
+            clicked = box.clickedButton()
+            if clicked is btn_rename:
+                new, ok = QInputDialog.getText(
+                    self, tr("Renombrar preset"), tr("Nuevo nombre:"), text=nombre)
+                new = new.strip()
+                if not ok or not new:
+                    return
+                if self._manager.exists(new):
+                    QMessageBox.warning(self, tr("Nombre en uso"),
+                                        tr("Ya existe un preset llamado '{name}'.").format(name=new))
+                    return
+                final_name = new
+            elif clicked is not btn_overwrite:
+                return   # Cancelar
+
+        tmp = AppConfig()
+        try:
+            PresetManager._apply_to_config(data, tmp)
+        except Exception as e:
+            QMessageBox.warning(self, tr("Error al importar"), str(e))
+            return
+        self._manager.save(final_name, tmp)
+        self._refresh_list()
+        self._select_by_name(final_name)
+
     # ------------------------------------------------------------------ #
     # Helpers                                                              #
     # ------------------------------------------------------------------ #
@@ -242,3 +315,4 @@ class PresetsTab(QWidget):
         self._btn_load.setEnabled(has_selection)
         self._btn_delete.setEnabled(has_selection)
         self._btn_rename.setEnabled(has_selection)
+        self._btn_export.setEnabled(has_selection)

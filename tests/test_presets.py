@@ -187,6 +187,48 @@ def test_delete():
         print("Delete                           OK")
 
 
+def test_export_to_writes_json():
+    with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as outdir:
+        mgr = PresetManager(tmpdir)
+        app = AppConfig()
+        app.dsp.noise_alpha = 0.42
+        mgr.save("Para Exportar", app)
+
+        dest = os.path.join(outdir, "suelto.json")
+        mgr.export_to("Para Exportar", dest)
+        assert os.path.exists(dest)
+        with open(dest, encoding="utf-8") as f:
+            data = json.load(f)
+        assert data["name"] == "Para Exportar"
+        assert data["dsp"]["noise_alpha"] == 0.42
+        print("Exportar preset a .json suelto   OK")
+
+
+def test_import_from_returns_dict_and_name():
+    with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as outdir:
+        mgr = PresetManager(tmpdir)
+        app = AppConfig()
+        app.dsp.noise_alpha = 0.73
+        mgr.save("Original", app)
+        dest = os.path.join(outdir, "suelto.json")
+        mgr.export_to("Original", dest)
+
+        data, nombre = mgr.import_from(dest)
+        assert nombre == "Original"
+        assert data["dsp"]["noise_alpha"] == 0.73
+
+        # Archivo sin las claves de un preset: import_from rechaza, no crashea.
+        otro = os.path.join(outdir, "no_es_preset.json")
+        with open(otro, "w", encoding="utf-8") as f:
+            json.dump({"foo": "bar"}, f)
+        try:
+            mgr.import_from(otro)
+            raise AssertionError("import_from debia rechazar un JSON sin dsp/gain")
+        except ValueError:
+            pass
+        print("Importar preset desde .json      OK")
+
+
 def test_multiple_presets_list_order():
     with tempfile.TemporaryDirectory() as tmpdir:
         mgr = PresetManager(tmpdir)
@@ -362,6 +404,8 @@ if __name__ == "__main__":
     test_save_load_roundtrip()
     test_rename()
     test_delete()
+    test_export_to_writes_json()
+    test_import_from_returns_dict_and_name()
     test_multiple_presets_list_order()
     test_load_applies_bandpass()
     test_missing_keys_use_factory_defaults()

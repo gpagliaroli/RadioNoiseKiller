@@ -52,6 +52,11 @@ def settings_path() -> str:
     return os.path.join(data_dir(), "settings.json")
 
 
+def log_path() -> str:
+    """Ruta a errores_dsp.log (junto al .exe en bundle, en raíz en desarrollo)."""
+    return os.path.join(data_dir(), "errores_dsp.log")
+
+
 def noise_profiles_dir() -> str:
     """Ruta a la carpeta PerfilesRuido/ (junto al .exe en bundle, en raíz en
     desarrollo). La crea si no existe."""

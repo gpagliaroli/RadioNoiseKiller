@@ -84,6 +84,25 @@ class PresetManager:
         cap = self._capture(name, fresh)
         return {"dsp": cap["dsp"], "gain": cap["gain"]}
 
+    def export_to(self, name: str, dest_path: str) -> None:
+        """Copia el .json del preset guardado a dest_path, tal cual está en
+        disco (mismo formato que un preset interno — sin reinventar nada)."""
+        data = self.read(name)
+        with open(dest_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+    def import_from(self, src_path: str) -> "tuple[dict, str]":
+        """Lee un .json suelto y devuelve (data, nombre_sugerido). No guarda
+        nada: la UI decide qué hacer si el nombre ya existe (ver invariante 10,
+        _apply_to_config ya cubre claves ausentes/obsoletas al aplicarlo)."""
+        data = self._read_file(src_path)
+        if "dsp" not in data and "gain" not in data:
+            raise ValueError("El archivo no tiene el formato de un preset "
+                              "(faltan las claves 'dsp'/'gain')")
+        nombre = str(data.get("name") or os.path.splitext(
+            os.path.basename(src_path))[0])
+        return data, nombre
+
     def matches(self, name: str, config: AppConfig) -> bool:
         """True si los valores DSP+Gain actuales del config coinciden exactamente
         con los guardados en el preset (para mostrar '(modificado)' en la UI)."""
