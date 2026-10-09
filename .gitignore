@@ -59,3 +59,6 @@ Thumbs.db
 # maquina del usuario, y tenerlo en la carpeta del proyecto ya causo una vez
 # que se tomara por un fallo real lo que habia dejado la suite de tests.
 errores_dsp.log
+
+# Modulo de Traduccion instalado en desarrollo (entorno + modelos)
+TraduccionRuntime/

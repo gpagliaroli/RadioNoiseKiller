@@ -42,6 +42,8 @@ radio, y el manual queda para cuando querés el porqué.
 
 También podés hacer **click derecho sobre cualquier slider** para restaurar su valor de fábrica.
 
+> **Nombres de las pestañas.** Para que las ocho entren en el ancho de la ventana sin scroll, *Avanzada Audio*, *Avanzada Impulsos* y *Avanzada Cancelador* se muestran como **Avanz. Audio**, **Avanz. Impulsos** y **Avanz. Cancelador**. En este manual se las nombra con el nombre completo.
+
 ---
 
 ## Glosario de términos
@@ -1218,6 +1220,58 @@ Al cerrar y volver a abrir la aplicación:
 - La etiqueta "Preset activo" recuerda el nombre, con "(modificado)" si los valores actuales difieren de los guardados en el preset.
 - Para volver al preset puro descartando los retoques, simplemente cargarlo de nuevo.
 
+### Exportar e importar presets
+
+Los botones **Exportar...** e **Importar...** de la pestaña Presets pasan un preset a un archivo `.json` y lo traen de vuelta: sirven para compartir tu configuración con otro radioaficionado o llevarla a otra computadora. Si al importar ya existe un preset con ese nombre, la aplicación pregunta si **Sobrescribir** o **Renombrar**.
+
+---
+
+## Capítulo 14 — Traducción
+
+### Descripción
+
+La pestaña **Traducción** transcribe y traduce en vivo lo que sale del cancelador, para hacerse una idea de qué dice una estación en un idioma que no se conoce. Usa reconocimiento de voz (*faster-whisper*) y traducción (*argostranslate*), y todo corre **en tu computadora**: no se manda audio a ningún servicio.
+
+> **Es una ayuda aproximada, no un subtítulo confiable.** Con señal débil, fading o ruido de banda el resultado puede ser impreciso o directamente incorrecto. Es una limitación de cualquier modelo de reconocimiento de voz sobre audio de onda corta, no un fallo de la aplicación. La pestaña lo recuerda con un aviso permanente.
+
+### Instalación (una sola vez, en un clic)
+
+La traducción **no viene instalada**: necesita un componente adicional de unos 600 MB que no forma parte de la aplicación (así quien no la usa no paga ese espacio). **Mientras no esté instalado, Iniciar y los selectores de idioma están deshabilitados.**
+
+1. Abrí la pestaña **Traducción** y apretá **⬇ Instalar módulo de traducción**.
+2. La aplicación muestra cuánto va a descargar y pide confirmación. **Si no aceptás, no se descarga nada.**
+3. Una barra muestra el avance (Python, componentes, modelo de voz e idioma). Se puede **Cancelar**: lo parcial se borra.
+4. Al terminar, el panel desaparece y se habilita **Iniciar**.
+
+Hace falta internet **solo para instalar**. Después funciona sin conexión; la única excepción es elegir más adelante un idioma que no se bajó: ese paquete se descarga la primera vez que se usa. Todo queda en la carpeta `TraduccionRuntime/`, junto a `settings.json`. **Desinstalar módulo** borra esa carpeta y recupera el espacio.
+
+La instalación baja los idiomas que estén elegidos en ese momento (origen y destino; con origen *Auto* baja el inglés como base).
+
+*Configuración avanzada...* permite apuntar a un entorno Python propio en vez del instalado (para quien ya lo armó a mano); esas rutas tienen prioridad.
+
+### Controles
+
+| Control | Qué hace |
+|---------|----------|
+| **Origen** | Idioma que se habla. *Auto* lo detecta solo. Fijarlo ayuda cuando la detección duda. |
+| **Destino** | Idioma al que se traduce. |
+| **Mostrar** | Origen y traducción, solo origen o solo traducción. Afecta a las líneas nuevas. |
+| **Confianza mínima** | Si el idioma detectado tiene menos confianza que este valor, no se traduce y se avisa con "⚠ Confianza baja". Traducir texto en un idioma mal detectado da frases con forma de oración pero sin sentido. |
+| **▶ Iniciar / ⏹ Detener** | Arranca o detiene la traducción. Se detiene sola al detener el procesamiento de audio. |
+| **🗑 Borrar** | Vacía la lista de líneas acumuladas. |
+
+Las líneas se pueden seleccionar y copiar con **Ctrl+C** o con el menú del botón derecho (sin selección copia todo).
+
+El indicador **Idioma detectado · Promedio** muestra el idioma más reciente y cuánto tarda en promedio cada tramo de audio (se procesa de a ~8 segundos, así que el texto llega con ese retraso más el tiempo de proceso).
+
+### Consejos
+
+- Funciona mejor con el cancelador y el pasabanda ya bien ajustados: lo que no se entiende al oído difícilmente lo entienda el modelo.
+- Si ves la misma frase repetida, es el modelo "enganchándose" con ruido; la aplicación descarta las repeticiones consecutivas, pero con audio muy sucio conviene subir la **Confianza mínima**.
+- En una PC lenta la traducción compite por CPU con el procesamiento de audio. Si aparecen cortes, detené la traducción.
+
+---
+
 ---
 
 ## Persistencia de configuración
@@ -1246,6 +1300,10 @@ Dos avisos de la barra de estado lo mencionan, y conviene saber qué significan:
 El archivo se limita a unos pocos errores por sesión, así que no crece sin control, y se puede borrar sin consecuencias.
 
 > **Por qué existe:** un fallo del procesamiento antes no se veía. La aplicación se recuperaba sola y seguía andando, pero con el módulo afectado a medio funcionar, y desde afuera el único síntoma era "esto no está reduciendo el ruido" — sin nada que lo explicara. Estos avisos y este archivo son para que la próxima vez haya un rastro que se pueda leer.
+
+**Exportar diagnóstico.** Si tenés que pedir ayuda, el botón **🩺** (Exportar diagnóstico) de la barra de estado empaqueta en un `.zip` el `settings.json`, el `errores_dsp.log` y el preset activo, más un resumen del estado del procesador. Es lo único que hace falta mandar; no incluye audio.
+
+**Medidor de CPU.** Debajo de la latencia, el medidor **CPU** muestra qué porcentaje del tiempo disponible por bloque tarda el procesado. Cerca del 100 % o más es la firma de cortes de audio (*underruns*): en una PC o Raspberry Pi lenta, desactivá módulos o detené la traducción.
 
 ---
 

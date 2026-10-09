@@ -42,6 +42,8 @@ radio, leaving the manual for when you want the reasoning.
 
 You can also **right-click any slider** to restore its factory value.
 
+> **Tab names.** So that all eight fit in the window width without scrolling, *Advanced Audio*, *Advanced Impulse* and *Advanced Canceller* are shown as **Adv. Audio**, **Adv. Impulse** and **Adv. Canceller**. This manual uses the full names.
+
 ---
 
 ## Glossary of terms
@@ -1219,6 +1221,58 @@ When you close and reopen the application:
 - The "Active preset" label remembers the name, with "(modified)" if the current values differ from those stored in the preset.
 - To return to the pure preset, discarding your tweaks, simply load it again.
 
+### Exporting and importing presets
+
+The **Export...** and **Import...** buttons in the Presets tab write a preset to a `.json` file and bring it back: use them to share your setup with another ham or move it to another computer. If a preset with the same name already exists on import, the application asks whether to **Overwrite** or **Rename**.
+
+---
+
+## Chapter 14 — Translation
+
+### Description
+
+The **Translation** tab transcribes and translates, live, what comes out of the canceller, to get an idea of what a station is saying in a language you do not know. It uses speech recognition (*faster-whisper*) and translation (*argostranslate*), and everything runs **on your computer**: no audio is sent to any service.
+
+> **It is a rough aid, not a reliable subtitle.** With weak signals, fading or band noise the result may be inaccurate or plainly wrong. That is a limitation of any speech-recognition model on shortwave audio, not a bug in the application. The tab reminds you with a permanent warning.
+
+### Installation (once, one click)
+
+Translation is **not installed by default**: it needs an extra component of about 600 MB that is not part of the application (so anyone who does not use it does not pay that space). **Until it is installed, Start and the language selectors are disabled.**
+
+1. Open the **Translation** tab and press **⬇ Install translation module**.
+2. The application shows how much it will download and asks for confirmation. **If you do not accept, nothing is downloaded.**
+3. A bar shows progress (Python, components, speech model and language). You can **Cancel**: anything partial is deleted.
+4. When it finishes, the panel disappears and **Start** is enabled.
+
+Internet is needed **only to install**. After that it works offline; the one exception is choosing a language later that was not downloaded: that pack is fetched the first time it is used. Everything lives in the `TraduccionRuntime/` folder next to `settings.json`. **Uninstall module** deletes that folder and gives the space back.
+
+The installation downloads the languages selected at that moment (source and target; with source *Auto* it downloads English as the base).
+
+*Advanced settings...* lets you point to your own Python environment instead of the installed one (for those who set it up by hand); those paths take priority.
+
+### Controls
+
+| Control | What it does |
+|---------|--------------|
+| **Source** | Language being spoken. *Auto* detects it. Fixing it helps when detection hesitates. |
+| **Target** | Language to translate into. |
+| **Show** | Source and translation, source only, or translation only. Applies to new lines. |
+| **Minimum confidence** | If the detected language has less confidence than this value, it is not translated and a "⚠ Low confidence" notice is shown. Translating text in a wrongly detected language yields sentence-shaped nonsense. |
+| **▶ Start / ⏹ Stop** | Starts or stops translation. It stops by itself when audio processing is stopped. |
+| **🗑 Clear** | Empties the accumulated lines. |
+
+Lines can be selected and copied with **Ctrl+C** or the right-click menu (with no selection it copies everything).
+
+The **Detected language · Average** indicator shows the latest language and the average time each audio segment takes (audio is processed in ~8-second pieces, so text arrives with that delay plus processing time).
+
+### Tips
+
+- It works best with the canceller and the bandpass already well tuned: what is hard to understand by ear is hard for the model too.
+- If you see the same sentence repeated, it is the model "latching on" to noise; the application discards consecutive repeats, but with very dirty audio raise the **Minimum confidence**.
+- On a slow PC translation competes for CPU with audio processing. If dropouts appear, stop the translation.
+
+---
+
 ---
 
 ## Configuration persistence
@@ -1247,6 +1301,10 @@ Two status-bar warnings refer to it, and it helps to know what they mean:
 The file is capped at a few errors per session, so it does not grow without bound, and it can be deleted with no consequences.
 
 > **Why it exists:** a processing failure used to be invisible. The application recovered on its own and kept running, but with the affected module half working, and from the outside the only symptom was "this is not reducing the noise" — with nothing to explain it. These warnings and this file exist so that next time there is a trail somebody can read.
+
+**Export diagnostics.** If you need to ask for help, the **🩺** button (Export diagnostics) in the status bar packs `settings.json`, `errores_dsp.log` and the active preset into a `.zip`, plus a summary of the processor state. It is all you need to send; it contains no audio.
+
+**CPU meter.** Below the latency, the **CPU** meter shows what percentage of the time available per block the processing takes. Near 100 % or more is the signature of audio dropouts (*underruns*): on a slow PC or Raspberry Pi, turn off modules or stop translation.
 
 ---
 

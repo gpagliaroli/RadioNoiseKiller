@@ -1148,13 +1148,32 @@ def test_translate_tab_warning_and_not_installed():
         f"no se encontró el banner de advertencia: {labels}"
 
     assert w._config.translate.worker_python_path == "", "config default deberia venir vacia"
-    tab._btn_toggle.setChecked(True)   # intenta iniciar -> start() con rutas vacias
-    tab._tick()   # fuerza una actualización de estado sin esperar al QTimer
+    # Sin modulo instalado ni rutas manuales: Iniciar NO lanza nada, guia a
+    # instalar. El panel de instalacion es visible; nada se descarga solo.
+    import translate_installer as inst
+    assert not inst.is_installed()
+    w.show()
+    w._tabs.setCurrentWidget(tab)
+    tab._refresh_install_ui()
+    assert tab._install_box.isVisible() and tab._btn_install.isVisible()
+    assert not tab._progress.isVisible()
+    assert not tab._btn_toggle.isEnabled(), 'Iniciar activo sin modulo instalado'
+    assert not tab._combo_src.isEnabled() and not tab._combo_dst.isEnabled()
+    tab._btn_toggle.setChecked(True)
+    assert not tab._active, "no deberia haber arrancado sin modulo instalado"
+    assert "instal" in tab._lbl_status.text().lower(), tab._lbl_status.text()
     from translate_client import TranslateClient
-    assert w._translate_client.state == TranslateClient.NOT_INSTALLED
-    assert "no instalado" in tab._lbl_status.text().lower() or \
-           "no configuradas" in tab._lbl_status.text().lower(), tab._lbl_status.text()
-    tab._btn_toggle.setChecked(False)
+    assert w._translate_client.state == TranslateClient.STOPPED
+    QApplication.processEvents()   # singleShot(0): vuelve a destildar el boton
+    assert not tab._btn_toggle.isChecked()
+    # Con rutas manuales (Configuracion avanzada) el panel se oculta.
+    w._config.translate.worker_python_path = "x"
+    w._config.translate.worker_script_path = "y"
+    tab._refresh_install_ui()
+    assert not tab._install_box.isVisible()
+    assert tab._btn_toggle.isEnabled() and tab._combo_src.isEnabled()
+    w._config.translate.worker_python_path = ""
+    w._config.translate.worker_script_path = ""
     print("Traduccion: banner siempre visible + no instalado   OK")
 
 
@@ -1214,6 +1233,8 @@ def test_translate_tab_clear_button():
     assert tab._list.count() == 0, "Borrar no vacio la lista"
     assert not tab._active, "Borrar no deberia activar la traduccion"
 
+    tab._config.translate.worker_python_path = 'x'
+    tab._config.translate.worker_script_path = 'y'
     tab._btn_toggle.setChecked(True)
     tab._list.addItem(QListWidgetItem("linea 3"))
     tab._on_clear()
@@ -1318,6 +1339,8 @@ def test_translate_tab_detected_lang_and_avg_latency():
     assert "zh" in texto, f"deberia mostrar el idioma mas reciente (zh): {texto!r}"
     assert "5.0" in texto, f"promedio esperado (4+6+5)/3=5.0: {texto!r}"
 
+    tab._config.translate.worker_python_path = 'x'
+    tab._config.translate.worker_script_path = 'y'
     tab._btn_toggle.setChecked(True)
     tab._btn_toggle.setChecked(False)
     assert len(tab._recent) == 0, "Detener deberia limpiar el historial"
@@ -1332,6 +1355,8 @@ def test_detener_procesamiento_detiene_traduccion():
     w = _win()
     w._pipeline.start(headless=True)
     try:
+        w._translate_tab._config.translate.worker_python_path = 'x'
+        w._translate_tab._config.translate.worker_script_path = 'y'
         w._translate_tab._btn_toggle.setChecked(True)
         assert w._translate_tab._active, "no se activo la traduccion"
 

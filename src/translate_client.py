@@ -11,6 +11,7 @@ diagnóstico no justifica señales Qt cruzando hilos ni locks finos).
 import base64
 import queue
 import subprocess
+import sys
 import threading
 import time
 from collections import deque
@@ -59,7 +60,8 @@ class TranslateClient:
         with self._lock:
             return self._last_error
 
-    def start(self, python_path: str, script_path: str, model_size: str = "tiny") -> None:
+    def start(self, python_path: str, script_path: str, model_size: str = "tiny",
+              env: "dict | None" = None) -> None:
         """Lanza el proceso. No bloquea esperando el 'ready' — eso se refleja
         en .state apenas llega (leer con polling)."""
         if not python_path or not script_path:
@@ -72,7 +74,9 @@ class TranslateClient:
                 [python_path, script_path, model_size],
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE, text=True, bufsize=1,
-                encoding="utf-8",
+                encoding="utf-8", env=env,
+                # Sin ventana de consola negra al lanzar python.exe en Windows.
+                creationflags=0x08000000 if sys.platform == "win32" else 0,
             )
         except (FileNotFoundError, OSError) as e:
             with self._lock:

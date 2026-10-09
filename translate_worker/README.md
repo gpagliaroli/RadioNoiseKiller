@@ -1,41 +1,41 @@
-# Módulo de Traducción — instalación (v1, manual)
+# Módulo de Traducción
 
-Este proceso NO forma parte del instalador de RadioNoiseKiller. Es un
-entorno Python separado que la app principal lanza y con el que habla por
-stdin/stdout. Se instala una sola vez, a mano.
+Proceso separado que la app principal lanza y con el que habla por
+stdin/stdout. No forma parte del instalador de RadioNoiseKiller.
+
+## Instalación (usuario normal): un clic
+
+Pestaña **Traducción → "Instalar módulo de traducción"**. La app pide
+confirmación (con el tamaño de la descarga, ~600 MB) y, solo si aceptás:
+
+1. Baja un Python embebible (Windows) o crea un venv (Linux; necesita
+   `python3-venv`: `sudo apt install python3-venv`).
+2. Instala `requirements.txt` (faster-whisper, argostranslate, pins probados).
+3. Descarga el modelo de voz (`tiny`, ~75 MB) y el paquete del idioma elegido.
+
+Todo queda en `TraduccionRuntime/` junto a la app (`settings.json`). Después de
+instalar funciona sin internet. **Desinstalar módulo** borra esa carpeta.
+Si no apretás el botón, no se descarga nada.
+
+El worker viaja dentro del bundle como datos (los `.spec` solo copian los
+`.py`, nunca analizan faster-whisper); `src/translate_installer.py` los copia
+al runtime en cada arranque del módulo, así una app nueva actualiza el worker
+sin reinstalar el entorno.
+
+## Instalación manual (avanzado)
+
+Botón **Configuración avanzada...**: elegí el `python` de tu propio venv
+(`pip install -r requirements.txt`) y el `worker.py`. Las rutas manuales
+tienen prioridad sobre el módulo instalado.
 
 ## Por qué está separado
 
-RadioNoiseKiller es, aparte de esto, una app de DSP puro (numpy/scipy, sin
-IA). El runtime que necesita este módulo (`faster-whisper`, `argostranslate`
-y sus dependencias — `ctranslate2`, `onnxruntime`) agrega varios cientos de
-MB y está **excluido a propósito** del instalador principal. Así quien no
-use Traducción no paga ese costo.
-
-## Instalación
-
-1. Python 3.10+ (el mismo que use RadioNoiseKiller sirve, o cualquier otro).
-2. Crear un entorno virtual propio, **no** el `.venv` de RadioNoiseKiller:
-   ```
-   python -m venv .venv_translate
-   .venv_translate\Scripts\activate        (Windows)
-   source .venv_translate/bin/activate     (Linux)
-   pip install -r requirements.txt
-   ```
-3. En la pestaña "Traducción" de RadioNoiseKiller, configurar:
-   - **Python del worker**: ruta a `.venv_translate\Scripts\python.exe`
-     (o `.venv_translate/bin/python` en Linux).
-   - **Script del worker**: ruta a este `worker.py`.
-4. Primer uso: la primera vez que se activa la traducción, se descargan
-   automáticamente el modelo de voz (`tiny` por defecto, ~75 MB) y, según el
-   idioma detectado, el paquete de traducción correspondiente (50-200 MB por
-   par de idiomas). Necesita internet solo esa primera vez por idioma — después
-   queda cacheado localmente y funciona sin conexión.
+RadioNoiseKiller es una app de DSP puro (numpy/scipy, sin IA). El runtime de
+este módulo (`ctranslate2`, `onnxruntime`) agrega cientos de MB y está
+**excluido a propósito** del instalador principal.
 
 ## Importante — qué esperar
 
 La transcripción es una ayuda para hacerse una idea aproximada de un idioma
 que no se conoce, **no un subtítulo confiable**. Con señal débil, fading o
-ruido de banda, el resultado puede ser impreciso o directamente incorrecto
-— es una limitación de cómo funciona cualquier modelo de reconocimiento de
-voz actual sobre audio de onda corta, no un bug para reportar.
+ruido de banda, el resultado puede ser impreciso o directamente incorrecto.

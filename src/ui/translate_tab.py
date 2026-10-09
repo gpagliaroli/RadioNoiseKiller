@@ -3,13 +3,14 @@ from collections import deque
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton,
     QListWidget, QListWidgetItem, QFileDialog, QMessageBox,
-    QAbstractItemView, QMenu, QApplication,
+    QAbstractItemView, QMenu, QApplication, QProgressBar,
 )
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtCore import QTimer, Signal, Qt
 from config import AppConfig
 from pipeline import ProcessingPipeline
 from translate_client import TranslateClient
+import translate_installer as inst
 from i18n import tr
 from ui.slider_row import SliderRow
 from ui.tooltips import apply_tooltips
@@ -48,8 +49,11 @@ class TranslateTab(QWidget):
     state_changed = Signal()  # cambió una ruta de config -> MainWindow agenda guardado
 
     def __init__(self, config: AppConfig, pipeline: ProcessingPipeline,
-                 client: TranslateClient, parent=None):
+                 client: TranslateClient, parent=None,
+                 installer: "inst.TranslateInstaller | None" = None):
         super().__init__(parent)
+        self._installer = installer or inst.TranslateInstaller()
+        self._last_inst_state = None
         self._config = config
         self._pipeline = pipeline
         self._client = client
@@ -61,6 +65,7 @@ class TranslateTab(QWidget):
         self._build_ui()
         self._load_values()
         apply_tooltips(self)
+        self._refresh_install_ui()
 
         self._timer = QTimer(self)
         self._timer.setInterval(_POLL_MS)
@@ -86,6 +91,36 @@ class TranslateTab(QWidget):
             "background-color: #3a2f00; color: #ffd600; padding: 8px; "
             "border: 1px solid #665200; border-radius: 4px; font-size: 8pt;")
         root.addWidget(warn)
+
+        # Panel de instalación en un clic (opt-in: nada se descarga hasta que
+        # el usuario aprieta el botón y confirma).
+        self._install_box = QWidget()
+        ib = QVBoxLayout(self._install_box)
+        ib.setContentsMargins(0, 0, 0, 0)
+        self._lbl_install = QLabel(tr(
+            "La traducción necesita un componente adicional que no viene en la "
+            "app. Se instala una sola vez (necesita internet) y después "
+            "funciona sin conexión."))
+        self._lbl_install.setWordWrap(True)
+        ib.addWidget(self._lbl_install)
+        inst_row = QHBoxLayout()
+        self._btn_install = QPushButton(tr("⬇  Instalar módulo de traducción"))
+        self._btn_install.clicked.connect(self._on_install)
+        inst_row.addWidget(self._btn_install)
+        self._progress = QProgressBar()
+        self._progress.setRange(0, 100)
+        self._progress.setVisible(False)
+        inst_row.addWidget(self._progress, 1)
+        self._btn_cancel_install = QPushButton(tr("Cancelar"))
+        self._btn_cancel_install.setVisible(False)
+        self._btn_cancel_install.clicked.connect(self._installer.cancel)
+        inst_row.addWidget(self._btn_cancel_install)
+        ib.addLayout(inst_row)
+        self._lbl_install_status = QLabel("")
+        self._lbl_install_status.setStyleSheet("color: #888; font-size: 8pt;")
+        self._lbl_install_status.setWordWrap(True)
+        ib.addWidget(self._lbl_install_status)
+        root.addWidget(self._install_box)
 
         lang_row = QHBoxLayout()
         lang_row.addWidget(QLabel(tr("Origen:")))
@@ -135,9 +170,12 @@ class TranslateTab(QWidget):
         root.addWidget(self._lbl_status)
 
         btn_row2 = QHBoxLayout()
-        self._btn_configure = QPushButton(tr("Configurar módulo de traducción..."))
+        self._btn_configure = QPushButton(tr("Configuración avanzada..."))
         self._btn_configure.clicked.connect(self._on_configure)
         btn_row2.addWidget(self._btn_configure)
+        self._btn_uninstall = QPushButton(tr("Desinstalar módulo"))
+        self._btn_uninstall.clicked.connect(self._on_uninstall)
+        btn_row2.addWidget(self._btn_uninstall)
         self._btn_clear = QPushButton(tr("🗑  Borrar"))
         self._btn_clear.setToolTip(tr("Borra los subtítulos acumulados en la lista de abajo."))
         self._btn_clear.clicked.connect(self._on_clear)
@@ -230,6 +268,93 @@ class TranslateTab(QWidget):
         menu.exec(self._list.mapToGlobal(pos))
 
     # ------------------------------------------------------------------
+    # Instalación en un clic
+    # ------------------------------------------------------------------
+
+    def _manual_paths(self) -> bool:
+        t = self._config.translate
+        return bool(t.worker_python_path and t.worker_script_path)
+
+    def _resolved_worker(self):
+        """(python, script, env) del worker a lanzar: las rutas manuales
+        (Configuración avanzada) mandan; si no, el módulo instalado."""
+        t = self._config.translate
+        if self._manual_paths():
+            return t.worker_python_path, t.worker_script_path, None
+        if inst.is_installed():
+            inst.refresh_worker_files()
+            return inst.runtime_python(), inst.runtime_worker_script(), inst.worker_env()
+        return "", "", None
+
+    def _install_langs(self):
+        t = self._config.translate
+        src = [t.lang_src] if t.lang_src != "auto" else ["en"]
+        return src, [t.lang_dst]
+
+    def _on_install(self) -> None:
+        src, dst = self._install_langs()
+        n_pairs = sum(1 for s in src for d in dst if s != d)
+        mb = inst.estimate_download_mb("tiny", n_pairs)
+        r = QMessageBox.question(
+            self, tr("Instalar módulo de traducción"),
+            tr("Se van a descargar unos {mb} MB (componentes, modelo de voz e "
+               "idioma {src} → {dst}) desde internet y se guardan en la carpeta "
+               "de la app. Solo hace falta internet esta vez.\n\n¿Instalar ahora?")
+            .format(mb=mb, src=src[0], dst=dst[0]))
+        if r != QMessageBox.StandardButton.Yes:
+            return
+        self._installer.start("tiny", src, dst)
+        self._refresh_install_ui()
+
+    def _on_uninstall(self) -> None:
+        r = QMessageBox.question(
+            self, tr("Desinstalar módulo"),
+            tr("Se borran los componentes y modelos de traducción. "
+               "Podés volver a instalarlos cuando quieras. ¿Continuar?"))
+        if r != QMessageBox.StandardButton.Yes:
+            return
+        self.stop_if_active()
+        inst.uninstall()
+        self._refresh_install_ui()
+        self._refresh_status_label(self._client.state)
+
+    def _refresh_install_ui(self) -> None:
+        running = self._installer.is_running()
+        installed = inst.is_installed()
+        manual = self._manual_paths()
+        self._install_box.setVisible(not installed and not manual)
+        self._btn_install.setVisible(not running)
+        self._progress.setVisible(running)
+        self._btn_cancel_install.setVisible(running)
+        self._btn_uninstall.setVisible(installed and not running and not self._active)
+        # Sin módulo (o mientras se instala) no hay nada que iniciar ni
+        # idiomas que elegir. Iniciar queda habilitado si ya está activo,
+        # para poder detenerlo.
+        available = (installed or manual) and not running
+        self._btn_toggle.setEnabled(available or self._active)
+        self._combo_src.setEnabled(available)
+        self._combo_dst.setEnabled(available)
+        if running:
+            self._progress.setValue(int(self._installer.progress * 100))
+            txt = self._installer.status_text
+            self._lbl_install_status.setText(tr(txt) if txt else "")
+
+    def _poll_installer(self) -> None:
+        st = self._installer.state
+        if st != self._last_inst_state:
+            self._last_inst_state = st
+            if st == inst.TranslateInstaller.ERROR:
+                msg = tr("La instalación falló: {err}").format(err=self._installer.last_error)
+                self._lbl_install_status.setText(msg)
+                QMessageBox.warning(self, tr("Instalar módulo de traducción"), msg)
+            elif st == inst.TranslateInstaller.CANCELLED:
+                self._lbl_install_status.setText(tr("Instalación cancelada."))
+            elif st == inst.TranslateInstaller.DONE:
+                self._lbl_install_status.setText("")
+                self._lbl_status.setText(tr("Módulo instalado. Presioná Iniciar."))
+        self._refresh_install_ui()
+
+    # ------------------------------------------------------------------
     # Iniciar/detener
     # ------------------------------------------------------------------
 
@@ -242,11 +367,18 @@ class TranslateTab(QWidget):
             self._btn_toggle.setChecked(False)   # dispara _on_toggle(False)
 
     def _on_toggle(self, checked: bool) -> None:
+        if checked:
+            py, script, env = self._resolved_worker()
+            if not py:
+                # Sin módulo instalado ni rutas manuales: no arrancar, guiar.
+                QTimer.singleShot(0, lambda: self._btn_toggle.setChecked(False))
+                self._lbl_status.setText(tr(
+                    "Primero instalá el módulo de traducción con el botón de arriba."))
+                return
         self._active = checked
         if checked:
             self._btn_toggle.setText(tr("⏹  Detener"))
-            t = self._config.translate
-            self._client.start(t.worker_python_path, t.worker_script_path)
+            self._client.start(py, script, env=env)
             self._pipeline.set_translate_enabled(True)
         else:
             self._btn_toggle.setText(tr("▶  Iniciar"))
@@ -260,6 +392,7 @@ class TranslateTab(QWidget):
     # ------------------------------------------------------------------
 
     def _tick(self) -> None:
+        self._poll_installer()
         state = self._client.state
         if state != self._last_shown_state:
             self._last_shown_state = state
@@ -340,8 +473,8 @@ class TranslateTab(QWidget):
     def _refresh_status_label(self, state: str) -> None:
         textos = {
             TranslateClient.NOT_INSTALLED: tr(
-                "Módulo no instalado o rutas no configuradas. Ver "
-                "translate_worker/README.md y usar 'Configurar...' arriba."),
+                "Módulo de traducción no instalado. Usá el botón "
+                "'Instalar módulo de traducción'."),
             TranslateClient.STARTING: tr("Iniciando el módulo de traducción..."),
             TranslateClient.READY: tr("Listo — traduciendo."),
             TranslateClient.CRASHED: tr("El proceso de traducción se cerró inesperadamente. "

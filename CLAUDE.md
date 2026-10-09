@@ -588,6 +588,14 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
   al pie del grupo para los dos módulos (`_lbl_period_act`): mostraban el mismo número uno debajo
   del otro. `test_dsp`, `test_ui` — `pendiente de validar`.
 
+- **Pestaña Traducción** (faster-whisper + argostranslate, proceso aparte) con **instalación en un
+  clic**, opt-in: botón "Instalar módulo" → Python embebible (Win) / venv (Linux) + pip + modelos en
+  `data_dir()/TraduccionRuntime/` (`src/translate_installer.py`); el worker viaja como `datas` en los
+  specs, nunca analizado. Rutas manuales = "Configuración avanzada" (mandan sobre lo instalado).
+  Anti-repetición de Whisper (`condition_on_previous_text=False` + `translate_worker/dedupe.py`).
+  Solapas "Avanz. …" sin scroll. `test_translate`, `test_ui` — `pendiente de validar`: instalación
+  en máquina limpia sin Python (Windows), Linux/Pi sin probar; `ARGOS_PACKAGES_DIR` no verificado.
+
 Formato al acumular: una línea por cambio con su estado de validación (`validado en el aire` /
 `pendiente de validar`), y el bloque narrativo completo en el historial, sección "En curso". El
 skill `release` toma las notas del release de esta lista.

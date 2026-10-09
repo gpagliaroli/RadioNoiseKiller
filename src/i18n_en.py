@@ -1102,4 +1102,118 @@ CATALOG = {
     "probar Perfil estático y volver, y mandar errores_dsp.log":
         "⚠ The adaptive estimator will not finish calibrating — try Static "
         "profile and back, and send errores_dsp.log",
+    # --- Traduccion: instalacion en un clic ---
+    "La traducción necesita un componente adicional que no viene en la "
+    "app. Se instala una sola vez (necesita internet) y después "
+    "funciona sin conexión.":
+        "Translation needs an extra component that is not bundled with the "
+        "app. It is installed once (internet required) and then works offline.",
+    "⬇  Instalar módulo de traducción": "⬇  Install translation module",
+    "Instalar módulo de traducción": "Install translation module",
+    "Cancelar": "Cancel",
+    "Configuración avanzada...": "Advanced settings...",
+    "Desinstalar módulo": "Uninstall module",
+    "Se van a descargar unos {mb} MB (componentes, modelo de voz e "
+    "idioma {src} → {dst}) desde internet y se guardan en la carpeta "
+    "de la app. Solo hace falta internet esta vez.\n\n¿Instalar ahora?":
+        "About {mb} MB will be downloaded (components, speech model and the "
+        "{src} → {dst} language pack) and stored in the app folder. Internet "
+        "is only needed this once.\n\nInstall now?",
+    "Se borran los componentes y modelos de traducción. "
+    "Podés volver a instalarlos cuando quieras. ¿Continuar?":
+        "The translation components and models will be deleted. You can "
+        "install them again any time. Continue?",
+    "La instalación falló: {err}": "Installation failed: {err}",
+    "Instalación cancelada.": "Installation cancelled.",
+    "Módulo instalado. Presioná Iniciar.": "Module installed. Press Start.",
+    "Primero instalá el módulo de traducción con el botón de arriba.":
+        "Install the translation module first using the button above.",
+    "Módulo de traducción no instalado. Usá el botón "
+    "'Instalar módulo de traducción'.":
+        "Translation module not installed. Use the "
+        "'Install translation module' button.",
+    "Preparando Python...": "Preparing Python...",
+    "Descargando Python...": "Downloading Python...",
+    "Descargando pip...": "Downloading pip...",
+    "Instalando componentes...": "Installing components...",
+    "Descargando modelos...": "Downloading models...",
+    "Listo": "Done",
+    "Cancelado": "Cancelled",
+    # --- Traduccion: pestana ---
+    'Traducción':
+        'Translation',
+    'Origen:':
+        'Source:',
+    'Destino:':
+        'Target:',
+    'Mostrar:':
+        'Show:',
+    'Origen y traducción':
+        'Source and translation',
+    'Solo origen':
+        'Source only',
+    'Solo traducción':
+        'Translation only',
+    'Confianza mínima:':
+        'Minimum confidence:',
+    '▶  Iniciar':
+        '▶  Start',
+    '🗑  Borrar':
+        '🗑  Clear',
+    'Borrar':
+        'Clear',
+    'Borra los subtítulos acumulados en la lista de abajo.':
+        'Clears the accumulated subtitles in the list below.',
+    'Copiar selección':
+        'Copy selection',
+    'Copiar todo':
+        'Copy all',
+    'Idioma detectado: —  ·  Promedio: —':
+        'Detected language: —  ·  Average: —',
+    'Idioma detectado: {lang} ({code})  ·  Promedio: {avg}':
+        'Detected language: {lang} ({code})  ·  Average: {avg}',
+    'Idioma detectado: —  ·  Promedio: {avg}':
+        'Detected language: —  ·  Average: {avg}',
+    '⚠ Confianza baja ({pct:.0f}%) — se omite la traducción':
+        '⚠ Low confidence ({pct:.0f}%) — translation skipped',
+    '⚠ Error: {detail}':
+        '⚠ Error: {detail}',
+    'Iniciando el módulo de traducción...':
+        'Starting the translation module...',
+    'Listo — traduciendo.':
+        'Ready — translating.',
+    'El proceso de traducción se cerró inesperadamente. Detener y volver a Iniciar para reintentar.':
+        'The translation process closed unexpectedly. Stop and Start again to retry.',
+    '⚠ Transcripción aproximada: con señal débil, fading o ruido de banda el resultado puede ser impreciso o directamente incorrecto. Es una ayuda para hacerse una idea de un idioma que no se conoce, no un subtítulo confiable.':
+        '⚠ Approximate transcription: with weak signals, fading or band noise the result may be inaccurate or plainly wrong. It is an aid to get an idea of a language you do not know, not a reliable subtitle.',
+    'Python del worker de traducción':
+        'Translation worker Python',
+    'Script worker.py':
+        'worker.py script',
+    'Configurado':
+        'Configured',
+    'Rutas guardadas. Presioná Iniciar para probar la conexión.':
+        'Paths saved. Press Start to test the connection.',
+    'Exportar...':
+        'Export...',
+    'Importar...':
+        'Import...',
+    'Exportar preset':
+        'Export preset',
+    'Importar preset':
+        'Import preset',
+    'Error al exportar':
+        'Export error',
+    'Error al importar':
+        'Import error',
+    'Sobrescribir':
+        'Overwrite',
+    'Renombrar':
+        'Rename',
+    'Exportar diagnóstico':
+        'Export diagnostics',
+    'Error al exportar diagnóstico':
+        'Diagnostics export error',
+    'Diagnóstico exportado: {path}':
+        'Diagnostics exported: {path}',
 }

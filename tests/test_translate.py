@@ -315,6 +315,99 @@ def test_translate_client_crashed_on_unexpected_exit():
     print("TranslateClient: salida inesperada -> crashed    OK")
 
 
+# ---------------------------------------------------------------------- #
+# 5. Instalador en un clic (sin red: pasos reales reemplazados por falsos) #
+# ---------------------------------------------------------------------- #
+
+import time
+import translate_installer as inst
+
+
+def _wait_installer(ins, timeout=5.0):
+    t0 = time.monotonic()
+    while ins.is_running() and time.monotonic() - t0 < timeout:
+        time.sleep(0.02)
+
+
+def _fake_installer(fail=False):
+    ins = inst.TranslateInstaller()
+
+    def make_python():
+        py = inst.runtime_python()
+        os.makedirs(os.path.dirname(py), exist_ok=True)
+        open(py, "w").close()
+
+    ins._make_python = make_python
+    ins._pip_install = lambda: None
+    if fail:
+        def boom(*a):
+            raise RuntimeError("sin internet")
+        ins._prefetch = boom
+    else:
+        ins._prefetch = lambda *a: None
+    return ins
+
+
+def test_installer_paths_inside_data_dir():
+    base = os.path.abspath(os.environ["RNK_DATA_DIR"])
+    assert os.path.abspath(inst.runtime_dir()).startswith(base)
+    assert not inst.is_installed()
+    print("TranslateInstaller: rutas bajo RNK_DATA_DIR, no instalado por defecto  OK")
+
+
+def test_installer_success_marks_installed_and_uninstalls():
+    inst.uninstall()
+    ins = _fake_installer()
+    ins.start("tiny", ["en"], ["es"])
+    _wait_installer(ins)
+    assert ins.state == inst.TranslateInstaller.DONE, (ins.state, ins.last_error)
+    assert ins.progress == 1.0
+    assert inst.is_installed()
+    assert os.path.isfile(inst.runtime_worker_script())   # worker copiado
+    env = inst.worker_env()
+    assert env["HF_HOME"].startswith(inst.runtime_dir())
+    inst.uninstall()
+    assert not inst.is_installed() and not os.path.exists(inst.runtime_dir())
+    print("TranslateInstaller: instala, marca y desinstala  OK")
+
+
+def test_installer_error_rolls_back():
+    inst.uninstall()
+    ins = _fake_installer(fail=True)
+    ins.start("tiny", ["en"], ["es"])
+    _wait_installer(ins)
+    assert ins.state == inst.TranslateInstaller.ERROR
+    assert "sin internet" in ins.last_error
+    assert not os.path.exists(inst.runtime_dir())   # carpeta parcial borrada
+    assert not inst.is_installed()
+    print("TranslateInstaller: error -> estado ERROR y rollback de la carpeta  OK")
+
+
+def test_installer_cancel():
+    inst.uninstall()
+    ins = inst.TranslateInstaller()
+    gate = threading.Event()
+
+    def slow_python():
+        gate.wait(2.0)
+        ins._check_cancel()
+
+    ins._make_python = slow_python
+    ins.start("tiny", ["en"], ["es"])
+    ins.cancel()
+    gate.set()
+    _wait_installer(ins)
+    assert ins.state == inst.TranslateInstaller.CANCELLED
+    assert not os.path.exists(inst.runtime_dir())
+    print("TranslateInstaller: cancelar deja todo limpio  OK")
+
+
+def test_installer_estimate_scales_with_pairs():
+    assert inst.estimate_download_mb("tiny", 2) > inst.estimate_download_mb("tiny", 1)
+    print("TranslateInstaller: estimacion de descarga  OK")
+
+
+
 if __name__ == "__main__":
     test_protocol_roundtrip()
     test_protocol_rejects_garbage()
@@ -326,5 +419,10 @@ if __name__ == "__main__":
     test_translate_client_ready_and_result_via_fake_proc()
     test_translate_client_send_chunk_never_blocks()
     test_translate_client_crashed_on_unexpected_exit()
+    test_installer_paths_inside_data_dir()
+    test_installer_success_marks_installed_and_uninstalls()
+    test_installer_error_rolls_back()
+    test_installer_cancel()
+    test_installer_estimate_scales_with_pairs()
     print()
     print("Todos los tests pasaron.")

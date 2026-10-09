@@ -49,7 +49,13 @@ a = Analysis(
     # utils.seed_factory_presets() los copia a la carpeta escribible
     # (_MEIPASS y la carpeta Presets/ del usuario NO son la misma).
     datas=[(str(ROOT / "Images" / "RNK_ico.png"), "Images")]
-          + [(str(p), "Presets") for p in sorted((ROOT / "Presets").glob("*.json"))],
+          + [(str(p), "Presets") for p in sorted((ROOT / "Presets").glob("*.json"))]
+          # Worker de Traduccion: solo como datos (no se analiza, no arrastra
+          # faster-whisper). translate_installer.py lo copia al runtime.
+          + [(str(p), "translate_worker")
+             for p in sorted((ROOT / "translate_worker").glob("*.py"))
+             if not p.name.startswith("test_")]
+          + [(str(ROOT / "translate_worker" / "requirements.txt"), "translate_worker")],
     hiddenimports=[
         "sounddevice",
         "cffi",

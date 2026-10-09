@@ -25,7 +25,34 @@ def _decode_audio(audio_b64: str) -> np.ndarray:
     return np.frombuffer(raw, dtype=np.float32)
 
 
+def _arg_list(flag: str) -> list:
+    """Valor de `--flag a,b,c` en argv (lista vacía si falta)."""
+    if flag in sys.argv:
+        i = sys.argv.index(flag)
+        if i + 1 < len(sys.argv):
+            return [x for x in sys.argv[i + 1].split(",") if x]
+    return []
+
+
+def prefetch() -> None:
+    """Modo instalación (lo lanza translate_installer.py): descarga el modelo
+    de voz y los paquetes de idioma pedidos y sale. Imprime `progress: ...`."""
+    print("progress: modelo de voz", flush=True)
+    AsrEngine(MODEL_SIZE)
+    mt = MtEngine()
+    for s in _arg_list("--src"):
+        for d in _arg_list("--dst"):
+            if s == d:
+                continue
+            print(f"progress: idioma {s} -> {d}", flush=True)
+            mt.ensure_pair(s, d)
+    print("progress: listo", flush=True)
+
+
 def main() -> None:
+    if "--prefetch" in sys.argv:
+        prefetch()
+        return
     asr = AsrEngine(MODEL_SIZE)
     mt = MtEngine()
     print(protocol.encode_ready(MODEL_SIZE), flush=True)
