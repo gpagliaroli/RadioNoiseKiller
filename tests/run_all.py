@@ -38,6 +38,7 @@ SUITES = [
     "test_noise_profiles",
     "test_pipeline",
     "test_integration",
+    "test_translate",
     "test_ui",          # requiere QT_QPA_PLATFORM=offscreen
 ]
 

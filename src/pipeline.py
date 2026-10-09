@@ -182,6 +182,24 @@ class ProcessingPipeline:
         self._spec_pre_frames:  deque = deque(maxlen=8)
         self._spec_post_frames: deque = deque(maxlen=8)
 
+        # Buffer continuo de audio post-NR para el módulo de Traducción (ver
+        # translate_client.py). Lock propio, no el self._lock general: éste
+        # lo toca el hilo de audio en CADA frame cuando está activo, y no
+        # queremos contención con bandpass/limiter por algo que la mayoría
+        # de las sesiones tiene desactivado.
+        self._translate_enabled: bool = False
+        self._translate_lock = threading.Lock()
+        # Deque de hops (no un único ndarray): concatenar el array ENTERO en
+        # cada frame de audio para agregar un hop chico es O(buffer completo)
+        # por hop, es decir ~100 veces por segundo — con 20s de buffer eso es
+        # copiar varios MB por segundo en el hilo de audio, y por GIL se
+        # siente como que toda la UI se puso lenta (reportado por el
+        # usuario). Appendear/popear de una deque es O(1); el concatenate
+        # de verdad solo se paga una vez por chunk entregado (cada ~8s).
+        self._translate_buf: deque = deque()
+        self._translate_buf_len: int = 0   # muestras totales en el deque (evita recalcular)
+        self._translate_buf_max: int = int(20.0 * config.audio.sample_rate)
+
     # ------------------------------------------------------------------
     # API pública — configuración general
     # ------------------------------------------------------------------
@@ -838,6 +856,39 @@ class ProcessingPipeline:
         # de diagnóstico que se lee 2 veces por segundo.
         return self._blanker.pop_hits()
 
+    # ------------------------------------------------------------------
+    # API pública — módulo de Traducción (ver translate_client.py)
+    # ------------------------------------------------------------------
+
+    def set_translate_enabled(self, enabled: bool) -> None:
+        """Activa/desactiva el llenado del buffer continuo post-NR. Al
+        desactivar se limpia — evita mandar al worker un chunk viejo mezclado
+        con audio de otra sesión de traducción."""
+        with self._translate_lock:
+            self._translate_enabled = bool(enabled)
+            self._translate_buf.clear()
+            self._translate_buf_len = 0
+
+    def pop_translate_chunk(self, seconds: float) -> "np.ndarray | None":
+        """Devuelve hasta `seconds` de audio acumulado (float32, sample_rate
+        de config) y lo retira del buffer. None si todavía no hay suficiente.
+        Llamar desde el hilo propio del cliente de traducción, no desde el
+        hilo Qt ni el de audio. El concatenate de los hops acumulados se paga
+        UNA vez por llamada (cada ~8s), no por hop — ver el comentario en
+        __init__ sobre por qué el buffer es una deque y no un ndarray."""
+        n = int(seconds * self._config.audio.sample_rate)
+        with self._translate_lock:
+            if not self._translate_enabled or self._translate_buf_len < n:
+                return None
+            full = np.concatenate(self._translate_buf)
+            chunk, remainder = full[:n], full[n:]
+            self._translate_buf.clear()
+            self._translate_buf_len = 0
+            if len(remainder) > 0:
+                self._translate_buf.append(remainder)
+                self._translate_buf_len = len(remainder)
+            return chunk
+
     @property
     def spectrum_pre_frames(self) -> deque:
         return self._spec_pre_frames
@@ -1372,6 +1423,18 @@ class ProcessingPipeline:
             out_frame = self._gate.process(out_frame, self.input_level_db)
 
         self._spec_post_frames.append(out_frame.copy())
+
+        # Buffer continuo para el módulo de Traducción (ver translate_client.py):
+        # a diferencia de _spec_post_frames (decimado, para refresco visual a
+        # 15fps), este NO puede perder audio — alimenta un ASR. Costo de
+        # copiar+acumular solo si la pestaña está activa.
+        if self._translate_enabled:
+            with self._translate_lock:
+                self._translate_buf.append(out_frame.copy())
+                self._translate_buf_len += len(out_frame)
+                while self._translate_buf_len > self._translate_buf_max:
+                    old = self._translate_buf.popleft()
+                    self._translate_buf_len -= len(old)
 
         if self._recorder.recording:
             self._recorder.feed(

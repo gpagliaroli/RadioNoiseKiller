@@ -93,17 +93,17 @@ def _set_combo(combo, data) -> None:
 # ---------------------------------------------------------------------- #
 
 def test_tab_order():
-    """7 pestanas en orden fijo, con 'Modulos' en la 2da posicion."""
+    """8 pestanas en orden fijo, con 'Modulos' en la 2da posicion."""
     w = _win()
     tabs = w._tabs
     expected = [
-        tr("Principal"), tr("Módulos"), tr("Avanzada Audio"),
-        tr("Avanzada Impulsos"), tr("Avanzada Cancelador"),
-        tr("Espectro"), tr("Presets"),
+        tr("Principal"), tr("Módulos"), tr("Avanz. Audio"),
+        tr("Avanz. Impulsos"), tr("Avanz. Cancelador"),
+        tr("Espectro"), tr("Presets"), tr("Traducción"),
     ]
     got = [tabs.tabText(i) for i in range(tabs.count())]
     assert got == expected, f"Orden de pestanas inesperado: {got}"
-    print("Orden de pestanas (7, Modulos en pos 1)   OK")
+    print("Orden de pestanas (8, Modulos en pos 1)   OK")
 
 
 def test_modules_group_moved_to_own_tab():
@@ -1133,6 +1133,231 @@ def test_mute_button_gating_and_state():
     print("Mute: gating + estado del boton              OK")
 
 
+def test_translate_tab_warning_and_not_installed():
+    """La pestaña Traducción: el banner de advertencia está siempre visible
+    (no es opcional, lo pidió el usuario explícito) y, sin rutas de worker
+    configuradas, el estado dice 'no instalado' sin crashear."""
+    w = _win()
+    tab = w._translate_tab
+    # El banner es un QLabel con el texto de advertencia — buscarlo por
+    # contenido en vez de por posición/atributo interno, así sobrevive a
+    # reordenar el layout.
+    from PySide6.QtWidgets import QLabel
+    labels = [lbl.text() for lbl in tab.findChildren(QLabel)]
+    assert any("aproximada" in t and "confiable" in t for t in labels), \
+        f"no se encontró el banner de advertencia: {labels}"
+
+    assert w._config.translate.worker_python_path == "", "config default deberia venir vacia"
+    tab._btn_toggle.setChecked(True)   # intenta iniciar -> start() con rutas vacias
+    tab._tick()   # fuerza una actualización de estado sin esperar al QTimer
+    from translate_client import TranslateClient
+    assert w._translate_client.state == TranslateClient.NOT_INSTALLED
+    assert "no instalado" in tab._lbl_status.text().lower() or \
+           "no configuradas" in tab._lbl_status.text().lower(), tab._lbl_status.text()
+    tab._btn_toggle.setChecked(False)
+    print("Traduccion: banner siempre visible + no instalado   OK")
+
+
+def test_translate_tab_show_mode():
+    """El combo 'Mostrar' (origen/traduccion/ambos) controla el formato de
+    cada linea de subtitulo, y la eleccion se persiste en config."""
+    w = _win()
+    tab = w._translate_tab
+    assert tab._combo_show.count() == 3
+
+    seg = {"start": 1.0, "text": "hola", "translated": "hello"}
+    casos = {"both": ("hola", "hello"), "src": ("hola",), "dst": ("hello",)}
+    for mode, esperados in casos.items():
+        w._config.translate.show_mode = mode
+        texto = tab._format_segment(seg)
+        for e in esperados:
+            assert e in texto, f"modo {mode!r}: {texto!r} no tiene {e!r}"
+        if mode == "src":
+            assert "hello" not in texto, f"modo 'src' no deberia mostrar la traduccion: {texto!r}"
+        if mode == "dst":
+            assert "hola" not in texto, f"modo 'dst' no deberia mostrar el original: {texto!r}"
+
+    for i in range(tab._combo_show.count()):
+        if tab._combo_show.itemData(i) == "src":
+            tab._combo_show.setCurrentIndex(i)
+            break
+    assert w._config.translate.show_mode == "src", "el combo no actualizo la config"
+    print("Traduccion: combo Mostrar controla el formato        OK")
+
+
+def test_translate_tab_format_segment_sin_translated_no_crashea():
+    """_format_segment() no debe lanzar KeyError si un segmento llega sin
+    'translated' (ej. un proceso worker viejo que quedo corriendo de antes
+    de agregar low_confidence — paso de verdad: tumbaba _tick en loop hasta
+    reiniciar la app). Degrada mostrando el texto original."""
+    w = _win()
+    tab = w._translate_tab
+    seg = {"start": 0.0, "end": 1.0, "text": "hola"}   # sin "translated"
+    w._config.translate.show_mode = "both"
+    assert tab._format_segment(seg) == "hola  →  hola"
+    w._config.translate.show_mode = "dst"
+    assert tab._format_segment(seg) == "hola"
+    print("Traduccion: segmento sin 'translated' no crashea     OK")
+
+
+def test_translate_tab_clear_button():
+    """El boton Borrar vacia la lista de subtitulos sin tocar el estado
+    de la traduccion (activa o detenida)."""
+    w = _win()
+    tab = w._translate_tab
+    from PySide6.QtWidgets import QListWidgetItem
+    tab._list.addItem(QListWidgetItem("linea 1"))
+    tab._list.addItem(QListWidgetItem("linea 2"))
+    assert tab._list.count() == 2
+
+    tab._on_clear()
+    assert tab._list.count() == 0, "Borrar no vacio la lista"
+    assert not tab._active, "Borrar no deberia activar la traduccion"
+
+    tab._btn_toggle.setChecked(True)
+    tab._list.addItem(QListWidgetItem("linea 3"))
+    tab._on_clear()
+    assert tab._list.count() == 0
+    assert tab._active, "Borrar no deberia detener una traduccion activa"
+    tab._btn_toggle.setChecked(False)
+    print("Traduccion: boton Borrar vacia la lista              OK")
+
+
+def test_translate_tab_copy_to_clipboard():
+    """Copiar (Ctrl+C o menu contextual) pone el texto en el portapapeles:
+    sin seleccion copia todo, con seleccion copia solo lo seleccionado."""
+    from PySide6.QtWidgets import QApplication, QListWidgetItem
+    w = _win()
+    tab = w._translate_tab
+    tab._list.addItem(QListWidgetItem("linea uno"))
+    tab._list.addItem(QListWidgetItem("linea dos"))
+
+    tab._copy_selected()
+    assert QApplication.clipboard().text() == "linea uno\nlinea dos", \
+        "sin seleccion deberia copiar todas las lineas"
+
+    tab._list.item(0).setSelected(True)
+    tab._copy_selected()
+    assert QApplication.clipboard().text() == "linea uno", \
+        "con seleccion deberia copiar solo lo seleccionado"
+    print("Traduccion: copiar al portapapeles (todo/seleccion)  OK")
+
+
+def test_translate_tab_min_confidence_slider_persists():
+    """El slider 'Confianza minima' persiste en config y se carga desde
+    config (mismo patron que test_gate_threshold_slider_on_principal)."""
+    w = _win()
+    tab = w._translate_tab
+    assert abs(tab._slider_min_confidence.value() - 50.0) < 0.01, \
+        "default de fabrica deberia ser 50%"
+
+    tab._slider_min_confidence.set_value(20.0)
+    tab._slider_min_confidence.set_value(75.0, emit=True)
+    _app.processEvents()
+    assert abs(w._config.translate.min_confidence - 0.75) < 0.01, \
+        w._config.translate.min_confidence
+
+    w._config.translate.min_confidence = 0.1
+    w._translate_tab._load_values()
+    assert abs(tab._slider_min_confidence.value() - 10.0) < 0.01
+    print("Traduccion: slider Confianza minima persiste         OK")
+
+
+def test_translate_tab_low_confidence_warning():
+    """Un resultado con low_confidence=True muestra SOLO el aviso (sin el
+    texto transcripto) y no contamina el indicador de idioma/latencia
+    promedio — es justo lo que pidio el usuario: saber que ese tramo de
+    audio se perdio, en vez de quedar en silencio sin explicacion."""
+    from translate_client import TranslateClient
+    w = _win()
+    tab = w._translate_tab
+    tab._active = True
+    w._translate_client._state = TranslateClient.READY   # sin proceso real
+
+    msg = {"ok": True, "low_confidence": True, "detected_lang_prob": 0.34,
+           "detected_lang": "nn",
+           "segments": [{"start": 0.0, "end": 8.0, "text": "texto que no deberia verse"}]}
+    orig_pop = w._translate_client.pop_results
+    orig_chunk = w._pipeline.pop_translate_chunk
+    w._translate_client.pop_results = lambda: [msg]
+    w._pipeline.pop_translate_chunk = lambda seconds: None
+    try:
+        tab._tick()
+        assert tab._list.count() == 1, "deberia agregar exactamente una linea de aviso"
+        texto = tab._list.item(0).text()
+        assert "34" in texto, f"deberia mostrar el % de confianza: {texto!r}"
+        assert "texto que no deberia verse" not in texto, \
+            f"no debe mostrar el texto transcripto con baja confianza: {texto!r}"
+        assert len(tab._recent) == 0, \
+            "low_confidence no debe alimentar el indicador de idioma/latencia"
+    finally:
+        w._translate_client.pop_results = orig_pop
+        w._pipeline.pop_translate_chunk = orig_chunk
+        tab._active = False
+    print("Traduccion: aviso de confianza baja, sin contaminar el indicador  OK")
+
+
+def test_translate_tab_detected_lang_and_avg_latency():
+    """El indicador de idioma detectado + latencia promedio reemplaza el
+    timestamp por linea: se alimenta de los ultimos resultados (hasta 5) y
+    se resetea al Detener."""
+    w = _win()
+    tab = w._translate_tab
+
+    assert "—" in tab._lbl_stats.text(), "arranca en reposo sin dato"
+
+    # Ningun segmento lleva ya timestamp propio.
+    seg = {"start": 3.0, "text": "hola", "translated": "hello"}
+    assert "3" not in tab._format_segment(seg), \
+        f"el timestamp por linea deberia haberse quitado: {tab._format_segment(seg)!r}"
+
+    for lang, lat in [("en", 4.0), ("en", 6.0), ("zh", 5.0)]:
+        tab._recent.append((lang, lat))
+    tab._refresh_stats_label()
+    texto = tab._lbl_stats.text()
+    assert "zh" in texto, f"deberia mostrar el idioma mas reciente (zh): {texto!r}"
+    assert "5.0" in texto, f"promedio esperado (4+6+5)/3=5.0: {texto!r}"
+
+    tab._btn_toggle.setChecked(True)
+    tab._btn_toggle.setChecked(False)
+    assert len(tab._recent) == 0, "Detener deberia limpiar el historial"
+    assert "—" in tab._lbl_stats.text(), "Detener deberia volver el indicador a reposo"
+    print("Traduccion: idioma detectado + latencia promedio     OK")
+
+
+def test_detener_procesamiento_detiene_traduccion():
+    """Al DETENER el procesamiento general, si la traduccion estaba activa
+    se detiene tambien: sin audio entrando al buffer, el worker quedaba
+    prendido esperando chunks que nunca llegan (reportado por el usuario)."""
+    w = _win()
+    w._pipeline.start(headless=True)
+    try:
+        w._translate_tab._btn_toggle.setChecked(True)
+        assert w._translate_tab._active, "no se activo la traduccion"
+
+        w._on_toggle_processing(False)   # simula DETENER
+
+        assert not w._translate_tab._active, \
+            "DETENER no detuvo la traduccion que estaba activa"
+        assert not w._translate_tab._btn_toggle.isChecked(), \
+            "el boton Iniciar/Detener de Traduccion no refleja el estado"
+    finally:
+        w._pipeline.stop()
+    print("DETENER general tambien detiene la traduccion      OK")
+
+
+def test_detener_procesamiento_no_rompe_si_traduccion_inactiva():
+    """DETENER sin que la traduccion estuviera corriendo no debe fallar."""
+    w = _win()
+    w._pipeline.start(headless=True)
+    try:
+        assert not w._translate_tab._active
+        w._on_toggle_processing(False)   # no debe lanzar excepcion
+    finally:
+        w._pipeline.stop()
+    print("DETENER sin traduccion activa no rompe             OK")
+
+
 def test_about_dialog():
     """El botón ℹ de la barra de estado abre el 'Acerca de' sin crashear."""
     from PySide6.QtWidgets import QMessageBox
@@ -1798,6 +2023,16 @@ if __name__ == "__main__":
     test_bypass_remembers_output_gain()
     test_bypass_clears_status_bar_message()
     test_bypass_gain_persiste_entre_sesiones()
+    test_translate_tab_warning_and_not_installed()
+    test_translate_tab_show_mode()
+    test_translate_tab_format_segment_sin_translated_no_crashea()
+    test_translate_tab_clear_button()
+    test_translate_tab_copy_to_clipboard()
+    test_translate_tab_min_confidence_slider_persists()
+    test_translate_tab_low_confidence_warning()
+    test_translate_tab_detected_lang_and_avg_latency()
+    test_detener_procesamiento_detiene_traduccion()
+    test_detener_procesamiento_no_rompe_si_traduccion_inactiva()
     test_about_dialog()
     test_about_donate_button()
     test_export_diagnostics_button()

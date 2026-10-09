@@ -60,6 +60,13 @@ SLIDER_TIPS = {
         "Es un ajuste de TU estación (depende del nivel con que entra la radio), así\n"
         "que revisalo al cambiar de banda, de antena o de hora."
     ),
+    "_slider_min_confidence": (
+        "Confianza mínima de detección de idioma para traducir un tramo de audio.\n"
+        "Por debajo de este valor, en vez de una traducción (probablemente en el\n"
+        "idioma equivocado) se muestra un aviso de 'confianza baja' — así no se\n"
+        "pierde silenciosamente ese tramo ni se confunde con una traducción real.\n"
+        "Subilo si ves traducciones sin sentido; bajalo si se omite demasiado."
+    ),
 
     # ---------------- Avanzada Audio ---------------- #
     "_s_block": (

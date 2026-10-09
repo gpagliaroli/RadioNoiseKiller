@@ -13,9 +13,9 @@ CATALOG = {
     "Listo. Presiona ACTIVAR para iniciar.": "Ready. Press START to begin.",
     "Principal": "Main",
     "Módulos": "Modules",
-    "Avanzada Audio": "Advanced Audio",
-    "Avanzada Impulsos": "Advanced Impulse",
-    "Avanzada Cancelador": "Advanced Canceller",
+    "Avanz. Audio": "Adv. Audio",
+    "Avanz. Impulsos": "Adv. Impulse",
+    "Avanz. Cancelador": "Adv. Canceller",
     "Espectro": "Spectrum",
     "Presets": "Presets",
 

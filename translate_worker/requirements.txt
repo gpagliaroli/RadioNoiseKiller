@@ -1,0 +1,11 @@
+# Entorno separado del venv principal de RadioNoiseKiller a propósito: estas
+# librerías (torch/onnxruntime/ctranslate2 por debajo) están EXCLUIDAS del
+# .spec de PyInstaller de la app principal — ver CLAUDE.md. Instalar en un
+# venv propio (ver README.md de esta carpeta).
+faster-whisper==1.2.1
+# Pin obligatorio: av 19.x rompe faster_whisper/audio.py (TypeError: open()
+# got an unexpected keyword argument 'metadata_errors'). Probado y
+# reproducido durante el spike — no subir sin volver a probar.
+av==18.1.0
+argostranslate==1.11.0
+numpy

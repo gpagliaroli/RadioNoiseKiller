@@ -22,6 +22,8 @@ from ui.vu_meter import VuMeter
 from ui.cpu_meter import CpuMeter
 from ui.advanced_tab import AdvancedAudioTab, AdvancedImpulseTab, AdvancedCancellerTab
 from ui.presets_tab import PresetsTab
+from ui.translate_tab import TranslateTab
+from translate_client import TranslateClient
 from ui.slider_row import SliderRow
 from ui.tooltips import apply_tooltips
 from ui.spectrum_widget import SpectrumWidget
@@ -191,9 +193,9 @@ class MainWindow(QMainWindow):
         self._adv_audio_tab.bandpass_changed.connect(self._refresh_bandpass_combo)
         self._adv_impulse_tab.changed.connect(self._schedule_save)
         self._adv_canceller_tab.changed.connect(self._schedule_save)
-        self._tabs.addTab(self._adv_audio_tab,     tr("Avanzada Audio"))
-        self._tabs.addTab(self._adv_impulse_tab,   tr("Avanzada Impulsos"))
-        self._tabs.addTab(self._adv_canceller_tab, tr("Avanzada Cancelador"))
+        self._tabs.addTab(self._adv_audio_tab,     tr("Avanz. Audio"))
+        self._tabs.addTab(self._adv_impulse_tab,   tr("Avanz. Impulsos"))
+        self._tabs.addTab(self._adv_canceller_tab, tr("Avanz. Cancelador"))
         self._tabs.addTab(self._build_spectrum_tab(), tr("Espectro"))
         self._presets_tab = PresetsTab(
             self._config, self._pipeline, self._preset_manager
@@ -203,7 +205,17 @@ class MainWindow(QMainWindow):
         self._presets_tab.state_changed.connect(self._schedule_save)
         self._presets_tab.state_changed.connect(self._refresh_title)
         self._tabs.addTab(self._presets_tab, tr("Presets"))
+        self._translate_client = TranslateClient()
+        self._translate_tab = TranslateTab(
+            self._config, self._pipeline, self._translate_client
+        )
+        self._translate_tab.state_changed.connect(self._schedule_save)
+        self._tabs.addTab(self._translate_tab, tr("Traducción"))
         self._tabs.currentChanged.connect(self._on_tab_changed)
+        # Todas las solapas visibles a la vez: sin botones de scroll y repartidas
+        # a lo ancho (el padding del stylesheet es chico para que entren las 8).
+        self._tabs.setUsesScrollButtons(False)
+        self._tabs.tabBar().setExpanding(True)
 
         root.addWidget(self._tabs)
         root.addSpacing(10)   # separa Grabar/Mute del botón ACTIVAR
@@ -2081,6 +2093,7 @@ class MainWindow(QMainWindow):
             self._btn_record.setEnabled(False)
             self._btn_mute.setChecked(False)   # dispara _on_mute_toggled: quita mute + restaura texto
             self._btn_mute.setEnabled(False)
+            self._translate_tab.stop_if_active()
             self._pipeline.stop()
             self._refresh_noise_profile_ui()
             self._level_timer.stop()
@@ -2479,6 +2492,7 @@ class MainWindow(QMainWindow):
         self._config.window.y = self.pos().y()
         self._config.window.w = self.width()
         self._pipeline.stop()
+        self._translate_client.stop()
         self._save_settings()
         event.accept()
 
@@ -2511,7 +2525,7 @@ class MainWindow(QMainWindow):
             QTabBar::tab {
                 background: #16213e;
                 color: #aaa;
-                padding: 6px 18px;
+                padding: 6px 8px;
                 border: 1px solid #444;
                 border-bottom: none;
                 border-radius: 4px 4px 0 0;

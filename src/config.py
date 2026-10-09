@@ -186,11 +186,24 @@ class WindowConfig:
 
 
 @dataclass
+class TranslateConfig:
+    """Módulo de Traducción (ASR+MT offline, proceso separado — ver
+    translate_worker/README.md). Rutas vacías = módulo no configurado."""
+    worker_python_path: str = ""   # python.exe del venv del worker
+    worker_script_path: str = ""   # ruta a translate_worker/worker.py
+    lang_src: str = "auto"
+    lang_dst: str = "es"
+    show_mode: str = "both"   # "both" | "src" | "dst" — qué texto mostrar en los subtítulos
+    min_confidence: float = 0.5   # 0.0-1.0 — por debajo, se avisa en vez de traducir
+
+
+@dataclass
 class AppConfig:
-    audio:  AudioConfig  = field(default_factory=AudioConfig)
-    dsp:    DSPConfig    = field(default_factory=DSPConfig)
-    gain:   GainConfig   = field(default_factory=GainConfig)
-    window: WindowConfig = field(default_factory=WindowConfig)
+    audio:     AudioConfig     = field(default_factory=AudioConfig)
+    dsp:       DSPConfig       = field(default_factory=DSPConfig)
+    gain:      GainConfig      = field(default_factory=GainConfig)
+    window:    WindowConfig    = field(default_factory=WindowConfig)
+    translate: TranslateConfig = field(default_factory=TranslateConfig)
     last_preset: str = ""   # nombre del último preset cargado/guardado (solo informativo)
     last_noise_profile: str = ""  # último perfil de ruido cargado/guardado (auto-recarga)
     language: str = "es"    # idioma de la UI ("es"/"en"); aplicar requiere reinicio
@@ -280,6 +293,14 @@ class AppConfig:
                 "waterfall_source":        self.window.waterfall_source,
                 "waterfall_history_sec":   self.window.waterfall_history_sec,
                 "ui_scale":                self.window.ui_scale,
+            },
+            "translate": {
+                "worker_python_path": self.translate.worker_python_path,
+                "worker_script_path": self.translate.worker_script_path,
+                "lang_src": self.translate.lang_src,
+                "lang_dst": self.translate.lang_dst,
+                "show_mode": self.translate.show_mode,
+                "min_confidence": self.translate.min_confidence,
             },
         }
         with open(path, "w", encoding="utf-8") as f:
@@ -402,3 +423,13 @@ class AppConfig:
         # solo tiene efecto antes de esa linea). Valor invalido -> 1.0.
         _scale = float(w.get("ui_scale", self.window.ui_scale))
         self.window.ui_scale = _scale if _scale in UI_SCALES else 1.0
+
+        t = data.get("translate", {})
+        self.translate.worker_python_path = str(t.get("worker_python_path", self.translate.worker_python_path))
+        self.translate.worker_script_path = str(t.get("worker_script_path", self.translate.worker_script_path))
+        self.translate.lang_src = str(t.get("lang_src", self.translate.lang_src))
+        self.translate.lang_dst = str(t.get("lang_dst", self.translate.lang_dst))
+        _show_mode = str(t.get("show_mode", self.translate.show_mode))
+        self.translate.show_mode = _show_mode if _show_mode in ("both", "src", "dst") else "both"
+        _min_conf = float(t.get("min_confidence", self.translate.min_confidence))
+        self.translate.min_confidence = _min_conf if 0.0 <= _min_conf <= 1.0 else 0.5
