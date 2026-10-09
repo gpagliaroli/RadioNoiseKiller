@@ -1,6 +1,6 @@
 ﻿# RadioNoiseKiller — Manual de Usuario
 
-**Versión 2.5**
+**Versión 2.6**
 
 ---
 
@@ -1228,6 +1228,8 @@ Los botones **Exportar...** e **Importar...** de la pestaña Presets pasan un pr
 
 ## Capítulo 14 — Traducción
 
+> **Función experimental (novedad 2.6).** La instalación en un clic todavía tiene pocas horas de uso: está probada en Windows; en Linux y Raspberry Pi falta confirmarla. Si algo falla al instalar, mandá el archivo de diagnóstico (ver el final del manual).
+
 ### Descripción
 
 La pestaña **Traducción** transcribe y traduce en vivo lo que sale del cancelador, para hacerse una idea de qué dice una estación en un idioma que no se conoce. Usa reconocimiento de voz (*faster-whisper*) y traducción (*argostranslate*), y todo corre **en tu computadora**: no se manda audio a ningún servicio.
@@ -1307,4 +1309,4 @@ El archivo se limita a unos pocos errores por sesión, así que no crece sin con
 
 ---
 
-*RadioNoiseKiller — versión 2.5*
+*RadioNoiseKiller — versión 2.6*

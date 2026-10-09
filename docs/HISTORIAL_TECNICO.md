@@ -33,10 +33,11 @@ regla de método nueva.
 | v2.4 | ago 2026 | menor | Umbral de trama 2–30, indicador por etapa del supresor, sliders λ_d grises en estático, presets 7 → 5 |
 | v2.4.1 | sep 2026 | patch | Exclusión de armónicos sostenidos del piso (constante), 5 presets reafinados, git mv por mayúsculas |
 | v2.5 | sep 2026 | menor | Ventana de ataque confirmada por tiempo, graves se retiran por periodicidad, FM 15 kHz, protección driver colgado, replay_recording, 8 presets |
+| v2.6 | oct 2026 | menor | Traducción experimental con instalación en un clic, ANF con enganche de portadora, excitador por periodicidad, export/import de presets, diagnóstico y medidor de CPU, solapas sin scroll |
 
 ---
 
-## En curso (post-v2.5)
+## En curso (post-v2.6)
 
 _(Los bloques nuevos de la próxima versión van acá, el más reciente arriba.)_
 
@@ -119,6 +120,38 @@ y el ANF "cuando lo detecta ya se va y así queda cíclico". Grabación `RNK_202
   con envolvente silábica nunca enganchan, `_hold_frames`/`_occ`/`_lock_hold` escalan con el hop
   (inv. 9). `test_integration` vuelve a 6,6 dB. Manuales ES/EN: bloque "Enganche de portadora" y
   nota del heterodino al borde del pasabanda. **Pendiente de validar en el aire.**
+
+---
+
+## v2.6 (octubre 2026)
+
+Lista de cambios tal como estaba en CLAUDE.md al cerrar la versión:
+
+- **ANF: enganche de portadora** (heterodino de 5 kHz con fading en SW, "lo detecta y se va,
+  cíclico"): ocupación EMA ≥ 0,85 (τ 1,5 s) → hold 1 s + histéresis 0,6× + ±2 bins + profundidad
+  plena + ataque instantáneo sólo en esos bins; discriminador portadora/parcial por **correlación
+  bin–frame < 0,5** (una parcial sube y baja con el programa). Medido: residuo audible 74 → 29 %
+  con la cadena completa; voz sin heterodino ≤ 0,03 dB; +40–110 µs/frame. Indicador "(n
+  enganchado)". `test_dsp` (fading, voz con vibrato y voz monótona como controles) —
+  `pendiente de validar`.
+- **El excitador se retira solo por periodicidad**, igual que los graves (reportado por el
+  usuario: "con mucho ruido tiene el mismo problema"). Su banda de trabajo (1–3,5 kHz) con voz
+  enterrada es ruido, así que genera armónicos DE RUIDO: descomponiendo `E(v+n)=E(v)+E(n)+cruce`,
+  a S/N de banda +20 dB los de ruido están 16 dB abajo, a +5 empatan, a 0 ganan por 4 dB. Misma
+  rampa y constantes que `BassRestorer` (0,20→0,40, EMA 2 s). Medido en la cadena real: limpias
+  −0,3/−0,4 dB, SSB media −0,9, voz enterrada −13,4/−16,5. **Un solo** indicador "Periodicidad"
+  al pie del grupo para los dos módulos (`_lbl_period_act`): mostraban el mismo número uno debajo
+  del otro. `test_dsp`, `test_ui` — `pendiente de validar`.
+
+- **Pestaña Traducción** (faster-whisper + argostranslate, proceso aparte) con **instalación en un
+  clic**, opt-in: botón "Instalar módulo" → Python embebible (Win) / venv (Linux) + pip + modelos en
+  `data_dir()/TraduccionRuntime/` (`src/translate_installer.py`); el worker viaja como `datas` en los
+  specs, nunca analizado. Rutas manuales = "Configuración avanzada" (mandan sobre lo instalado).
+  Anti-repetición de Whisper (`condition_on_previous_text=False` + `translate_worker/dedupe.py`).
+  Solapas "Avanz. …" sin scroll. `test_translate`, `test_ui` — `pendiente de validar`: instalación
+  en máquina limpia sin Python (Windows), Linux/Pi sin probar; `ARGOS_PACKAGES_DIR` no verificado.
+
+**Decisión de release:** la Traducción sale como *experimental*; ANF y excitador se dan por validados por el usuario al elegir esa opción. Pendiente: instalación en máquina limpia (Windows sin Python), Linux/Pi, y comprobar que `ARGOS_PACKAGES_DIR` mueve los paquetes de idioma a `TraduccionRuntime/models/`.
 
 ---
 

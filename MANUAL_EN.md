@@ -1,6 +1,6 @@
 ﻿# RadioNoiseKiller — User Manual
 
-**Version 2.5**
+**Version 2.6**
 
 ---
 
@@ -1229,6 +1229,8 @@ The **Export...** and **Import...** buttons in the Presets tab write a preset to
 
 ## Chapter 14 — Translation
 
+> **Experimental feature (new in 2.6).** The one-click installation has few hours of use so far: it is tested on Windows; on Linux and Raspberry Pi it still needs confirmation. If something fails during installation, send the diagnostic file (see the end of the manual).
+
 ### Description
 
 The **Translation** tab transcribes and translates, live, what comes out of the canceller, to get an idea of what a station is saying in a language you do not know. It uses speech recognition (*faster-whisper*) and translation (*argostranslate*), and everything runs **on your computer**: no audio is sent to any service.
@@ -1308,4 +1310,4 @@ The file is capped at a few errors per session, so it does not grow without boun
 
 ---
 
-*RadioNoiseKiller — version 2.5*
+*RadioNoiseKiller — version 2.6*

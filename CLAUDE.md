@@ -530,10 +530,11 @@ leer ese bloque es repetir trabajo que ya costó.
 
 ## Estado actual del proyecto
 
-**v2.5 publicada (septiembre 2026)** — última release en GitHub, distribuibles Windows y Linux,
-manuales `MANUAL_RadioNoiseKiller_v2.5.pdf` (ES, 46 págs) y `..._v2.5_EN.pdf` (EN, 45 págs),
-título "v2.5 by LU6APA". Validada en hardware real por el usuario. Cadena de versiones y qué
-trajo cada una: tabla al principio de `docs/HISTORIAL_TECNICO.md`.
+**v2.6 publicada (octubre 2026)** — última release en GitHub, distribuibles Windows y Linux,
+manuales `MANUAL_RadioNoiseKiller_v2.6.pdf` (ES, 48 págs) y `..._v2.6_EN.pdf` (EN, 47 págs),
+título "v2.6 by LU6APA". Traducción publicada como **experimental**: la instalación en un clic no
+se probó en máquina limpia ni en Linux/Pi. Cadena de versiones y qué trajo cada una: tabla al
+principio de `docs/HISTORIAL_TECNICO.md`.
 
 Lo que define el producto hoy, en una línea cada uno (el detalle está en el historial):
 - **Cancelador**: Log-MMSE + OMLSA sobre un piso que viene del perfil estático o de MCRA. En MCRA el
@@ -559,6 +560,10 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
   derivada de los armónicos: los dos se retiran solos por periodicidad (misma rampa 0,20→0,40 con
   EMA de 2 s) cuando la voz está enterrada en ruido — los dos derivan de una banda que en ese caso
   es ruido, y una no linealidad alimentada con ruido da armónicos de ruido.
+- **Traducción** (v2.6, experimental): pestaña con transcripción + traducción en vivo (faster-whisper +
+  argostranslate) en un proceso aparte, instalable en un clic y opt-in desde la propia pestaña
+  (`src/translate_installer.py`, carpeta `TraduccionRuntime/`); sin instalar, Iniciar y los idiomas
+  quedan deshabilitados. Detalle en el historial, sección v2.6.
 - **Robustez de audio** (v2.5): watchdog del callback + open/stop/close de PortAudio con timeout en
   hilo auxiliar; el stream se abandona si el driver no vuelve y `main.py` sale con `os._exit`.
 - **8 presets de fábrica** en `Presets/`, afinados en el aire (ver [[project_factory_presets]]):
@@ -572,29 +577,7 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
 
 ### Cambios pendientes de release
 
-- **ANF: enganche de portadora** (heterodino de 5 kHz con fading en SW, "lo detecta y se va,
-  cíclico"): ocupación EMA ≥ 0,85 (τ 1,5 s) → hold 1 s + histéresis 0,6× + ±2 bins + profundidad
-  plena + ataque instantáneo sólo en esos bins; discriminador portadora/parcial por **correlación
-  bin–frame < 0,5** (una parcial sube y baja con el programa). Medido: residuo audible 74 → 29 %
-  con la cadena completa; voz sin heterodino ≤ 0,03 dB; +40–110 µs/frame. Indicador "(n
-  enganchado)". `test_dsp` (fading, voz con vibrato y voz monótona como controles) —
-  `pendiente de validar`.
-- **El excitador se retira solo por periodicidad**, igual que los graves (reportado por el
-  usuario: "con mucho ruido tiene el mismo problema"). Su banda de trabajo (1–3,5 kHz) con voz
-  enterrada es ruido, así que genera armónicos DE RUIDO: descomponiendo `E(v+n)=E(v)+E(n)+cruce`,
-  a S/N de banda +20 dB los de ruido están 16 dB abajo, a +5 empatan, a 0 ganan por 4 dB. Misma
-  rampa y constantes que `BassRestorer` (0,20→0,40, EMA 2 s). Medido en la cadena real: limpias
-  −0,3/−0,4 dB, SSB media −0,9, voz enterrada −13,4/−16,5. **Un solo** indicador "Periodicidad"
-  al pie del grupo para los dos módulos (`_lbl_period_act`): mostraban el mismo número uno debajo
-  del otro. `test_dsp`, `test_ui` — `pendiente de validar`.
-
-- **Pestaña Traducción** (faster-whisper + argostranslate, proceso aparte) con **instalación en un
-  clic**, opt-in: botón "Instalar módulo" → Python embebible (Win) / venv (Linux) + pip + modelos en
-  `data_dir()/TraduccionRuntime/` (`src/translate_installer.py`); el worker viaja como `datas` en los
-  specs, nunca analizado. Rutas manuales = "Configuración avanzada" (mandan sobre lo instalado).
-  Anti-repetición de Whisper (`condition_on_previous_text=False` + `translate_worker/dedupe.py`).
-  Solapas "Avanz. …" sin scroll. `test_translate`, `test_ui` — `pendiente de validar`: instalación
-  en máquina limpia sin Python (Windows), Linux/Pi sin probar; `ARGOS_PACKAGES_DIR` no verificado.
+(ninguno)
 
 Formato al acumular: una línea por cambio con su estado de validación (`validado en el aire` /
 `pendiente de validar`), y el bloque narrativo completo en el historial, sección "En curso". El

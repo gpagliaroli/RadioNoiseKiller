@@ -67,6 +67,9 @@ panorama general y las notas para quien quiera tocar el código.
   marcadores de los tonos que está cancelando el ANF
 - **Cascada en modo Diferencia** — pinta cuánto quita el procesamiento en cada frecuencia y
   momento, para ver de un vistazo si el cancelador está tocando la voz
+- **Traducción** *(experimental)* — transcribe y traduce en vivo lo que sale del cancelador, todo
+  local. Se instala con un clic desde la pestaña (≈600 MB, solo si lo pedís); sin instalar no
+  se descarga nada
 - **Presets** — 8 perfiles de fábrica afinados en el aire (SSB, AM SW, AM local, banda aérea y FM),
   más los propios
 - **Perfiles de ruido nombrados** — guardar y recuperar el ruido de cada banda o cada hora del día
@@ -129,7 +132,7 @@ En Windows hay wrappers en la raíz: `run.cmd` (lanza la aplicación) y `test.cm
 python tests/run_all.py
 ```
 
-Corre las 8 suites de regresión headless en subprocesos aislados. Los datos escribibles se redirigen
+Corre las 9 suites de regresión headless en subprocesos aislados. Los datos escribibles se redirigen
 a una carpeta temporal vía la variable `RNK_DATA_DIR`, así que **los tests nunca tocan tu
 `settings.json` ni tus presets**. `test_devices.py` y `test_hostapis.py` quedan fuera del runner:
 requieren hardware de audio y son diagnósticos. `test_cpu_profile.py` tampoco, es un benchmark.
@@ -161,6 +164,9 @@ src/
 ├── noise_profiles.py     # NoiseProfileManager: perfiles de ruido nombrados
 ├── i18n.py / i18n_en.py  # Traducción ES→EN (catálogo propio, sin Qt Linguist)
 ├── utils.py              # Rutas de recursos y de datos escribibles (RNK_DATA_DIR)
+├── translate_client.py   # Cliente del worker de Traducción (proceso aparte, stdin/stdout)
+├── translate_protocol.py # Protocolo IPC JSON del módulo de Traducción
+├── translate_installer.py# Instalación en un clic del módulo (Python + pip + modelos)
 ├── buildinfo.py          # BUILD_ID, estampado en el empaquetado
 ├── audio/
 │   ├── devices.py        # Enumeración y deduplicación por API (WASAPI/WDM-KS, ALSA)
@@ -178,9 +184,11 @@ src/
 │   ├── gain.py           # GainLimiter: limitador de picos con rodilla suave
 │   └── level.py          # LevelMeter: RMS con decaimiento
 └── ui/
-    ├── main_window.py    # Ventana principal: 7 pestañas + barra de estado
+    ├── main_window.py    # Ventana principal: 8 pestañas + barra de estado
     ├── advanced_tab.py   # Pestañas Avanzada Audio / Impulsos / Cancelador
     ├── presets_tab.py    # Gestión de presets
+    ├── translate_tab.py  # Pestaña Traducción (transcripción + traducción en vivo)
+    ├── cpu_meter.py      # Medidor de carga del hilo de audio
     ├── slider_row.py     # Widget: label + QSlider escalado a float + valor
     ├── tooltips.py       # Textos de ayuda de todos los sliders
     ├── vu_meter.py       # VU meter custom (QPainter)
@@ -188,6 +196,7 @@ src/
     └── waterfall_widget.py # Cascada tiempo-frecuencia
 
 Presets/                  # 8 presets de fábrica (JSON) + Presets.zip
+translate_worker/         # Worker de Traducción (faster-whisper + argostranslate), proceso aparte
 tests/                    # Suites de regresión (run_all.py) y diagnósticos
 tools/                    # Generadores del manual PDF, el diagrama y el zip de presets;
                           # replay_recording.py pasa una grabación por la cadena real
