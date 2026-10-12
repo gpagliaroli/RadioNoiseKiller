@@ -67,7 +67,7 @@ class EibiTab(QWidget):
         row.addWidget(QLabel(tr("Frecuencia:")))
         self._spin_freq = QDoubleSpinBox()
         self._spin_freq.setRange(*EIBI_FREQ_RANGE)
-        self._spin_freq.setDecimals(2)
+        self._spin_freq.setDecimals(0)
         self._spin_freq.setSingleStep(1.0)
         self._spin_freq.setSuffix(" kHz")
         self._spin_freq.setKeyboardTracking(False)
