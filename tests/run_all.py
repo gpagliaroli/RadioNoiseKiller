@@ -40,6 +40,7 @@ SUITES = [
     "test_integration",
     "test_translate",
     "test_eibi",
+    "test_updater",
     "test_ui",          # requiere QT_QPA_PLATFORM=offscreen
 ]
 
@@ -47,6 +48,7 @@ SUITES = [
 def run_one(name: str) -> tuple[bool, float, str]:
     env = dict(os.environ)
     env["RNK_DATA_DIR"] = os.path.join(DATA_DIR, name)   # una carpeta por suite
+    env["RNK_NO_UPDATE_CHECK"] = "1"   # los tests nunca consultan GitHub
     if name == "test_ui":
         env["QT_QPA_PLATFORM"] = "offscreen"
     t0 = time.perf_counter()

@@ -67,6 +67,9 @@ panorama general y las notas para quien quiera tocar el código.
   marcadores de los tonos que está cancelando el ANF
 - **Cascada en modo Diferencia** — pinta cuánto quita el procesamiento en cada frecuencia y
   momento, para ver de un vistazo si el cancelador está tocando la voz
+- **Aviso de versión nueva** — al iniciar (como máximo una vez por día, desactivable) consulta
+  GitHub Releases y, si hay una versión posterior, muestra un botón con las novedades y un enlace a la
+  descarga. Solo avisa: no instala nada
 - **EiBi** — identifica qué emisora de onda corta es la que estás sintonizando: busca la frecuencia en la
   grilla EiBi y marca las que están en el aire a la hora UTC actual. La base se baja sola (≈0,5 MB) al
   abrir la solapa si venció, solo si cambió en el servidor, y también con un botón
@@ -135,7 +138,7 @@ En Windows hay wrappers en la raíz: `run.cmd` (lanza la aplicación) y `test.cm
 python tests/run_all.py
 ```
 
-Corre las 10 suites de regresión headless en subprocesos aislados. Los datos escribibles se redirigen
+Corre las 11 suites de regresión headless en subprocesos aislados. Los datos escribibles se redirigen
 a una carpeta temporal vía la variable `RNK_DATA_DIR`, así que **los tests nunca tocan tu
 `settings.json` ni tus presets**. `test_devices.py` y `test_hostapis.py` quedan fuera del runner:
 requieren hardware de audio y son diagnósticos. `test_cpu_profile.py` tampoco, es un benchmark.
@@ -167,6 +170,8 @@ src/
 ├── noise_profiles.py     # NoiseProfileManager: perfiles de ruido nombrados
 ├── i18n.py / i18n_en.py  # Traducción ES→EN (catálogo propio, sin Qt Linguist)
 ├── utils.py              # Rutas de recursos y de datos escribibles (RNK_DATA_DIR)
+├── version.py            # APP_VERSION: única fuente de la versión
+├── updater.py            # Aviso de versión nueva (GitHub Releases), sin Qt
 ├── eibi_db.py            # Base EiBi: parseo, búsqueda "en el aire ahora", descarga con vencimiento
 ├── eibi_codes.py         # Nombres de idioma/país/zona de EiBi (generado por tools/gen_eibi_codes.py)
 ├── translate_client.py   # Cliente del worker de Traducción (proceso aparte, stdin/stdout)
@@ -192,6 +197,7 @@ src/
     ├── main_window.py    # Ventana principal: 9 pestañas + barra de estado
     ├── advanced_tab.py   # Pestañas Avanzada Audio / Impulsos / Cancelador
     ├── presets_tab.py    # Gestión de presets
+    ├── update_dialog.py  # Diálogo "hay una versión nueva"
     ├── eibi_tab.py       # Solapa EiBi (qué emisora es)
     ├── translate_tab.py  # Pestaña Traducción (transcripción + traducción en vivo)
     ├── cpu_meter.py      # Medidor de carga del hilo de audio

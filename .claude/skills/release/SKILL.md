@@ -22,12 +22,13 @@ en orden; cada uno tiene su verificación. No publicar si algo falla.
   proyecto") — es la fuente de las notas del release. El detalle de cada cambio vive en
   `docs/HISTORIAL_TECNICO.md`, sección "En curso".
 
-## 1. Bump de versión (2 lugares)
+## 1. Bump de versión (1 lugar)
 
-- `src/main.py` → `app.setApplicationVersion("X.Y.0")`
-- `src/ui/main_window.py` → dentro de `_update_window_title()`, la línea
-  `title = "RadioNoiseKiller  vX.Y  by LU6APA"` (la versión está hardcodeada ahí, NO en un
-  `setWindowTitle` del build).
+- `src/version.py` → `APP_VERSION = "X.Y.0"`. De ahí salen `app.setApplicationVersion`, el título
+  de la ventana (`_update_window_title`) y la versión contra la que el aviso de actualizaciones
+  compara el tag de GitHub. **El tag y el nombre del release tienen que ser `vX.Y` o `vX.Y.Z`**
+  (`updater.parse_version` ignora cualquier otro formato) y el release no puede salir como
+  pre-release/borrador si se quiere que avise.
 
 ## 2. Documentación
 

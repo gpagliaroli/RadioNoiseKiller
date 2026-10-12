@@ -222,6 +222,14 @@ class EibiConfig:
 
 
 @dataclass
+class UpdateConfig:
+    """Aviso de versión nueva (ver updater.py). Sólo avisa, no descarga."""
+    auto_check: bool = True      # consultar GitHub al iniciar, como máximo 1 vez por día
+    last_check: str = ""         # ISO 8601 UTC de la última consulta (con o sin error)
+    skipped_version: str = ""    # tag que el usuario eligió omitir ("v2.7")
+
+
+@dataclass
 class AppConfig:
     audio:     AudioConfig     = field(default_factory=AudioConfig)
     dsp:       DSPConfig       = field(default_factory=DSPConfig)
@@ -229,6 +237,7 @@ class AppConfig:
     window:    WindowConfig    = field(default_factory=WindowConfig)
     translate: TranslateConfig = field(default_factory=TranslateConfig)
     eibi:      EibiConfig      = field(default_factory=EibiConfig)
+    update:    UpdateConfig    = field(default_factory=UpdateConfig)
     last_preset: str = ""   # nombre del último preset cargado/guardado (solo informativo)
     last_noise_profile: str = ""  # último perfil de ruido cargado/guardado (auto-recarga)
     language: str = "es"    # idioma de la UI ("es"/"en"); aplicar requiere reinicio
@@ -331,6 +340,11 @@ class AppConfig:
                 "freq_khz": self.eibi.freq_khz,
                 "tol_khz": self.eibi.tol_khz,
                 "auto_update": self.eibi.auto_update,
+            },
+            "update": {
+                "auto_check": self.update.auto_check,
+                "last_check": self.update.last_check,
+                "skipped_version": self.update.skipped_version,
             },
         }
         with open(path, "w", encoding="utf-8") as f:
@@ -468,3 +482,8 @@ class AppConfig:
         self.eibi.freq_khz = _clamp_float(e.get("freq_khz"), EIBI_FREQ_RANGE, self.eibi.freq_khz)
         self.eibi.tol_khz = _clamp_float(e.get("tol_khz"), EIBI_TOL_RANGE, self.eibi.tol_khz)
         self.eibi.auto_update = bool(e.get("auto_update", self.eibi.auto_update))
+
+        u = data.get("update", {})
+        self.update.auto_check = bool(u.get("auto_check", self.update.auto_check))
+        self.update.last_check = str(u.get("last_check", self.update.last_check) or "")
+        self.update.skipped_version = str(u.get("skipped_version", self.update.skipped_version) or "")

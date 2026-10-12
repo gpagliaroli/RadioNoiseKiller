@@ -1299,4 +1299,45 @@ CATALOG = {
         'could not update: {err}',
     'vencida':
         'expired',
+    # --- Actualizaciones ---
+    'Hay una versión nueva: clic para ver las novedades.':
+        "A new version is available: click to see what's new.",
+    '{v} disponible':
+        '{v} available',
+    'Buscar actualizaciones':
+        'Check for updates',
+    'Buscar automáticamente (1 vez por día)':
+        'Check automatically (once a day)',
+    'Al iniciar, consulta a GitHub si hay una versión nueva (como máximo una vez por día). GitHub ve tu IP; la app no envía ningún dato propio.':
+        'On startup, asks GitHub whether a new version exists (at most once a day). GitHub sees your IP; the app sends no data of its own.',
+    'Estás al día (v{v}).':
+        'You are up to date (v{v}).',
+    'No se pudo buscar actualizaciones: {err}':
+        'Could not check for updates: {err}',
+    'Nueva versión disponible':
+        'New version available',
+    'Hay una versión nueva: <b>{new}</b> (instalada: {cur}).':
+        'A new version is available: <b>{new}</b> (installed: {cur}).',
+    '(El release no trae notas.)':
+        '(The release has no notes.)',
+    'Se abre la página del release en el navegador; desde ahí se descarga el zip de tu plataforma.':
+        'The release page opens in your browser; download the zip for your platform from there.',
+    'Abrir página de descarga':
+        'Open download page',
+    'Recordármelo después':
+        'Remind me later',
+    'Omitir esta versión':
+        'Skip this version',
+    'No vuelve a avisar hasta que salga una versión posterior.':
+        'It will not notify again until a later version is released.',
+    'GitHub rechazó la consulta (límite de consultas); probá más tarde':
+        'GitHub rejected the request (rate limit); try again later',
+    'No hay versiones publicadas':
+        'No published versions',
+    'No se pudo verificar el certificado de GitHub':
+        "Could not verify GitHub's certificate",
+    'Respuesta demasiado grande':
+        'Response too large',
+    'Respuesta de GitHub inválida':
+        'Invalid response from GitHub',
 }

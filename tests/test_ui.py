@@ -28,6 +28,7 @@ import shutil
 import tempfile
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+os.environ.setdefault("RNK_NO_UPDATE_CHECK", "1")   # los tests nunca consultan GitHub
 if not os.environ.get("RNK_DATA_DIR"):
     _tmp_data = tempfile.mkdtemp(prefix="rnk_test_ui_")
     os.environ["RNK_DATA_DIR"] = _tmp_data
@@ -1133,6 +1134,60 @@ def test_mute_button_gating_and_state():
     print("Mute: gating + estado del boton              OK")
 
 
+def test_update_button_and_skip():
+    """Aviso de version nueva: el boton esta oculto al arrancar (sin red); un checker en
+    AVAILABLE lo muestra con la version; 'Omitir' lo oculta y persiste; el chequeo
+    automatico respeta 'omitida' pero el manual no."""
+    import updater
+    from ui.update_dialog import UpdateDialog
+
+    w = _win()
+    assert not w._btn_update.isVisible(), "el aviso no debe verse al arrancar"
+    assert w._update_checker.state == updater.UpdateChecker.IDLE, "no debe consultar solo en el test"
+
+    res = {"tag": "v9.9", "version": "9.9.0", "label": "v9.9", "notes": "## Novedades\n- algo",
+           "url": "https://example.invalid/r", "published": ""}
+
+    class _Fake:
+        state = updater.UpdateChecker.AVAILABLE
+        message = ""
+        result = res
+
+        def is_running(self):
+            return False
+
+    w._update_checker = _Fake()
+    w._update_manual = False
+    w._poll_update()
+    w.show()
+    assert w._btn_update.isVisible() and "v9.9" in w._btn_update.text()
+    assert w._config.update.last_check, "anota la consulta"
+
+    # Omitir: el dialogo devuelve SKIP -> se oculta y persiste
+    orig_exec = UpdateDialog.exec
+    UpdateDialog.exec = lambda self: setattr(self, "choice", UpdateDialog.SKIP)
+    try:
+        w._on_update_button()
+    finally:
+        UpdateDialog.exec = orig_exec
+    assert not w._btn_update.isVisible() and w._config.update.skipped_version == "v9.9"
+
+    # Chequeo automatico: version omitida no vuelve a mostrarse
+    w._update_manual = False
+    w._poll_update()
+    assert not w._btn_update.isVisible()
+    # Chequeo manual: ignora lo omitido (abre el dialogo)
+    abierto = []
+    UpdateDialog.exec = lambda self: abierto.append(self.choice)
+    try:
+        w._update_manual = True
+        w._poll_update()
+    finally:
+        UpdateDialog.exec = orig_exec
+    assert abierto and w._btn_update.isVisible()
+    print("Actualizaciones: boton oculto, omitir persiste, manual ignora lo omitido  OK")
+
+
 def test_eibi_tab_search_and_no_network():
     """La solapa EiBi: no toca la red al construirse; con una base guardada llena la tabla
     (en el aire primero), respeta la hora manual y persiste frecuencia/tolerancia."""
@@ -2134,6 +2189,7 @@ if __name__ == "__main__":
     test_bypass_remembers_output_gain()
     test_bypass_clears_status_bar_message()
     test_bypass_gain_persiste_entre_sesiones()
+    test_update_button_and_skip()
     test_eibi_tab_search_and_no_network()
     test_translate_tab_warning_and_not_installed()
     test_translate_tab_show_mode()

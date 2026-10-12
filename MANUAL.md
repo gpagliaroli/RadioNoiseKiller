@@ -193,6 +193,18 @@ RadioNoiseKiller es gratuito y de código abierto (licencia MIT), y va a seguir 
 
 > **Si estás fuera de Argentina:** Cafecito es una plataforma argentina, pero acepta tarjetas internacionales. La donación entra igual desde donde estés.
 
+### Actualizaciones
+
+La aplicación avisa cuando hay una **versión nueva** publicada en GitHub. **Solo avisa: no descarga ni instala nada** por su cuenta.
+
+- **Al iniciar**, unos segundos después de abrir la ventana, consulta a GitHub (como máximo **una vez por día**). Si hay una versión posterior a la instalada, aparece en la barra de estado un botón ámbar **⬆ v2.7 disponible**. Un clic abre las novedades del release, con tres opciones: **Abrir página de descarga** (en el navegador, para bajar el zip de tu plataforma), **Recordármelo después** y **Omitir esta versión** (no vuelve a avisar hasta una versión posterior).
+- **A pedido:** en **ℹ Acerca de** está el botón **Buscar actualizaciones**, que consulta en el momento (aunque ya hayas consultado hoy o hayas omitido esa versión) y responde "Estás al día" o muestra las novedades.
+- **Desactivar el aviso automático:** casilla **Buscar automáticamente (1 vez por día)** en el mismo cuadro *Acerca de*. Con ella apagada la aplicación no consulta nada por su cuenta.
+- Las versiones experimentales (*pre-release*) y los borradores no generan aviso.
+- Si no hay conexión o GitHub no responde, el aviso automático falla en silencio (no molesta); la búsqueda manual sí muestra el motivo.
+
+> **Privacidad.** Es la única consulta a internet que la aplicación hace por su cuenta (la Traducción y EiBi solo se conectan cuando las pedís o al abrir su solapa). La consulta es una lectura pública de la API de GitHub; **GitHub ve la dirección IP**, igual que en cualquier descarga, y la aplicación no envía ningún dato propio (ni versión de sistema, ni identificadores).
+
 ### Presets de AGC
 
 El combo **AGC** de la pestaña Principal ofrece tres velocidades con ataque/release fijos, todos con objetivo −20 dBFS y ganancia máxima +36 dB:

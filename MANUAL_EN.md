@@ -193,6 +193,18 @@ RadioNoiseKiller is free and open source (MIT licence), and it will stay that wa
 
 > **Note for donors outside Argentina:** Cafecito is an Argentine platform, but it does accept international cards. The donation goes through regardless of where you are.
 
+### Updates
+
+The application tells you when a **new version** is published on GitHub. **It only notifies: it does not download or install anything** on its own.
+
+- **On startup**, a few seconds after the window opens, it asks GitHub (at most **once a day**). If there is a version later than the installed one, an amber **⬆ v2.7 available** button appears in the status bar. One click opens the release notes, with three options: **Open download page** (in your browser, to get the zip for your platform), **Remind me later** and **Skip this version** (it will not notify again until a later version).
+- **On demand:** **ℹ About** has a **Check for updates** button that asks right away (even if you already checked today or skipped that version) and answers "You are up to date" or shows the release notes.
+- **Turning the automatic notice off:** the **Check automatically (once a day)** checkbox in the same *About* box. With it off, the application asks nothing on its own.
+- Experimental versions (*pre-releases*) and drafts do not trigger a notice.
+- If there is no connection or GitHub does not answer, the automatic check fails silently (it does not bother you); the manual check does show the reason.
+
+> **Privacy.** This is the only internet request the application makes on its own (Translation and EiBi only connect when you ask, or when you open their tab). The request is a public read of the GitHub API; **GitHub sees your IP address**, as with any download, and the application sends no data of its own (no system version, no identifiers).
+
 ### AGC presets
 
 The **AGC** combo on the Main tab offers three speeds with fixed attack/release, all with target −20 dBFS and max gain +36 dB:

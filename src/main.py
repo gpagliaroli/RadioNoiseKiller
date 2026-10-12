@@ -21,12 +21,13 @@ from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QIcon
 from ui.main_window import MainWindow
 from utils import resource_path
+from version import APP_VERSION
 
 
 def main():
     app = QApplication(sys.argv)
     app.setApplicationName("RadioNoiseKiller")
-    app.setApplicationVersion("2.6.0")
+    app.setApplicationVersion(APP_VERSION)
     icon_path = resource_path(os.path.join("Images", "RNK_ico.png"))
     if os.path.exists(icon_path):
         app.setWindowIcon(QIcon(icon_path))

@@ -577,6 +577,14 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
 
 ### Cambios pendientes de release
 
+- **Aviso de versión nueva** (post-v2.6): `src/updater.py` (sin Qt, `UpdateChecker` con hilo + opener inyectable) consulta
+  `GET /repos/gpagliaroli/RadioNoiseKiller/releases/latest` (público, sin token; excluye pre-releases y borradores). Al iniciar,
+  5 s después de abrir y como máximo 1 vez por día (`UpdateConfig.last_check`, se anota aunque falle); botón ámbar en la barra
+  de estado → `src/ui/update_dialog.py` (abrir página / después / omitir versión); "Buscar actualizaciones" y la casilla de
+  auto-chequeo viven en Acerca de. **Solo avisa, no descarga ni reemplaza** (fase 2 diseñada: el asset trae `digest` sha256).
+  La versión sale de `src/version.py` (**única fuente**: el bump del release pasó a 1 lugar). `RNK_NO_UPDATE_CHECK=1` apaga el
+  chequeo automático en los tests (la fija `run_all.py`). `test_updater`, `test_ui` — `pendiente de validar` en el equipo
+  (Windows y Linux: certificados TLS del sistema).
 - **Solapa EiBi** (post-v2.6): `src/eibi_db.py` (sin Qt) + `src/ui/eibi_tab.py`. Busca por frecuencia ± tolerancia
   y marca "en el aire ahora" por hora UTC (días, cruce de medianoche, fechas P=6). Base en `data_dir()/EiBi/`
   (`sked-a26.csv` + `meta.json`); **auto al abrir la solapa si pasaron 7 días** con GET condicional (ETag /

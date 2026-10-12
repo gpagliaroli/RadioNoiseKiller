@@ -30,6 +30,9 @@ from ui.tooltips import apply_tooltips
 from ui.spectrum_widget import SpectrumWidget
 from ui.waterfall_widget import WaterfallWidget
 from presets import PresetManager
+from version import APP_VERSION, display_version
+import updater
+from ui.update_dialog import UpdateDialog
 from noise_profiles import NoiseProfileManager
 from utils import (settings_path, presets_dir, noise_profiles_dir,
                    seed_factory_presets, log_path, data_dir)
@@ -140,7 +143,13 @@ class MainWindow(QMainWindow):
         self._save_timer.timeout.connect(self._save_settings)
 
         self._setup_pipeline_callbacks()
+        self._update_checker = updater.UpdateChecker(APP_VERSION)
+        self._update_manual = False
+        self._update_timer = QTimer(self)
+        self._update_timer.setInterval(300)
+        self._update_timer.timeout.connect(self._poll_update)
         self._build_ui()
+        QTimer.singleShot(5000, self._auto_check_updates)
         self._saved_input_device  = self._config.audio.input_device
         self._saved_output_device = self._config.audio.output_device
         self._populate_devices()
@@ -253,6 +262,15 @@ class MainWindow(QMainWindow):
             "el procesamiento. Requiere reiniciar la aplicación."))
         self._combo_ui_scale.currentIndexChanged.connect(self._on_ui_scale_changed)
         self._status_bar.addPermanentWidget(self._combo_ui_scale)
+
+        # Aviso de versión nueva: oculto hasta que el chequeo encuentre una (ver
+        # _poll_update). Es un botón, no una ventana emergente al arrancar.
+        self._btn_update = QPushButton("")
+        self._btn_update.setVisible(False)
+        self._btn_update.setStyleSheet("QPushButton { color: #ffb74d; font-weight: bold; }")
+        self._btn_update.setToolTip(tr("Hay una versión nueva: clic para ver las novedades."))
+        self._btn_update.clicked.connect(self._on_update_button)
+        self._status_bar.addPermanentWidget(self._btn_update)
 
         self._btn_about = QPushButton("ℹ")
         self._btn_about.setFixedWidth(28)
@@ -1442,13 +1460,82 @@ class MainWindow(QMainWindow):
             # menos se puede leer y copiar a mano.
             btn_donar.setToolTip(
                 tr("Abre la página de donación en el navegador") + "\n" + _DONATE_URL)
+        btn_check = box.addButton(tr("Buscar actualizaciones"),
+                                  QMessageBox.ButtonRole.ActionRole)
+        chk_auto = QCheckBox(tr("Buscar automáticamente (1 vez por día)"))
+        chk_auto.setChecked(self._config.update.auto_check)
+        chk_auto.setToolTip(tr(
+            "Al iniciar, consulta a GitHub si hay una versión nueva (como máximo una vez "
+            "por día). GitHub ve tu IP; la app no envía ningún dato propio."))
+        box.setCheckBox(chk_auto)
         box.addButton(QMessageBox.StandardButton.Ok)
 
         box.exec()
+        if chk_auto.isChecked() != self._config.update.auto_check:
+            self._config.update.auto_check = chk_auto.isChecked()
+            self._schedule_save()
+        if box.clickedButton() is btn_check:
+            self._start_update_check(manual=True)
         # Los botones ActionRole cierran el diálogo, así que el navegador se abre
         # después de exec(); QDesktopServices lo lanza sin bloquear la UI.
         if btn_donar is not None and box.clickedButton() is btn_donar:
             QDesktopServices.openUrl(QUrl(_DONATE_URL))
+
+    # ------------------------------------------------------------------
+    # Aviso de versión nueva (sólo avisa; ver updater.py)
+    # ------------------------------------------------------------------
+
+    def _auto_check_updates(self) -> None:
+        if os.environ.get("RNK_NO_UPDATE_CHECK"):   # los tests nunca tocan la red
+            return
+        u = self._config.update
+        if u.auto_check and updater.is_due(u.last_check, updater._now_utc()):
+            self._start_update_check(manual=False)
+
+    def _start_update_check(self, manual: bool) -> None:
+        if self._update_checker.is_running():
+            return
+        self._update_manual = manual
+        self._update_checker.start()
+        self._update_timer.start()
+
+    def _poll_update(self) -> None:
+        chk = self._update_checker
+        if chk.is_running():
+            return
+        self._update_timer.stop()
+        manual = self._update_manual
+        # Se anota la consulta aunque haya fallado: no reintentar en cada arranque.
+        self._config.update.last_check = updater._now_utc().isoformat()
+        self._schedule_save()
+        if chk.state == updater.UpdateChecker.AVAILABLE:
+            res = chk.result
+            if not manual and res["tag"] == self._config.update.skipped_version:
+                return
+            self._update_result = res
+            self._btn_update.setText("⬆ " + tr("{v} disponible").format(v=res["label"]))
+            self._btn_update.setVisible(True)
+            if manual:
+                self._on_update_button()
+        elif chk.state == updater.UpdateChecker.UP_TO_DATE:
+            self._btn_update.setVisible(False)
+            if manual:
+                QMessageBox.information(self, tr("Buscar actualizaciones"), tr(
+                    "Estás al día (v{v}).").format(v=display_version()))
+        elif manual:
+            QMessageBox.warning(self, tr("Buscar actualizaciones"), tr(
+                "No se pudo buscar actualizaciones: {err}").format(err=tr(chk.message)))
+
+    def _on_update_button(self) -> None:
+        res = getattr(self, "_update_result", None)
+        if not res:
+            return
+        dlg = UpdateDialog("v" + display_version(), res, self)
+        dlg.exec()
+        if dlg.choice == UpdateDialog.SKIP:
+            self._config.update.skipped_version = res["tag"]
+            self._btn_update.setVisible(False)
+            self._schedule_save()
 
     def _export_diagnostics(self) -> None:
         """Empaqueta settings.json + errores_dsp.log + el preset activo + un
@@ -2474,7 +2561,7 @@ class MainWindow(QMainWindow):
         valores actuales difieren del preset guardado) + build ID. Compara contra
         el snapshot en memoria — sin disco — para poder llamarse en cada cambio."""
         from buildinfo import BUILD_ID
-        title = "RadioNoiseKiller  v2.6  by LU6APA"
+        title = "RadioNoiseKiller  v%s  by LU6APA" % display_version()
         name = self._config.last_preset
         if name:
             self._refresh_preset_snapshot(force=False)
