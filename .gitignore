@@ -62,3 +62,5 @@ errores_dsp.log
 
 # Modulo de Traduccion instalado en desarrollo (entorno + modelos)
 TraduccionRuntime/
+# Base EiBi descargada en desarrollo
+EiBi/
