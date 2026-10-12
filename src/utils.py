@@ -63,6 +63,11 @@ def noise_profiles_dir() -> str:
     return _data_subdir("PerfilesRuido")
 
 
+def eibi_dir() -> str:
+    """Ruta a la carpeta EiBi/ (base de emisoras de onda corta descargada). La crea si no existe."""
+    return _data_subdir("EiBi")
+
+
 def recordings_dir() -> str:
     """Ruta a la carpeta Grabaciones/ (junto al .exe en bundle, en raíz en
     desarrollo). La crea si no existe."""

@@ -23,6 +23,7 @@ from ui.cpu_meter import CpuMeter
 from ui.advanced_tab import AdvancedAudioTab, AdvancedImpulseTab, AdvancedCancellerTab
 from ui.presets_tab import PresetsTab
 from ui.translate_tab import TranslateTab
+from ui.eibi_tab import EibiTab
 from translate_client import TranslateClient
 from ui.slider_row import SliderRow
 from ui.tooltips import apply_tooltips
@@ -197,6 +198,9 @@ class MainWindow(QMainWindow):
         self._tabs.addTab(self._adv_impulse_tab,   tr("Avanz. Impulsos"))
         self._tabs.addTab(self._adv_canceller_tab, tr("Avanz. Cancelador"))
         self._tabs.addTab(self._build_spectrum_tab(), tr("Espectro"))
+        self._eibi_tab = EibiTab(self._config)
+        self._eibi_tab.state_changed.connect(self._schedule_save)
+        self._tabs.addTab(self._eibi_tab, tr("EiBi"))
         self._presets_tab = PresetsTab(
             self._config, self._pipeline, self._preset_manager
         )

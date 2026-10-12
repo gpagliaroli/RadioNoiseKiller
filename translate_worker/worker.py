@@ -16,6 +16,7 @@ import protocol
 from asr import AsrEngine
 from dedupe import dedupe_segments, normalize
 from mt import MtEngine, NoLanguagePairError
+from speechfilter import split_speech
 
 MODEL_SIZE = sys.argv[1] if len(sys.argv) > 1 else "tiny"
 
@@ -85,17 +86,24 @@ def main() -> None:
             # confianzas de 24-41% dieron traducciones "con forma de
             # oración" pero sin sentido real). Ahorra además el costo de
             # las llamadas a argostranslate.
+            # Música / ruido / alucinaciones de Whisper: no se muestran ni
+            # se traducen. Si el chunk quedó sin voz, la UI avisa (music).
+            # Sin segmentos (el filtro de voz de Whisper no encontró nada, típico
+            # de música instrumental) cuenta igual: la UI colapsa los avisos
+            # repetidos en una sola línea.
+            segments, _ = split_speech(segments)
+            music = not segments
             # Repeticiones: dentro del chunk (bucle de Whisper) y contra el
             # último texto del chunk anterior.
             segments = dedupe_segments(segments, last_text)
             if segments:
                 last_text = normalize(segments[-1]["text"])
-            low_confidence = prob < min_confidence
+            low_confidence = prob < min_confidence and not music
             if not low_confidence:
                 for seg in segments:
                     seg["translated"] = mt.translate(seg["text"], detected_lang, lang_dst)
             print(protocol.encode_result(req_id, detected_lang, prob, segments,
-                                          low_confidence),
+                                          low_confidence, music),
                   flush=True)
         except NoLanguagePairError as e:
             print(protocol.encode_error(req_id, "no_language_pair", str(e)), flush=True)

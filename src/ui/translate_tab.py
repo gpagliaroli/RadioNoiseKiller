@@ -2,7 +2,7 @@ from collections import deque
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton,
-    QListWidget, QListWidgetItem, QFileDialog, QMessageBox,
+    QListWidget, QListWidgetItem, QMessageBox,
     QAbstractItemView, QMenu, QApplication, QProgressBar,
 )
 from PySide6.QtGui import QKeySequence, QShortcut
@@ -170,9 +170,6 @@ class TranslateTab(QWidget):
         root.addWidget(self._lbl_status)
 
         btn_row2 = QHBoxLayout()
-        self._btn_configure = QPushButton(tr("Configuración avanzada..."))
-        self._btn_configure.clicked.connect(self._on_configure)
-        btn_row2.addWidget(self._btn_configure)
         self._btn_uninstall = QPushButton(tr("Desinstalar módulo"))
         self._btn_uninstall.clicked.connect(self._on_uninstall)
         btn_row2.addWidget(self._btn_uninstall)
@@ -225,24 +222,6 @@ class TranslateTab(QWidget):
         self._config.translate.min_confidence = value / 100.0
         self.state_changed.emit()
 
-    def _on_configure(self) -> None:
-        t = self._config.translate
-        py, _ = QFileDialog.getOpenFileName(
-            self, tr("Python del worker de traducción"),
-            t.worker_python_path or "", "python.exe (python.exe);;Todos (*)")
-        if not py:
-            return
-        script, _ = QFileDialog.getOpenFileName(
-            self, tr("Script worker.py"),
-            t.worker_script_path or "", "Python (*.py)")
-        if not script:
-            return
-        t.worker_python_path = py
-        t.worker_script_path = script
-        self.state_changed.emit()
-        QMessageBox.information(self, tr("Configurado"), tr(
-            "Rutas guardadas. Presioná Iniciar para probar la conexión."))
-
     def _on_clear(self) -> None:
         """Borra solo los subtítulos acumulados — no toca el estado de la
         traducción (si está activa, sigue; si está detenida, sigue así)."""
@@ -277,7 +256,7 @@ class TranslateTab(QWidget):
 
     def _resolved_worker(self):
         """(python, script, env) del worker a lanzar: las rutas manuales
-        (Configuración avanzada) mandan; si no, el módulo instalado."""
+        (a mano en settings.json, para desarrollo) mandan; si no, el módulo instalado."""
         t = self._config.translate
         if self._manual_paths():
             return t.worker_python_path, t.worker_script_path, None
@@ -409,7 +388,15 @@ class TranslateTab(QWidget):
                 self._config.translate.min_confidence)
 
         for msg in self._client.pop_results():
-            if msg.get("ok") and msg.get("low_confidence"):
+            if msg.get("ok") and msg.get("music"):
+                # Sin voz en este tramo (música, ruido): se avisa en vez de
+                # dejar un hueco o traducir basura. No repite si la última
+                # línea ya era el mismo aviso.
+                aviso = tr("🎵 Música / sin voz detectada")
+                n = self._list.count()
+                if not (n and self._list.item(n - 1).text() == aviso):
+                    self._list.addItem(QListWidgetItem(aviso))
+            elif msg.get("ok") and msg.get("low_confidence"):
                 # El worker ya se salteó la traducción (ver worker.py): no
                 # hay "translated" confiable que mostrar, pero sin esta
                 # línea el usuario no tiene forma de saber que esos

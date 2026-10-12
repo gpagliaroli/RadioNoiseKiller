@@ -1111,7 +1111,6 @@ CATALOG = {
     "⬇  Instalar módulo de traducción": "⬇  Install translation module",
     "Instalar módulo de traducción": "Install translation module",
     "Cancelar": "Cancel",
-    "Configuración avanzada...": "Advanced settings...",
     "Desinstalar módulo": "Uninstall module",
     "Se van a descargar unos {mb} MB (componentes, modelo de voz e "
     "idioma {src} → {dst}) desde internet y se guardan en la carpeta "
@@ -1140,6 +1139,7 @@ CATALOG = {
     "Listo": "Done",
     "Cancelado": "Cancelled",
     # --- Traduccion: pestana ---
+    "🎵 Música / sin voz detectada": "🎵 Music / no speech detected",
     'Traducción':
         'Translation',
     'Origen:':
@@ -1186,14 +1186,6 @@ CATALOG = {
         'The translation process closed unexpectedly. Stop and Start again to retry.',
     '⚠ Transcripción aproximada: con señal débil, fading o ruido de banda el resultado puede ser impreciso o directamente incorrecto. Es una ayuda para hacerse una idea de un idioma que no se conoce, no un subtítulo confiable.':
         '⚠ Approximate transcription: with weak signals, fading or band noise the result may be inaccurate or plainly wrong. It is an aid to get an idea of a language you do not know, not a reliable subtitle.',
-    'Python del worker de traducción':
-        'Translation worker Python',
-    'Script worker.py':
-        'worker.py script',
-    'Configurado':
-        'Configured',
-    'Rutas guardadas. Presioná Iniciar para probar la conexión.':
-        'Paths saved. Press Start to test the connection.',
     'Exportar...':
         'Export...',
     'Importar...':
@@ -1216,4 +1208,95 @@ CATALOG = {
         'Diagnostics export error',
     'Diagnóstico exportado: {path}':
         'Diagnostics exported: {path}',
+    # --- Solapa EiBi ---
+    'EiBi':
+        'EiBi',
+    'Frecuencia:':
+        'Frequency:',
+    'Tolerancia ±':
+        'Tolerance ±',
+    'Frecuencia sintonizada, en kHz (ej. 6140 o 9560).':
+        'Tuned frequency, in kHz (e.g. 6140 or 9560).',
+    'Cuánto se busca alrededor de la frecuencia. Subila si tu receptor está levemente desafinado o si estás en una banda con canales cada 5 kHz.':
+        'How far around the frequency to search. Raise it if your receiver is slightly off or you are on a band with 5 kHz channels.',
+    'Usar hora actual (UTC)':
+        'Use current time (UTC)',
+    'Toma la hora y el día del reloj de la PC convertidos a UTC. Destildalo para consultar otro horario.':
+        'Takes the time and day from the PC clock converted to UTC. Untick it to look up another time.',
+    'Lun':
+        'Mon',
+    'Mar':
+        'Tue',
+    'Mié':
+        'Wed',
+    'Jue':
+        'Thu',
+    'Vie':
+        'Fri',
+    'Sáb':
+        'Sat',
+    'Dom':
+        'Sun',
+    'Verificar la base automáticamente al abrir esta solapa':
+        'Check the database automatically when this tab opens',
+    'Si la base tiene más de 7 días, consulta al servidor si hay una versión más nueva y solo la baja si cambió. Sin esto, se actualiza con el botón.':
+        'If the database is older than 7 days, asks the server for a newer version and only downloads it if it changed. Without this, it updates with the button.',
+    'En el aire':
+        'On air',
+    'kHz':
+        'kHz',
+    'Δ kHz':
+        'Δ kHz',
+    'Hora UTC':
+        'Time UTC',
+    'Días':
+        'Days',
+    'Emisora':
+        'Station',
+    'País':
+        'Country',
+    'Idioma':
+        'Language',
+    'Zona':
+        'Target',
+    'Sitio / notas':
+        'Site / notes',
+    'Actualizar ahora':
+        'Update now',
+    'Consulta al servidor y baja la base si hay una versión más nueva.':
+        'Asks the server and downloads the database if there is a newer version.',
+    'Datos: EiBi — Eike Bierwirth (eibispace.de). Es la programación publicada: solo escuchar confirma qué emisora es.':
+        'Data: EiBi — Eike Bierwirth (eibispace.de). This is the published schedule: only listening confirms which station it is.',
+    'Todavía no hay base descargada. Se baja sola al abrir esta solapa (necesita internet una vez) o con el botón Actualizar ahora.':
+        'No database downloaded yet. It downloads by itself when this tab opens (internet needed once) or with the Update now button.',
+    'Sin coincidencias en {f:.1f} ± {t:.1f} kHz.':
+        'No matches at {f:.1f} ± {t:.1f} kHz.',
+    '{n} coincidencias, {a} en el aire a las {h:02d}:{m:02d} UTC.':
+        '{n} matches, {a} on air at {h:02d}:{m:02d} UTC.',
+    'Se muestran las primeras {n}.':
+        'Showing the first {n}.',
+    'En el aire ahora':
+        'On air now',
+    'Los días no se pueden interpretar: revisá la columna Días':
+        'The days cannot be interpreted: check the Days column',
+    'Fuera de horario':
+        'Off schedule',
+    'Actualizando la base EiBi...':
+        'Updating the EiBi database...',
+    'No se pudo bajar la base: {err}':
+        'Could not download the database: {err}',
+    'Sin base descargada.':
+        'No database downloaded.',
+    'verificada hace {d} d':
+        'checked {d} d ago',
+    'verificada hoy':
+        'checked today',
+    'verificación desconocida':
+        'check date unknown',
+    'EiBi {season} · {n} entradas · {age}':
+        'EiBi {season} · {n} entries · {age}',
+    'no se pudo actualizar: {err}':
+        'could not update: {err}',
+    'vencida':
+        'expired',
 }

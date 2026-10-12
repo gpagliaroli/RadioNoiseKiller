@@ -93,17 +93,17 @@ def _set_combo(combo, data) -> None:
 # ---------------------------------------------------------------------- #
 
 def test_tab_order():
-    """8 pestanas en orden fijo, con 'Modulos' en la 2da posicion."""
+    """9 pestanas en orden fijo, con 'Modulos' en la 2da posicion."""
     w = _win()
     tabs = w._tabs
     expected = [
         tr("Principal"), tr("Módulos"), tr("Avanz. Audio"),
         tr("Avanz. Impulsos"), tr("Avanz. Cancelador"),
-        tr("Espectro"), tr("Presets"), tr("Traducción"),
+        tr("Espectro"), tr("EiBi"), tr("Presets"), tr("Traducción"),
     ]
     got = [tabs.tabText(i) for i in range(tabs.count())]
     assert got == expected, f"Orden de pestanas inesperado: {got}"
-    print("Orden de pestanas (8, Modulos en pos 1)   OK")
+    print("Orden de pestanas (9, Modulos en pos 1)   OK")
 
 
 def test_modules_group_moved_to_own_tab():
@@ -1133,6 +1133,58 @@ def test_mute_button_gating_and_state():
     print("Mute: gating + estado del boton              OK")
 
 
+def test_eibi_tab_search_and_no_network():
+    """La solapa EiBi: no toca la red al construirse; con una base guardada llena la tabla
+    (en el aire primero), respeta la hora manual y persiste frecuencia/tolerancia."""
+    import tempfile
+    import eibi_db
+    from datetime import datetime, timezone
+    from PySide6.QtWidgets import QApplication
+    from ui.eibi_tab import EibiTab
+
+    def sin_red(req, timeout):
+        raise AssertionError("la solapa no debe tocar la red en este test")
+
+    store = eibi_db.EibiStore(tempfile.mkdtemp(prefix="rnk_eibi_ui_"))
+    now = datetime(2026, 10, 10, 19, 30, tzinfo=timezone.utc)   # sabado
+    rows = ["6140;1900-2000;Mo-Fr;ARG;Radio Argentina;S;LAm;;1;;",
+            "6140;0000-2400;;B;Radio Casa;P;LAm;;1;;"]
+    relleno = ["%d;0000-2400;;X;R%d;E;Eu;;1;;" % (3000 + i, i) for i in range(1200)]
+    raw = "\n".join(["kHz:75;x;"] + rows + relleno).encode("latin-1")
+    store.save("a26", raw, "", "", now)
+    updater = eibi_db.EibiUpdater(store, sin_red, lambda: now)
+    orig_now = eibi_db._now_utc
+    eibi_db._now_utc = lambda: now
+    try:
+        w = _win()
+        cfg = w._config
+        assert not w._eibi_tab._shown_once, "no debe cargar ni bajar nada antes de mostrarse"
+        tab = EibiTab(cfg, updater)
+        cfg.eibi.auto_update = False          # esta prueba no verifica el vencimiento
+        tab.show()
+        QApplication.processEvents()
+        assert tab._db is not None and len(tab._db) > 1000
+        tab._spin_freq.setValue(6140.0)
+        tab._spin_tol.setValue(1.0)
+        assert tab._table.rowCount() == 2
+        assert tab._table.item(0, 5).text() == "Radio Casa" and tab._table.item(0, 0).text() == "●"
+        assert tab._table.item(1, 0).text() == "○"            # Mo-Fr y hoy es sabado
+        assert cfg.eibi.freq_khz == 6140.0 and cfg.eibi.tol_khz == 1.0
+        # hora manual: lunes 19:30 -> Radio Argentina pasa a estar en el aire
+        tab._chk_now.setChecked(False)
+        tab._combo_day.setCurrentIndex(0)
+        tab._edit_time.setTime(tab._edit_time.time().fromString("19:30", "HH:mm"))
+        stations = {tab._table.item(r, 5).text(): tab._table.item(r, 0).text()
+                    for r in range(tab._table.rowCount())}
+        assert stations["Radio Argentina"] == "●", stations
+        tab._spin_freq.setValue(9999.0)
+        assert tab._table.rowCount() == 0 and "Sin coincidencias" in tab._lbl_result.text()
+        tab.close()
+    finally:
+        eibi_db._now_utc = orig_now
+    print("EiBi: solapa busca, ordena, hora manual y no usa la red  OK")
+
+
 def test_translate_tab_warning_and_not_installed():
     """La pestaña Traducción: el banner de advertencia está siempre visible
     (no es opcional, lo pidió el usuario explícito) y, sin rutas de worker
@@ -1316,6 +1368,40 @@ def test_translate_tab_low_confidence_warning():
         w._pipeline.pop_translate_chunk = orig_chunk
         tab._active = False
     print("Traduccion: aviso de confianza baja, sin contaminar el indicador  OK")
+
+
+def test_translate_tab_music_notice_not_repeated():
+    """Un tramo sin voz (musica/ruido) muestra UN aviso, no traduce nada, no
+    contamina el indicador de idioma y no se repite si llegan varios seguidos."""
+    from translate_client import TranslateClient
+    w = _win()
+    tab = w._translate_tab
+    tab._active = True
+    w._translate_client._state = TranslateClient.READY
+    msg = {"ok": True, "music": True, "low_confidence": False,
+           "detected_lang": "en", "detected_lang_prob": 0.2, "segments": []}
+    orig_pop = w._translate_client.pop_results
+    orig_chunk = w._pipeline.pop_translate_chunk
+    w._pipeline.pop_translate_chunk = lambda seconds: None
+    try:
+        w._translate_client.pop_results = lambda: [dict(msg), dict(msg)]
+        tab._tick()
+        w._translate_client.pop_results = lambda: [dict(msg)]
+        tab._tick()
+        assert tab._list.count() == 1, "los avisos de musica seguidos deben colapsar"
+        assert "sin voz" in tab._list.item(0).text().lower()
+        assert len(tab._recent) == 0
+        # una linea de voz real despues, y de nuevo musica: ahora SI vuelve a avisar
+        w._translate_client.pop_results = lambda: [
+            {"ok": True, "detected_lang": "en", "latency_s": 1.0,
+             "segments": [{"text": "hello", "translated": "hola"}]}, dict(msg)]
+        tab._tick()
+        assert tab._list.count() == 3
+    finally:
+        w._translate_client.pop_results = orig_pop
+        w._pipeline.pop_translate_chunk = orig_chunk
+        tab._active = False
+    print("Traduccion: aviso de musica sin repetirse  OK")
 
 
 def test_translate_tab_detected_lang_and_avg_latency():
@@ -2048,6 +2134,7 @@ if __name__ == "__main__":
     test_bypass_remembers_output_gain()
     test_bypass_clears_status_bar_message()
     test_bypass_gain_persiste_entre_sesiones()
+    test_eibi_tab_search_and_no_network()
     test_translate_tab_warning_and_not_installed()
     test_translate_tab_show_mode()
     test_translate_tab_format_segment_sin_translated_no_crashea()
@@ -2055,6 +2142,7 @@ if __name__ == "__main__":
     test_translate_tab_copy_to_clipboard()
     test_translate_tab_min_confidence_slider_persists()
     test_translate_tab_low_confidence_warning()
+    test_translate_tab_music_notice_not_repeated()
     test_translate_tab_detected_lang_and_avg_latency()
     test_detener_procesamiento_detiene_traduccion()
     test_detener_procesamiento_no_rompe_si_traduccion_inactiva()

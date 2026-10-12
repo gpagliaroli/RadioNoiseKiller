@@ -42,7 +42,7 @@ radio, y el manual queda para cuando querés el porqué.
 
 También podés hacer **click derecho sobre cualquier slider** para restaurar su valor de fábrica.
 
-> **Nombres de las pestañas.** Para que las ocho entren en el ancho de la ventana sin scroll, *Avanzada Audio*, *Avanzada Impulsos* y *Avanzada Cancelador* se muestran como **Avanz. Audio**, **Avanz. Impulsos** y **Avanz. Cancelador**. En este manual se las nombra con el nombre completo.
+> **Nombres de las pestañas.** Para que las nueve entren en el ancho de la ventana sin scroll, *Avanzada Audio*, *Avanzada Impulsos* y *Avanzada Cancelador* se muestran como **Avanz. Audio**, **Avanz. Impulsos** y **Avanz. Cancelador**. En este manual se las nombra con el nombre completo.
 
 ---
 
@@ -1249,7 +1249,6 @@ Hace falta internet **solo para instalar**. Después funciona sin conexión; la 
 
 La instalación baja los idiomas que estén elegidos en ese momento (origen y destino; con origen *Auto* baja el inglés como base).
 
-*Configuración avanzada...* permite apuntar a un entorno Python propio en vez del instalado (para quien ya lo armó a mano); esas rutas tienen prioridad.
 
 ### Controles
 
@@ -1273,6 +1272,46 @@ El indicador **Idioma detectado · Promedio** muestra el idioma más reciente y 
 - En una PC lenta la traducción compite por CPU con el procesamiento de audio. Si aparecen cortes, detené la traducción.
 
 ---
+
+---
+
+## Capítulo 15 — EiBi: ¿qué emisora es?
+
+### Descripción
+
+La solapa **EiBi** responde a la pregunta de siempre en onda corta: *"estoy escuchando algo en 6140 kHz, ¿qué emisora es?"*. Busca la frecuencia en la base **EiBi** (Eike Bierwirth, [eibispace.de](http://www.eibispace.de)), la grilla de emisoras de onda corta más usada por los oyentes, y muestra qué emisoras la usan, a qué hora, en qué idioma y hacia qué zona transmiten. Marca con **●** las que **están en el aire ahora** según la hora UTC.
+
+> **Es la programación publicada, no lo que realmente está al aire.** Las emisoras cambian de frecuencia, se atrasan o transmiten fuera de grilla. EiBi lo dice igual: **el único dato seguro es lo que escuchás vos**. Usá la lista para acotar candidatas y confirmá con la identificación de la emisora, el idioma o el tipo de programa. El módulo de **Traducción** (cap. 14) puede ayudar a reconocer el idioma.
+
+### Cómo se usa
+
+1. Escribí la **Frecuencia** sintonizada (en kHz) y la **Tolerancia ±** (por defecto 1 kHz).
+2. La tabla muestra las emisoras de la grilla en ese rango. Por defecto se usa la **hora actual en UTC** del reloj de la PC (la hora se ve arriba, junto al día). Para consultar otro horario destildá **Usar hora actual** y elegí hora y día.
+3. Orden de la tabla: primero las que están en el aire, después las de días que no se pueden interpretar (**?**), y al final las fuera de horario (**○**, en gris). Dentro de cada grupo, las más cercanas a la frecuencia.
+
+| Columna | Qué es |
+|---------|--------|
+| **En el aire** | ● en el aire ahora · ○ fuera de horario · ? los días del campo no se pueden interpretar (revisá la columna Días) |
+| **kHz / Δ kHz** | Frecuencia de la grilla y su diferencia con la que buscaste |
+| **Hora UTC / Días** | Horario de transmisión y días de la semana (vacío = todos). Las que cruzan la medianoche (1900-0400) se interpretan bien |
+| **Emisora / País** | Nombre y país del transmisor (código ITU, con el nombre del país) |
+| **Idioma / Zona** | Idioma de la transmisión y zona hacia la que apunta la antena. Si la zona objetivo es lejana, la señal que oís puede ser un lóbulo lateral |
+| **Sitio / notas** | Código del sitio de transmisión y observaciones de EiBi |
+
+El idioma `-MX` de EiBi significa música; `-CW`, telegrafía; `-TY`, teletipo digital.
+
+### La base de datos: descarga y vencimiento
+
+- La base **no viene en el instalador**: se baja de eibispace.de (≈0,5 MB) y se guarda en la carpeta `EiBi/`, junto a `settings.json`. Después funciona **sin conexión**.
+- **Automática al abrir la solapa.** Si la base tiene más de **7 días**, la aplicación le pregunta al servidor si hay una versión más nueva y **solo la baja si cambió** (si no cambió, no gasta datos). Si todavía no hay base, la baja la primera vez que abrís la solapa. Se puede desactivar con *Verificar la base automáticamente al abrir esta solapa*.
+- **Manual:** el botón **Actualizar ahora** consulta al servidor en cualquier momento, aunque no haya vencido.
+- EiBi publica una grilla por temporada: **A** (verano, de fines de marzo a fines de octubre) y **B** (invierno). La aplicación elige la que corresponde a la fecha; cuando cambia la temporada y la nueva todavía no está publicada, sigue con la anterior y vuelve a mirar en la próxima apertura.
+- Si la descarga falla (sin internet, servidor caído, archivo dañado), **se conserva la base anterior** y se avisa en la línea de estado; nunca queda una base a medias.
+- La línea de estado de abajo muestra la temporada, la cantidad de entradas y cuándo se verificó por última vez. Aparece en ámbar cuando está vencida.
+
+> **Por qué la descarga es por HTTP y no HTTPS:** el sitio de EiBi tiene el certificado HTTPS vencido, así que solo responde por HTTP. La aplicación valida el contenido (formato y cantidad de filas) antes de reemplazar la base guardada.
+
+*Los datos de EiBi son de uso libre, incluso dentro de software de terceros. Créditos: Eike Bierwirth — eibispace.de.*
 
 ---
 

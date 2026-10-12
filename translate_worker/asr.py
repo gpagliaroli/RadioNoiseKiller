@@ -39,6 +39,8 @@ class AsrEngine:
         if lang_src and lang_src != "auto":
             kwargs["language"] = lang_src
         segments, info = self.model.transcribe(audio, **kwargs)
-        out = [{"start": float(s.start), "end": float(s.end), "text": s.text.strip()}
+        out = [{"start": float(s.start), "end": float(s.end), "text": s.text.strip(),
+                "no_speech_prob": float(s.no_speech_prob),
+                "avg_logprob": float(s.avg_logprob)}
                for s in segments]
         return info.language, float(info.language_probability), out

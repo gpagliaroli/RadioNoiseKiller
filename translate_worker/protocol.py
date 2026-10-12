@@ -29,7 +29,8 @@ def encode_request(req_id: int, audio_b64: str, sample_rate: int,
 
 
 def encode_result(req_id: int, detected_lang: str, detected_lang_prob: float,
-                   segments: list, low_confidence: bool = False) -> str:
+                   segments: list, low_confidence: bool = False,
+                   music: bool = False) -> str:
     """segments: lista de dicts {"start", "end", "text", "translated"}.
     low_confidence=True: detected_lang_prob no llegó al mínimo pedido en el
     request — "translated" queda sin poner en los segmentos (ver worker.py),
@@ -42,6 +43,7 @@ def encode_result(req_id: int, detected_lang: str, detected_lang_prob: float,
         "detected_lang_prob": detected_lang_prob,
         "segments": segments,
         "low_confidence": low_confidence,
+        "music": music,   # el chunk no tenía voz (música/ruido): sin segmentos
     })
 
 

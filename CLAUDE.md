@@ -577,7 +577,20 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
 
 ### Cambios pendientes de release
 
-(ninguno)
+- **Solapa EiBi** (post-v2.6): `src/eibi_db.py` (sin Qt) + `src/ui/eibi_tab.py`. Busca por frecuencia ± tolerancia
+  y marca "en el aire ahora" por hora UTC (días, cruce de medianoche, fechas P=6). Base en `data_dir()/EiBi/`
+  (`sked-a26.csv` + `meta.json`); **auto al abrir la solapa si pasaron 7 días** con GET condicional (ETag /
+  Last-Modified → 304 no baja), botón "Actualizar ahora", valida antes de reemplazar y ante cualquier fallo
+  conserva la base vieja. **El sitio solo anda por HTTP (certificado HTTPS vencido)**. El CSV no marca utilidades
+  (no hay P≥90 en la práctica): por eso no hay casilla "ocultar utilidad". `src/eibi_codes.py` se genera con
+  `tools/gen_eibi_codes.py` desde el README de EiBi. `test_eibi`, `test_ui` — `pendiente de validar` en el aire
+  (comparar con emisoras conocidas) y el ancho de las 9 solapas en 125/150 %.
+- **Traducción: filtro de no-voz** (post-v2.6): `translate_worker/speechfilter.py` descarta segmentos
+  con símbolos/etiquetas de música, frases de alucinación de Whisper ("Subtitles by…") o
+  `no_speech_prob`>0,6 con `avg_logprob`<−1 (>0,9 solo); si el tramo queda sin voz el worker manda
+  `music=True` y la pestaña muestra UNA línea "🎵 Música / sin voz detectada" (no se repite). Música
+  con voz cantada pasa el filtro (limitación). Umbrales de Whisper sin ajustar con grabaciones
+  reales. `test_translate`, `test_ui`, `translate_worker/test_speechfilter.py` — `pendiente de validar`.
 
 Formato al acumular: una línea por cambio con su estado de validación (`validado en el aire` /
 `pendiente de validar`), y el bloque narrativo completo en el historial, sección "En curso". El

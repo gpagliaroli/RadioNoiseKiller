@@ -22,11 +22,9 @@ El worker viaja dentro del bundle como datos (los `.spec` solo copian los
 al runtime en cada arranque del módulo, así una app nueva actualiza el worker
 sin reinstalar el entorno.
 
-## Instalación manual (avanzado)
+## Rutas manuales (solo desarrollo)
 
-Botón **Configuración avanzada...**: elegí el `python` de tu propio venv
-(`pip install -r requirements.txt`) y el `worker.py`. Las rutas manuales
-tienen prioridad sobre el módulo instalado.
+Si `translate.worker_python_path` y `translate.worker_script_path` están cargadas en `settings.json`, tienen prioridad sobre el módulo instalado y el panel de instalación se oculta. No hay botón en la UI: para volver al módulo instalado, vaciá esas dos claves.
 
 ## Por qué está separado
 

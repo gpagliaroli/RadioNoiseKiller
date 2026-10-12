@@ -42,7 +42,7 @@ radio, leaving the manual for when you want the reasoning.
 
 You can also **right-click any slider** to restore its factory value.
 
-> **Tab names.** So that all eight fit in the window width without scrolling, *Advanced Audio*, *Advanced Impulse* and *Advanced Canceller* are shown as **Adv. Audio**, **Adv. Impulse** and **Adv. Canceller**. This manual uses the full names.
+> **Tab names.** So that all nine fit in the window width without scrolling, *Advanced Audio*, *Advanced Impulse* and *Advanced Canceller* are shown as **Adv. Audio**, **Adv. Impulse** and **Adv. Canceller**. This manual uses the full names.
 
 ---
 
@@ -1250,7 +1250,6 @@ Internet is needed **only to install**. After that it works offline; the one exc
 
 The installation downloads the languages selected at that moment (source and target; with source *Auto* it downloads English as the base).
 
-*Advanced settings...* lets you point to your own Python environment instead of the installed one (for those who set it up by hand); those paths take priority.
 
 ### Controls
 
@@ -1274,6 +1273,46 @@ The **Detected language · Average** indicator shows the latest language and the
 - On a slow PC translation competes for CPU with audio processing. If dropouts appear, stop the translation.
 
 ---
+
+---
+
+## Chapter 15 — EiBi: which station is it?
+
+### Description
+
+The **EiBi** tab answers the eternal shortwave question: *"I'm hearing something on 6140 kHz — which station is it?"*. It looks the frequency up in the **EiBi** database (Eike Bierwirth, [eibispace.de](http://www.eibispace.de)), the most widely used shortwave schedule among listeners, and shows which stations use it, at what time, in what language and toward which target area. It marks with **●** the ones that **are on air right now** according to UTC time.
+
+> **It is the published schedule, not what is actually on air.** Stations change frequency, run late or transmit off schedule. EiBi says so itself: **the only certain data is what you hear**. Use the list to narrow down candidates and confirm with the station identification, the language or the programme type. The **Translation** module (ch. 14) can help recognise the language.
+
+### How to use it
+
+1. Type the tuned **Frequency** (in kHz) and the **Tolerance ±** (1 kHz by default).
+2. The table shows the schedule entries in that range. By default the **current UTC time** from the PC clock is used (the time is shown above, next to the day). To look up another time untick **Use current time** and pick a time and day.
+3. Table order: first the ones on air, then those whose days cannot be interpreted (**?**), and last the ones off schedule (**○**, greyed). Within each group, the closest to the frequency first.
+
+| Column | What it is |
+|--------|------------|
+| **On air** | ● on air now · ○ off schedule · ? the days field cannot be interpreted (check the Days column) |
+| **kHz / Δ kHz** | Schedule frequency and its difference from the one you searched |
+| **Time UTC / Days** | Transmission time and weekdays (empty = every day). Entries crossing midnight (1900-0400) are handled correctly |
+| **Station / Country** | Name and country of the transmitter (ITU code, with the country name) |
+| **Language / Target** | Language of the broadcast and the area the antenna points to. If the target area is far away, the signal you hear may be a side lobe |
+| **Site / notes** | Transmitter-site code and EiBi remarks |
+
+EiBi's `-MX` language means music; `-CW`, telegraphy; `-TY`, digital teletype.
+
+### The database: download and expiry
+
+- The database is **not in the installer**: it is downloaded from eibispace.de (≈0.5 MB) and stored in the `EiBi/` folder next to `settings.json`. After that it works **offline**.
+- **Automatic when the tab opens.** If the database is older than **7 days**, the application asks the server whether there is a newer version and **only downloads it if it changed** (if not, no data is used). If there is no database yet, it is downloaded the first time you open the tab. It can be turned off with *Check the database automatically when this tab opens*.
+- **Manual:** the **Update now** button asks the server at any time, even if it has not expired.
+- EiBi publishes one schedule per season: **A** (summer, late March to late October) and **B** (winter). The application picks the one for the date; when the season changes and the new one is not published yet, it keeps using the previous one and looks again the next time you open the tab.
+- If the download fails (no internet, server down, damaged file), **the previous database is kept** and the status line says so; it never ends up with a half-written database.
+- The status line below shows the season, the number of entries and when it was last checked. It turns amber when expired.
+
+> **Why HTTP and not HTTPS:** the EiBi site has an expired HTTPS certificate, so it only answers over HTTP. The application validates the content (format and number of rows) before replacing the stored database.
+
+*EiBi data is free to use, including within third-party software. Credits: Eike Bierwirth — eibispace.de.*
 
 ---
 

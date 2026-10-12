@@ -39,6 +39,7 @@ SUITES = [
     "test_pipeline",
     "test_integration",
     "test_translate",
+    "test_eibi",
     "test_ui",          # requiere QT_QPA_PLATFORM=offscreen
 ]
 

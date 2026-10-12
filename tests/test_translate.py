@@ -50,6 +50,11 @@ def test_protocol_roundtrip():
     msg = proto.decode_line(line)
     assert msg["low_confidence"] is True
 
+    assert msg["music"] is False, "music default debe ser False"
+    line = proto.encode_result(9, "en", 0.2, [], music=True)
+    msg = proto.decode_line(line)
+    assert msg["music"] is True and msg["segments"] == []
+
     line = proto.encode_error(7, "no_language_pair", "zh->xx")
     msg = proto.decode_line(line)
     assert msg["ok"] is False

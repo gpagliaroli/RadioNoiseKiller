@@ -197,6 +197,30 @@ class TranslateConfig:
     min_confidence: float = 0.5   # 0.0-1.0 — por debajo, se avisa en vez de traducir
 
 
+def _clamp_float(value, rng, default):
+    """float dentro de rng; None / basura -> default."""
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return default
+    if v != v:   # NaN
+        return default
+    return min(max(v, rng[0]), rng[1])
+
+
+# Rangos de la solapa EiBi: el clamp del load() == el rango de los controles (invariante 1).
+EIBI_FREQ_RANGE = (10.0, 30000.0)   # kHz
+EIBI_TOL_RANGE = (0.1, 10.0)        # ± kHz
+
+
+@dataclass
+class EibiConfig:
+    """Solapa EiBi (base de emisoras de onda corta, ver eibi_db.py)."""
+    freq_khz: float = 6000.0
+    tol_khz: float = 1.0
+    auto_update: bool = True   # verificar la base al abrir la solapa si venció
+
+
 @dataclass
 class AppConfig:
     audio:     AudioConfig     = field(default_factory=AudioConfig)
@@ -204,6 +228,7 @@ class AppConfig:
     gain:      GainConfig      = field(default_factory=GainConfig)
     window:    WindowConfig    = field(default_factory=WindowConfig)
     translate: TranslateConfig = field(default_factory=TranslateConfig)
+    eibi:      EibiConfig      = field(default_factory=EibiConfig)
     last_preset: str = ""   # nombre del último preset cargado/guardado (solo informativo)
     last_noise_profile: str = ""  # último perfil de ruido cargado/guardado (auto-recarga)
     language: str = "es"    # idioma de la UI ("es"/"en"); aplicar requiere reinicio
@@ -301,6 +326,11 @@ class AppConfig:
                 "lang_dst": self.translate.lang_dst,
                 "show_mode": self.translate.show_mode,
                 "min_confidence": self.translate.min_confidence,
+            },
+            "eibi": {
+                "freq_khz": self.eibi.freq_khz,
+                "tol_khz": self.eibi.tol_khz,
+                "auto_update": self.eibi.auto_update,
             },
         }
         with open(path, "w", encoding="utf-8") as f:
@@ -433,3 +463,8 @@ class AppConfig:
         self.translate.show_mode = _show_mode if _show_mode in ("both", "src", "dst") else "both"
         _min_conf = float(t.get("min_confidence", self.translate.min_confidence))
         self.translate.min_confidence = _min_conf if 0.0 <= _min_conf <= 1.0 else 0.5
+
+        e = data.get("eibi", {})
+        self.eibi.freq_khz = _clamp_float(e.get("freq_khz"), EIBI_FREQ_RANGE, self.eibi.freq_khz)
+        self.eibi.tol_khz = _clamp_float(e.get("tol_khz"), EIBI_TOL_RANGE, self.eibi.tol_khz)
+        self.eibi.auto_update = bool(e.get("auto_update", self.eibi.auto_update))
