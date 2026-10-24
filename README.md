@@ -5,7 +5,7 @@ Procesa el audio ya demodulado entre el receptor y los parlantes o auriculares.
 
 Todo el DSP es **numpy/scipy puro** — sin IA, sin modelos externos, sin GPU y sin internet.
 
-**Plataformas:** Windows 10/11 · Linux x86_64 · ARM64 / Raspberry Pi (experimental)
+**Plataformas:** Windows 10/11 · Linux x86_64 · Raspberry Pi 4 (desde el fuente, con restricciones — ver [Descargas](#descargas))
 **Idiomas:** español · inglés
 **En video:** [explicación de la aplicación en *Net de la Tecnología*](https://www.youtube.com/watch?v=o8AEuAEnQpY)
 
@@ -24,6 +24,38 @@ Los paquetes listos para usar están en la [página de releases](https://github.
 
 No requieren instalación. **El manual es la documentación de verdad**: este README es sólo el
 panorama general y las notas para quien quiera tocar el código.
+
+### Raspberry Pi 4 (desde el fuente)
+
+No hay paquete para Raspberry Pi: se corre desde el código fuente. Probado en una **Raspberry Pi 4**
+con Raspberry Pi OS de **64 bits** (basado en Debian 13, Python 3.13) y dos placas de audio USB.
+El paquete compilado (PyInstaller) todavía no se probó en la Pi.
+
+```bash
+sudo apt update
+sudo apt install git python3-venv python3-pip libportaudio2 libxcb-xinerama0
+git clone https://github.com/gpagliaroli/RadioNoiseKiller.git
+cd RadioNoiseKiller
+python3 -m venv .venv
+.venv/bin/pip install sounddevice numpy scipy PySide6
+.venv/bin/python src/main.py
+```
+
+Restricciones que encontramos en la prueba:
+
+- **Sistema de 64 bits obligatorio** (`uname -m` debe decir `aarch64`): en 32 bits no hay PySide6.
+- **Usar bloque de audio 960** (Avanzada Audio, requiere reiniciar el stream). Con 480 el procesado
+  ocupa 75–80 % del tiempo disponible, con picos de más de 100 %; con 960 baja a ~50 %.
+- **Desactivar el Excitador armónico, la Recuperación de graves y el Refuerzo de pitch de voz.** Con
+  todos los módulos activos aparecen cortes de audio aunque el promedio del medidor de CPU ronde el
+  50 %; sin esos tres la salida casi no cambia.
+- **No elegir la salida HDMI de la Pi** (`vc4-hdmi`): no abre (`Sample format not supported
+  [-9994]`). Sirven una placa USB o los auriculares. Sin un `settings.json` previo, la app puede
+  proponer el HDMI por ser el primero de la lista: elegí otra salida antes de activar.
+- **No instalar la pestaña Traducción** en la Pi.
+- El aviso `qt.qpa.wayland.textinput ... Trying to disable` en la terminal es inofensivo.
+
+Pendiente de validar: prueba larga con la radio conectada y el paquete compilado.
 
 ---
 
@@ -155,7 +187,8 @@ python -m PyInstaller reductor-linux.spec --clean --noconfirm
 
 El build de Linux también corre en GitHub Actions al pushear un tag de versión (`v*`), o a mano desde
 la pestaña *Actions*. El disparo manual tiene además la opción de compilar para **ARM64 / Raspberry
-Pi**, que por ahora es experimental: compila, pero todavía no se verificó que arranque en una Pi real.
+Pi**, que por ahora es experimental: compila, pero el paquete todavía no se verificó en una Pi real
+(desde el fuente sí anda en una Pi 4, ver arriba).
 
 ---
 
