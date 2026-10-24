@@ -229,7 +229,15 @@ class AudioStream:
 
     @property
     def overruns(self) -> int:
+        """Overflows de ENTRADA que PortAudio reportó (el callback llegó tarde
+        y el dispositivo perdió muestras)."""
         return self._overrun_count
+
+    @property
+    def underruns(self) -> int:
+        """Underflows de SALIDA que PortAudio reportó (el dispositivo se quedó
+        sin muestras que reproducir)."""
+        return self._underrun_count
 
     def _callback(
         self,

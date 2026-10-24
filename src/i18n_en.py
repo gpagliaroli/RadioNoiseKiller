@@ -1340,4 +1340,17 @@ CATALOG = {
         'Response too large',
     'Respuesta de GitHub inválida':
         'Invalid response from GitHub',
+
+    # --- Contador de cortes ---
+    "Cortes: {n}  ·  pico {ms:.0f} ms": "Dropouts: {n}  ·  peak {ms:.0f} ms",
+    "Cortes de audio desde que se activó el procesamiento: veces que la\n"
+    "salida se quedó sin audio procesado o que el dispositivo perdió\n"
+    "muestras. «pico» es el procesado más lento de un frame — si pasa\n"
+    "la duración del bloque (480 = 10 ms, 960 = 20 ms) hay un corte.\n"
+    "El detalle queda en errores_dsp.log y en Exportar diagnóstico.":
+        "Audio dropouts since processing was started: times the output ran\n"
+        "out of processed audio or the device lost samples. «peak» is the\n"
+        "slowest processing time of a single frame — if it exceeds the\n"
+        "block length (480 = 10 ms, 960 = 20 ms) there is a dropout.\n"
+        "Details go to errores_dsp.log and to Export diagnostics.",
 }

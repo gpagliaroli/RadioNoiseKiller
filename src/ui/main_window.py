@@ -798,6 +798,15 @@ class MainWindow(QMainWindow):
             "tarda el procesado. Cerca de 100% o más es la firma de un\n"
             "underrun (útil sobre todo en Raspberry Pi)."))
         layout.addWidget(self._cpu_meter, alignment=Qt.AlignLeft)
+        self._lbl_dropouts = QLabel("—")
+        self._lbl_dropouts.setStyleSheet(self._IDLE_LBL_STYLE)
+        self._lbl_dropouts.setToolTip(tr(
+            "Cortes de audio desde que se activó el procesamiento: veces que la\n"
+            "salida se quedó sin audio procesado o que el dispositivo perdió\n"
+            "muestras. «pico» es el procesado más lento de un frame — si pasa\n"
+            "la duración del bloque (480 = 10 ms, 960 = 20 ms) hay un corte.\n"
+            "El detalle queda en errores_dsp.log y en Exportar diagnóstico."))
+        layout.addWidget(self._lbl_dropouts, alignment=Qt.AlignLeft)
         self._label_latency = QLabel(tr("Latencia: --"))
         self._label_latency.setAlignment(Qt.AlignLeft)
         layout.addWidget(self._label_latency)
@@ -2313,6 +2322,8 @@ class MainWindow(QMainWindow):
         self._lbl_snr.setStyleSheet("color: #888; font-weight: bold;")
         self._waterfall_widget.set_tone_freqs(None)
         self._cpu_meter.set_load(0.0)
+        self._lbl_dropouts.setText("—")
+        self._lbl_dropouts.setStyleSheet(self._IDLE_LBL_STYLE)
 
     def _on_audio_device_lost(self) -> None:
         """El dispositivo dejó de entregar audio en pleno procesamiento (interfaz
@@ -2355,6 +2366,12 @@ class MainWindow(QMainWindow):
             self._label_agc_gain.setText("—")
 
         self._cpu_meter.set_load(self._pipeline.cpu_load_pct)
+        cortes = self._pipeline.dropout_count
+        self._lbl_dropouts.setText(tr("Cortes: {n}  ·  pico {ms:.0f} ms").format(
+            n=cortes, ms=self._pipeline.worst_frame_ms))
+        self._lbl_dropouts.setStyleSheet(
+            "color: #ffa726; font-size: 8pt; font-weight: bold;" if cortes
+            else "color: #66bb6a; font-size: 8pt; font-weight: bold;")
 
         red = self._pipeline.peak_reduction_db
         if red < -0.1:

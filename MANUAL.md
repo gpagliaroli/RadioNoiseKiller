@@ -1358,7 +1358,9 @@ El archivo se limita a unos pocos errores por sesión, así que no crece sin con
 
 **Medidor de CPU.** Debajo de la latencia, el medidor **CPU** muestra qué porcentaje del tiempo disponible por bloque tarda el procesado. Cerca del 100 % o más es la firma de cortes de audio (*underruns*): en una PC o Raspberry Pi lenta, desactivá módulos o detené la traducción.
 
-> **Raspberry Pi 4.** Probada desde el fuente (Raspberry Pi OS de 64 bits). Usá **bloque 960** y **desactivá el Excitador armónico, la Recuperación de graves y el Refuerzo de pitch de voz**: con todos los módulos activos aparecen cortes de audio aunque el promedio del medidor ronde el 50 %, y con el pitch activo el margen queda tan justo que corta de a momentos. Sin esos tres módulos la salida casi no cambia. Como salida elegí una placa USB o los auriculares, no el HDMI de la Pi (no abre).
+**Contador de cortes.** Debajo del medidor de CPU, **Cortes: N · pico X ms** cuenta las veces que la salida se quedó sin audio procesado o que el dispositivo perdió muestras desde que activaste el procesamiento, y el procesado más lento de un frame. En verde no hubo cortes. Si «pico» pasa la duración del bloque (480 = 10 ms, 960 = 20 ms), hay un corte: el promedio del medidor de CPU puede verse holgado igual. Al detener, si hubo cortes queda un resumen en `errores_dsp.log`, y **Exportar diagnóstico** incluye los contadores.
+
+> **Raspberry Pi 4.** Probada desde el fuente (Raspberry Pi OS de 64 bits). Usá **bloque 960** y **desactivá el Excitador armónico, la Recuperación de graves y el Refuerzo de pitch de voz**: con todos los módulos activos aparecen cortes de audio aunque el promedio del medidor ronde el 50 %, y con el pitch activo el margen queda tan justo que corta de a momentos. Sin esos tres módulos la salida casi no cambia. **No uses la pestaña Espectro** (ni la cascada) mientras procesás: consume demasiada CPU en la Pi. Como salida elegí una placa USB o los auriculares: la salida HDMI directa de la Pi no aparece en la lista porque no abre.
 
 ---
 

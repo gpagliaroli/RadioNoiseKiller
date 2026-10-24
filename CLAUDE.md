@@ -602,9 +602,16 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
 
 - **Raspberry Pi 4** (post-v2.6): probada desde el fuente (Pi OS Trixie, Python 3.13, aarch64), arranca. Salida HDMI `hw:` da
   `-9994`; con **bloque 960** ~50 % de CPU sin picos; los cortes con todo activado se evitan sin excitador armónico, recuperación
-  de graves ni refuerzo de pitch (recomendación en los manuales ES/EN, sin cambios de código). `pendiente de validar`: bundle
-  PyInstaller, prueba larga con radio, ocultar HDMI `hw:`, contador de diagnóstico del callback. `test_cpu_profile` subestima el
-  pipeline en la Pi (descarta frames en silencio). Detalle en el historial, "En curso".
+  de graves ni refuerzo de pitch (recomendación en los manuales ES/EN). Tampoco se puede usar la pestaña Espectro (consume demasiado; dicho por el usuario, sin medir).
+  La prueba larga con radio va bien (sin cortes).
+  `test_cpu_profile` subestima el pipeline en la Pi (descarta frames en silencio). Detalle en el historial, "En curso".
+- **Contador de cortes + HDMI oculto** (post-v2.6): el pipeline cuenta frames tardíos (procesado > duración del frame), el peor
+  frame, callbacks con salida rellenada con ceros (`starved`, recién después del primer frame y no al salir de bypass), descartes
+  de cola y los `status` de PortAudio (`AudioStream.overruns/underruns`). Etiqueta "Cortes: N · pico X ms" bajo el medidor de CPU
+  (reposo en `_reset_dsp_indicators`), resumen por sesión en `errores_dsp.log` solo si hubo cortes, y los contadores van en el
+  zip de Exportar diagnóstico. `audio/devices.py` oculta en Linux el HDMI ALSA `hw:` (`is_raw_hdmi_hw`; el `hdmi` y `default` de
+  ALSA sí quedan). `test_pipeline`, `test_device_combo`, `test_ui` — `pendiente de validar` en la Pi (el HDMI oculto y que la
+  etiqueta marque cortes reales). El bundle PyInstaller en la Pi sigue sin probarse.
 
 Formato al acumular: una línea por cambio con su estado de validación (`validado en el aire` /
 `pendiente de validar`), y el bloque narrativo completo en el historial, sección "En curso". El

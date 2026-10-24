@@ -1062,6 +1062,7 @@ def test_dispositivo_perdido_detiene_y_avisa():
 
         class _StreamPerdido:
             device_lost = True
+            overruns = underruns = 0
             def stop(self): pass
 
         w._pipeline._stream = _StreamPerdido()
@@ -2018,6 +2019,8 @@ def test_bypass_indicadores_en_reposo():
         "pitch_f0": property(lambda self: 150.0),
         "anf_notched_bins": property(lambda self: 2),
         "cpu_load_pct": property(lambda self: 42.0),
+        "dropout_count": property(lambda self: 3),
+        "worst_frame_ms": property(lambda self: 14.0),
     }
     canc, imp = w._adv_canceller_tab, w._adv_impulse_tab
     orig = {k: getattr(pipe_cls, k) for k in patched}
@@ -2032,6 +2035,8 @@ def test_bypass_indicadores_en_reposo():
         assert "estimando" in w._label_noise.text(), w._label_noise.text()
         assert "ACTIVO" in w._lbl_peak_active.text(), w._lbl_peak_active.text()
         assert w._cpu_meter._load_pct == 42.0, w._cpu_meter._load_pct
+        assert "3" in w._lbl_dropouts.text() and "14" in w._lbl_dropouts.text(), \
+            w._lbl_dropouts.text()
         canc._update_stats(); imp._update_stats()
         assert "-12.0" in canc._lbl_noise_db.text(), canc._lbl_noise_db.text()
         assert "80%" in canc._lbl_noise_vp.text(), canc._lbl_noise_vp.text()
@@ -2062,6 +2067,8 @@ def test_bypass_indicadores_en_reposo():
         assert w._lbl_snr.text() == tr("S/N: —"), w._lbl_snr.text()
         assert w._cpu_meter._load_pct == 0.0, \
             f"medidor de CPU pegado en bypass: {w._cpu_meter._load_pct}"
+        assert w._lbl_dropouts.text() == "—", \
+            f"contador de cortes pegado en bypass: {w._lbl_dropouts.text()!r}"
 
         # Al salir del bypass vuelven los valores vivos
         w._btn_bypass.setChecked(False)

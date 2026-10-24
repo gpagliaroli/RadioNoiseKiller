@@ -49,9 +49,11 @@ Restricciones que encontramos en la prueba:
 - **Desactivar el Excitador armónico, la Recuperación de graves y el Refuerzo de pitch de voz.** Con
   todos los módulos activos aparecen cortes de audio aunque el promedio del medidor de CPU ronde el
   50 %; sin esos tres la salida casi no cambia.
-- **No elegir la salida HDMI de la Pi** (`vc4-hdmi`): no abre (`Sample format not supported
-  [-9994]`). Sirven una placa USB o los auriculares. Sin un `settings.json` previo, la app puede
-  proponer el HDMI por ser el primero de la lista: elegí otra salida antes de activar.
+- **No usar la pestaña Espectro** (ni la cascada) mientras se procesa: consume demasiada CPU en la Pi.
+- **La salida HDMI directa de la Pi** (`vc4-hdmi ... (hw:`) no abre (`Sample format not supported
+  [-9994]`) y la app la oculta de la lista. Sirven una placa USB o los auriculares.
+- **El contador «Cortes»** (debajo del medidor de CPU) dice si hubo cortes de audio y cuánto tardó
+  el frame más lento: es la forma de comprobar que la configuración aguanta en tu Pi.
 - **No instalar la pestaña Traducción** en la Pi.
 - El aviso `qt.qpa.wayland.textinput ... Trying to disable` en la terminal es inofensivo.
 

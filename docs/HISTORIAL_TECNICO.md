@@ -73,9 +73,39 @@ Raspberry Pi OS basado en Debian 13 (Trixie), aarch64, Python 3.13.5, Wayland, d
   refuerzo de pitch en una Pi 4** ("no causan mayor efecto en la salida y puede utilizarse sin ellos";
   el pitch se agregó después: "queda muy justo y tiende a cortar de a momentos"), con bloque 960. Anotado
   en los manuales ES/EN (Medidor de CPU). Sin cambios de código.
-- **Pendiente**: contador de diagnóstico (frame más lento, frames fuera de presupuesto, `status` del
-  callback); corregir el test de CPU para que cuente los frames descartados; prueba larga con la radio
-  y presets propios de Pi; bundle PyInstaller en la Pi; ocultar la salida HDMI `hw:`.
+- **La pestaña Espectro tampoco se puede usar en la Pi** ("consume demasiado", dicho por el usuario;
+  **no se midió** cuánto). Anotado en README y manuales ES/EN junto con las otras restricciones. Si se
+  quisiera habilitar: bajar los 15 fps del timer o la resolución de la cascada en Linux/ARM, midiendo
+  antes con el contador de cortes.
+- **Hecho después (mismo día)**: contador de cortes y HDMI `hw:` oculto en Linux (bloque siguiente).
+  La prueba larga con la radio va bien.
+- **Pendiente**: corregir el test de CPU para que cuente los frames descartados; presets propios de
+  Pi; bundle PyInstaller en la Pi.
+
+**Post-v2.6: contador de cortes y HDMI oculto.** Motivo: con "se corta de a momentos" y un medidor de
+CPU en 50 % no había forma de saber si cortaba el DSP, el dispositivo o las colas; el EMA del medidor
+(0,8) esconde justo el frame lento aislado que corta.
+- **Qué cuenta** (`pipeline.py`, sin lock, invariante 7): `late_frames` (procesado > duración del
+  frame), `worst_frame_ms`, `starved_frames` (el callback no encontró el frame procesado y sacó
+  ceros — es el corte que se OYE), descartes de cola de entrada y de salida, y los overflow/underflow
+  que PortAudio informa en `status` (`AudioStream.overruns/underruns`; el contador ya existía pero
+  `underruns` no se exponía). `starved` no cuenta antes del primer frame entregado (el pipeline tiene
+  un hop de latencia: el primer callback sale vacío siempre) ni el primero tras salir de bypass
+  (`_primed` se baja en bypass).
+- **Dónde se ve**: etiqueta "Cortes: N · pico X ms" bajo el medidor de CPU (verde sin cortes, naranja
+  con cortes; reposo "—" en `_reset_dsp_indicators`, regla 25); al detener, UN bloque "Resumen de audio
+  de la sesión" en `errores_dsp.log` solo si hubo algo que contar; y `dump_diag_text()` (zip de Exportar
+  diagnóstico) trae las mismas cifras. Lectura: `frames_tardios` y `peor_frame_ms` altos = el DSP no
+  llega; `underflow_salida`/`overflow_entrada` sin tardíos = dispositivo o relojes de dos placas
+  distintas; descartes de cola = el hilo procesador se atrasó de forma sostenida.
+- **HDMI**: `audio/devices.py::is_raw_hdmi_hw` filtra en Linux los dispositivos ALSA cuyo nombre trae
+  `hdmi` y `(hw:`. La salida ALSA `hdmi` y `default` abren bien (medido) y quedan. Efecto colateral
+  buscado: `get_default_output()` ya no cae en el HDMI por ser el primero de la lista.
+- **Tests**: `test_pipeline` (starved determinista sin hilo: arranque, frame completo/parcial, bypass;
+  frame tardío con `_process_chunk` lento a propósito, resumen en el log y en el diagnóstico, reinicio en
+  `start()`), `test_device_combo` (lista de Pi simulada, intacto en Windows), `test_ui` (etiqueta viva y
+  en reposo en bypass). Hubo que darle `overruns/underruns` al stream falso de `test_ui`, porque
+  `stop()` los lee. **Pendiente de validar en la Pi.**
 
 **Post-v2.5: el excitador armónico también se retira por periodicidad.** Reporte del usuario
 (23/9), después de probar el enganche del ANF: *"al igual que la recuperación de graves no es bueno

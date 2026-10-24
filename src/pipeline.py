@@ -170,6 +170,20 @@ class ProcessingPipeline:
         # _dsp_errors (invariante 7): un indicador de diagnostico no justifica
         # contencion en el hilo de audio.
         self._cpu_load_pct: float = 0.0
+        # Contadores de cortes (ver audio_diag_text). El promedio del medidor de
+        # CPU no los ve: lo que corta es el PEOR frame, no el promedio. Sin lock
+        # (invariante 7). `_primed` evita contar el primer callback, que siempre
+        # sale vacío porque el pipeline tiene un hop de latencia.
+        self._frames_done:    int   = 0
+        self._late_frames:    int   = 0     # procesado más lento que el hueco del frame
+        self._worst_frame_ms: float = 0.0
+        self._starved:        int   = 0     # callbacks sin frame listo: salida con ceros
+        self._in_drops:       int   = 0     # cola de entrada llena: chunk descartado
+        self._out_drops:      int   = 0     # cola de salida llena: frame descartado
+        self._primed:         bool  = False
+        # Los del stream se guardan al detenerlo, para que sigan visibles después.
+        self._last_overruns:  int   = 0
+        self._last_underruns: int   = 0
 
         self._in_acc:  np.ndarray = np.zeros(0, dtype=np.float32)
         self._out_acc: np.ndarray = np.zeros(0, dtype=np.float32)
@@ -916,6 +930,53 @@ class ProcessingPipeline:
         return self._cpu_load_pct
 
     @property
+    def late_frames(self) -> int:
+        """Frames cuyo procesado tardó más que su propia duración (a bloque 960,
+        más de 20 ms) desde el último start()."""
+        return self._late_frames
+
+    @property
+    def worst_frame_ms(self) -> float:
+        """Procesado más lento de un frame desde el último start(), en ms."""
+        return self._worst_frame_ms
+
+    @property
+    def starved_frames(self) -> int:
+        """Callbacks que no encontraron el frame procesado y sacaron ceros:
+        es el corte que se OYE. Se cuenta recién después del primer frame."""
+        return self._starved
+
+    @property
+    def audio_overruns(self) -> int:
+        stream = self._stream
+        return stream.overruns if stream is not None else self._last_overruns
+
+    @property
+    def audio_underruns(self) -> int:
+        stream = self._stream
+        return stream.underruns if stream is not None else self._last_underruns
+
+    @property
+    def dropout_count(self) -> int:
+        """Total de cortes audibles de la sesión: salida con ceros + underflows
+        de salida + overflows de entrada que reportó PortAudio."""
+        return self._starved + self.audio_underruns + self.audio_overruns
+
+    def audio_diag_text(self) -> str:
+        """Los contadores de cortes, en una línea por dato, para el log, el zip
+        de diagnóstico y el tooltip del medidor."""
+        return (
+            f"bloque={self._config.audio.block_size} frames={self._frames_done} "
+            f"cpu_ema={self._cpu_load_pct:.0f}%\n"
+            f"salida_con_ceros={self._starved} "
+            f"underflow_salida_portaudio={self.audio_underruns} "
+            f"overflow_entrada_portaudio={self.audio_overruns}\n"
+            f"frames_tardios={self._late_frames} "
+            f"peor_frame_ms={self._worst_frame_ms:.1f} "
+            f"descartes_cola_entrada={self._in_drops} "
+            f"descartes_cola_salida={self._out_drops}\n")
+
+    @property
     def mcra_diag(self) -> str:
         """Estado interno del estimador, para diagnosticar un warmup atascado.
 
@@ -943,7 +1004,8 @@ class ProcessingPipeline:
         import datetime
         return (f"RadioNoiseKiller — diagnóstico {datetime.datetime.now():%Y-%m-%d %H:%M:%S}\n"
                 f"{self.mcra_diag}\n"
-                f"ultimo_error={self.dsp_last_error or '(ninguno)'}\n")
+                f"ultimo_error={self.dsp_last_error or '(ninguno)'}\n"
+                f"{self.audio_diag_text()}")
 
     def log_diagnostic(self, titulo: str, detalle: str) -> None:
         """Anota una línea de diagnóstico en el mismo archivo que los errores."""
@@ -1018,6 +1080,15 @@ class ProcessingPipeline:
             self._dsp_errors     = 0
             self._dsp_last_error = ""
             self._cpu_load_pct   = 0.0
+            self._frames_done    = 0
+            self._late_frames    = 0
+            self._worst_frame_ms = 0.0
+            self._starved        = 0
+            self._in_drops       = 0
+            self._out_drops      = 0
+            self._primed         = False
+            self._last_overruns  = 0
+            self._last_underruns = 0
             self._bandpass.reset()
             self._bandpass_out.reset()
             self._presence.reset()
@@ -1069,8 +1140,16 @@ class ProcessingPipeline:
 
         if stream:
             stream.stop()
+            self._last_overruns  = stream.overruns
+            self._last_underruns = stream.underruns
 
         self._shutdown_processor_thread()
+
+        # Un renglón por sesión con cortes: con "se corta de a momentos" en el
+        # aire el log dice si fue el DSP (frames tardíos), el dispositivo
+        # (underflow/overflow) o las colas. Sin cortes no se escribe nada.
+        if self.dropout_count or self._late_frames or self._in_drops or self._out_drops:
+            self.log_diagnostic("Resumen de audio de la sesión", self.audio_diag_text())
 
         # Cerrar la grabación en curso (header del WAV finalizado limpio)
         if self._recorder.recording:
@@ -1267,16 +1346,24 @@ class ProcessingPipeline:
                 t0 = time.perf_counter()
                 out_frame = self._process_chunk(chunk)
                 frame_s = len(chunk) / self._config.audio.sample_rate
+                elapsed = time.perf_counter() - t0
                 if frame_s > 0:
-                    pct_inst = 100.0 * (time.perf_counter() - t0) / frame_s
+                    pct_inst = 100.0 * elapsed / frame_s
                     # EMA 0.8: suaviza sin esconder una subida sostenida (se
                     # nota en ~5 frames, ~50ms con el hop default).
                     self._cpu_load_pct = (0.8 * self._cpu_load_pct
                                           + 0.2 * pct_inst)
+                    # El EMA esconde el frame lento aislado, que es el que
+                    # corta: contarlo y guardar el peor aparte.
+                    self._frames_done += 1
+                    if elapsed > frame_s:
+                        self._late_frames += 1
+                    if elapsed * 1000.0 > self._worst_frame_ms:
+                        self._worst_frame_ms = elapsed * 1000.0
                 try:
                     self._out_queue.put_nowait(out_frame)
                 except queue.Full:
-                    pass
+                    self._out_drops += 1
             except Exception as exc:
                 # Contador de diagnóstico: sin lock a propósito (invariante 7).
                 # Un fallo acá se repite CADA frame y el reset de abajo deja al
@@ -1452,6 +1539,9 @@ class ProcessingPipeline:
         self._db_in = self._level_in.process(audio_in)
 
         if self._bypass:
+            # Al salir de bypass el hilo procesador tarda un hop en entregar: ese
+            # callback vacío no es un corte (ver `_primed`).
+            self._primed = False
             # En bypass la salida es la señal cruda, pero la ganancia de salida SÍ
             # se aplica (el limitador que normalmente la aplica corre en el hilo
             # procesador, que en bypass no procesa — sin esto el volumen de bypass
@@ -1492,7 +1582,7 @@ class ProcessingPipeline:
             try:
                 self._in_queue.put_nowait(chunk)
             except queue.Full:
-                pass
+                self._in_drops += 1
 
         while True:
             try:
@@ -1503,15 +1593,18 @@ class ProcessingPipeline:
 
         n_out = len(audio_in)
         if len(self._out_acc) >= n_out:
+            self._primed = True
             out = self._out_acc[:n_out]
             self._out_acc = self._out_acc[n_out:]
         elif len(self._out_acc) > 0:
+            self._starved += self._primed   # salida con ceros: el corte audible
             out = np.concatenate((
                 self._out_acc,
                 np.zeros(n_out - len(self._out_acc), dtype=np.float32),
             ))
             self._out_acc = np.zeros(0, dtype=np.float32)
         else:
+            self._starved += self._primed
             out = np.zeros(n_out, dtype=np.float32)
 
         self._db_out = self._level_out.process(out)

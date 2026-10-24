@@ -95,6 +95,17 @@ class AudioDevice:
         return self.display_name()
 
 
+def is_raw_hdmi_hw(name: str, api_name: str) -> bool:
+    """HDMI abierto directo por ALSA (`vc4-hdmi-0 ... (hw:0,0)` en la Raspberry
+    Pi): sólo acepta IEC958, no los float32/int16 que usa la app, y falla al
+    activar con 'Sample format not supported' (-9994). Medido en una Pi 4: las
+    salidas ALSA `hdmi`/`default` (con conversión) y las placas USB sí abren."""
+    if sys.platform == "win32" or api_name != "ALSA":
+        return False
+    n = name.lower()
+    return "hdmi" in n and "(hw:" in n
+
+
 def list_devices() -> list[AudioDevice]:
     """
     Devuelve la lista de dispositivos deduplicada por nombre+dirección,
@@ -107,6 +118,8 @@ def list_devices() -> list[AudioDevice]:
     for i, dev in enumerate(all_devs):
         api_name = all_apis[dev["hostapi"]]["name"]
         if _PREFERRED_APIS is not None and api_name not in _PREFERRED_APIS:
+            continue
+        if is_raw_hdmi_hw(dev["name"], api_name):
             continue
         priority = _API_PRIORITY.get(api_name, 99)
         candidates.append((i, dev, api_name, priority))

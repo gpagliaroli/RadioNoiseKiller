@@ -80,9 +80,47 @@ def test_stream_raises_before_portaudio():
     print("AudioStream.start lanza antes de PortAudio OK")
 
 
+def test_raw_hdmi_hidden_on_linux():
+    """El HDMI de la Raspberry Pi abierto por ALSA `hw:` no acepta float32/int16
+    y falla al Activar con -9994. Medido en una Pi 4 real: las placas USB, los
+    auriculares y las salidas ALSA `hdmi`/`default` sí abren."""
+    import audio.devices as ad
+    devs = [
+        {"name": "vc4-hdmi-0: MAI PCM i2s-hifi-0 (hw:0,0)", "hostapi": 0,
+         "max_input_channels": 0, "max_output_channels": 2, "default_samplerate": 44100},
+        {"name": "bcm2835 Headphones: - (hw:2,0)", "hostapi": 0,
+         "max_input_channels": 0, "max_output_channels": 8, "default_samplerate": 44100},
+        {"name": "USB PnP Sound Device: Audio (hw:3,0)", "hostapi": 0,
+         "max_input_channels": 1, "max_output_channels": 2, "default_samplerate": 44100},
+        {"name": "hdmi", "hostapi": 0,
+         "max_input_channels": 0, "max_output_channels": 2, "default_samplerate": 44100},
+    ]
+    saved = (sd.query_devices, sd.query_hostapis, sys.platform, ad._PREFERRED_APIS)
+    try:
+        sd.query_devices = lambda device=None, kind=None: devs if device is None else devs[device]
+        sd.query_hostapis = lambda: [{"name": "ALSA"}]
+        sys.platform = "linux"
+        ad._PREFERRED_APIS = None
+        assert ad.is_raw_hdmi_hw(devs[0]["name"], "ALSA")
+        assert not ad.is_raw_hdmi_hw("hdmi", "ALSA"), "la salida ALSA 'hdmi' sí abre"
+        assert not ad.is_raw_hdmi_hw(devs[1]["name"], "ALSA")
+        assert not ad.is_raw_hdmi_hw(devs[0]["name"], "PulseAudio")
+        idx = [d.index for d in ad.list_devices()]
+        assert 0 not in idx, f"el HDMI hw: sigue en la lista: {idx}"
+        assert idx == [1, 2, 3], idx
+        # El default ya no cae en el HDMI por ser el primero de la lista
+        assert ad.get_default_output().index == 1
+        sys.platform = "win32"
+        assert not ad.is_raw_hdmi_hw(devs[0]["name"], "ALSA"), "en Windows no se filtra"
+    finally:
+        sd.query_devices, sd.query_hostapis, sys.platform, ad._PREFERRED_APIS = saved
+    print("HDMI hw: oculto en Linux, intacto en Windows OK")
+
+
 if __name__ == "__main__":
     test_hostapi_of()
     test_mismatch_detected()
     test_stream_raises_before_portaudio()
+    test_raw_hdmi_hidden_on_linux()
     print()
     print("test_device_combo: OK")

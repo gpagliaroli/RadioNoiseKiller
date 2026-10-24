@@ -159,6 +159,65 @@ assert p_cpu.cpu_load_pct == 0.0, "cpu_load_pct no vuelve a reposo tras stop()"
 print(f"cpu_load_pct: {p_cpu.cpu_load_pct:.1f}% tras stop() (en vivo fue > 0): OK")
 
 # ------------------------------------------------------------------
+# Contador de cortes: el promedio del medidor de CPU no ve el frame lento
+# aislado, que es el que corta. Se prueba sin hilo (determinista) y con un
+# procesado lento a propósito.
+# ------------------------------------------------------------------
+print("\nContador de cortes...")
+p_cut = ProcessingPipeline(AppConfig())
+h_cut = p_cut._config.audio.block_size
+z_cut = np.zeros(h_cut, dtype=np.float32)
+p_cut._process(z_cut)          # sin hilo: nunca llega un frame procesado
+assert p_cut.starved_frames == 0, "el arranque (sin primer frame) no es un corte"
+p_cut._out_queue.put_nowait(z_cut)
+p_cut._process(z_cut)          # recibe el frame -> queda "cebado"
+assert p_cut.starved_frames == 0
+p_cut._process(z_cut)          # ahora no hay frame listo: salida con ceros
+assert p_cut.starved_frames == 1, "no contó la salida con ceros"
+p_cut._out_queue.put_nowait(z_cut[: h_cut // 2])
+p_cut._process(z_cut)          # frame a medias: también es un corte
+assert p_cut.starved_frames == 2, "no contó el frame parcial"
+p_cut.set_bypass(True)
+p_cut._process(z_cut)          # salir de bypass no debe contar como corte
+p_cut.set_bypass(False)
+p_cut._process(z_cut)
+assert p_cut.starved_frames == 2, "salir de bypass se contó como corte"
+assert p_cut.dropout_count == 2
+print("  salida con ceros: cuenta tras el primer frame, no en el arranque ni en bypass  OK")
+
+# Procesado más lento que el hueco del frame -> frame tardío + peor frame.
+p_slow = ProcessingPipeline(AppConfig())
+_orig_chunk = p_slow._process_chunk
+_budget_ms = p_slow._config.audio.block_size / p_slow._config.audio.sample_rate * 1000
+
+
+def _lento(chunk, _o=_orig_chunk):
+    time.sleep(_budget_ms * 2.5 / 1000)   # 2,5 veces el hueco del frame
+    return _o(chunk)
+
+
+p_slow._process_chunk = _lento
+p_slow.start(headless=True)
+for _ in range(3):
+    p_slow._process(np.zeros(p_slow._config.audio.block_size, dtype=np.float32))
+    time.sleep(_budget_ms * 4 / 1000)
+time.sleep(0.2)
+assert p_slow.late_frames >= 1, "no contó el frame tardío"
+assert p_slow.worst_frame_ms >= _budget_ms * 2.0, p_slow.worst_frame_ms
+p_slow.stop()
+_log_cut = os.path.join(os.environ["RNK_DATA_DIR"], "errores_dsp.log")
+assert os.path.exists(_log_cut), "stop() con frames tardíos no dejó resumen en el log"
+_txt_cut = open(_log_cut, encoding="utf-8").read()
+assert "Resumen de audio de la sesión" in _txt_cut and "frames_tardios=" in _txt_cut
+assert "peor_frame_ms=" in p_slow.dump_diag_text(), "el zip de diagnóstico no trae los contadores"
+print(f"  frame tardío: {p_slow.late_frames} tardío(s), peor {p_slow.worst_frame_ms:.0f} ms, "
+      f"resumen en el log y en el diagnóstico  OK")
+p_slow.start(headless=True)
+assert p_slow.late_frames == 0 and p_slow.worst_frame_ms == 0.0, "start() no reinicia los contadores"
+p_slow.stop()
+print("Contador de cortes: OK")
+
+# ------------------------------------------------------------------
 # Grabación a WAV (headless): graba N frames y verifica los archivos
 # ------------------------------------------------------------------
 print("\nGrabacion WAV...")
