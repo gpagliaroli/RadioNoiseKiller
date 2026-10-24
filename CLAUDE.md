@@ -610,8 +610,9 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
   de cola y los `status` de PortAudio (`AudioStream.overruns/underruns`). Etiqueta "Cortes: N · pico X ms" bajo el medidor de CPU
   (reposo en `_reset_dsp_indicators`), resumen por sesión en `errores_dsp.log` solo si hubo cortes, y los contadores van en el
   zip de Exportar diagnóstico. `audio/devices.py` oculta en Linux el HDMI ALSA `hw:` (`is_raw_hdmi_hw`; el `hdmi` y `default` de
-  ALSA sí quedan). `test_pipeline`, `test_device_combo`, `test_ui` — `pendiente de validar` en la Pi (el HDMI oculto y que la
-  etiqueta marque cortes reales). El bundle PyInstaller en la Pi sigue sin probarse.
+  ALSA sí quedan). `test_pipeline`, `test_device_combo`, `test_ui` — `validado en la Pi 4`: la etiqueta marca los cortes que se oyen, el
+  `vc4-hdmi` hw: ya no aparece y la salida ALSA `hdmi` (con conversión) queda y funciona. El bundle PyInstaller en la Pi
+  sigue sin probarse.
 
 Formato al acumular: una línea por cambio con su estado de validación (`validado en el aire` /
 `pendiente de validar`), y el bloque narrativo completo en el historial, sección "En curso". El

@@ -105,7 +105,9 @@ CPU en 50 % no había forma de saber si cortaba el DSP, el dispositivo o las col
   frame tardío con `_process_chunk` lento a propósito, resumen en el log y en el diagnóstico, reinicio en
   `start()`), `test_device_combo` (lista de Pi simulada, intacto en Windows), `test_ui` (etiqueta viva y
   en reposo en bypass). Hubo que darle `overruns/underruns` al stream falso de `test_ui`, porque
-  `stop()` los lee. **Pendiente de validar en la Pi.**
+  `stop()` los lee. **Validado en la Pi 4 (24/10)**: la etiqueta marca bien los cortes; el `vc4-hdmi`
+  hw: desapareció del combo y el `hdmi [ALSA]` que sigue en la lista es la salida con conversión, que
+  funciona (no es un fallo del filtro).
 
 **Post-v2.5: el excitador armónico también se retira por periodicidad.** Reporte del usuario
 (23/9), después de probar el enganche del ANF: *"al igual que la recuperación de graves no es bueno
