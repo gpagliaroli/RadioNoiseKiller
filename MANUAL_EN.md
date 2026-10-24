@@ -1359,6 +1359,8 @@ The file is capped at a few errors per session, so it does not grow without boun
 
 **CPU meter.** Below the latency, the **CPU** meter shows what percentage of the time available per block the processing takes. Near 100 % or more is the signature of audio dropouts (*underruns*): on a slow PC or Raspberry Pi, turn off modules or stop translation.
 
+> **Raspberry Pi 4.** Tested from source (64-bit Raspberry Pi OS). Use **block size 960** and **turn off the Harmonic exciter, Bass recovery and Voice pitch boost**: with every module on, audio dropouts appear even when the meter averages around 50 %, and with pitch boost on the margin is so thin that it cuts out now and then. Without those three modules the output barely changes. For the output pick a USB card or the headphone jack, not the Pi's HDMI (it will not open).
+
 ---
 
 *RadioNoiseKiller — version 2.6*

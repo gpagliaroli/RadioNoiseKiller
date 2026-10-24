@@ -52,7 +52,7 @@
     "perceptual_floor_rolloff_hz": 3000.0,
     "perceptual_floor_rolloff_depth": 0.6000000000000001,
     "post_filter_enabled": true,
-    "post_filter_strength": 3.1,
+    "post_filter_strength": 3.0,
     "pitch_enhance_enabled": true,
     "pitch_enhance_strength": 0.7000000000000001,
     "noise_mcra_window_ms": 300.0,

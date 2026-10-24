@@ -600,6 +600,12 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
   con voz cantada pasa el filtro (limitación). Umbrales de Whisper sin ajustar con grabaciones
   reales. `test_translate`, `test_ui`, `translate_worker/test_speechfilter.py` — `pendiente de validar`.
 
+- **Raspberry Pi 4** (post-v2.6): probada desde el fuente (Pi OS Trixie, Python 3.13, aarch64), arranca. Salida HDMI `hw:` da
+  `-9994`; con **bloque 960** ~50 % de CPU sin picos; los cortes con todo activado se evitan sin excitador armónico, recuperación
+  de graves ni refuerzo de pitch (recomendación en los manuales ES/EN, sin cambios de código). `pendiente de validar`: bundle
+  PyInstaller, prueba larga con radio, ocultar HDMI `hw:`, contador de diagnóstico del callback. `test_cpu_profile` subestima el
+  pipeline en la Pi (descarta frames en silencio). Detalle en el historial, "En curso".
+
 Formato al acumular: una línea por cambio con su estado de validación (`validado en el aire` /
 `pendiente de validar`), y el bloque narrativo completo en el historial, sección "En curso". El
 skill `release` toma las notas del release de esta lista.

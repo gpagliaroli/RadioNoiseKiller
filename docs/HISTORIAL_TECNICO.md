@@ -41,6 +41,42 @@ regla de método nueva.
 
 _(Los bloques nuevos de la próxima versión van acá, el más reciente arriba.)_
 
+**Post-v2.6: primera prueba en una Raspberry Pi 4 real (24/10/2026).** Desde el fuente (clon + venv),
+Raspberry Pi OS basado en Debian 13 (Trixie), aarch64, Python 3.13.5, Wayland, dos placas USB baratas
+(CM108, solo `hw:` directo) y salida por los auriculares de la Pi. **El bundle PyInstaller NO se probó.**
+- **Instala y arranca**: `python3 -m venv` + `pip install sounddevice numpy scipy PySide6` (los wheels
+  aarch64 anduvieron con la glibc de Trixie), sin `python3.11` (no está en los repos; sirve el
+  `python3` del sistema). La ventana se ve bien. El aviso `qt.qpa.wayland.textinput ... Trying to
+  disable ... but 0x0 is focused` es inofensivo (se silencia con
+  `QT_LOGGING_RULES="qt.qpa.wayland.textinput=false"`).
+- **Al activar daba `-9994` (sample format not supported)**: la causa era la salida `vc4-hdmi-0`
+  (`hw:0,0`), la primera de la lista sin `settings.json`, que por ALSA directo solo acepta IEC958. Las
+  placas USB, `default`, `sysdefault`, `hdmi` y los auriculares abren bien en float32 y en int16 a
+  48 kHz con bloque 480 (probado con `sd.Stream` duplex en todas las combinaciones). **Pendiente**: ocultar
+  esa salida en `audio/devices.py` para Linux o traducir el -9994 a un aviso legible.
+- **CPU**: con bloque 480 y todo activado el indicador daba 75–80 % con picos de más de 100 %;
+  con **bloque 960** baja a ~50 % promedio, sin picos, `vcgencmd get_throttled` en `0x0` y 44,8 °C.
+  `test_cpu_profile.py` en la Pi: la "suma de los módulos" (79,5 %) cuenta alternativas que no corren
+  juntas (cancelador estático + adaptativo + con post-filtro, excitador armónico + mixto), y el
+  "pipeline completo" (~7 %) **está subestimado**: el test mete frames con `_process()` sobre una cola de
+  30 con `put_nowait` y, si el procesador no da abasto, los descarta sin avisar (693 µs para todo
+  activado, menos que los 1857 µs del cancelador solo). **No usar ese número en la Pi.**
+- **Cortes de audio con la radio conectada**, a pesar del 50 %: desaparecen sin el **excitador
+  armónico, la recuperación de graves y el refuerzo de pitch**. Cada módulo por separado no corta; los
+  tres juntos sí, y al sumar los graves en último lugar empiezan. Es un problema del conjunto, no de un
+  módulo. **Hipótesis sin medir**: cuando el procesado de un frame tarda más que el hueco del callback,
+  el callback rellena con ceros (`pipeline.py`, ~1514) y se oye como un corte; el indicador de CPU
+  suaviza con EMA y un frame lento aislado casi no se ve. La autocorrelación del pitch (2 FFT de 4096
+  cada 3 frames) hace que el costo por frame no sea parejo. No hay colchón de jitter ni se miran los
+  `status` del callback de PortAudio.
+- **Decisión del usuario**: recomendar **no usar el excitador armónico, la recuperación de graves ni el
+  refuerzo de pitch en una Pi 4** ("no causan mayor efecto en la salida y puede utilizarse sin ellos";
+  el pitch se agregó después: "queda muy justo y tiende a cortar de a momentos"), con bloque 960. Anotado
+  en los manuales ES/EN (Medidor de CPU). Sin cambios de código.
+- **Pendiente**: contador de diagnóstico (frame más lento, frames fuera de presupuesto, `status` del
+  callback); corregir el test de CPU para que cuente los frames descartados; prueba larga con la radio
+  y presets propios de Pi; bundle PyInstaller en la Pi; ocultar la salida HDMI `hw:`.
+
 **Post-v2.5: el excitador armónico también se retira por periodicidad.** Reporte del usuario
 (23/9), después de probar el enganche del ANF: *"al igual que la recuperación de graves no es bueno
 utilizarlo con mucho ruido, el excitador de armónicos tiene el mismo problema"*. Es el mismo
