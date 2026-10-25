@@ -1,6 +1,6 @@
 ---
 name: release
-description: Cierra y publica una versión de RadioNoiseKiller — bumps, manual bilingüe, tests, builds Windows/Linux, tag y release en GitHub con assets. Usar cuando el usuario pida "cerrar la versión", "hacer el release" o "publicar vX.Y".
+description: Cierra y publica una versión de RadioNoiseKiller — bumps, manual bilingüe, tests, builds Windows / Linux x86_64 / Raspberry Pi ARM64, tag y release en GitHub con assets. Usar cuando el usuario pida "cerrar la versión", "hacer el release" o "publicar vX.Y".
 ---
 
 # Release de RadioNoiseKiller (vX.Y)
@@ -70,7 +70,10 @@ cuando queda viejo. Repasarlo en cada release, no sólo agregarle lo nuevo:
 - **Pipeline**: el README usa la imagen versionada `Images/pipeline_diagram.png`, la misma del
   manual. **No volver a poner un bloque ASCII**: era una segunda fuente de verdad y se desincronizó.
 - **Descargas**: la tabla usa `vX.Y` genérico y apunta a `releases/latest` — no hay que tocarla
-  cada versión, pero conviene confirmar que los nombres de los assets sigan coincidiendo.
+  cada versión, pero conviene confirmar que los nombres de los assets sigan coincidiendo. **El
+  primer release con paquete de la Pi** tiene que agregar la fila
+  `RadioNoiseKiller_vX.Y-linux-aarch64.zip | Raspberry Pi 4 (64 bits)` y ajustar la sección
+  "Raspberry Pi 4 (desde el fuente)", que hoy dice que el paquete no se publica.
 - Chequear los números que se afirman (cantidad de presets de fábrica, de suites de test, de
   pestañas) contra el código, no contra el README anterior.
 
@@ -92,7 +95,8 @@ diagnósticos — correrlos a mano si el release tocó enumeración de dispositi
 - Commit `release: vX.Y — <resumen>` (sin comillas dobles en el mensaje — el quoting de
   PowerShell 5.1 hacia git las rompe). Co-Authored-By de rigor.
 - `git tag vX.Y && git push origin main vX.Y` — **el tag dispara el build Linux en CI**
-  (`.github/workflows/build-linux.yml`).
+  (`.github/workflows/build-linux.yml`): **dos jobs, x86_64 y ARM64 / Raspberry Pi**. El de ARM
+  corre en un runner pago (repo privado, ~1,5 min por corrida).
 
 ## 5. Build Windows (local, en paralelo con el CI)
 
@@ -109,33 +113,61 @@ diagnósticos — correrlos a mano si el release tocó enumeración de dispositi
    `for f in Presets/*.json; do diff -q --strip-trailing-cr <(git show HEAD:$f) dist_vXY/RadioNoiseKiller/_internal/$f; done`
    (sin `--strip-trailing-cr` difieren todos por CRLF).
 8. **Verificar el CONTENIDO del zip antes de publicar**, no solo que exista:
-   `RadioNoiseKiller/Presets/*.json` (los 5 de fábrica), los dos PDFs y el binario.
+   `RadioNoiseKiller/Presets/*.json` (todos los de fábrica: contarlos contra `Presets/*.json` del
+   tag, no contra un número escrito acá), los dos PDFs y el binario.
    En v2.0 se publicaron los dos zips **sin ningún preset** — el de Windows con la carpeta
    `Presets/` vacía (la crea el propio smoke test al ejecutar el exe, lo que la hace parecer
    correcta) y el de Linux directamente sin la carpeta. Lo detectó el usuario mirando el zip.
    Ojo también: si se corre el exe antes de zipear, quedan dentro `PerfilesRuido/` y
    `settings.json` del smoke test — inofensivos pero conviene saberlo.
 
-## 6. Build Linux (artifact del CI)
+## 6. Builds Linux x86_64 y Raspberry Pi ARM64 (artifacts del CI)
 
-- Esperar el run del tag en verde (poll por API con el token de `git credential fill`).
-- Descargar el artifact `RadioNoiseKiller-linux-x86_64` (viene como zip dentro de un zip),
-  renombrar a `RadioNoiseKiller_vX.Y-linux-x86_64.zip` y **agregarle los dos PDFs** bajo
-  `RadioNoiseKiller/` (el CI no los genera; las notas dicen que los dos paquetes los traen).
-- Si la versión tocó los specs o el recorte de Qt: verificar contenido del zip (plugins
-  wayland presentes — ver invariantes de empaquetado en CLAUDE.md).
+`gh` está instalado en `C:\Program Files\GitHub CLI\gh.exe` y autenticado como `gpagliaroli`
+(desde bash: `GH="/c/Program Files/GitHub CLI/gh.exe"`; puede no estar en el PATH de la sesión).
+
+- Esperar el run del tag en verde: `"$GH" run list --workflow build-linux.yml --limit 1` y
+  `"$GH" run watch <id> --exit-status`. **Los DOS jobs** tienen que terminar bien; si el de ARM
+  falla, no hay release con el paquete de la Pi (avisarle al usuario y decidir con él). Si un job
+  aparece "cancelled" con cero pasos es que GitHub no consiguió runner: relanzar con
+  `"$GH" run rerun <id> --failed`.
+- Descargar los dos artifacts con `"$GH" run download <id> -n <nombre> -D <carpeta del scratchpad>`:
+  - `RadioNoiseKiller-linux-x86_64` → renombrar a `RadioNoiseKiller_vX.Y-linux-x86_64.zip`.
+  - `RadioNoiseKiller-linux-aarch64` → renombrar a `RadioNoiseKiller_vX.Y-linux-aarch64.zip`.
+  `run download` ya desempaqueta el zip externo de GitHub; lo que queda es el zip del CI.
+- **Agregarle los dos PDFs** a cada uno, bajo `RadioNoiseKiller/` (el CI no los genera; las
+  notas dicen que todos los paquetes los traen).
+- **Verificar el contenido de los dos** (regla 29) con `zipfile` + pyelftools (está en el venv):
+  - binario `RadioNoiseKiller/RadioNoiseKiller` con la arquitectura correcta
+    (`EM_X86_64` / `EM_AARCH64`, ELF de 64 bits) y permisos 755;
+  - **todos** los presets de fábrica del tag en `RadioNoiseKiller/_internal/Presets/` (o donde los
+    ponga el spec): contar contra `git ls-files Presets/*.json`;
+  - `libportaudio.so.2` **adentro** y ningún `libasound` (invariante 2 de empaquetado);
+  - plugins `wayland-decoration-client` (`libbradient.so`) y `wayland-shell-integration`;
+  - ARM64: `LEEME_RASPBERRY_PI.txt` presente, y la **glibc máxima requerida ≤ 2.36** (Bookworm)
+    leyendo `.gnu.version_r` de todos los `.so` y del binario. Si sube, el runner cambió de
+    versión de Ubuntu y el paquete deja de arrancar en Bookworm.
+  - `scipy/signal/_sosfilt*.so` presente (la vía rápida de `dsp/iir.py`; sin él anda igual, pero
+    más lento — y en la Pi eso son cortes).
+- **Validación en hardware antes de publicar** (invariante 5 de empaquetado): pasarle al usuario
+  el link del run para que baje el ARM64 desde el browser de la Pi (repo privado: hace falta
+  sesión de GitHub en la Pi), lo arranque y confirme ventana, dispositivos USB, presets y
+  "Cortes" en 0 con bloque 960 y todos los módulos. Sin ese OK, preguntarle si se publica igual.
 
 ## 7. Release en GitHub
 
-- **No hay `gh` instalado.** Usar la API REST con el token de
-  `printf 'protocol=https\nhost=github.com\n\n' | git credential fill` (en bash; nunca
-  imprimir el token).
-- Crear release sobre el tag: nombre `RadioNoiseKiller vX.Y`, notas en español al estilo de
-  v1.4/v1.5 (secciones por área, sección "Descargas" al final con instrucciones por plataforma;
-  si hay cambios de idioma/manual, resumen breve en inglés).
-- Assets: los dos zips + los dos PDFs sueltos.
-- Verificar por API que los 4 assets queden `uploaded`, y pedirle al usuario un vistazo final
-  al release en el navegador.
+- Con `gh`: `"$GH" release create vX.Y <assets...> --title "RadioNoiseKiller vX.Y"
+  --notes-file <notas.md>` (notas escritas a un archivo del scratchpad: evita el quoting).
+  Sin `gh`, la API REST con el token de `printf 'protocol=https\nhost=github.com\n\n' | git
+  credential fill` (en bash; nunca imprimir el token).
+- Notas en español al estilo de v1.4/v1.5 (secciones por área, sección "Descargas" al final con
+  instrucciones por plataforma; si hay cambios de idioma/manual, resumen breve en inglés). En
+  "Descargas", la Raspberry Pi lleva sus restricciones: SO de 64 bits, bloque 960 (de fábrica en
+  ARM, pero un settings.json previo conserva el suyo), pestaña Espectro no, HDMI directo no,
+  y `sudo apt install libportaudio2 libxcb-xinerama0`.
+- Assets: **los tres zips** (Windows, Linux x86_64, Linux aarch64) + los dos PDFs sueltos.
+- Verificar (`"$GH" release view vX.Y`) que los **5 assets** queden subidos, y pedirle al
+  usuario un vistazo final al release en el navegador.
 
 ## 8. Cierre
 

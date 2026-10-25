@@ -6,7 +6,7 @@ on:
   workflow_dispatch:     # o manualmente desde la pestana Actions
     inputs:
       arm64:
-        description: 'Compilar tambien para ARM64 / Raspberry Pi (experimental, runner pago)'
+        description: 'Compilar tambien para ARM64 / Raspberry Pi (runner pago; en los tags corre siempre)'
         type: boolean
         default: false
 
@@ -57,20 +57,19 @@ jobs:
           retention-days: 30
 
   # ------------------------------------------------------------------------
-  # ARM64 (Raspberry Pi) — EXPERIMENTAL. VERIFICADO en una Pi 4 real (25/10/2026,
-  # run 40225963759, Raspberry Pi OS Trixie): arranca y rinde igual que desde el
+  # ARM64 (Raspberry Pi). VERIFICADO en una Pi 4 real (25/10/2026, run
+  # 40225963759, Raspberry Pi OS Trixie): arranca y rinde igual que desde el
   # fuente con bloque 960. Falta probarlo en Bookworm.
   #
-  # OPT-IN A PROPOSITO (if: inputs.arm64): este repo es PRIVADO y los runners
-  # ARM64 solo son gratis en repos PUBLICOS — en privados se facturan por minuto.
-  # Un job que puede costar plata no debe correr solo en cada tag. Para probarlo:
-  # Actions -> Run workflow -> tildar la opcion.
+  # CORRE EN CADA TAG de version (decision del usuario, 25/10/2026: el release
+  # publica el paquete de la Pi junto con los de Windows y Linux x86_64), y a mano
+  # con la opcion del Run workflow. Ojo con el costo: este repo es PRIVADO y los
+  # runners ARM64 solo son gratis en repos PUBLICOS — en privados se facturan por
+  # minuto (~1,5 min por corrida). Sin continue-on-error: si falla, el release
+  # tiene que enterarse.
   #
-  # VERIFICADO que COMPILA (agosto 2026): binario ELF aarch64 de 64 bits, 542
-  # entradas, los 7 presets, plugins wayland presentes, libasound fuera. Tarda
-  # ~2 min. Python 3.12 en aarch64 tiene wheels de PySide6/scipy/numpy, asi que
-  # no hay que compilar nada desde fuente. Lo que sigue SIN verificar es que
-  # ARRANQUE en una Raspberry Pi real — de ahi el EXPERIMENTAL.
+  # Tarda ~1,5 min. Python 3.12 en aarch64 tiene wheels de PySide6/scipy/numpy,
+  # asi que no hay que compilar nada desde fuente.
   #
   # Si algun run aparece "cancelled" con CERO pasos: no es este workflow. La
   # anotacion del job dice "The job was not acquired by Runner of type hosted
@@ -83,14 +82,13 @@ jobs:
   #     glibc 2.36; 22.04 tiene 2.35 (sirve), 24.04 tiene 2.39 (no).
   #   - Python 3.12 y no 3.14: en aarch64 la disponibilidad de wheels
   #     (PySide6, scipy) va por detras de x86_64. Si con 3.12 tampoco hay
-  #     wheels, pip intenta compilar desde fuente y el job se va a tardar
-  #     muchisimo o a fallar — que es justamente lo que estamos por averiguar.
+  #     wheels, pip intenta compilar desde fuente y el job se tarda muchisimo
+  #     o falla.
   # ------------------------------------------------------------------------
   build-arm64:
-    name: Linux ARM64 / Raspberry Pi (experimental)
-    if: inputs.arm64
+    name: Linux ARM64 / Raspberry Pi
+    if: github.event_name == 'push' || inputs.arm64
     runs-on: ubuntu-22.04-arm
-    continue-on-error: true
 
     steps:
       - name: Checkout
@@ -121,43 +119,43 @@ jobs:
         run: |
           python -m PyInstaller reductor-linux.spec --clean --noconfirm
 
-      - name: Aviso de build experimental
+      - name: Notas para la Raspberry Pi
         run: |
-          cat > dist/RadioNoiseKiller/EXPERIMENTAL.txt <<'EOF'
-          BUILD EXPERIMENTAL — ARM64 / Raspberry Pi
-          =========================================
+          cat > dist/RadioNoiseKiller/LEEME_RASPBERRY_PI.txt <<'EOF'
+          RadioNoiseKiller — ARM64 / Raspberry Pi
+          =======================================
 
-          Este paquete se compila automaticamente pero NUNCA fue verificado en
-          una Raspberry Pi real: puede no arrancar, o arrancar y no encontrar
-          los dispositivos de audio.
-
-          Compilado en Ubuntu 22.04 ARM64 (glibc 2.35). Deberia funcionar en
-          Raspberry Pi OS Bookworm (glibc 2.36) y posteriores. En sistemas con
-          glibc mas vieja no va a arrancar.
+          Probado en una Raspberry Pi 4 con Raspberry Pi OS de 64 bits (Trixie).
+          Compilado en Ubuntu 22.04 ARM64 (glibc 2.35): deberia funcionar tambien
+          en Bookworm (glibc 2.36), sin probar todavia. Requiere SO de 64 bits.
 
           Requiere del sistema:  libportaudio2  libxcb-xinerama0
+              sudo apt install libportaudio2 libxcb-xinerama0
 
-          Si no funciona, la alternativa que no depende de este paquete es
-          correr la app desde el codigo fuente en la propia Pi:
+          Ejecutar:  ./RadioNoiseKiller/RadioNoiseKiller
+          (si dice "Permission denied": chmod +x RadioNoiseKiller/RadioNoiseKiller)
 
-              sudo apt install python3 python3-venv libportaudio2 libxcb-xinerama0
-              python3 -m venv .venv
-              .venv/bin/pip install sounddevice numpy scipy PySide6
-              .venv/bin/python src/main.py
+          Restricciones medidas en la Pi 4:
+            - Bloque de audio 960 (viene asi de fabrica en ARM). Con 480 corta.
+            - Con 960 funcionan todos los modulos a la vez (~55 % de CPU).
+            - La pestana Espectro no se puede usar con el procesamiento activo.
+            - La salida HDMI directa de la Pi no abre y no aparece en la lista:
+              usar una placa de audio USB o los auriculares.
+          El contador "Cortes" (debajo del medidor de CPU) dice si la
+          configuracion aguanta.
 
-          Reportes (funcione o no) en:
-          https://github.com/gpagliaroli/RadioNoiseKiller/issues
+          Reportes en: https://github.com/gpagliaroli/RadioNoiseKiller/issues
           EOF
-          cat dist/RadioNoiseKiller/EXPERIMENTAL.txt
+          cat dist/RadioNoiseKiller/LEEME_RASPBERRY_PI.txt
 
       - name: Create ZIP
         run: |
           cd dist
-          zip -r RadioNoiseKiller-linux-aarch64-EXPERIMENTAL.zip RadioNoiseKiller/
+          zip -r RadioNoiseKiller-linux-aarch64.zip RadioNoiseKiller/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: RadioNoiseKiller-linux-aarch64-EXPERIMENTAL
-          path: dist/RadioNoiseKiller-linux-aarch64-EXPERIMENTAL.zip
+          name: RadioNoiseKiller-linux-aarch64
+          path: dist/RadioNoiseKiller-linux-aarch64.zip
           retention-days: 30

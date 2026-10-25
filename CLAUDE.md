@@ -527,7 +527,7 @@ leer ese bloque es repetir trabajo que ya costó.
   para estimarlo), +88 MB de RAM, y rechaza el exe y Qt por CFG. Specs en `upx=False` a propósito
   → *"DESCARTADO por medición: UPX"*.
 - **Publicar el build ARM64 como asset** sin que alguien lo arranque en una Pi real. (Ya se arrancó: el run
-  40225963759 anda en una Pi 4. Publicarlo es ahora una decisión del usuario, no un descarte.)
+  40225963759 anda en una Pi 4, y el usuario decidió publicarlo — ver "Cambios pendientes de release".)
 
 ## Estado actual del proyecto
 
@@ -618,8 +618,13 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
   fuente. Trampa: arrancaba con su propio `settings.json` de fábrica (**bloque 480**) y el usuario lo probó así primero →
   cortes. Por eso `config.default_block_size()`: **960 de fábrica en ARM** (`platform.machine()` aarch64/arm*), 480 en
   el resto; un settings.json existente conserva su bloque. `test_presets::test_default_block_size_by_cpu` —
-  `pendiente de validar` en la Pi (arrancar el bundle sin settings.json). Todavía no se publica como asset de release
-  (decisión pendiente).
+  `validado en la Pi 4` (arranca en 960 sin settings.json).
+- **El release publica el paquete de la Raspberry Pi** (decisión del usuario, 25/10/2026): el job `build-arm64` de
+  `build-linux.yml` corre en cada tag (antes sólo a mano), sin `continue-on-error`, artefacto
+  `RadioNoiseKiller-linux-aarch64` con `LEEME_RASPBERRY_PI.txt` (restricciones medidas) en lugar de `EXPERIMENTAL.txt`.
+  El skill `release` lo baja, lo verifica (arquitectura, presets, libportaudio adentro/libasound afuera, glibc ≤ 2.36,
+  `_sosfilt`), pide el OK del usuario en la Pi y lo sube como `RadioNoiseKiller_vX.Y-linux-aarch64.zip`; también pasó a
+  usar `gh`. Costo: runner ARM pago (repo privado), ~1,5 min por tag. `pendiente de validar`: el primer tag que lo dispare.
 
 - **Optimización de CPU sin cambiar el audio** (post-v2.6): máscara armónica del pitch vectorizada y cacheada por
   `(f0, nb)`; `dsp/iir.py::sosfilt_fast` (núcleo C de scipy directo, idéntico bit a bit, fallback automático a `sosfilt`)
