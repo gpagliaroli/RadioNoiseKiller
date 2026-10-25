@@ -763,6 +763,40 @@ def test_waterfall_toggle_and_source():
     print("Cascada: toggle + fuente + profundidad + marcadores  OK")
 
 
+def test_alternate_rows_dark_on_linux_style():
+    """Las filas alternas de Presets y EiBi no pueden salir blancas. Con el estilo
+    de Linux (Fusion) Qt pinta el AlternateBase del tema del sistema (#f7f7f7)
+    si la hoja de estilo no lo define, y el texto claro se vuelve ilegible —
+    reportado en la Raspberry Pi. En Windows no se veía."""
+    from PySide6.QtWidgets import QStyleFactory, QTableWidgetItem
+
+    w = _win()
+    try:
+        fusion = QStyleFactory.create("Fusion")
+        lst = w._presets_tab._list
+        lst.clear()
+        lst.addItems(["uno", "dos", "tres", "cuatro"])
+        tabla = w._eibi_tab._table
+        tabla.setRowCount(4)
+        for r in range(4):
+            tabla.setItem(r, 0, QTableWidgetItem(str(r)))
+        for vista in (lst, tabla):
+            vista.setStyle(fusion)
+            vista.resize(300, 200)
+            vista.show()
+            _app.processEvents()
+            img = vista.viewport().grab().toImage()
+            h = vista.sizeHintForRow(0)
+            for fila in (1, 3):
+                c = img.pixelColor(img.width() - 5, fila * h + h // 2)
+                assert c.lightnessF() < 0.35, \
+                    f"{type(vista).__name__}: fila alterna {fila} clara ({c.name()})"
+            vista.hide()
+    finally:
+        w.close()
+    print("Filas alternas oscuras con el estilo de Linux     OK")
+
+
 def test_waterfall_rgb_incremental():
     """La cascada colorea cada fila al empujarla (y todo el ring sólo al cambiar
     la escala). Tiene que pintar EXACTAMENTE lo mismo que el método viejo, que
@@ -2273,6 +2307,7 @@ if __name__ == "__main__":
     test_waterfall_toggle_and_source()
     test_waterfall_diff_mode()
     test_waterfall_rgb_incremental()
+    test_alternate_rows_dark_on_linux_style()
     test_incompatible_devices_disable_activate()
     test_noise_fall_slider()
     test_gate_threshold_slider_on_principal()

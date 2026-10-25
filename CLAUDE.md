@@ -622,6 +622,11 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
   y manuales. La pestaña Espectro sigue cortando en la Pi aun sin esos
   módulos: la restricción queda (causa sin medir: pintado o GIL de la GUI). Bloque 480 tampoco funciona: 960 obligatorio. **Nuevo `sosfilt` en el DSP: usar `sosfilt_fast`.**
 
+- **Filas alternas legibles en Linux** (post-v2.6): `alternate-background-color` en la hoja de estilo oscura
+  (`QAbstractItemView`); sin eso Presets y EiBi pintaban filas `#f7f7f7` (AlternateBase del tema del sistema) bajo texto
+  claro. `test_ui::test_alternate_rows_dark_on_linux_style` (fuerza Fusion; falla sin el arreglo) — `pendiente de validar`
+  en la Pi.
+
 Formato al acumular: una línea por cambio con su estado de validación (`validado en el aire` /
 `pendiente de validar`), y el bloque narrativo completo en el historial, sección "En curso". El
 skill `release` toma las notas del release de esta lista.

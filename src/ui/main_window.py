@@ -2703,5 +2703,10 @@ class MainWindow(QMainWindow):
             }
             QPushButton:disabled { background-color: #333; color: #666; }
             QScrollArea { border: none; }
+            /* Filas alternas de listas y tablas (Presets, EiBi): sin esto Qt usa
+               el AlternateBase del tema del SISTEMA, que en Linux/Raspberry Pi es
+               casi blanco (#f7f7f7) y deja el texto claro ilegible. En Windows no
+               se veía porque su tema lo pinta parecido al fondo. */
+            QAbstractItemView { alternate-background-color: #22223d; }
             QStatusBar { background-color: #111; color: #aaa; font-size: 8pt; }
         """)
