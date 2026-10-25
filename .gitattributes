@@ -6,3 +6,4 @@
 *.txt text eol=lf
 *.json text eol=lf
 *.ini text eol=lf
+run text eol=lf

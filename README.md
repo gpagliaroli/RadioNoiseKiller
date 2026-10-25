@@ -36,10 +36,11 @@ sudo apt update
 sudo apt install git python3-venv python3-pip libportaudio2 libxcb-xinerama0
 git clone https://github.com/gpagliaroli/RadioNoiseKiller.git
 cd RadioNoiseKiller
-python3 -m venv .venv
-.venv/bin/pip install sounddevice numpy scipy PySide6
-.venv/bin/python src/main.py
+./run
 ```
+
+`./run` crea el entorno virtual e instala las dependencias la primera vez (tarda unos minutos), y
+después sólo arranca la app. Para actualizar: `git pull` y `./run`.
 
 Restricciones que encontramos en la prueba:
 

@@ -1,0 +1,23 @@
+#!/bin/sh
+# Lanza RadioNoiseKiller desde el código fuente (Linux / Raspberry Pi).
+# Uso: ./run   (desde cualquier carpeta)
+#
+# La primera vez crea el entorno virtual .venv e instala las dependencias de
+# ejecución de requirements.txt (sin PyInstaller, que sólo hace falta para
+# empaquetar). Requiere python3-venv y libportaudio2 del sistema:
+#   sudo apt install python3-venv python3-pip libportaudio2 libxcb-xinerama0
+set -e
+cd "$(dirname "$0")"
+
+if [ ! -x .venv/bin/python ]; then
+    echo "Primera ejecución: creando el entorno virtual en .venv ..."
+    if ! python3 -m venv .venv; then
+        echo "No se pudo crear .venv. Instalá python3-venv:" >&2
+        echo "  sudo apt install python3-venv python3-pip libportaudio2 libxcb-xinerama0" >&2
+        exit 1
+    fi
+    .venv/bin/pip install --upgrade pip
+    grep -vi '^pyinstaller' requirements.txt | .venv/bin/pip install -r /dev/stdin
+fi
+
+exec .venv/bin/python src/main.py "$@"
