@@ -44,11 +44,10 @@ python3 -m venv .venv
 Restricciones que encontramos en la prueba:
 
 - **Sistema de 64 bits obligatorio** (`uname -m` debe decir `aarch64`): en 32 bits no hay PySide6.
-- **Usar bloque de audio 960** (Avanzada Audio, requiere reiniciar el stream). Con 480 el procesado
-  ocupa 75–80 % del tiempo disponible, con picos de más de 100 %; con 960 baja a ~50 %.
-- **Desactivar el Excitador armónico, la Recuperación de graves y el Refuerzo de pitch de voz.** Con
-  todos los módulos activos aparecen cortes de audio aunque el promedio del medidor de CPU ronde el
-  50 %; sin esos tres la salida casi no cambia.
+- **Usar bloque de audio 960** (Avanzada Audio, requiere reiniciar el stream); con 480 hay cortes.
+  Con 960 funcionan **todos
+  los módulos activos a la vez, sin cortes**, con el medidor de CPU en ~55 %. Antes de la
+  optimización de CPU posterior a la v2.6 había que apagar el excitador, los graves y el pitch.
 - **No usar la pestaña Espectro** (ni la cascada) mientras se procesa: consume demasiada CPU en la Pi.
 - **La salida HDMI directa de la Pi** (`vc4-hdmi ... (hw:`) no abre (`Sample format not supported
   [-9994]`) y la app la oculta de la lista. Sirven una placa USB o los auriculares.

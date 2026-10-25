@@ -70,8 +70,24 @@ de float32, medido sobre grabaciones reales ANTES de creerle a nada (regla 5).
   cascadas apiladas, fallback sin la API privada, cascada apilada de graves = dos filtros en serie,
   máscara nueva contra la vieja en hop 480/960/1920 y f0 80–400 Hz, cache invalidado por `reset(hop)`),
   `test_ui::test_waterfall_rgb_incremental` (mismos píxeles que el método viejo tras push, escala,
-  frecuencia, profundidad, modo Diferencia y clear). **Pendiente de validar en la Pi**: si con esto
-  vuelven a entrar pitch, graves, excitador y la pestaña Espectro (mirar "Cortes" y "pico" < 20 ms).
+  frecuencia, profundidad, modo Diferencia y clear). **Validado en la Pi 4 (24/10)**: con bloque 960
+  entran TODOS los módulos a la vez sin cortes, CPU ~55 % (antes había que apagar pitch, graves y
+  excitador). Restricción quitada de README y manuales. **La pestaña Espectro sigue cortando** después de la
+  optimización, **aun con pitch, graves y excitador apagados** (dato del usuario): la restricción
+  queda. No se midió qué parte del pintado pesa en la Pi (espectro, cascada, o el GIL del hilo de la
+  GUI); el CPU del DSP no es la causa (con todo activo da ~55 %). **Bloque 480 tampoco funciona**
+  en la Pi 4 tras la optimización (dato del usuario): 960 sigue siendo obligatorio.
+- **Por qué corta el Espectro** (contador de cortes en la Pi, monitor directo, sin VNC): se atrasa el
+  hilo del DSP, no el driver. Todo apagado + Espectro: 14 % de frames tardíos, peor 78 ms, 396 cortes
+  en 7,7 min, underflows ≈ 0. En la PC se reprodujo en chico: con el espectro pintando, el p99,9 del
+  DSP sube de ~6 a 17 ms; lo estira el PINTADO, no la FFT del tick; armar los `QPointF` con numpy (100×
+  más rápido) no mueve la cola, y Qt libera el GIL mientras pinta (otro hilo sigue al 96 %).
+  `sys.setswitchinterval(0.0005)` probado en la Pi sin tocar código (`runpy`): todo apagado baja a 3 %
+  de tardíos y 1 corte en 32 s, **pero con todos los módulos activos da 53 % de tardíos y 890 cortes
+  en ~2 min** → no sirve en el caso real y NO se fijó en `main.py` (ajuste global de Python para todas
+  las plataformas sin beneficio medido). Decisión del usuario: **queda la restricción** (Espectro no se
+  usa en la Pi 4 con el procesamiento activo); el "modo liviano" (sin antialiasing, ~5 fps) quedó sin
+  probar, propuesto como opción si algún día se quiere.
 
 **Post-v2.6: primera prueba en una Raspberry Pi 4 real (24/10/2026).** Desde el fuente (clon + venv),
 Raspberry Pi OS basado en Debian 13 (Trixie), aarch64, Python 3.13.5, Wayland, dos placas USB baratas

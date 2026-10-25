@@ -1361,7 +1361,7 @@ The file is capped at a few errors per session, so it does not grow without boun
 
 **Dropout counter.** Below the CPU meter, **Dropouts: N · peak X ms** counts the times the output ran out of processed audio or the device lost samples since you started processing, plus the slowest processing time of a single frame. Green means no dropouts. If «peak» exceeds the block length (480 = 10 ms, 960 = 20 ms) there is a dropout: the CPU meter average can look comfortable anyway. When you stop, if there were dropouts a summary is left in `errores_dsp.log`, and **Export diagnostics** includes the counters.
 
-> **Raspberry Pi 4.** Tested from source (64-bit Raspberry Pi OS). Use **block size 960** and **turn off the Harmonic exciter, Bass recovery and Voice pitch boost**: with every module on, audio dropouts appear even when the meter averages around 50 %, and with pitch boost on the margin is so thin that it cuts out now and then. Without those three modules the output barely changes. **Do not use the Spectrum tab** (or the waterfall) while processing: it uses too much CPU on the Pi. For the output pick a USB card or the headphone jack: the Pi's direct HDMI output is not listed because it will not open.
+> **Raspberry Pi 4.** Tested from source (64-bit Raspberry Pi OS). Use **block size 960** (480 has dropouts): that way every module can be on at the same time without dropouts, with the CPU meter around 55 %. **Do not use the Spectrum tab** (or the waterfall) while processing: it uses too much CPU on the Pi. For the output pick a USB card or the headphone jack: the Pi's direct HDMI output is not listed because it will not open.
 
 ---
 
