@@ -1,5 +1,6 @@
 import numpy as np
-from scipy.signal import butter, sosfilt, sosfilt_zi
+from scipy.signal import butter, sosfilt_zi
+from dsp.iir import sosfilt_fast
 
 
 class BassRestorer:
@@ -105,14 +106,16 @@ class BassRestorer:
         self._sos_band = butter(
             2, [self._BAND_LO_HZ / nyq, min(self._BAND_HI_HZ / nyq, 0.99)],
             btype='band', output='sos').astype(np.float64)
-        self._sos_lp = butter(
-            2, self._LP_HZ / nyq, btype='low', output='sos').astype(np.float64)
-        self._sos_dc = butter(
-            2, self._DC_HZ / nyq, btype='high', output='sos').astype(np.float64)
+        # Pasa-bajos y quitacontinua en UNA cascada: es la misma serie de biquads
+        # en el mismo orden que filtrarlos uno detrás del otro (idéntico bit a
+        # bit) y se ahorra una llamada al filtro por frame.
+        self._sos_low = np.vstack([
+            butter(2, self._LP_HZ / nyq, btype='low', output='sos'),
+            butter(2, self._DC_HZ / nyq, btype='high', output='sos'),
+        ]).astype(np.float64)
 
         self._zi_band: np.ndarray | None = None
-        self._zi_lp:   np.ndarray | None = None
-        self._zi_dc:   np.ndarray | None = None
+        self._zi_low:  np.ndarray | None = None
         self._rms:     float = 0.0
         self._sr:      float = float(sample_rate)
         # Periodicidad: objetivo del frame (1.0 = sin retirar, para quien no la
@@ -122,8 +125,7 @@ class BassRestorer:
 
     def reset(self) -> None:
         self._zi_band = None
-        self._zi_lp   = None
-        self._zi_dc   = None
+        self._zi_low  = None
         self._rms     = 0.0
         self._period_ema = None
 
@@ -170,10 +172,9 @@ class BassRestorer:
 
         if self._zi_band is None:
             self._zi_band = sosfilt_zi(self._sos_band) * 0.0
-            self._zi_lp   = sosfilt_zi(self._sos_lp) * 0.0
-            self._zi_dc   = sosfilt_zi(self._sos_dc) * 0.0
+            self._zi_low  = np.zeros((self._sos_low.shape[0], 2))
 
-        band, self._zi_band = sosfilt(self._sos_band, x, zi=self._zi_band)
+        band, self._zi_band = sosfilt_fast(self._sos_band, x, self._zi_band)
 
         # El cuadrado es cuadrático: normalizar por el RMS de la banda deja el
         # efecto proporcional a la señal y no al cuadrado de su nivel.
@@ -182,8 +183,7 @@ class BassRestorer:
         if self._rms < self._RMS_MIN:
             return chunk
 
-        low, self._zi_lp = sosfilt(self._sos_lp, band * band, zi=self._zi_lp)
-        low, self._zi_dc = sosfilt(self._sos_dc, low, zi=self._zi_dc)
+        low, self._zi_low = sosfilt_fast(self._sos_low, band * band, self._zi_low)
 
         gain = self._amount * r * self._REF_GAIN / self._rms
         return (x + gain * low).astype(np.float32)

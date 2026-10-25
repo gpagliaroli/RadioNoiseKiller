@@ -109,6 +109,12 @@ class WaterfallWidget(QWidget):
         # capturada ni obliga a reasignar el ring en caliente.
         self._rows   = max(1, int(self.HISTORY_MAX / (self.TICK_MS / 1000.0)))
         self._ring   = np.full((self._rows, self._n_bins), self._empty_value, dtype=np.float32)
+        # Copia ya coloreada del ring (RGB uint8). Se colorea UNA fila por tick al
+        # empujarla, y todo el ring sólo cuando cambia la escala. Antes el pintado
+        # recoloreaba las ~450×683 celdas visibles en cada repintado (3,2 ms en la
+        # PC, 15 veces por segundo, en el hilo de la GUI con el GIL tomado —
+        # compitiendo con el hilo de audio, que en la Raspberry Pi cortaba).
+        self._rgb_ring = np.zeros((self._rows, self._n_bins, 3), dtype=np.uint8)
         self._cursor = 0          # posición de la fila más nueva (recién escrita)
         self._history_sec = self.HISTORY_SEC
         self._tone_freqs: np.ndarray | None = None   # heterodinos detectados por el ANF
@@ -121,6 +127,7 @@ class WaterfallWidget(QWidget):
         self._active       = False
         self._source_label = tr("Entrada")
         self._rgb: np.ndarray | None = None   # mantiene vivo el buffer del QImage
+        self._fill_empty()                    # colorea el ring vacío con la escala
 
     # ------------------------------------------------------------------
     # API pública
@@ -134,21 +141,33 @@ class WaterfallWidget(QWidget):
         return 0.0 if self._diff_mode else self.DB_MIN
 
     def start(self) -> None:
-        self._ring.fill(self._empty_value)
-        self._cursor = 0
+        self._fill_empty()
         self._active = True
         self.update()
 
     def stop(self) -> None:
         self._active = False
-        self._ring.fill(self._empty_value)
-        self._cursor = 0
+        self._fill_empty()
         self.update()
 
     def clear(self) -> None:
-        self._ring.fill(self._empty_value)
-        self._cursor = 0
+        self._fill_empty()
         self.update()
+
+    def _fill_empty(self) -> None:
+        """Vacía el ring (y su copia coloreada) con el valor vacío de la escala."""
+        self._ring.fill(self._empty_value)
+        self._rgb_ring[:] = self._colorize(np.float32(self._empty_value))
+        self._cursor = 0
+
+    def _colorize(self, db: np.ndarray) -> np.ndarray:
+        """Valor → RGB uint8 con la escala del modo actual (ver _scale)."""
+        lo, span, lut = self._scale()
+        frac = np.clip((db - lo) / span, 0.0, 1.0)
+        return lut[(frac * 255.0).astype(np.uint8)]
+
+    def _recolor_all(self) -> None:
+        self._rgb_ring[:] = self._colorize(self._ring)
 
     def push_row(self, db: np.ndarray) -> None:
         """Agrega una fila al tope de la cascada: dB absolutos en modo nivel,
@@ -160,10 +179,15 @@ class WaterfallWidget(QWidget):
         self._ring[self._cursor, :n] = db[:n]
         if n < self._n_bins:
             self._ring[self._cursor, n:] = self._empty_value
+        self._rgb_ring[self._cursor] = self._colorize(self._ring[self._cursor])
         self.update()
 
     def set_db_max(self, db_max: int) -> None:
+        if float(db_max) == self._db_max:
+            return
         self._db_max = float(db_max)
+        if not self._diff_mode:     # Diferencia tiene escala fija: no cambia nada
+            self._recolor_all()
         self.update()
 
     def set_max_freq_hz(self, hz: int) -> None:
@@ -196,8 +220,7 @@ class WaterfallWidget(QWidget):
         if on == self._diff_mode:
             return
         self._diff_mode = on
-        self._ring.fill(self._empty_value)
-        self._cursor = 0
+        self._fill_empty()
         self.update()
 
     def _update_max_bin(self) -> None:
@@ -242,13 +265,9 @@ class WaterfallWidget(QWidget):
         # Filas ordenadas de más nueva (arriba) a más vieja (abajo), solo las que
         # entran en la profundidad elegida. El ring va cronológico; roll para que
         # la fila del cursor quede primera.
+        # Las filas ya están coloreadas (ver _rgb_ring): acá sólo se copian.
         order = (self._cursor - np.arange(nvis)) % self._rows
-        rows = self._ring[order, :mb]                       # (nvis, max_bin)
-
-        lo, span, lut = self._scale()
-        frac = np.clip((rows - lo) / span, 0.0, 1.0)
-        idx  = (frac * 255.0).astype(np.uint8)
-        rgb  = np.ascontiguousarray(lut[idx])                # (nvis, max_bin, 3) uint8
+        rgb = np.ascontiguousarray(self._rgb_ring[order, :mb])   # (nvis, max_bin, 3)
         self._rgb = rgb                                      # evita GC durante el draw
 
         img = QImage(rgb.data, mb, nvis, mb * 3, QImage.Format_RGB888)

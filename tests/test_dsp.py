@@ -756,3 +756,91 @@ _gc.set_threshold_db(-999); assert _gc._threshold_db == -80.0
 _gc.set_depth_db(999);     assert _gc._depth_db == 60.0
 _gc.set_hold_ms(1);        assert _gc._hold_ms == 50.0
 print("  hold por hop y clamps de los setters: OK")
+
+# ------------------------------------------------------------------
+# Optimización de CPU sin cambiar el audio
+# ------------------------------------------------------------------
+print("\nsosfilt_fast y máscara armónica (optimización de CPU)...")
+import dsp.iir as _iir                       # noqa: E402
+from scipy.signal import sosfilt_zi as _sosfilt_zi   # noqa: E402
+
+# sosfilt_fast tiene que ser IDÉNTICO bit a bit a scipy.signal.sosfilt, con
+# estado entre bloques, entrada float32 y float64, y cascadas apiladas.
+_rng_i = np.random.default_rng(11)
+for _sos in (_butter(2, [250 / 24000, 1000 / 24000], btype="band", output="sos"),
+             _butter(4, [300 / 24000, 2700 / 24000], btype="band", output="sos"),
+             np.vstack([_butter(2, 320 / 24000, output="sos"),
+                        _butter(2, 60 / 24000, btype="high", output="sos")])):
+    for _dt in (np.float32, np.float64):
+        _za = _zb = _sosfilt_zi(_sos) * 0.1
+        for _ in range(4):
+            _x = _rng_i.standard_normal(960).astype(_dt)
+            _ya, _za = _iir.sosfilt_fast(_sos, _x, _za)
+            _yb, _zb = _sosfilt(_sos, _x, zi=_zb)
+            assert _ya.dtype == np.float64
+            assert np.array_equal(_ya, _yb) and np.array_equal(_za, _zb), \
+                "sosfilt_fast no es idéntico a sosfilt"
+# La vía lenta (fallback si scipy cambia su API privada) da lo mismo
+_ya, _ = _iir._sosfilt_lento(_sos, _x, _sosfilt_zi(_sos) * 0.0)
+_yb, _ = _sosfilt(_sos, _x, zi=_sosfilt_zi(_sos) * 0.0)
+assert np.array_equal(_ya, _yb)
+print(f"  sosfilt_fast idéntico a sosfilt (vía rápida activa: {_iir.RAPIDO}): OK")
+
+# Graves: el pasa-bajos y el quitacontinua apilados en una sola cascada dan lo
+# mismo que filtrarlos en serie (la versión anterior del módulo).
+_lp = _butter(2, BassRestorer._LP_HZ / 24000, output="sos")
+_dc = _butter(2, BassRestorer._DC_HZ / 24000, btype="high", output="sos")
+_sq = _rng_i.standard_normal(4800) ** 2
+assert np.array_equal(_sosfilt(np.vstack([_lp, _dc]), _sq), _sosfilt(_dc, _sosfilt(_lp, _sq)))
+print("  graves: cascada apilada idéntica a los dos filtros en serie: OK")
+
+
+def _mask_vieja(p, f0):
+    """La implementación anterior (suma de TODOS los armónicos), de referencia."""
+    sep = f0 / (48000.0 / p._fft_n)
+    sigma = max(p._PITCH_SIGMA_MIN, p._PITCH_SIGMA_K * sep)
+    mask = np.zeros(p._nb, dtype=np.float32)
+    bins = np.arange(p._nb, dtype=np.float32)
+    h = 1
+    while h * sep < p._nb:
+        mask += np.exp(-0.5 * ((bins - h * sep) / sigma) ** 2).astype(np.float32)
+        h += 1
+    return np.minimum(mask, 1.0)
+
+
+from dsp.noise_profiler import NoiseProfiler   # noqa: E402
+_peor = 0.0
+for _hop in (480, 960, 1920):
+    _np_ = NoiseProfiler(_hop)
+    for _f0 in np.linspace(80.0, 400.0, 61):
+        _peor = max(_peor, float(np.max(np.abs(_np_._harmonic_mask(_f0)
+                                               - _mask_vieja(_np_, _f0)))))
+assert _peor <= 1e-6, f"la máscara nueva se aparta de la vieja: {_peor:.2e}"
+# Cache: misma f0 -> mismo array; cambio de bloque -> se recalcula con el nb nuevo
+_np_ = NoiseProfiler(960)
+_m1 = _np_._harmonic_mask(150.0)
+assert _np_._harmonic_mask(150.0) is _m1, "no reusa la máscara cacheada"
+_np_.reset(480)
+_m2 = _np_._harmonic_mask(150.0)
+assert len(_m2) == _np_._nb and np.allclose(_m2, _mask_vieja(_np_, 150.0), atol=1e-6), \
+    "tras reset(hop) la máscara quedó con el tamaño viejo (invariante 9)"
+print(f"  máscara armónica = suma completa (dif. máx {_peor:.1e}), cache por f0 y nb: OK")
+
+# Sin la API privada de scipy (versión futura que la saque): vuelve sola a la
+# pública, sin romper nada. Se simula bloqueando el módulo y recargando.
+import importlib as _importlib   # noqa: E402
+_guard = sys.modules.get("scipy.signal._sosfilt")
+sys.modules["scipy.signal._sosfilt"] = None
+try:
+    _importlib.reload(_iir)
+    assert _iir.RAPIDO is False and _iir.sosfilt_fast is _iir._sosfilt_lento
+    _ya, _ = _iir.sosfilt_fast(_sos, _x, _sosfilt_zi(_sos) * 0.0)
+    assert np.array_equal(_ya, _yb), "el fallback no da lo mismo"
+finally:
+    if _guard is None:
+        del sys.modules["scipy.signal._sosfilt"]
+    else:
+        sys.modules["scipy.signal._sosfilt"] = _guard
+    _importlib.reload(_iir)
+assert _iir.RAPIDO, "la vía rápida no se restauró tras el test"
+print("  sin la API privada de scipy: vuelve a sosfilt público: OK")

@@ -41,6 +41,38 @@ regla de método nueva.
 
 _(Los bloques nuevos de la próxima versión van acá, el más reciente arriba.)_
 
+**Post-v2.6: optimización de CPU sin cambiar el audio (24/10/2026).** Pedido del usuario tras la Pi 4
+("bajar el consumo sin afectar la calidad"). Criterio: salida idéntica bit a bit o dentro del redondeo
+de float32, medido sobre grabaciones reales ANTES de creerle a nada (regla 5).
+- **Perfil** (cProfile de `_process_chunk`, PC, bloque 960, todo activado): `_harmonic_mask` **~32 %**
+  de la cadena (un `exp` sobre TODOS los bins por cada armónico, hasta ~240 con f0 = 100 Hz, ≈1 ms por
+  frame y recalculado cada frame aunque f0 cambia cada 3); `scipy.signal.sosfilt` **~23 %** (7 llamadas
+  por frame, 18 de cada 20 µs son validación y `moveaxis`; el núcleo C tarda 4). La cascada recoloreaba
+  ~450×683 celdas en cada repintado: 3,2 ms × 15 fps en el hilo de la GUI con el GIL tomado.
+- **Cambios**: (1) máscara armónica vectorizada (cada bin suma sólo los ±3 armónicos más cercanos; el
+  resto está a > 6σ y aporta < 2e-9) y cacheada por `(f0, nb)`; (2) `dsp/iir.py::sosfilt_fast` llama al
+  MISMO núcleo C de scipy (`scipy.signal._sosfilt._sosfilt`), con auto-chequeo al importar contra la
+  versión pública y fallback a ella si la API privada desaparece o da distinto; usado en pasabanda
+  (entrada y salida), excitador y graves; en graves, pasa-bajos + quitacontinua apilados en UNA cascada
+  (misma serie de biquads, idéntico); (3) cascada con un ring RGB `uint8` que colorea una fila por tick
+  y todo el ring sólo al cambiar la escala.
+- **Verificación sobre la señal** (3 grabaciones reales, 45 s, todos los módulos, hop 480/960/1920,
+  `scratchpad/golden.py`): la línea de base contra sí misma da **0 exacto** (regla 6); `sosfilt_fast` y la
+  cascada apilada dan **0 exacto**; la máscara da **6e-8** de diferencia máxima (bajo el LSB de 24 bits).
+- **Ganancia** (mismo equipo, código viejo en un worktree de HEAD, intercalado, 2 rondas): todo activado
+  **1150 → 530 µs/frame a hop 480 (−53 %)** y **1540 → 740 a hop 960 (−52 %)**; configuración típica
+  (MCRA) −10 a −20 %. Cascada: push + repintado **4,7 → 0,59 ms por tick (−87 %)**. `test_noise_vad`
+  bajó de 18 a 8 s como efecto colateral.
+- **Descartado de esta ronda** (cambia el audio, aunque sea poco): tabular `exp(½·E1(v))` (`exp1`
+  ~167 µs/frame a hop 960; error ~1e-6 relativo). Bajar fps o suavizado de espectro/cascada cambia lo
+  que se ve.
+- **Tests**: `test_dsp` (`sosfilt_fast` igual bit a bit a `sosfilt` en float32/float64 con estado y
+  cascadas apiladas, fallback sin la API privada, cascada apilada de graves = dos filtros en serie,
+  máscara nueva contra la vieja en hop 480/960/1920 y f0 80–400 Hz, cache invalidado por `reset(hop)`),
+  `test_ui::test_waterfall_rgb_incremental` (mismos píxeles que el método viejo tras push, escala,
+  frecuencia, profundidad, modo Diferencia y clear). **Pendiente de validar en la Pi**: si con esto
+  vuelven a entrar pitch, graves, excitador y la pestaña Espectro (mirar "Cortes" y "pico" < 20 ms).
+
 **Post-v2.6: primera prueba en una Raspberry Pi 4 real (24/10/2026).** Desde el fuente (clon + venv),
 Raspberry Pi OS basado en Debian 13 (Trixie), aarch64, Python 3.13.5, Wayland, dos placas USB baratas
 (CM108, solo `hw:` directo) y salida por los auriculares de la Pi. **El bundle PyInstaller NO se probó.**

@@ -614,6 +614,12 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
   `vc4-hdmi` hw: ya no aparece y la salida ALSA `hdmi` (con conversión) queda y funciona. El bundle PyInstaller en la Pi
   sigue sin probarse.
 
+- **Optimización de CPU sin cambiar el audio** (post-v2.6): máscara armónica del pitch vectorizada y cacheada por
+  `(f0, nb)`; `dsp/iir.py::sosfilt_fast` (núcleo C de scipy directo, idéntico bit a bit, fallback automático a `sosfilt`)
+  en pasabanda, excitador y graves; cascada coloreada por fila (ring RGB). Todo activado −52/−53 % a hop 480/960, cascada
+  −87 % por tick. Salida medida sobre grabaciones reales: 0 exacto, la máscara 6e-8. `test_dsp`, `test_ui` — `pendiente de
+  validar` en la Pi (si vuelven pitch, graves, excitador y Espectro). **Nuevo `sosfilt` en el DSP: usar `sosfilt_fast`.**
+
 Formato al acumular: una línea por cambio con su estado de validación (`validado en el aire` /
 `pendiente de validar`), y el bloque narrativo completo en el historial, sección "En curso". El
 skill `release` toma las notas del release de esta lista.

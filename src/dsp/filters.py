@@ -6,8 +6,9 @@ y estabilidad numérica. El estado del filtro (zi) se mantiene entre frames para
 garantizar continuidad en la señal procesada.
 """
 import numpy as np
-from scipy.signal import butter, sosfilt, sosfilt_zi, lfilter
+from scipy.signal import butter, sosfilt_zi, lfilter
 from config import DSPConfig
+from dsp.iir import sosfilt_fast
 
 
 class BandpassFilter:
@@ -49,7 +50,7 @@ class BandpassFilter:
         self._zi = sosfilt_zi(self._sos) * 0.0  # estado inicial en cero
 
     def process(self, audio: np.ndarray) -> np.ndarray:
-        out, self._zi = sosfilt(self._sos, audio, zi=self._zi)
+        out, self._zi = sosfilt_fast(self._sos, audio, self._zi)
         return out.astype(np.float32)
 
     def reset(self) -> None:

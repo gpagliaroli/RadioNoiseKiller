@@ -286,6 +286,10 @@ class NoiseProfiler:
         self._ola_prev = np.zeros(hop_size, dtype=np.float32)
         self._ola_acc  = np.zeros(self._fft_n, dtype=np.float32)
 
+        # Cache de la máscara armónica del refuerzo de pitch (ver _harmonic_mask)
+        self._hmask_key: tuple | None = None
+        self._hmask:     np.ndarray | None = None
+
         # Perfil estático
         self._noise_mag:  np.ndarray | None = None
         self._is_learning = False
@@ -501,6 +505,7 @@ class NoiseProfiler:
         self._pf_extra_db        = 0.0
         self._pitch_cache        = None
         self._pitch_countdown    = 0
+        self._hmask_key          = None   # por-bin: la clave ya incluye nb (inv. 9)
         self._mcra_voice_hold    = 0
         self._atk_window         = 0
         self._prev_vp_sq         = 0.0
@@ -816,21 +821,41 @@ class NoiseProfiler:
             return None
         return f0
 
+    # Armónicos vecinos que se suman a cada bin además del más cercano. Con el
+    # peor caso (hop 480, f0 80 Hz: separación 1,6 bins con σ = 1) el que queda
+    # afuera está a 6,4σ y aporta < 2e-9.
+    _HMASK_VECINOS: int = 3
+
     def _harmonic_mask(self, f0: float) -> np.ndarray:
-        """Máscara gaussiana centrada en cada armónico de f0 (en bins FFT)."""
+        """Máscara gaussiana centrada en cada armónico de f0 (en bins FFT).
+
+        Cada bin suma sólo los armónicos más cercanos (±_HMASK_VECINOS): el resto
+        está a muchas σ y no cambia el resultado (medido contra la suma de TODOS
+        los armónicos: diferencia ≤ 1,2e-7, el redondeo de float32). Antes era un
+        bucle con un exp sobre todos los bins por armónico —hasta ~240 con f0 de
+        100 Hz— y costaba más que el resto de la cadena junta (≈1 ms por frame en
+        la PC, 4-5 ms en la Raspberry Pi: por eso el refuerzo de pitch cortaba).
+        f0 sale de la autocorrelación cacheada cada _PITCH_EVERY frames, así que
+        la máscara se cachea por (f0, nb) y la mayoría de los frames la reusan."""
+        key = (f0, self._nb)
+        if key == self._hmask_key:
+            return self._hmask
         freq_per_bin = 48000.0 / self._fft_n
         separacion = f0 / freq_per_bin          # armónicos contiguos, en bins
         sigma = max(self._PITCH_SIGMA_MIN, self._PITCH_SIGMA_K * separacion)
-        mask = np.zeros(self._nb, dtype=np.float32)
-        bins = np.arange(self._nb, dtype=np.float32)
-        h = 1
-        while True:
-            center = h * separacion
-            if center >= self._nb:
-                break
-            mask += np.exp(-0.5 * ((bins - center) / sigma) ** 2).astype(np.float32)
-            h += 1
-        return np.minimum(mask, 1.0)
+        bins = np.arange(self._nb, dtype=np.float64)
+        kmax = int(np.ceil(self._nb / separacion))   # último armónico con centro < nb
+        while kmax * separacion >= self._nb:
+            kmax -= 1
+        k0 = np.rint(bins / separacion)
+        mask = np.zeros(self._nb, dtype=np.float64)
+        for d in range(-self._HMASK_VECINOS, self._HMASK_VECINOS + 1):
+            k = k0 + d
+            g = np.exp(-0.5 * ((bins - k * separacion) / sigma) ** 2)
+            mask += np.where((k >= 1) & (k <= kmax), g, 0.0)
+        self._hmask = np.minimum(mask, 1.0).astype(np.float32)
+        self._hmask_key = key
+        return self._hmask
 
     # ------------------------------------------------------------------
     # MCRA — estimación adaptativa de ruido

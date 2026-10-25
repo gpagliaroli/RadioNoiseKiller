@@ -1,5 +1,6 @@
 import numpy as np
-from scipy.signal import butter, sosfilt, sosfilt_zi
+from scipy.signal import butter, sosfilt_zi
+from dsp.iir import sosfilt_fast
 
 
 class AuralExciter:
@@ -197,7 +198,7 @@ class AuralExciter:
         if self._zi_even is None:
             self._zi_even = sosfilt_zi(self._sos_even_hp) * 0.0
 
-        h, self._zi_band = sosfilt(self._sos_band, x, zi=self._zi_band)
+        h, self._zi_band = sosfilt_fast(self._sos_band, x, self._zi_band)
 
         # Nivel de trabajo fijo para la no linealidad (RMS con memoria entre bloques):
         # el efecto no depende del nivel de entrada, pero `drive` sí lo controla
@@ -221,8 +222,8 @@ class AuralExciter:
             # Rama PAR: u² (no linealidad par → armónicos 2°, 4°). Se le quita la
             # continua y se filtra alto para acotar los productos de diferencia.
             ev = u * u
-            ev, self._zi_even = sosfilt(self._sos_even_hp, ev - float(np.mean(ev)),
-                                        zi=self._zi_even)
+            ev, self._zi_even = sosfilt_fast(self._sos_even_hp, ev - float(np.mean(ev)),
+                                             self._zi_even)
             # Igualar RMS de las dos ramas (con memoria) para que "carácter" sea un
             # crossfade de timbre y no un salto de nivel.
             self._rms_odd  = a * self._rms_odd + (1.0 - a) * float(np.sqrt(np.mean(odd * odd)))
@@ -234,6 +235,6 @@ class AuralExciter:
         else:
             branch = odd
 
-        harm, self._zi_lp = sosfilt(self._sos_lp, scale * branch, zi=self._zi_lp)
+        harm, self._zi_lp = sosfilt_fast(self._sos_lp, scale * branch, self._zi_lp)
 
         return (x + (self._mix * self._gate * per) * harm).astype(np.float32)

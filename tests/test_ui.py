@@ -763,6 +763,46 @@ def test_waterfall_toggle_and_source():
     print("Cascada: toggle + fuente + profundidad + marcadores  OK")
 
 
+def test_waterfall_rgb_incremental():
+    """La cascada colorea cada fila al empujarla (y todo el ring sólo al cambiar
+    la escala). Tiene que pintar EXACTAMENTE lo mismo que el método viejo, que
+    recoloreaba todo lo visible en cada repintado."""
+    import numpy as np
+    from ui.waterfall_widget import WaterfallWidget
+
+    wf = WaterfallWidget()
+
+    def viejo():
+        mb, nvis = wf._max_bin, wf._visible_rows()
+        order = (wf._cursor - np.arange(nvis)) % wf._rows
+        lo, span, lut = wf._scale()
+        frac = np.clip((wf._ring[order, :mb] - lo) / span, 0.0, 1.0)
+        return lut[(frac * 255.0).astype(np.uint8)]
+
+    def nuevo():
+        order = (wf._cursor - np.arange(wf._visible_rows())) % wf._rows
+        return wf._rgb_ring[order, :wf._max_bin]
+
+    rng = np.random.default_rng(3)
+    assert np.array_equal(viejo(), nuevo()), "ring vacío al construir"
+    wf.start()
+    for paso, accion in enumerate((lambda: None,
+                                   lambda: wf.set_db_max(-30),
+                                   lambda: wf.set_max_freq_hz(4000),
+                                   lambda: wf.set_history_sec(10),
+                                   lambda: wf.set_diff_mode(True),
+                                   lambda: wf.set_db_max(-10),   # no toca la escala diff
+                                   lambda: wf.set_diff_mode(False),
+                                   lambda: wf.clear())):
+        accion()
+        for _ in range(40):
+            wf.push_row(rng.uniform(-100, 20, 1025 - paso).astype(np.float32))
+        assert np.array_equal(viejo(), nuevo()), f"difiere del método viejo en el paso {paso}"
+    wf.stop()
+    assert np.array_equal(viejo(), nuevo()), "ring vacío al detener"
+    print("Cascada: coloreo incremental = método viejo  OK")
+
+
 def test_waterfall_diff_mode():
     """Modo Diferencia de la cascada: el combo lo selecciona y persiste, la fila
     empujada es entrada−salida en dB (sin recortar a −80, que taparia la
@@ -2232,6 +2272,7 @@ if __name__ == "__main__":
     test_advanced_change_marks_modified()
     test_waterfall_toggle_and_source()
     test_waterfall_diff_mode()
+    test_waterfall_rgb_incremental()
     test_incompatible_devices_disable_activate()
     test_noise_fall_slider()
     test_gate_threshold_slider_on_principal()
