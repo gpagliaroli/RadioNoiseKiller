@@ -57,7 +57,9 @@ jobs:
           retention-days: 30
 
   # ------------------------------------------------------------------------
-  # ARM64 (Raspberry Pi) — EXPERIMENTAL, nunca verificado en hardware real.
+  # ARM64 (Raspberry Pi) — EXPERIMENTAL. VERIFICADO en una Pi 4 real (25/10/2026,
+  # run 40225963759, Raspberry Pi OS Trixie): arranca y rinde igual que desde el
+  # fuente con bloque 960. Falta probarlo en Bookworm.
   #
   # OPT-IN A PROPOSITO (if: inputs.arm64): este repo es PRIVADO y los runners
   # ARM64 solo son gratis en repos PUBLICOS — en privados se facturan por minuto.

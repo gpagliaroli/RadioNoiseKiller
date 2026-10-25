@@ -29,7 +29,8 @@ panorama general y las notas para quien quiera tocar el código.
 
 No hay paquete para Raspberry Pi: se corre desde el código fuente. Probado en una **Raspberry Pi 4**
 con Raspberry Pi OS de **64 bits** (basado en Debian 13, Python 3.13) y dos placas de audio USB.
-El paquete compilado (PyInstaller) todavía no se probó en la Pi.
+El paquete compilado para ARM64 (GitHub Actions) también se probó en la Pi 4 y anda igual, pero
+todavía no se publica como descarga: por ahora, desde el fuente.
 
 ```bash
 sudo apt update
@@ -57,7 +58,8 @@ Restricciones que encontramos en la prueba:
 - **No instalar la pestaña Traducción** en la Pi.
 - El aviso `qt.qpa.wayland.textinput ... Trying to disable` en la terminal es inofensivo.
 
-Pendiente de validar: prueba larga con la radio conectada y el paquete compilado.
+En ARM la configuración de fábrica ya trae bloque 960. Si venís de una instalación anterior, tu
+`settings.json` conserva el bloque que tenía: revisá que diga 960 en Avanzada Audio.
 
 ---
 
@@ -189,8 +191,8 @@ python -m PyInstaller reductor-linux.spec --clean --noconfirm
 
 El build de Linux también corre en GitHub Actions al pushear un tag de versión (`v*`), o a mano desde
 la pestaña *Actions*. El disparo manual tiene además la opción de compilar para **ARM64 / Raspberry
-Pi**, que por ahora es experimental: compila, pero el paquete todavía no se verificó en una Pi real
-(desde el fuente sí anda en una Pi 4, ver arriba).
+Pi**: ese paquete se probó en una Pi 4 real (octubre 2026) y anda igual que desde el fuente, con las
+mismas restricciones (ver arriba). Todavía no se publica como descarga en las releases.
 
 ---
 

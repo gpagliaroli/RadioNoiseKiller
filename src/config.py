@@ -74,10 +74,24 @@ def read_ui_scale(path: str) -> float:
     return scale if scale in UI_SCALES else 1.0
 
 
+def default_block_size(machine: "str | None" = None) -> int:
+    """Bloque de fábrica según la CPU: 960 en ARM (Raspberry Pi), 480 en el resto.
+
+    Medido en una Raspberry Pi 4: con 480 hay cortes aun con la optimización de
+    CPU, con 960 entran todos los módulos (~55 %). Con 480 de fábrica, el primer
+    arranque en una Pi —sin settings.json, o con el bundle, que trae el suyo—
+    cortaba el audio hasta que el usuario encontraba el slider. Sólo cambia el
+    valor INICIAL: un settings.json existente conserva su bloque."""
+    import platform
+    m = (machine if machine is not None else platform.machine()).lower()
+    return 960 if m.startswith(("aarch64", "arm")) else 480
+
+
 @dataclass
 class AudioConfig:
     sample_rate: int = 48000
-    block_size: int = 480       # hop_size del modelo; 480 = 10ms @ 48kHz
+    # hop_size del modelo; 480 = 10ms @ 48kHz (960 en ARM: ver default_block_size)
+    block_size: int = field(default_factory=default_block_size)
     channels: int = 1           # (legado — el stream calcula los canales por dispositivo)
     dtype: str = "float32"
     input_device: int | None = None

@@ -397,7 +397,28 @@ def test_specs_bundle_factory_presets():
     print("Specs empaquetan los presets     OK")
 
 
+def test_default_block_size_by_cpu():
+    """Bloque de fábrica 960 en ARM (Raspberry Pi: con 480 corta), 480 en el resto.
+    Un settings.json existente conserva su bloque: el default sólo es el inicial."""
+    from config import AudioConfig, default_block_size
+    for m in ("aarch64", "arm64", "armv7l", "ARM64"):
+        assert default_block_size(m) == 960, m
+    for m in ("x86_64", "AMD64", "i686"):
+        assert default_block_size(m) == 480, m
+    assert AudioConfig().block_size == default_block_size()
+    with tempfile.TemporaryDirectory() as d:
+        p = os.path.join(d, "settings.json")
+        cfg = AppConfig()
+        cfg.audio.block_size = 1920
+        cfg.save(p)
+        cfg2 = AppConfig()
+        cfg2.load(p)
+        assert cfg2.audio.block_size == 1920, "el bloque guardado no se respeta"
+    print("Bloque de fábrica por CPU (960 en ARM)  OK")
+
+
 if __name__ == "__main__":
+    test_default_block_size_by_cpu()
     test_capture_covers_all_dsp_fields()
     test_capture_covers_all_gain_fields()
     test_apply_config_covers_all_fields()

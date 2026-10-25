@@ -526,7 +526,8 @@ leer ese bloque es repetir trabajo que ya costó.
 - **UPX**: Defender marca las DLL comprimidas en VirusTotal (el escaneo local da limpio y no sirve
   para estimarlo), +88 MB de RAM, y rechaza el exe y Qt por CFG. Specs en `upx=False` a propósito
   → *"DESCARTADO por medición: UPX"*.
-- **Publicar el build ARM64 como asset** sin que alguien lo arranque en una Pi real.
+- **Publicar el build ARM64 como asset** sin que alguien lo arranque en una Pi real. (Ya se arrancó: el run
+  40225963759 anda en una Pi 4. Publicarlo es ahora una decisión del usuario, no un descarte.)
 
 ## Estado actual del proyecto
 
@@ -611,8 +612,14 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
   (reposo en `_reset_dsp_indicators`), resumen por sesión en `errores_dsp.log` solo si hubo cortes, y los contadores van en el
   zip de Exportar diagnóstico. `audio/devices.py` oculta en Linux el HDMI ALSA `hw:` (`is_raw_hdmi_hw`; el `hdmi` y `default` de
   ALSA sí quedan). `test_pipeline`, `test_device_combo`, `test_ui` — `validado en la Pi 4`: la etiqueta marca los cortes que se oyen, el
-  `vc4-hdmi` hw: ya no aparece y la salida ALSA `hdmi` (con conversión) queda y funciona. El bundle PyInstaller en la Pi
-  sigue sin probarse.
+  `vc4-hdmi` hw: ya no aparece y la salida ALSA `hdmi` (con conversión) queda y funciona. 
+- **Bundle ARM64 de Actions validado en la Pi 4** (25/10/2026, run 40225963759, `workflow_dispatch` con `arm64=true`):
+  arranca, 8 presets, `libportaudio` adentro y `libasound` afuera, glibc 2.35, y con bloque 960 rinde igual que desde el
+  fuente. Trampa: arrancaba con su propio `settings.json` de fábrica (**bloque 480**) y el usuario lo probó así primero →
+  cortes. Por eso `config.default_block_size()`: **960 de fábrica en ARM** (`platform.machine()` aarch64/arm*), 480 en
+  el resto; un settings.json existente conserva su bloque. `test_presets::test_default_block_size_by_cpu` —
+  `pendiente de validar` en la Pi (arrancar el bundle sin settings.json). Todavía no se publica como asset de release
+  (decisión pendiente).
 
 - **Optimización de CPU sin cambiar el audio** (post-v2.6): máscara armónica del pitch vectorizada y cacheada por
   `(f0, nb)`; `dsp/iir.py::sosfilt_fast` (núcleo C de scipy directo, idéntico bit a bit, fallback automático a `sosfilt`)
@@ -631,7 +638,7 @@ Formato al acumular: una línea por cambio con su estado de validación (`valida
 skill `release` toma las notas del release de esta lista.
 
 ### Pendiente para Fase 2
-- Validar build en Pi real (ARM64 Raspberry Pi OS Bookworm)
+- ~~Validar build en Pi real~~ hecho en una Pi 4 con Trixie (octubre 2026); falta probarlo en Bookworm
 - Reducir/optimizar el tamaño total de la app. **Primera pasada hecha y validada en ambas
   plataformas (v1.5):** recorte de módulos Qt sin uso en ambos specs (`QT_EXCLUDES` + filtro
   `sin_basura_qt()`) — Windows dist 218→166 MB, artifact Linux 189→~170 MB (con libQt6OpenGL y

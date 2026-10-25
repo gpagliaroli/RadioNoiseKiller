@@ -128,7 +128,17 @@ Raspberry Pi OS basado en Debian 13 (Trixie), aarch64, Python 3.13.5, Wayland, d
 - **Hecho después (mismo día)**: contador de cortes y HDMI `hw:` oculto en Linux (bloque siguiente).
   La prueba larga con la radio va bien.
 - **Pendiente**: corregir el test de CPU para que cuente los frames descartados; presets propios de
-  Pi; bundle PyInstaller en la Pi.
+  Pi.
+- **Bundle ARM64 validado (25/10)**: run 40225963759 de Actions (`arm64=true`, ~1 min 20 s). Revisado
+  antes de pasarlo (regla 29): ELF aarch64, 551 entradas, 8 presets, `libportaudio` adentro,
+  `libasound` afuera, plugins Wayland, glibc máx. 2.35, `scipy.signal._sosfilt` presente. Bajado desde
+  el browser de la Pi (repo privado: hace falta sesión de GitHub). Arranca sin problemas; la primera
+  prueba cortó porque el bundle usa su propio `settings.json` de fábrica con **bloque 480** — con 960
+  rinde igual que desde el fuente. Es la trampa que va a pisar cualquier usuario de la Pi, así que
+  el bloque de fábrica pasó a depender de la CPU: `config.default_block_size()` da **960 en ARM** y 480
+  en el resto (`field(default_factory=...)` en `AudioConfig`; el "Restaurar por defecto" del slider y
+  el reset de Avanzada Audio usan `AudioConfig()`, así que lo heredan). Sólo cambia el valor inicial:
+  un settings.json existente conserva su bloque. Test `test_presets::test_default_block_size_by_cpu`.
 
 **Post-v2.6: contador de cortes y HDMI oculto.** Motivo: con "se corta de a momentos" y un medidor de
 CPU en 50 % no había forma de saber si cortaba el DSP, el dispositivo o las colas; el EMA del medidor
