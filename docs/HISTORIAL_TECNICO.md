@@ -34,12 +34,81 @@ regla de método nueva.
 | v2.4.1 | sep 2026 | patch | Exclusión de armónicos sostenidos del piso (constante), 5 presets reafinados, git mv por mayúsculas |
 | v2.5 | sep 2026 | menor | Ventana de ataque confirmada por tiempo, graves se retiran por periodicidad, FM 15 kHz, protección driver colgado, replay_recording, 8 presets |
 | v2.6 | oct 2026 | menor | Traducción experimental con instalación en un clic, ANF con enganche de portadora, excitador por periodicidad, export/import de presets, diagnóstico y medidor de CPU, solapas sin scroll |
+| v2.7 | oct 2026 | menor | Paquete Raspberry Pi 4 (ARM64), optimización de CPU sin cambiar el audio (−52 % con todo activo), contador de cortes, aviso de versión nueva, solapa EiBi, filtro de música en la Traducción, bloque 960 de fábrica en ARM |
 
 ---
 
-## En curso (post-v2.6)
+## En curso (post-v2.7)
 
 _(Los bloques nuevos de la próxima versión van acá, el más reciente arriba.)_
+
+---
+
+## v2.7 (octubre 2026)
+
+Lista de cambios tal como estaba en CLAUDE.md al cerrar la versión:
+
+- **Aviso de versión nueva** (post-v2.6): `src/updater.py` (sin Qt, `UpdateChecker` con hilo + opener inyectable) consulta
+  `GET /repos/gpagliaroli/RadioNoiseKiller/releases/latest` (público, sin token; excluye pre-releases y borradores). Al iniciar,
+  5 s después de abrir y como máximo 1 vez por día (`UpdateConfig.last_check`, se anota aunque falle); botón ámbar en la barra
+  de estado → `src/ui/update_dialog.py` (abrir página / después / omitir versión); "Buscar actualizaciones" y la casilla de
+  auto-chequeo viven en Acerca de. **Solo avisa, no descarga ni reemplaza** (fase 2 diseñada: el asset trae `digest` sha256).
+  La versión sale de `src/version.py` (**única fuente**: el bump del release pasó a 1 lugar). `RNK_NO_UPDATE_CHECK=1` apaga el
+  chequeo automático en los tests (la fija `run_all.py`). `test_updater`, `test_ui` — `pendiente de validar` en el equipo
+  (Windows y Linux: certificados TLS del sistema).
+- **Solapa EiBi** (post-v2.6): `src/eibi_db.py` (sin Qt) + `src/ui/eibi_tab.py`. Busca por frecuencia ± tolerancia
+  y marca "en el aire ahora" por hora UTC (días, cruce de medianoche, fechas P=6). Base en `data_dir()/EiBi/`
+  (`sked-a26.csv` + `meta.json`); **auto al abrir la solapa si pasaron 7 días** con GET condicional (ETag /
+  Last-Modified → 304 no baja), botón "Actualizar ahora", valida antes de reemplazar y ante cualquier fallo
+  conserva la base vieja. **El sitio solo anda por HTTP (certificado HTTPS vencido)**. El CSV no marca utilidades
+  (no hay P≥90 en la práctica): por eso no hay casilla "ocultar utilidad". `src/eibi_codes.py` se genera con
+  `tools/gen_eibi_codes.py` desde el README de EiBi. `test_eibi`, `test_ui` — `pendiente de validar` en el aire
+  (comparar con emisoras conocidas) y el ancho de las 9 solapas en 125/150 %.
+- **Traducción: filtro de no-voz** (post-v2.6): `translate_worker/speechfilter.py` descarta segmentos
+  con símbolos/etiquetas de música, frases de alucinación de Whisper ("Subtitles by…") o
+  `no_speech_prob`>0,6 con `avg_logprob`<−1 (>0,9 solo); si el tramo queda sin voz el worker manda
+  `music=True` y la pestaña muestra UNA línea "🎵 Música / sin voz detectada" (no se repite). Música
+  con voz cantada pasa el filtro (limitación). Umbrales de Whisper sin ajustar con grabaciones
+  reales. `test_translate`, `test_ui`, `translate_worker/test_speechfilter.py` — `pendiente de validar`.
+
+- **Raspberry Pi 4** (post-v2.6): probada desde el fuente (Pi OS Trixie, Python 3.13, aarch64), arranca. Salida HDMI `hw:` da
+  `-9994`; con **bloque 960** ~50 % de CPU sin picos; los cortes con todo activado se evitan sin excitador armónico, recuperación
+  de graves ni refuerzo de pitch (recomendación en los manuales ES/EN). Tampoco se puede usar la pestaña Espectro (consume demasiado; dicho por el usuario, sin medir).
+  La prueba larga con radio va bien (sin cortes).
+  `test_cpu_profile` subestima el pipeline en la Pi (descarta frames en silencio). Detalle en el historial, "En curso".
+- **Contador de cortes + HDMI oculto** (post-v2.6): el pipeline cuenta frames tardíos (procesado > duración del frame), el peor
+  frame, callbacks con salida rellenada con ceros (`starved`, recién después del primer frame y no al salir de bypass), descartes
+  de cola y los `status` de PortAudio (`AudioStream.overruns/underruns`). Etiqueta "Cortes: N · pico X ms" bajo el medidor de CPU
+  (reposo en `_reset_dsp_indicators`), resumen por sesión en `errores_dsp.log` solo si hubo cortes, y los contadores van en el
+  zip de Exportar diagnóstico. `audio/devices.py` oculta en Linux el HDMI ALSA `hw:` (`is_raw_hdmi_hw`; el `hdmi` y `default` de
+  ALSA sí quedan). `test_pipeline`, `test_device_combo`, `test_ui` — `validado en la Pi 4`: la etiqueta marca los cortes que se oyen, el
+  `vc4-hdmi` hw: ya no aparece y la salida ALSA `hdmi` (con conversión) queda y funciona. 
+- **Bundle ARM64 de Actions validado en la Pi 4** (25/10/2026, run 40225963759, `workflow_dispatch` con `arm64=true`):
+  arranca, 8 presets, `libportaudio` adentro y `libasound` afuera, glibc 2.35, y con bloque 960 rinde igual que desde el
+  fuente. Trampa: arrancaba con su propio `settings.json` de fábrica (**bloque 480**) y el usuario lo probó así primero →
+  cortes. Por eso `config.default_block_size()`: **960 de fábrica en ARM** (`platform.machine()` aarch64/arm*), 480 en
+  el resto; un settings.json existente conserva su bloque. `test_presets::test_default_block_size_by_cpu` —
+  `validado en la Pi 4` (arranca en 960 sin settings.json).
+- **El release publica el paquete de la Raspberry Pi** (decisión del usuario, 25/10/2026): el job `build-arm64` de
+  `build-linux.yml` corre en cada tag (antes sólo a mano), sin `continue-on-error`, artefacto
+  `RadioNoiseKiller-linux-aarch64` con `LEEME_RASPBERRY_PI.txt` (restricciones medidas) en lugar de `EXPERIMENTAL.txt`.
+  El skill `release` lo baja, lo verifica (arquitectura, presets, libportaudio adentro/libasound afuera, glibc ≤ 2.36,
+  `_sosfilt`), pide el OK del usuario en la Pi y lo sube como `RadioNoiseKiller_vX.Y-linux-aarch64.zip`; también pasó a
+  usar `gh`. Costo: runner ARM pago (repo privado), ~1,5 min por tag. `pendiente de validar`: el primer tag que lo dispare.
+
+- **Optimización de CPU sin cambiar el audio** (post-v2.6): máscara armónica del pitch vectorizada y cacheada por
+  `(f0, nb)`; `dsp/iir.py::sosfilt_fast` (núcleo C de scipy directo, idéntico bit a bit, fallback automático a `sosfilt`)
+  en pasabanda, excitador y graves; cascada coloreada por fila (ring RGB). Todo activado −52/−53 % a hop 480/960, cascada
+  −87 % por tick. Salida medida sobre grabaciones reales: 0 exacto, la máscara 6e-8. `test_dsp`, `test_ui` — `validado en la
+  Pi 4`: con bloque 960 entran TODOS los módulos sin cortes (~55 % de CPU); restricción de los tres módulos quitada de README
+  y manuales. La pestaña Espectro sigue cortando en la Pi aun sin esos
+  módulos: la restricción queda (causa sin medir: pintado o GIL de la GUI). Bloque 480 tampoco funciona: 960 obligatorio. **Nuevo `sosfilt` en el DSP: usar `sosfilt_fast`.**
+
+- **Filas alternas legibles en Linux** (post-v2.6): `alternate-background-color` en la hoja de estilo oscura
+  (`QAbstractItemView`); sin eso Presets y EiBi pintaban filas `#f7f7f7` (AlternateBase del tema del sistema) bajo texto
+  claro. `test_ui::test_alternate_rows_dark_on_linux_style` (fuerza Fusion; falla sin el arreglo) — `validado en la Pi 4`.
+
+Bloques narrativos de la versión, el más reciente arriba:
 
 **Post-v2.6: optimización de CPU sin cambiar el audio (24/10/2026).** Pedido del usuario tras la Pi 4
 ("bajar el consumo sin afectar la calidad"). Criterio: salida idéntica bit a bit o dentro del redondeo

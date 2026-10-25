@@ -1,6 +1,6 @@
 """Versión de la aplicación: ÚNICA fuente (la leen main.py, el título de la ventana
 y el chequeo de actualizaciones). Al hacer un release se cambia sólo acá."""
-APP_VERSION = "2.6.0"
+APP_VERSION = "2.7.0"
 
 
 def display_version(version: str = APP_VERSION) -> str:

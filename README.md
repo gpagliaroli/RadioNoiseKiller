@@ -5,7 +5,7 @@ Procesa el audio ya demodulado entre el receptor y los parlantes o auriculares.
 
 Todo el DSP es **numpy/scipy puro** — sin IA, sin modelos externos, sin GPU y sin internet.
 
-**Plataformas:** Windows 10/11 · Linux x86_64 · Raspberry Pi 4 (desde el fuente, con restricciones — ver [Descargas](#descargas))
+**Plataformas:** Windows 10/11 · Linux x86_64 · Raspberry Pi 4 (64 bits, con restricciones — ver [Descargas](#descargas))
 **Idiomas:** español · inglés
 **En video:** [explicación de la aplicación en *Net de la Tecnología*](https://www.youtube.com/watch?v=o8AEuAEnQpY)
 
@@ -19,18 +19,29 @@ Los paquetes listos para usar están en la [página de releases](https://github.
 |---|---|
 | `RadioNoiseKiller_vX.Y.zip` | Windows 10/11 (64 bits) |
 | `RadioNoiseKiller_vX.Y-linux-x86_64.zip` | Linux x86_64 |
+| `RadioNoiseKiller_vX.Y-linux-aarch64.zip` | Raspberry Pi 4 (Raspberry Pi OS de 64 bits) |
 | `MANUAL_RadioNoiseKiller_vX.Y.pdf` | Manual completo en español |
 | `MANUAL_RadioNoiseKiller_vX.Y_EN.pdf` | Manual completo en inglés |
 
 No requieren instalación. **El manual es la documentación de verdad**: este README es sólo el
 panorama general y las notas para quien quiera tocar el código.
 
-### Raspberry Pi 4 (desde el fuente)
+### Raspberry Pi 4
 
-No hay paquete para Raspberry Pi: se corre desde el código fuente. Probado en una **Raspberry Pi 4**
-con Raspberry Pi OS de **64 bits** (basado en Debian 13, Python 3.13) y dos placas de audio USB.
-El paquete compilado para ARM64 (GitHub Actions) también se probó en la Pi 4 y anda igual, pero
-todavía no se publica como descarga: por ahora, desde el fuente.
+Probado en una **Raspberry Pi 4** con Raspberry Pi OS de **64 bits** (basado en Debian 13) y dos
+placas de audio USB, con el paquete y desde el código fuente: los dos andan igual.
+
+**Con el paquete** (`RadioNoiseKiller_vX.Y-linux-aarch64.zip` de la página de releases):
+
+```bash
+sudo apt install libportaudio2 libxcb-xinerama0
+unzip RadioNoiseKiller_vX.Y-linux-aarch64.zip
+./RadioNoiseKiller/RadioNoiseKiller
+```
+
+Está compilado contra glibc 2.35, así que debería andar también en Bookworm (sin probar todavía).
+
+**Desde el código fuente:**
 
 ```bash
 sudo apt update
@@ -47,9 +58,8 @@ Restricciones que encontramos en la prueba:
 
 - **Sistema de 64 bits obligatorio** (`uname -m` debe decir `aarch64`): en 32 bits no hay PySide6.
 - **Usar bloque de audio 960** (Avanzada Audio, requiere reiniciar el stream); con 480 hay cortes.
-  Con 960 funcionan **todos
-  los módulos activos a la vez, sin cortes**, con el medidor de CPU en ~55 %. Antes de la
-  optimización de CPU posterior a la v2.6 había que apagar el excitador, los graves y el pitch.
+  Con 960 funcionan **todos los módulos activos a la vez, sin cortes**, con el medidor de CPU en
+  ~55 %.
 - **No usar la pestaña Espectro** (ni la cascada) mientras se procesa: consume demasiada CPU en la Pi.
 - **La salida HDMI directa de la Pi** (`vc4-hdmi ... (hw:`) no abre (`Sample format not supported
   [-9994]`) y la app la oculta de la lista. Sirven una placa USB o los auriculares.
@@ -116,8 +126,12 @@ En ARM la configuración de fábrica ya trae bloque 960. Si venís de una instal
   más los propios
 - **Perfiles de ruido nombrados** — guardar y recuperar el ruido de cada banda o cada hora del día
 - **Grabación a WAV** — con opción de grabar en paralelo la entrada sin procesar, para el antes/después
+- **Contador de cortes** — debajo del medidor de CPU, cuántas veces se cortó el audio y cuánto
+  tardó el frame más lento: dice si la configuración aguanta en tu equipo
 - **Tamaño de interfaz ajustable** (100 / 125 / 150 %) y ayuda contextual en todos los sliders
-- **Standalone** — sin instalación de Python, sin internet, sin GPU
+- **Standalone** — sin instalación de Python ni GPU; el procesamiento no usa internet (solo el
+  aviso de versión, EiBi y la instalación de la Traducción se conectan)
+- **Windows, Linux y Raspberry Pi 4** — paquetes listos para las tres plataformas
 - **Robusta ante el hardware** — si la interfaz de audio se desconecta o el driver se traba, la
   aplicación lo detecta, detiene sola y sigue respondiendo (nunca queda congelada en PortAudio)
 
@@ -137,7 +151,7 @@ tiene además dos sub-módulos que corren dentro de él (refuerzo de pitch y pos
 1. Conectar la salida de audio del receptor a la entrada de la PC (o usar un cable de audio virtual
    para SDR por software)
 2. Seleccionar **dispositivo de entrada** y **salida** — ambos de la misma API de audio
-3. Elegir el modo: **AM** o **SSB**
+3. Elegir el **Pasabanda** según lo que se escucha (SSB, AM o FM), o cargar un **preset**
 4. Presionar **ACTIVAR**
 5. En modo estático, aprender el perfil de ruido: **⏺ Aprender ruido** durante 3–5 segundos sin
    señal, luego **⏹ Detener**. En modo adaptativo no hace falta: calibra solo.
@@ -189,10 +203,9 @@ python -m PyInstaller reductor.spec --clean --noconfirm
 python -m PyInstaller reductor-linux.spec --clean --noconfirm
 ```
 
-El build de Linux también corre en GitHub Actions al pushear un tag de versión (`v*`), o a mano desde
-la pestaña *Actions*. El disparo manual tiene además la opción de compilar para **ARM64 / Raspberry
-Pi**: ese paquete se probó en una Pi 4 real (octubre 2026) y anda igual que desde el fuente, con las
-mismas restricciones (ver arriba). Todavía no se publica como descarga en las releases.
+Los builds de Linux corren en GitHub Actions al pushear un tag de versión (`v*`): **x86_64 y ARM64 /
+Raspberry Pi**, los dos se publican en el release. A mano, desde la pestaña *Actions*, se compila
+x86_64 y opcionalmente ARM64.
 
 ---
 
@@ -224,6 +237,7 @@ src/
 │   ├── agc.py            # AGC (también usado como nivelador de voz)
 │   ├── anf.py            # AdaptiveNotchFilter: heterodinos y tonos
 │   ├── filters.py        # BandpassFilter + PresenceFilter (Butterworth / peaking IIR)
+│   ├── iir.py            # sosfilt_fast: núcleo C de scipy sin el costo fijo por llamada
 │   ├── exciter.py        # AuralExciter: armónicos con carácter par/impar y gate por VAD
 │   ├── bass.py           # BassRestorer: fundamental derivado de los armónicos
 │   ├── blanker.py        # ImpulseBlanker: impulsos por contraste local en el tiempo

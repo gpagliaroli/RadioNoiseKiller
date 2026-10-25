@@ -1,6 +1,6 @@
 ﻿# RadioNoiseKiller — User Manual
 
-**Version 2.6**
+**Version 2.7**
 
 ---
 
@@ -1282,6 +1282,7 @@ The **Detected language · Average** indicator shows the latest language and the
 
 - It works best with the canceller and the bandpass already well tuned: what is hard to understand by ear is hard for the model too.
 - If you see the same sentence repeated, it is the model "latching on" to noise; the application discards consecutive repeats, but with very dirty audio raise the **Minimum confidence**.
+- **Music and stretches without speech (new in 2.7).** With music, or when nobody is talking, the speech model tends to "make up" text (subtitle credits, musical notes, stray phrases). The application discards those stretches and shows **a single line "🎵 Music / no speech detected"**, which is not repeated while the music goes on. Limitation: a song with lyrics is still transcribed, because to the model it is speech.
 - On a slow PC translation competes for CPU with audio processing. If dropouts appear, stop the translation.
 
 ---
@@ -1361,8 +1362,8 @@ The file is capped at a few errors per session, so it does not grow without boun
 
 **Dropout counter.** Below the CPU meter, **Dropouts: N · peak X ms** counts the times the output ran out of processed audio or the device lost samples since you started processing, plus the slowest processing time of a single frame. Green means no dropouts. If «peak» exceeds the block length (480 = 10 ms, 960 = 20 ms) there is a dropout: the CPU meter average can look comfortable anyway. When you stop, if there were dropouts a summary is left in `errores_dsp.log`, and **Export diagnostics** includes the counters.
 
-> **Raspberry Pi 4.** Tested from source (64-bit Raspberry Pi OS). Use **block size 960** (480 has dropouts; on ARM it is the factory default, but an earlier `settings.json` keeps its block size): that way every module can be on at the same time without dropouts, with the CPU meter around 55 %. **Do not use the Spectrum tab** (or the waterfall) while processing: it uses too much CPU on the Pi. For the output pick a USB card or the headphone jack: the Pi's direct HDMI output is not listed because it will not open.
+> **Raspberry Pi 4 (new in 2.7: its own package).** Tested with the `RadioNoiseKiller_v2.7-linux-aarch64.zip` package and from source, on **64-bit** Raspberry Pi OS (it does not work on 32-bit). Requires `sudo apt install libportaudio2 libxcb-xinerama0`. Use **block size 960** (480 has dropouts; on ARM it is the factory default, but an earlier `settings.json` keeps its block size): that way every module can be on at the same time without dropouts, with the CPU meter around 55 %. **Do not use the Spectrum tab** (or the waterfall) while processing: it uses too much CPU on the Pi. For the output pick a USB card or the headphone jack: the Pi's direct HDMI output is not listed because it will not open.
 
 ---
 
-*RadioNoiseKiller — version 2.6*
+*RadioNoiseKiller — version 2.7*

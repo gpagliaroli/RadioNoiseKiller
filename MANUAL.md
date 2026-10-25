@@ -1,6 +1,6 @@
 ﻿# RadioNoiseKiller — Manual de Usuario
 
-**Versión 2.6**
+**Versión 2.7**
 
 ---
 
@@ -1281,6 +1281,7 @@ El indicador **Idioma detectado · Promedio** muestra el idioma más reciente y 
 
 - Funciona mejor con el cancelador y el pasabanda ya bien ajustados: lo que no se entiende al oído difícilmente lo entienda el modelo.
 - Si ves la misma frase repetida, es el modelo "enganchándose" con ruido; la aplicación descarta las repeticiones consecutivas, pero con audio muy sucio conviene subir la **Confianza mínima**.
+- **Música y tramos sin voz (novedad 2.7).** Con música o sin nadie hablando, el modelo de voz tiende a "inventar" texto (títulos de subtítulos, notas musicales, frases sueltas). La aplicación descarta esos tramos y muestra **una sola línea "🎵 Música / sin voz detectada"**, que no se repite mientras siga la música. Limitación: una canción con letra se transcribe igual, porque para el modelo es voz.
 - En una PC lenta la traducción compite por CPU con el procesamiento de audio. Si aparecen cortes, detené la traducción.
 
 ---
@@ -1360,8 +1361,8 @@ El archivo se limita a unos pocos errores por sesión, así que no crece sin con
 
 **Contador de cortes.** Debajo del medidor de CPU, **Cortes: N · pico X ms** cuenta las veces que la salida se quedó sin audio procesado o que el dispositivo perdió muestras desde que activaste el procesamiento, y el procesado más lento de un frame. En verde no hubo cortes. Si «pico» pasa la duración del bloque (480 = 10 ms, 960 = 20 ms), hay un corte: el promedio del medidor de CPU puede verse holgado igual. Al detener, si hubo cortes queda un resumen en `errores_dsp.log`, y **Exportar diagnóstico** incluye los contadores.
 
-> **Raspberry Pi 4.** Probada desde el fuente (Raspberry Pi OS de 64 bits). Usá **bloque 960** (con 480 hay cortes; en ARM viene así de fábrica, pero un `settings.json` anterior conserva su bloque): así funcionan todos los módulos activos a la vez, sin cortes, con el medidor de CPU en ~55 %. **No uses la pestaña Espectro** (ni la cascada) mientras procesás: consume demasiada CPU en la Pi. Como salida elegí una placa USB o los auriculares: la salida HDMI directa de la Pi no aparece en la lista porque no abre.
+> **Raspberry Pi 4 (novedad 2.7: paquete propio).** Probada con el paquete `RadioNoiseKiller_v2.7-linux-aarch64.zip` y desde el código fuente, en Raspberry Pi OS de **64 bits** (en 32 bits no funciona). Requiere `sudo apt install libportaudio2 libxcb-xinerama0`. Usá **bloque 960** (con 480 hay cortes; en ARM viene así de fábrica, pero un `settings.json` anterior conserva su bloque): así funcionan todos los módulos activos a la vez, sin cortes, con el medidor de CPU en ~55 %. **No uses la pestaña Espectro** (ni la cascada) mientras procesás: consume demasiada CPU en la Pi. Como salida elegí una placa USB o los auriculares: la salida HDMI directa de la Pi no aparece en la lista porque no abre.
 
 ---
 
-*RadioNoiseKiller — versión 2.6*
+*RadioNoiseKiller — versión 2.7*
