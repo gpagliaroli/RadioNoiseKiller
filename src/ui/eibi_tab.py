@@ -48,6 +48,9 @@ class EibiTab(QWidget):
         self._last_minute = None
         self._clock_ticks = 0
         self._radio_khz: "float | None" = None   # última frecuencia del CAT (None = sin CAT)
+        # La radio está fuera del rango de EiBi (p. ej. en VHF): el spin muestra
+        # "----- kHz" y la tabla queda vacía, en vez de recortar a 30000 kHz.
+        self._radio_out_of_range = False
         self._build_ui()
         self._load_values()
         self._timer = QTimer(self)
@@ -212,19 +215,53 @@ class EibiTab(QWidget):
         self._update_follow_state()
         if checked and self._radio_khz is not None:
             self.set_radio_freq(self._radio_khz)
+        elif not checked:
+            self._clear_out_of_range()
 
     def set_radio_freq(self, khz: "float | None") -> None:
         """Frecuencia de la radio desde el CAT (None = CAT apagado o sin conexión).
         Con la casilla activa mueve el spin (redondeado a kHz); el refresco de la
-        tabla lo dispara valueChanged sólo si cambió."""
+        tabla lo dispara valueChanged sólo si cambió. Fuera del rango de EiBi NO
+        recorta (mostraría las emisoras de 30 MHz estando en 2 m): el spin pasa a
+        "----- kHz" y la config conserva la última frecuencia válida."""
+        prev_khz = self._radio_khz
         self._radio_khz = khz
         self._update_follow_state()
         if khz is None or not self._chk_follow.isChecked():
+            self._clear_out_of_range()
             return
         lo, hi = self._spin_freq.minimum(), self._spin_freq.maximum()
-        val = float(min(max(round(khz), lo), hi))
-        if val != self._spin_freq.value():
+        val = float(round(khz))
+        if not lo <= val <= hi:
+            entering = not self._radio_out_of_range
+            self._radio_out_of_range = True
+            self._spin_freq.setSpecialValueText("----- kHz")
+            self._spin_freq.blockSignals(True)     # no escribir config ni buscar en 10 kHz
+            self._spin_freq.setValue(lo)
+            self._spin_freq.blockSignals(False)
+            if entering or prev_khz is None or round(prev_khz) != val:
+                self._refresh_results()
+            return
+        if self._radio_out_of_range:
+            self._radio_out_of_range = False
+            self._spin_freq.setSpecialValueText("")
+            self._spin_freq.blockSignals(True)
             self._spin_freq.setValue(val)
+            self._spin_freq.blockSignals(False)
+            self._on_params_changed()              # refresca aunque el valor coincida
+        elif val != self._spin_freq.value():
+            self._spin_freq.setValue(val)
+
+    def _clear_out_of_range(self) -> None:
+        """Sale del estado "----- kHz": vuelve a la última frecuencia válida."""
+        if not self._radio_out_of_range:
+            return
+        self._radio_out_of_range = False
+        self._spin_freq.setSpecialValueText("")
+        self._spin_freq.blockSignals(True)
+        self._spin_freq.setValue(self._config.eibi.freq_khz)
+        self._spin_freq.blockSignals(False)
+        self._refresh_results()
 
     def _update_follow_state(self) -> None:
         following = self._chk_follow.isChecked() and self._radio_khz is not None
@@ -301,6 +338,12 @@ class EibiTab(QWidget):
             self._lbl_now.setText("UTC %02d:%02d · %s" % (
                 when.hour, when.minute, tr(_DAYS[when.weekday()])))
         self._table.setRowCount(0)
+        if self._radio_out_of_range:
+            lo, hi = self._spin_freq.minimum(), self._spin_freq.maximum()
+            self._lbl_result.setText(tr(
+                "La frecuencia de la radio ({f:.0f} kHz) está fuera del rango de EiBi "
+                "({lo:.0f}–{hi:.0f} kHz).").format(f=self._radio_khz or 0, lo=lo, hi=hi))
+            return
         if self._db is None:
             self._lbl_result.setText(tr(
                 "Todavía no hay base descargada. Se baja sola al abrir esta solapa "

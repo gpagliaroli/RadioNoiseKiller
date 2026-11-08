@@ -2018,6 +2018,25 @@ def test_cat_auto_preset_and_eibi_follow():
         spin = w._eibi_tab._spin_freq
         assert spin.value() == 7074 and spin.isReadOnly(), "EiBi sigue a la radio"
 
+        # Radio en 2 m: fuera del rango de EiBi -> "----- kHz", tabla vacía, y la
+        # config conserva la última frecuencia válida (antes recortaba a 30000).
+        et = w._eibi_tab
+        rig.freq = 145500000
+        assert tick_until(lambda: "-----" in spin.text()), spin.text()
+        assert et._table.rowCount() == 0 and "145500" in et._lbl_result.text(), et._lbl_result.text()
+        assert w._config.eibi.freq_khz == 7074, "fuera de rango no se guarda"
+        rig.freq = 7074000
+        assert tick_until(lambda: "-----" not in spin.text() and spin.value() == 7074), spin.text()
+        assert "145500" not in et._lbl_result.text()
+        # Fuera de rango y destildar la casilla: vuelve a la última válida, editable.
+        rig.freq = 145500000
+        assert tick_until(lambda: "-----" in spin.text())
+        et._chk_follow.setChecked(False)
+        assert "-----" not in spin.text() and spin.value() == 7074 and not spin.isReadOnly()
+        et._chk_follow.setChecked(True)
+        rig.freq = 7074000
+        assert tick_until(lambda: spin.value() == 7074 and "-----" not in spin.text())
+
         rig.mode = "AM"
         assert tick_until(lambda: pt.active_name() == am), "AM carga el preset de AM"
         assert am in w.windowTitle() and ssb not in w.windowTitle(), w.windowTitle()

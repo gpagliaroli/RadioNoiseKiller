@@ -71,6 +71,11 @@ revisión post-v2.7 (junto con el build en 22.04 y el lanzador). Decisiones, tod
   Ninguna llamada de red ocurre en el hilo de la GUI. El tick no re-aplica stylesheets si nada cambió
   (en la Pi, recalcular estilos le roba tiempo al hilo del DSP).
 - La config va en `settings.json` bajo `"cat"` y **no forma parte de los presets**.
+- **EiBi con la radio fuera de rango** (pedido del usuario): `set_radio_freq` recortaba a
+  `EIBI_FREQ_RANGE` y en 2 m mostraba 30000 kHz con las emisoras de 30 MHz. Ahora el spin muestra
+  `----- kHz` (`setSpecialValueText` sobre el mínimo, puesto con señales bloqueadas: no escribe la config
+  ni busca en 10 kHz), la tabla queda vacía con el motivo, y al volver al rango o destildar la casilla
+  se recupera la última frecuencia válida.
 - UI: **solapa propia "CAT", la última, después de Traducción** (pedido del usuario: primero había quedado
   como un grupo dentro de Presets). Con 10 solapas en 770 px fijos entra sin recortar: medido, la barra
   ocupa 708 px en castellano y 643 en inglés. Mientras está

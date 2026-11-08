@@ -1314,7 +1314,7 @@ The **EiBi** tab answers the eternal shortwave question: *"I'm hearing something
 
 EiBi's `-MX` language means music; `-CW`, telegraphy; `-TY`, digital teletype.
 
-With **radio control** enabled (ch. 16), the **Follow the radio's frequency (CAT)** checkbox takes the frequency straight from the radio: the table updates as you tune. While it follows the radio the Frequency field cannot be edited; untick the box to look up a different one.
+With **radio control** enabled (ch. 16), the **Follow the radio's frequency (CAT)** checkbox takes the frequency straight from the radio: the table updates as you tune. While it follows the radio the Frequency field cannot be edited; untick the box to look up a different one. If the radio is outside the EiBi range (10–30,000 kHz, for example on VHF or UHF), the field shows **----- kHz** and the table stays empty until you are back on shortwave.
 
 ### The database: download and expiry
 

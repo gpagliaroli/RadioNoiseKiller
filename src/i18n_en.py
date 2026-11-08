@@ -1401,4 +1401,8 @@ CATALOG = {
     "de la radio y se actualiza sola al sintonizar.":
         "With CAT enabled and connected (CAT tab), the frequency is taken\n"
         "from the radio and follows it as you tune.",
+    "La frecuencia de la radio ({f:.0f} kHz) está fuera del rango de EiBi "
+    "({lo:.0f}–{hi:.0f} kHz).":
+        "The radio's frequency ({f:.0f} kHz) is outside the EiBi range "
+        "({lo:.0f}–{hi:.0f} kHz).",
 }

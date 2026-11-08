@@ -1313,7 +1313,7 @@ La solapa **EiBi** responde a la pregunta de siempre en onda corta: *"estoy escu
 
 El idioma `-MX` de EiBi significa música; `-CW`, telegrafía; `-TY`, teletipo digital.
 
-Con el **control de la radio** activo (cap. 16), la casilla **Seguir la frecuencia de la radio (CAT)** hace que la frecuencia se tome sola de la radio: al sintonizar, la tabla se actualiza. Mientras la sigue, el campo Frecuencia no se puede editar; destildá la casilla para buscar otra.
+Con el **control de la radio** activo (cap. 16), la casilla **Seguir la frecuencia de la radio (CAT)** hace que la frecuencia se tome sola de la radio: al sintonizar, la tabla se actualiza. Mientras la sigue, el campo Frecuencia no se puede editar; destildá la casilla para buscar otra. Si la radio está fuera del rango de EiBi (10–30.000 kHz, por ejemplo en VHF o UHF), el campo muestra **----- kHz** y la tabla queda vacía hasta que vuelvas a onda corta.
 
 ### La base de datos: descarga y vencimiento
 
