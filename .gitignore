@@ -64,3 +64,5 @@ errores_dsp.log
 TraduccionRuntime/
 # Base EiBi descargada en desarrollo
 EiBi/
+# Memorias de emisoras del usuario (solapa CAT)
+/Memorias.json

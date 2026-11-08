@@ -1315,6 +1315,8 @@ El idioma `-MX` de EiBi significa música; `-CW`, telegrafía; `-TY`, teletipo d
 
 Con el **control de la radio** activo (cap. 16), la casilla **Seguir la frecuencia de la radio (CAT)** hace que la frecuencia se tome sola de la radio: al sintonizar, la tabla se actualiza. Mientras la sigue, el campo Frecuencia no se puede editar; destildá la casilla para buscar otra. Si la radio está fuera del rango de EiBi (10–30.000 kHz, por ejemplo en VHF o UHF), el campo muestra **----- kHz** y la tabla queda vacía hasta que vuelvas a onda corta.
 
+El botón **Guardar en memorias** (o clic derecho en una fila) guarda la emisora elegida en las memorias de la solapa CAT, para volver a ella con doble clic (cap. 16).
+
 ### La base de datos: descarga y vencimiento
 
 - La base **no viene en el instalador**: se baja de eibispace.de (≈0,5 MB) y se guarda en la carpeta `EiBi/`, junto a `settings.json`. Después funciona **sin conexión**.
@@ -1339,8 +1341,9 @@ RadioNoiseKiller puede leer la **frecuencia y el modo** de tu radio por CAT. Con
 - **Carga el preset que corresponde al modo**: pasás la radio de LSB a AM y se carga tu preset de AM, sin tocar la aplicación.
 - La solapa **EiBi** sigue la frecuencia sintonizada (cap. 15).
 - En la pestaña Principal, bajo *Dispositivos de Audio*, la fila **Radio** muestra la frecuencia y el modo (`7.074,0 kHz · LSB · CAT`).
+- **Memorias de emisoras**: guardás frecuencia, modo y nombre, y con doble clic la radio va a esa emisora (ver *Memorias* más abajo).
 
-La aplicación **no habla directamente con la radio**: lo hace a través de **rigctld**, el programa de Hamlib que maneja el puerto serie o USB de cientos de modelos (Icom, Yaesu, Kenwood, Elecraft, Xiegu, SDR...). Así no hace falta un protocolo por marca, y la radio se puede compartir con otros programas. Por ahora **solo se lee**: la aplicación nunca cambia la frecuencia ni el modo de la radio.
+La aplicación **no habla directamente con la radio**: lo hace a través de **rigctld**, el programa de Hamlib que maneja el puerto serie o USB de cientos de modelos (Icom, Yaesu, Kenwood, Elecraft, Xiegu, SDR...). Así no hace falta un protocolo por marca, y la radio se puede compartir con otros programas. La aplicación **solo cambia la frecuencia y el modo de la radio cuando sintonizás una memoria**; el resto del tiempo solo los lee.
 
 > **Función nueva (novedad 2.8).** Probada contra la radio simulada de Hamlib; la prueba en el aire con radios reales está en curso. Si tu modelo no responde bien, mandá el diagnóstico.
 
@@ -1377,6 +1380,18 @@ De fábrica, la tabla apunta a los presets de fábrica: SSB → *SSB - Ruido Med
 - **El cambio de modo manda, aunque el preset activo tenga cambios sin guardar** (*modificado*): esos ajustes se descartan y la barra de estado avisa cuáles se perdieron. Si estuviste afinando un preset y querés conservarlo, **guardalo antes de cambiar de modo** en la radio (*Sobrescribir seleccionado* o *Guardar como nuevo*).
 - Si cargás otro preset a mano, se respeta hasta el próximo cambio de modo.
 - Cambiar de frecuencia sin cambiar de modo no cambia el preset.
+
+### Memorias
+
+El grupo **Memorias**, debajo del de la radio, guarda emisoras con **nombre, frecuencia y modo**. Son memorias de la aplicación, no los canales de memoria de la radio, así que **no tienen límite** de cantidad.
+
+- **Guardar actual** guarda la frecuencia y el modo en que está la radio. Si en esa frecuencia hay una emisora de EiBi **en el aire**, toma su nombre; si no, queda la frecuencia como nombre (`7.074,0 kHz USB`).
+- **Desde la solapa EiBi**: elegí una fila y apretá **Guardar en memorias** (también con clic derecho). Se guarda en **AM**, o en USB si es una estación utilitaria. No hace falta tener el CAT conectado.
+- **Doble clic** (o **Sintonizar**) lleva la radio a esa frecuencia y modo. **El preset lo pone la tabla de modos**: si la memoria está en AM y venías de SSB, se carga tu preset de AM, igual que si giraras el selector.
+- **F2** (o clic derecho → *Renombrar*) cambia el nombre. **Borrar** pide confirmación.
+- No se repiten: una emisora en la misma frecuencia y el mismo grupo de modo que otra ya guardada no se duplica.
+- Si la radio rechaza el modo (algunos equipos no tienen AM sincrónico, por ejemplo), la barra de estado lo avisa; la frecuencia sí se cambia.
+- Se guardan solas en **`Memorias.json`**, junto a `settings.json`. Para pasarlas a otra PC o a la Pi, copiá ese archivo o usá **Exportar… / Importar…** (formato CSV). El CSV tiene las columnas `name;freq_khz;mode`, y al importar se saltean las que ya existen.
 
 ---
 

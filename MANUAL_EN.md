@@ -1316,6 +1316,8 @@ EiBi's `-MX` language means music; `-CW`, telegraphy; `-TY`, digital teletype.
 
 With **radio control** enabled (ch. 16), the **Follow the radio's frequency (CAT)** checkbox takes the frequency straight from the radio: the table updates as you tune. While it follows the radio the Frequency field cannot be edited; untick the box to look up a different one. If the radio is outside the EiBi range (10–30,000 kHz, for example on VHF or UHF), the field shows **----- kHz** and the table stays empty until you are back on shortwave.
 
+The **Save to memories** button (or right-click on a row) stores the selected station in the CAT tab memories, so you can come back to it with a double-click (ch. 16).
+
 ### The database: download and expiry
 
 - The database is **not in the installer**: it is downloaded from eibispace.de (≈0.5 MB) and stored in the `EiBi/` folder next to `settings.json`. After that it works **offline**.
@@ -1340,8 +1342,9 @@ RadioNoiseKiller can read your radio's **frequency and mode** over CAT. With tha
 - **Loads the preset that matches the mode**: switch the radio from LSB to AM and your AM preset is loaded, without touching the app.
 - Makes the **EiBi** tab follow the tuned frequency (ch. 15).
 - Shows the frequency and mode in the **Radio** row of the Main tab, under *Audio Devices* (`7,074.0 kHz · LSB · CAT`).
+- **Station memories**: save frequency, mode and name, and a double-click tunes the radio to that station (see *Memories* below).
 
-The app **does not talk to the radio directly**: it goes through **rigctld**, the Hamlib program that drives the serial or USB port of hundreds of models (Icom, Yaesu, Kenwood, Elecraft, Xiegu, SDRs...). No per-brand protocol is needed, and the radio can be shared with other programs. For now it **only reads**: the app never changes the radio's frequency or mode.
+The app **does not talk to the radio directly**: it goes through **rigctld**, the Hamlib program that drives the serial or USB port of hundreds of models (Icom, Yaesu, Kenwood, Elecraft, Xiegu, SDRs...). No per-brand protocol is needed, and the radio can be shared with other programs. The app **only changes the radio's frequency and mode when you tune a memory**; the rest of the time it just reads them.
 
 > **New feature (new in 2.8).** Tested against Hamlib's simulated radio; on-air testing with real radios is under way. If your model does not respond properly, send the diagnostics file.
 
@@ -1378,6 +1381,18 @@ Out of the box the table points to the factory presets: SSB → *SSB - Ruido Med
 - **The mode change wins, even if the active preset has unsaved changes** (*modified*): those adjustments are discarded and the status bar says which preset lost them. If you have been fine-tuning a preset and want to keep it, **save it before changing mode** on the radio (*Overwrite selected* or *Save as new*).
 - If you load another preset by hand, it is kept until the next mode change.
 - Changing frequency without changing mode does not change the preset.
+
+### Memories
+
+The **Memories** group, below the radio group, stores stations with a **name, frequency and mode**. They are app memories, not the radio's memory channels, so there is **no limit** on how many you keep.
+
+- **Save current** stores the radio's current frequency and mode. If an EiBi station is **on the air** on that frequency, its name is used; otherwise the frequency becomes the name (`7,074.0 kHz USB`).
+- **From the EiBi tab**: pick a row and press **Save to memories** (also on right-click). It is saved in **AM**, or USB for utility stations. CAT does not need to be connected.
+- **Double-click** (or **Tune**) sends the radio to that frequency and mode. **The preset comes from the mode table**: if the memory is AM and you were on SSB, your AM preset loads, just as if you had turned the mode knob.
+- **F2** (or right-click → *Rename*) renames it. **Delete** asks for confirmation.
+- No duplicates: a station on the same frequency and mode group as one already saved is not added twice.
+- If the radio rejects the mode (some rigs have no synchronous AM, for example), the status bar says so; the frequency is still changed.
+- They are saved automatically to **`Memorias.json`**, next to `settings.json`. To move them to another PC or the Pi, copy that file or use **Export… / Import…** (CSV format). The CSV has the columns `name;freq_khz;mode`, and importing skips the ones that already exist.
 
 ---
 

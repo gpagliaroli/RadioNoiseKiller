@@ -8,6 +8,8 @@ Kenwood...) y permite compartir la radio con WSJT-X/fldigi, que también lo usan
 
     f\\n  ->  "14074000\\n"               frecuencia en Hz
     m\\n  ->  "USB\\n2400\\n"              modo y passband en Hz
+    F 9560000\\n  ->  "RPRT 0\\n"          sintonizar (memorias)
+    M AM 0\\n     ->  "RPRT 0\\n"          modo, passband 0 = el de la radio
     error ->  "RPRT -11\\n"
 
 Sin Qt: el cliente corre en un hilo daemon y publica un `CatState` inmutable
@@ -18,6 +20,7 @@ responde no puede trabar la app ni el audio: timeouts de 1 s y reintento.
 `AutoPresetSwitcher` y `choose_preset()` son la lógica del preset automático
 por modo, puras y testeables sin Qt ni sockets.
 """
+import queue
 import socket
 import threading
 from dataclasses import dataclass
@@ -67,6 +70,7 @@ class CatState:
     freq_hz: "int | None" = None
     mode: "str | None" = None
     error: str = ""          # último error (conexión rechazada, RPRT, timeout...)
+    cmd_error: str = ""      # la radio rechazó el último tune() (la conexión sigue)
 
 
 class CatError(Exception):
@@ -89,6 +93,8 @@ class RigctldClient:
         self._state = CatState()
         self._stop = threading.Event()
         self._thread: "threading.Thread | None" = None
+        self._tune_q: "queue.Queue" = queue.Queue()
+        self._cmd_error = ""
 
     @property
     def state(self) -> CatState:
@@ -109,7 +115,22 @@ class RigctldClient:
         if self._thread is not None:
             self._thread.join(timeout)
         self._thread = None
+        self._drain_tune()
+        self._cmd_error = ""
         self._state = CatState()
+
+    def tune(self, freq_hz: int, mode: "str | None" = None) -> None:
+        """Pide sintonizar (memorias). No bloquea: lo manda el hilo antes del
+        próximo sondeo. Dos pedidos seguidos: gana el último."""
+        self._drain_tune()
+        self._tune_q.put((int(freq_hz), (mode or "").strip().upper()))
+
+    def _drain_tune(self) -> None:
+        try:
+            while True:
+                self._tune_q.get_nowait()
+        except queue.Empty:
+            pass
 
     # ------------------------------------------------------------------
 
@@ -125,9 +146,10 @@ class RigctldClient:
                 sock.settimeout(self._timeout_s)
                 rf = sock.makefile("r", encoding="ascii", errors="replace", newline="\n")
                 while not self._stop.is_set():
+                    self._send_pending_tune(sock, rf)
                     freq = int(float(self._query(sock, rf, "f", 1)[0]))
                     mode = self._query(sock, rf, "m", 2)[0].strip().upper()
-                    self._state = CatState(True, freq, mode)
+                    self._state = CatState(True, freq, mode, cmd_error=self._cmd_error)
                     self._stop.wait(self._poll_s)
             except (OSError, ValueError, CatError) as e:
                 self._state = CatState(error=str(e) or type(e).__name__)
@@ -139,6 +161,34 @@ class RigctldClient:
             # Reconexión: el primer reintento rápido (rigctld reiniciado), y
             # después el ritmo normal si sigue sin estar.
             self._stop.wait(min(self._retry_s, 1.0))
+
+    def _send_pending_tune(self, sock: socket.socket, rf) -> None:
+        """Frecuencia y después modo. Un RPRT de error en un set NO tira la
+        conexión (hay radios que rechazan un modo, p. ej. SAM): queda en
+        `cmd_error`. Un timeout o un socket caído sí (OSError sube)."""
+        try:
+            freq_hz, mode = self._tune_q.get_nowait()
+        except queue.Empty:
+            return
+        self._cmd_error = ""
+        cmds = [f"F {freq_hz}"] + ([f"M {mode} 0"] if mode else [])
+        for cmd in cmds:
+            try:
+                self._command(sock, rf, cmd)
+            except CatError as e:
+                self._cmd_error = str(e)
+                return
+
+    @staticmethod
+    def _command(sock: socket.socket, rf, cmd: str) -> None:
+        """Comando de escritura: rigctld responde una sola línea, 'RPRT 0' si anduvo."""
+        sock.sendall((cmd + "\n").encode("ascii"))
+        line = rf.readline()
+        if not line:
+            raise OSError("rigctld cerró la conexión")
+        line = line.strip()
+        if line != "RPRT 0":
+            raise CatError(f"rigctld respondió {line or '(vacío)'} a '{cmd}'")
 
     @staticmethod
     def _query(sock: socket.socket, rf, cmd: str, n_lines: int) -> list:

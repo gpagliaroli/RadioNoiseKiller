@@ -125,7 +125,8 @@ En ARM la configuración de fábrica ya trae bloque 960. Si venís de una instal
   abrir la solapa si venció, solo si cambió en el servidor, y también con un botón
 - **Control de la radio (CAT)** — lee frecuencia y modo de la radio por **rigctld** (Hamlib, cientos
   de modelos) y carga solo el preset de cada modo (SSB, AM, FM...); la solapa EiBi sigue la
-  frecuencia. Solo lectura: nunca le cambia nada a la radio
+  frecuencia. **Memorias de emisoras** (nombre, frecuencia y modo, también desde EiBi): con
+  doble clic la radio va a la emisora y se carga el preset del modo
 - **Traducción** *(experimental)* — transcribe y traduce en vivo lo que sale del cancelador, todo
   local. Se instala con un clic desde la pestaña (≈600 MB, solo si lo pedís); sin instalar no
   se descarga nada
@@ -196,7 +197,7 @@ En Windows hay wrappers en la raíz: `run.cmd` (lanza la aplicación) y `test.cm
 python tests/run_all.py
 ```
 
-Corre las 13 suites de regresión headless en subprocesos aislados. Los datos escribibles se redirigen
+Corre las 14 suites de regresión headless en subprocesos aislados. Los datos escribibles se redirigen
 a una carpeta temporal vía la variable `RNK_DATA_DIR`, así que **los tests nunca tocan tu
 `settings.json` ni tus presets**. `test_devices.py` y `test_hostapis.py` quedan fuera del runner:
 requieren hardware de audio y son diagnósticos. `test_cpu_profile.py` tampoco, es un benchmark.
@@ -234,6 +235,7 @@ src/
 ├── eibi_db.py            # Base EiBi: parseo, búsqueda "en el aire ahora", descarga con vencimiento
 ├── eibi_codes.py         # Nombres de idioma/país/zona de EiBi (generado por tools/gen_eibi_codes.py)
 ├── cat.py                # CAT por rigctld (Hamlib): cliente TCP en su hilo + preset automático por modo
+├── memories.py           # Memorias de emisoras (Memorias.json, CSV), sin Qt
 ├── translate_client.py   # Cliente del worker de Traducción (proceso aparte, stdin/stdout)
 ├── translate_protocol.py # Protocolo IPC JSON del módulo de Traducción
 ├── translate_installer.py# Instalación en un clic del módulo (Python + pip + modelos)
@@ -261,6 +263,7 @@ src/
     ├── update_dialog.py  # Diálogo "hay una versión nueva"
     ├── eibi_tab.py       # Solapa EiBi (qué emisora es)
     ├── cat_panel.py      # Solapa CAT: conexión con rigctld y tabla modo → preset
+    ├── memories_panel.py # Solapa CAT: memorias de emisoras (doble clic sintoniza)
     ├── translate_tab.py  # Pestaña Traducción (transcripción + traducción en vivo)
     ├── cpu_meter.py      # Medidor de carga del hilo de audio
     ├── slider_row.py     # Widget: label + QSlider escalado a float + valor

@@ -1405,4 +1405,46 @@ CATALOG = {
     "({lo:.0f}–{hi:.0f} kHz).":
         "The radio's frequency ({f:.0f} kHz) is outside the EiBi range "
         "({lo:.0f}–{hi:.0f} kHz).",
+    # Memorias (solapa CAT)
+    "Memorias": "Memories",
+    "Nombre": "Name",
+    "Frecuencia": "Frequency",
+    "Modo": "Mode",
+    "Guardar actual": "Save current",
+    "Guarda la frecuencia y el modo de la radio. El nombre sale de la\n"
+    "emisora EiBi en el aire en esa frecuencia, si hay.":
+        "Saves the radio's frequency and mode. The name comes from the\n"
+        "EiBi station on the air on that frequency, if any.",
+    "Sintonizar": "Tune",
+    "Lleva la radio a la memoria elegida (también con doble clic).\n"
+    "El preset lo carga la tabla de modos de arriba.":
+        "Tunes the radio to the selected memory (double-click works too).\n"
+        "The preset is loaded by the mode table above.",
+    "Importar…": "Import…",
+    "Agrega memorias desde un CSV con columnas name;freq_khz;mode\n"
+    "(las que ya existen se saltean).":
+        "Adds memories from a CSV with columns name;freq_khz;mode\n"
+        "(existing ones are skipped).",
+    "Exportar…": "Export…",
+    "Guarda todas las memorias en un CSV (name;freq_khz;mode).":
+        "Saves all memories to a CSV (name;freq_khz;mode).",
+    "Doble clic para sintonizar; F2 para renombrar. También se guardan desde "
+    "la solapa EiBi (\"Guardar en memorias\").":
+        "Double-click to tune; F2 to rename. You can also save them from "
+        "the EiBi tab (\"Save to memories\").",
+    "Error al guardar las memorias": "Error saving the memories",
+    "Borrar la memoria '{name}'?": "Delete the memory '{name}'?",
+    "Importar memorias": "Import memories",
+    "Exportar memorias": "Export memories",
+    "Se agregaron {n} memorias.": "{n} memories added.",
+    "Guardar en memorias": "Save to memories",
+    "Guarda la emisora elegida en las memorias de la solapa CAT\n"
+    "(frecuencia, nombre y modo AM; USB para las utilitarias).":
+        "Saves the selected station to the CAT tab memories\n"
+        "(frequency, name and AM mode; USB for utility stations).",
+    "Memoria guardada: {name} ({freq}, {mode}).": "Memory saved: {name} ({freq}, {mode}).",
+    "Ya estaba en las memorias: {name} ({freq}, {mode}).":
+        "Already in the memories: {name} ({freq}, {mode}).",
+    "Sintonizando {name} ({freq}, {mode})...": "Tuning {name} ({freq}, {mode})...",
+    "La radio rechazó la memoria: {err}": "The radio rejected the memory: {err}",
 }

@@ -42,6 +42,25 @@ regla de método nueva.
 
 _(Los bloques nuevos de la próxima versión van acá, el más reciente arriba.)_
 
+**Post-v2.7: memorias de emisoras en la solapa CAT (primera escritura a la radio).** Pedido del
+usuario: guardar frecuencia + modo + nombre (el nombre de EiBi) y cambiar de emisora eligiéndola.
+Decisiones con él: **el preset sale siempre del modo** (sin preset por memoria: al sintonizar cambia
+el modo y la tabla modo → preset del bloque de abajo hace el resto, sin lógica nueva); se agregan
+**desde la radio** ("Guardar actual", con el nombre de la emisora EiBi *en el aire* dentro de la
+tolerancia, o `7.074,0 kHz USB`) y **desde una fila EiBi** ("Guardar en memorias", AM, o USB si la
+entrada es utilitaria); **archivo propio** `Memorias.json` (carpeta de datos, para copiarlo a otra PC
+o a la Pi) con import/export CSV `name;freq_khz;mode`; **sin límite** (son memorias de la app, no
+los canales de la radio). No se duplica una memoria con la misma frecuencia y el mismo grupo de modo.
+- Escritura: `RigctldClient.tune()` deja el pedido en una cola (gana el último) y el hilo lo manda
+  **antes del próximo sondeo**: `F <hz>` y después `M <MODO> 0` (passband 0 = el de la radio). Sigue
+  sin haber red en la GUI. Un `RPRT` ≠ 0 en un set **no** reconecta (hay radios sin SAM): queda en
+  `CatState.cmd_error` y la barra de estado lo muestra una vez; un timeout o socket caído sí.
+- El bloque de abajo decía "Solo lectura. La app nunca escribe en la radio": deja de ser cierto sólo
+  al sintonizar una memoria, y los manuales lo dicen así.
+Tests: `test_memories` (nuevo, suite 14), `test_cat` (+3: orden F/M, último pedido gana, modo
+rechazado sin reconectar; el `_FakeRig` acepta `F`/`M`) y `test_ui::test_cat_memories` de punta a
+punta (EiBi → memoria, guardar actual, doble clic → la radio falsa cambia → se carga el preset del modo).
+
 **Post-v2.7: control de la radio (CAT) por rigctld.** El usuario eligió esta ampliación en la
 revisión post-v2.7 (junto con el build en 22.04 y el lanzador). Decisiones, todas tomadas con él:
 - **rigctld por TCP y no el puerto serie directo**: un protocolo de texto (`f` → Hz, `m` → modo +

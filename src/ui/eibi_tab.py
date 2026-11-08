@@ -9,11 +9,11 @@ escucha confirma la emisora.
 """
 from datetime import datetime, timedelta, timezone
 
-from PySide6.QtCore import QTime, QTimer, Signal
+from PySide6.QtCore import Qt, QTime, QTimer, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QAbstractItemView, QCheckBox, QComboBox, QDoubleSpinBox, QHBoxLayout, QHeaderView,
-    QLabel, QProgressBar, QPushButton, QTableWidget, QTableWidgetItem, QTimeEdit,
+    QLabel, QMenu, QProgressBar, QPushButton, QTableWidget, QTableWidgetItem, QTimeEdit,
     QVBoxLayout, QWidget,
 )
 
@@ -35,6 +35,7 @@ _GREEN, _GREY, _AMBER, _RED = "#69f0ae", "#777777", "#ffb74d", "#ef5350"
 
 class EibiTab(QWidget):
     state_changed = Signal()   # cambió algo persistente -> MainWindow agenda guardado
+    memory_requested = Signal(str, int, str)   # nombre, freq_hz, modo -> memorias del CAT
 
     def __init__(self, config: AppConfig, updater: "eibi_db.EibiUpdater | None" = None,
                  parent=None):
@@ -51,6 +52,7 @@ class EibiTab(QWidget):
         # La radio está fuera del rango de EiBi (p. ej. en VHF): el spin muestra
         # "----- kHz" y la tabla queda vacía, en vez de recortar a 30000 kHz.
         self._radio_out_of_range = False
+        self._shown: list = []          # Match de cada fila de la tabla
         self._build_ui()
         self._load_values()
         self._timer = QTimer(self)
@@ -90,6 +92,12 @@ class EibiTab(QWidget):
             "levemente desafinado o si estás en una banda con canales cada 5 kHz."))
         row.addWidget(self._spin_tol)
         row.addStretch()
+        self._btn_memory = QPushButton(tr("Guardar en memorias"))
+        self._btn_memory.setToolTip(tr(
+            "Guarda la emisora elegida en las memorias de la solapa CAT\n"
+            "(frecuencia, nombre y modo AM; USB para las utilitarias)."))
+        self._btn_memory.setEnabled(False)
+        row.addWidget(self._btn_memory)
         root.addLayout(row)
 
         self._chk_follow = QCheckBox(tr("Seguir la frecuencia de la radio (CAT)"))
@@ -134,6 +142,7 @@ class EibiTab(QWidget):
         hdr = self._table.horizontalHeader()
         hdr.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         hdr.setStretchLastSection(True)
+        self._table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         root.addWidget(self._table, 1)
 
         self._lbl_result = QLabel("")
@@ -171,6 +180,10 @@ class EibiTab(QWidget):
         self._chk_auto.toggled.connect(self._on_auto_changed)
         self._chk_follow.toggled.connect(self._on_follow_changed)
         self._btn_update.clicked.connect(self._on_update_clicked)
+        self._btn_memory.clicked.connect(self._on_save_memory)
+        self._table.itemSelectionChanged.connect(
+            lambda: self._btn_memory.setEnabled(self._selected_match() is not None))
+        self._table.customContextMenuRequested.connect(self._on_context_menu)
 
     def _load_values(self) -> None:
         e = self._config.eibi
@@ -289,6 +302,49 @@ class EibiTab(QWidget):
         self._refresh_db_label()
 
     # ------------------------------------------------------------------
+    # Memorias (solapa CAT)
+    # ------------------------------------------------------------------
+
+    def _selected_match(self) -> "eibi_db.Match | None":
+        rows = self._table.selectionModel().selectedRows()
+        if not rows or rows[0].row() >= len(self._shown):
+            return None
+        return self._shown[rows[0].row()]
+
+    def _on_save_memory(self) -> None:
+        m = self._selected_match()
+        if m is None:
+            return
+        e = m.entry
+        self.memory_requested.emit(e.station, int(round(e.freq_khz * 1000)),
+                                   "USB" if e.utility else "AM")
+
+    def _on_context_menu(self, pos) -> None:
+        item = self._table.itemAt(pos)
+        if item is None:
+            return
+        self._table.selectRow(item.row())
+        menu = QMenu(self)
+        act = menu.addAction(tr("Guardar en memorias"))
+        if menu.exec(self._table.viewport().mapToGlobal(pos)) is act:
+            self._on_save_memory()
+
+    def best_station(self, khz: float) -> str:
+        """Emisora EiBi en el aire ahora en esa frecuencia (dentro de la tolerancia),
+        para nombrar una memoria; "" si no hay base o no hay ninguna en el aire."""
+        if self._db is None:
+            try:
+                self._db = self._store.load()   # la solapa todavía no se abrió
+            except Exception:
+                return ""
+            if self._db is None:
+                return ""
+        for m in self._db.query(khz, self._spin_tol.value(), eibi_db._now_utc()):
+            if m.on_air:
+                return m.entry.station
+        return ""
+
+    # ------------------------------------------------------------------
     # Polling
     # ------------------------------------------------------------------
 
@@ -338,6 +394,7 @@ class EibiTab(QWidget):
             self._lbl_now.setText("UTC %02d:%02d · %s" % (
                 when.hour, when.minute, tr(_DAYS[when.weekday()])))
         self._table.setRowCount(0)
+        self._shown = []
         if self._radio_out_of_range:
             lo, hi = self._spin_freq.minimum(), self._spin_freq.maximum()
             self._lbl_result.setText(tr(
@@ -350,7 +407,7 @@ class EibiTab(QWidget):
                 "(necesita internet una vez) o con el botón Actualizar ahora."))
             return
         matches = self._db.query(self._spin_freq.value(), self._spin_tol.value(), when)
-        shown = matches[:_MAX_ROWS]
+        shown = self._shown = matches[:_MAX_ROWS]
         self._table.setRowCount(len(shown))
         for r, m in enumerate(shown):
             self._fill_row(r, m)

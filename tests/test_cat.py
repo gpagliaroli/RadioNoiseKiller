@@ -2,7 +2,8 @@
 Tests del control de la radio por rigctld (src/cat.py), sin radio ni Hamlib:
 un rigctld FALSO en un hilo (socketserver en 127.0.0.1, puerto libre).
 - RigctldClient: lee frecuencia y modo, RPRT de error, reconexión cuando el
-  servidor se cae y vuelve, puerto cerrado.
+  servidor se cae y vuelve, puerto cerrado; tune() (memorias): F y después M,
+  gana el último pedido, un modo rechazado no tira la conexión.
 - mode_group con todos los modos.
 - AutoPresetSwitcher: espera la estabilidad, no repite, None no dispara.
 - choose_preset: carga aunque el activo esté modificado (DISCARD, la UI avisa),
@@ -33,6 +34,8 @@ class _FakeRig:
     def __init__(self, port: int = 0):
         self.freq, self.mode, self.passband = 7074000, "LSB", 2400
         self.fail_f = False
+        self.reject_modes = set()      # modos que la "radio" rechaza con RPRT -9
+        self.sets = []                 # comandos de escritura recibidos, en orden
         self.conns = []
         rig = self
 
@@ -42,10 +45,22 @@ class _FakeRig:
                 try:
                     for raw in self.rfile:
                         cmd = raw.decode().strip()
+                        parts = cmd.split()
                         if cmd == "f":
                             out = "RPRT -11\n" if rig.fail_f else f"{rig.freq}\n"
                         elif cmd == "m":
                             out = f"{rig.mode}\n{rig.passband}\n"
+                        elif parts and parts[0] == "F" and len(parts) == 2:
+                            rig.sets.append(cmd)
+                            rig.freq = int(parts[1])
+                            out = "RPRT 0\n"
+                        elif parts and parts[0] == "M" and len(parts) == 3:
+                            rig.sets.append(cmd)
+                            if parts[1] in rig.reject_modes:
+                                out = "RPRT -9\n"
+                            else:
+                                rig.mode = parts[1]
+                                out = "RPRT 0\n"
                         else:
                             out = "RPRT -4\n"
                         self.wfile.write(out.encode())
@@ -149,6 +164,57 @@ def test_client_closed_port_never_raises():
     print("CAT: puerto cerrado -> error y reintento, stop() inmediato  OK")
 
 
+def test_client_tune_sets_freq_then_mode():
+    rig = _FakeRig()
+    c = _client(rig.port)
+    c.start()
+    try:
+        assert _wait(lambda: c.state.connected)
+        c.tune(9560000, "am")
+        assert _wait(lambda: c.state.freq_hz == 9560000 and c.state.mode == "AM"), c.state
+        assert rig.sets == ["F 9560000", "M AM 0"], rig.sets
+        assert c.state.cmd_error == ""
+        rig.sets.clear()
+        c.tune(3700000, None)
+        assert _wait(lambda: c.state.freq_hz == 3700000), c.state
+        assert rig.sets == ["F 3700000"], "sin modo: sólo la frecuencia"
+    finally:
+        c.stop()
+        rig.close()
+    print("CAT: tune() manda F y después M, y el sondeo lo refleja  OK")
+
+
+def test_client_tune_last_request_wins():
+    c = _client(1)                       # sin conectar: los pedidos quedan en cola
+    c.tune(7000000, "LSB")
+    c.tune(9560000, "AM")
+    assert c._tune_q.qsize() == 1 and c._tune_q.get_nowait() == (9560000, "AM")
+    c.tune(1, "AM")
+    c.stop()
+    assert c._tune_q.empty(), "stop() descarta pedidos pendientes"
+    print("CAT: dos tune() seguidos -> gana el último; stop() vacía la cola  OK")
+
+
+def test_client_tune_rejected_mode_keeps_connection():
+    rig = _FakeRig()
+    rig.reject_modes = {"SAM"}
+    c = _client(rig.port)
+    c.start()
+    try:
+        assert _wait(lambda: c.state.connected)
+        n_conns = len(rig.conns)
+        c.tune(9560000, "SAM")
+        assert _wait(lambda: "RPRT -9" in c.state.cmd_error), c.state
+        assert c.state.connected and c.state.freq_hz == 9560000 and c.state.mode == "LSB"
+        assert len(rig.conns) == n_conns, "un set rechazado no reconecta"
+        c.tune(9560000, "AM")
+        assert _wait(lambda: c.state.mode == "AM" and c.state.cmd_error == ""), c.state
+    finally:
+        c.stop()
+        rig.close()
+    print("CAT: modo rechazado -> cmd_error, la conexión sigue  OK")
+
+
 def test_mode_group():
     casos = {"USB": "SSB", "lsb": "SSB", "PKTUSB": "SSB", "PKTLSB": "SSB",
              "AM": "AM", "SAM": "AM", "AMS": "AM", "DSB": "AM",
@@ -243,6 +309,9 @@ if __name__ == "__main__":
     test_client_rprt_error_and_recovery()
     test_client_reconnects_after_server_restart()
     test_client_closed_port_never_raises()
+    test_client_tune_sets_freq_then_mode()
+    test_client_tune_last_request_wins()
+    test_client_tune_rejected_mode_keeps_connection()
     test_mode_group()
     test_switcher_waits_stability_and_does_not_repeat()
     test_choose_preset_rules()

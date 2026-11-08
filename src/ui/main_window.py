@@ -26,7 +26,9 @@ from ui.presets_tab import PresetsTab
 from ui.translate_tab import TranslateTab
 from ui.eibi_tab import EibiTab
 from ui.cat_panel import CatPanel
+from ui.memories_panel import MemoriesPanel
 import cat
+import memories
 from translate_client import TranslateClient
 from ui.slider_row import SliderRow
 from ui.tooltips import apply_tooltips
@@ -154,6 +156,7 @@ class MainWindow(QMainWindow):
         # CAT (rigctld): el cliente corre en su hilo; _tick_cat lee el estado.
         self._cat_client: "cat.RigctldClient | None" = None
         self._cat_switcher = cat.AutoPresetSwitcher()
+        self._cat_cmd_error = ""        # último rechazo de tune() ya mostrado
         self._cat_timer = QTimer(self)
         self._cat_timer.setInterval(500)
         self._cat_timer.timeout.connect(self._tick_cat)
@@ -245,7 +248,11 @@ class MainWindow(QMainWindow):
         cat_layout = QVBoxLayout(cat_tab)
         cat_layout.setContentsMargins(12, 12, 12, 12)
         cat_layout.addWidget(self._cat_panel)
-        cat_layout.addStretch()
+        self._memories_panel = MemoriesPanel()
+        self._memories_panel.tune_requested.connect(self._on_memory_tune)
+        self._memories_panel.save_current_requested.connect(self._on_memory_save_current)
+        self._eibi_tab.memory_requested.connect(self._on_memory_add)
+        cat_layout.addWidget(self._memories_panel, 1)
         self._tabs.addTab(cat_tab, tr("CAT"))
         self._tabs.currentChanged.connect(self._on_tab_changed)
         # Todas las solapas visibles a la vez: sin botones de scroll y repartidas
@@ -2330,9 +2337,11 @@ class MainWindow(QMainWindow):
         c = self._config.cat
         self._lbl_cat.setVisible(c.enabled)
         self._cat_row_label.setVisible(c.enabled)
+        self._cat_cmd_error = ""
         if not c.enabled:
             self._cat_timer.stop()
             self._eibi_tab.set_radio_freq(None)
+            self._memories_panel.set_connected(False)
             return
         self._cat_client = cat.RigctldClient(c.host, c.port)
         self._cat_client.start()
@@ -2351,16 +2360,44 @@ class MainWindow(QMainWindow):
     @staticmethod
     def _format_freq(hz: int) -> str:
         """14074000 -> '14.074,0 kHz' en castellano, '14,074.0 kHz' en inglés."""
-        txt = f"{hz / 1000:,.1f}"
-        if get_language() != "en":
-            txt = txt.replace(",", "#").replace(".", ",").replace("#", ".")
-        return txt + " kHz"
+        return memories.default_name(hz, "", get_language())
+
+    def _on_memory_add(self, name: str, freq_hz: int, mode: str) -> None:
+        """'Guardar en memorias' desde la solapa EiBi."""
+        if self._memories_panel.add_memory(name, freq_hz, mode):
+            msg = tr("Memoria guardada: {name} ({freq}, {mode}).")
+        else:
+            msg = tr("Ya estaba en las memorias: {name} ({freq}, {mode}).")
+        self._status_bar.showMessage(msg.format(
+            name=name, freq=self._format_freq(freq_hz), mode=mode), 6000)
+
+    def _on_memory_save_current(self) -> None:
+        st = self._cat_client.state if self._cat_client is not None else None
+        if st is None or not st.connected or not st.freq_hz:
+            return
+        mode = st.mode or ""
+        name = (self._eibi_tab.best_station(st.freq_hz / 1000.0)
+                or memories.default_name(st.freq_hz, mode, get_language()))
+        self._on_memory_add(name, st.freq_hz, mode)
+
+    def _on_memory_tune(self, freq_hz: int, mode: str, name: str) -> None:
+        if self._cat_client is None:
+            return
+        self._cat_client.tune(freq_hz, mode)
+        self._cat_cmd_error = ""
+        self._status_bar.showMessage(tr("Sintonizando {name} ({freq}, {mode})...").format(
+            name=name, freq=self._format_freq(freq_hz), mode=mode), 6000)
 
     def _tick_cat(self) -> None:
         if self._cat_client is None:
             return
         st = self._cat_client.state
         c = self._config.cat
+        self._memories_panel.set_connected(st.connected)
+        if st.cmd_error and st.cmd_error != self._cat_cmd_error:
+            self._cat_cmd_error = st.cmd_error
+            self._status_bar.showMessage(
+                tr("La radio rechazó la memoria: {err}").format(err=st.cmd_error), 10000)
         if not st.connected:
             self._cat_switcher.reset()
             self._set_cat_label(tr("sin conexión con rigctld"), self._IDLE_LBL_STYLE)

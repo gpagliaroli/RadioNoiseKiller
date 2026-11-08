@@ -2057,6 +2057,116 @@ def test_cat_auto_preset_and_eibi_follow():
     print("CAT: preset por modo (pisa modificado y avisa), EiBi sigue  OK")
 
 
+def test_cat_memories():
+    """Memorias de la solapa CAT contra el rigctld falso: botones según la
+    conexión, "Guardar actual" con el nombre EiBi o el de por defecto, "Guardar en
+    memorias" desde una fila EiBi, y doble clic -> la radio va a esa frecuencia y
+    modo -> la tabla de modos carga el preset."""
+    import time as _t
+    from test_cat import _FakeRig
+    import cat
+    import eibi_db
+    from memories import MemoryStore
+
+    def tick_until(cond, timeout=6.0):
+        t0 = _t.monotonic()
+        while _t.monotonic() - t0 < timeout:
+            w._tick_cat()
+            _app.processEvents()
+            if cond():
+                return True
+            _t.sleep(0.05)
+        return False
+
+    w = _win()
+    mp, et, pt = w._memories_panel, w._eibi_tab, w._presets_tab
+    assert w._tabs.widget(w._tabs.count() - 1).isAncestorOf(mp), "en la solapa CAT"
+    mp._store.items.clear()
+    mp._refresh()
+    assert not mp._btn_save.isEnabled() and not mp._btn_tune.isEnabled(), "sin CAT: deshabilitados"
+
+    # EiBi -> memorias, con el CAT apagado (no hace falta radio para guardar).
+    entry = eibi_db.Entry(9560.0, 0, 1440, "", "ARG", "RAE Argentina", "S", "AM", "",
+                          1, False, None, None)
+    util = eibi_db.Entry(8291.0, 0, 1440, "", "USA", "Coast Guard", "E", "NAm", "",
+                         1, True, None, None)
+    et._db = eibi_db.EibiDatabase([entry, util])
+    et._chk_follow.setChecked(False)
+    et._spin_freq.setValue(9560)
+    et._refresh_results()
+    assert not et._btn_memory.isEnabled(), "sin fila elegida no guarda"
+    et._table.selectRow(0)
+    assert et._btn_memory.isEnabled()
+    et._btn_memory.click()
+    assert [(m.name, m.freq_hz, m.mode) for m in mp._store.items] == [("RAE Argentina", 9560000, "AM")]
+    assert "RAE Argentina" in w._status_bar.currentMessage()
+    et._btn_memory.click()
+    assert len(mp._store) == 1 and tr("Ya estaba") in w._status_bar.currentMessage(), "no duplica"
+    et._spin_freq.setValue(8291)
+    et._refresh_results()
+    et._table.selectRow(0)
+    et._btn_memory.click()
+    assert mp._store.items[0] == mp._store.items[0].__class__("Coast Guard", 8291000, "USB"), \
+        "las utilitarias se guardan en USB"
+    disk = MemoryStore(mp._store.path)
+    disk.load()
+    assert len(disk) == 2, "se guardan solas en Memorias.json"
+
+    ssb, am = "___mem_ssb___", "___mem_am___"
+    cfg = AppConfig()
+    cfg.dsp.noise_alpha = 0.51
+    w._preset_manager.save(ssb, cfg)
+    cfg.dsp.noise_alpha = 0.61
+    w._preset_manager.save(am, cfg)
+    pt._refresh_list()
+    rig = _FakeRig()
+    rig.freq, rig.mode = 7074000, "USB"
+    c = w._config.cat
+    w._cat_panel._edit_host.setText("127.0.0.1")
+    w._cat_panel._spin_port.setValue(rig.port)
+    c.mode_presets.update({"SSB": ssb, "AM": am})
+    w._cat_switcher = cat.AutoPresetSwitcher(stable_s=0.0)
+    w._cat_panel._chk_enabled.setChecked(True)
+    try:
+        assert tick_until(lambda: pt.active_name() == ssb)
+        assert mp._btn_tune.isEnabled(), "conectado, con la última agregada seleccionada"
+        mp._table.clearSelection()
+        assert mp._btn_save.isEnabled() and not mp._btn_tune.isEnabled(), "conectado, sin selección"
+        # Guardar actual en 7074 USB: EiBi no tiene nada ahí -> nombre por defecto.
+        mp._btn_save.click()
+        names = [m.name for m in mp._store.items]
+        assert "7.074,0 kHz USB" in names, names
+        # Doble clic en RAE (AM) -> la radio va a 9560 AM y se carga el preset de AM.
+        row = next(i for i, m in enumerate(mp._store.items) if m.freq_hz == 9560000)
+        mp._table.selectRow(row)
+        assert mp._btn_tune.isEnabled()
+        mp._table.itemDoubleClicked.emit(mp._table.item(row, 1))
+        assert tick_until(lambda: rig.freq == 9560000 and rig.mode == "AM"), (rig.freq, rig.mode)
+        assert rig.sets[-2:] == ["F 9560000", "M AM 0"], rig.sets
+        assert tick_until(lambda: pt.active_name() == am), "el modo nuevo carga su preset"
+        # Guardar actual en 9560 con EiBi: toma el nombre de la emisora y no duplica.
+        mp._btn_save.click()
+        assert len([m for m in mp._store.items if m.freq_hz == 9560000]) == 1
+        # La radio rechaza un modo: aviso en la barra, la conexión sigue.
+        rig.reject_modes = {"USB"}
+        row = next(i for i, m in enumerate(mp._store.items) if m.freq_hz == 8291000)
+        mp._table.selectRow(row)
+        mp._btn_tune.click()
+        assert tick_until(lambda: tr("La radio rechazó") in w._status_bar.currentMessage()), \
+            w._status_bar.currentMessage()
+        assert w._cat_client.state.connected and rig.freq == 8291000
+    finally:
+        w._cat_panel._chk_enabled.setChecked(False)
+        rig.close()
+    assert not mp._btn_save.isEnabled() and not mp._btn_tune.isEnabled(), "CAT apagado: deshabilitados"
+    mp._store.items.clear()
+    mp._store.save()
+    mp._refresh()
+    for n in (ssb, am):
+        w._preset_manager.delete(n)
+    print("CAT: memorias (EiBi -> memoria, guardar actual, doble clic sintoniza)  OK")
+
+
 def test_noise_fall_slider():
     """El slider del freno de caida del piso llega al DSP y respeta su gating.
 
@@ -2427,5 +2537,6 @@ if __name__ == "__main__":
     test_ui_scales_that_fit()
     test_read_ui_scale_tolerante()
     test_cat_auto_preset_and_eibi_follow()
+    test_cat_memories()
     print()
     print("test_ui: OK")
