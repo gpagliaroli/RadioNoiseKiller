@@ -5,7 +5,8 @@ un rigctld FALSO en un hilo (socketserver en 127.0.0.1, puerto libre).
   servidor se cae y vuelve, puerto cerrado.
 - mode_group con todos los modos.
 - AutoPresetSwitcher: espera la estabilidad, no repite, None no dispara.
-- choose_preset: no pisa un preset modificado, ignora inexistente / "".
+- choose_preset: carga aunque el activo esté modificado (DISCARD, la UI avisa),
+  ignora inexistente / "".
 - CatConfig: roundtrip y carga tolerante.
 """
 import json
@@ -186,9 +187,11 @@ def test_choose_preset_rules():
     exists = {"SSB X", "AM Y"}.__contains__
     assert cat.choose_preset("SSB", mapping, exists, "", False) == ("SSB X", cat.LOAD), "sin activo carga"
     assert cat.choose_preset("SSB", mapping, exists, "AM Y", False) == ("SSB X", cat.LOAD)
-    assert cat.choose_preset("SSB", mapping, exists, "AM Y", True) == (None, cat.MODIFIED), \
-        "no pisa un preset con cambios sin guardar"
+    assert cat.choose_preset("SSB", mapping, exists, "AM Y", True) == ("SSB X", cat.DISCARD), \
+        "el cambio de modo manda: carga aunque el activo esté modificado, y avisa"
     assert cat.choose_preset("SSB", mapping, exists, "SSB X", False) == (None, cat.ALREADY)
+    assert cat.choose_preset("SSB", mapping, exists, "SSB X", True) == ("SSB X", cat.DISCARD), \
+        "el mismo preset modificado se recarga (vuelve a lo guardado)"
     assert cat.choose_preset("FM", mapping, exists, "", False) == (None, cat.MISSING)
     assert cat.choose_preset("CW", mapping, exists, "", False) == (None, cat.UNMAPPED)
     assert cat.choose_preset("WFM", mapping, exists, "", False) == (None, cat.UNMAPPED)

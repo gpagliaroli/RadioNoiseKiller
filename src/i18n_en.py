@@ -1366,10 +1366,10 @@ CATALOG = {
     "Equipo donde corre rigctld (127.0.0.1 = esta misma PC).":
         "Computer where rigctld runs (127.0.0.1 = this same PC).",
     "Puerto TCP de rigctld (4532 por defecto).": "rigctld TCP port (4532 by default).",
-    "El preset se carga cuando el modo nuevo se mantiene 1 segundo. Si el preset "
-    "activo tiene cambios sin guardar (modificado), no se reemplaza.":
-        "The preset is loaded once the new mode has held for 1 second. If the active "
-        "preset has unsaved changes (modified), it is not replaced.",
+    "El preset se carga cuando el modo nuevo se mantiene 1 segundo, aunque el "
+    "activo tenga cambios sin guardar (modificado): guardalos antes de cambiar de modo.":
+        "The preset is loaded once the new mode has held for 1 second, even if the "
+        "active one has unsaved changes (modified): save them before changing mode.",
     "Host:": "Host:",
     "Puerto:": "Port:",
     "Modo de la radio": "Radio mode",
@@ -1390,8 +1390,10 @@ CATALOG = {
         "No connection to rigctld at {host}:{port}. Retrying...",
     "{freq}  ·  {mode}  ·  CAT": "{freq}  ·  {mode}  ·  CAT",
     "Conectado a rigctld en {host}:{port}.": "Connected to rigctld at {host}:{port}.",
-    "Radio en {group}: el preset activo tiene cambios sin guardar, no se cambió.":
-        "Radio in {group}: the active preset has unsaved changes, it was not switched.",
+    "Radio en {group}: preset \"{name}\" cargado (se descartaron los "
+    "cambios sin guardar de \"{prev}\").":
+        "Radio in {group}: preset \"{name}\" loaded (unsaved changes to \"{prev}\" "
+        "were discarded).",
     'Radio en {group}: el preset "{name}" no existe.': 'Radio in {group}: preset "{name}" does not exist.',
     'Radio en {group}: preset "{name}" cargado.': 'Radio in {group}: preset "{name}" loaded.',
     "Seguir la frecuencia de la radio (CAT)": "Follow the radio's frequency (CAT)",

@@ -1374,7 +1374,7 @@ De fábrica, la tabla apunta a los presets de fábrica: SSB → *SSB - Ruido Med
 
 - Cuando **cambia el modo** de la radio y el nuevo **se mantiene 1 segundo**. Al girar el selector, la radio pasa por modos intermedios que no cargan nada.
 - Al conectar, se carga el preset del modo en el que está la radio.
-- **Si el preset activo tiene cambios sin guardar** (*modificado*), **no se reemplaza**: estabas ajustando y perderías el trabajo. La barra de estado lo avisa. Guardá (o volvé a cargar el preset) y el próximo cambio de modo funciona normalmente.
+- **El cambio de modo manda, aunque el preset activo tenga cambios sin guardar** (*modificado*): esos ajustes se descartan y la barra de estado avisa cuáles se perdieron. Si estuviste afinando un preset y querés conservarlo, **guardalo antes de cambiar de modo** en la radio (*Sobrescribir seleccionado* o *Guardar como nuevo*).
 - Si cargás otro preset a mano, se respeta hasta el próximo cambio de modo.
 - Cambiar de frecuencia sin cambiar de modo no cambia el preset.
 

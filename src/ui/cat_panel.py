@@ -85,8 +85,8 @@ class CatPanel(QGroupBox):
         root.addLayout(grid)
 
         note = QLabel(tr(
-            "El preset se carga cuando el modo nuevo se mantiene 1 segundo. Si el preset "
-            "activo tiene cambios sin guardar (modificado), no se reemplaza."))
+            "El preset se carga cuando el modo nuevo se mantiene 1 segundo, aunque el "
+            "activo tenga cambios sin guardar (modificado): guardalos antes de cambiar de modo."))
         note.setWordWrap(True)
         note.setStyleSheet("color: #888; font-size: 8pt;")
         root.addWidget(note)

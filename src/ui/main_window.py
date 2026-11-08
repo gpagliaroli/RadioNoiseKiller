@@ -2390,22 +2390,25 @@ class MainWindow(QMainWindow):
         name, why = cat.choose_preset(
             group, self._config.cat.mode_presets, pt.preset_exists,
             pt.active_name(), pt.active_modified())
-        if why == cat.MODIFIED:
-            self._status_bar.showMessage(tr(
-                "Radio en {group}: el preset activo tiene cambios sin guardar, no se cambió.").format(
-                group=group), 8000)
-        elif why == cat.MISSING:
+        if why == cat.MISSING:
             self._status_bar.showMessage(tr(
                 "Radio en {group}: el preset \"{name}\" no existe.").format(
                 group=group, name=self._config.cat.mode_presets.get(group, "")), 8000)
-        elif why == cat.LOAD:
+        elif why in (cat.LOAD, cat.DISCARD):
+            previous = pt.active_name()
             try:
                 pt.load_preset(name)
             except Exception as e:
                 self._status_bar.showMessage(tr("Error al cargar preset") + f": {e}", 8000)
                 return
-            self._status_bar.showMessage(tr(
-                "Radio en {group}: preset \"{name}\" cargado.").format(group=group, name=name), 8000)
+            if why == cat.DISCARD:
+                msg = tr("Radio en {group}: preset \"{name}\" cargado (se descartaron los "
+                         "cambios sin guardar de \"{prev}\").").format(
+                    group=group, name=name, prev=previous)
+            else:
+                msg = tr("Radio en {group}: preset \"{name}\" cargado.").format(
+                    group=group, name=name)
+            self._status_bar.showMessage(msg, 10000)
 
     def _reset_live_indicators(self) -> None:
         """Deja en reposo TODO lo que sólo se actualiza en `_tick_levels`.

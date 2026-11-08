@@ -1953,8 +1953,9 @@ def test_read_ui_scale_tolerante():
 
 def test_cat_auto_preset_and_eibi_follow():
     """CAT de punta a punta contra un rigctld falso: el indicador aparece sólo con
-    el CAT activo, el cambio de modo carga el preset de la tabla, un preset
-    modificado NO se pisa, y la solapa EiBi sigue la frecuencia de la radio."""
+    el CAT activo, el cambio de modo carga el preset de la tabla AUNQUE el activo
+    esté modificado (y lo avisa), y la solapa EiBi sigue la frecuencia de la radio.
+    Arranca como en el aire del usuario: un preset activo con cambios sin guardar."""
     import time as _t
     from test_cat import _FakeRig
     import cat
@@ -1998,14 +1999,18 @@ def test_cat_auto_preset_and_eibi_follow():
     c.eibi_follow = True
     w._eibi_tab._load_values()
     w._cat_switcher = cat.AutoPresetSwitcher(stable_s=0.0)
-    # Estado de partida conocido: un test anterior deja otro preset activo y
-    # MODIFICADO en el settings.json temporal, y el CAT (bien) no lo pisaría.
+    # Partida: preset activo con cambios sin guardar (el caso que reportó el
+    # usuario: "veo cambiar USB/AM en el indicador pero no el preset").
     pt.load_preset(am)
-    assert pt.active_name() == am and not pt.active_modified()
+    w._config.dsp.noise_alpha = 0.22
+    assert pt.active_name() == am and pt.active_modified()
     w._cat_panel._chk_enabled.setChecked(True)      # -> connection_changed -> _restart_cat
     try:
         assert not w._lbl_cat.isHidden(), "con el CAT activo el indicador se ve"
-        assert tick_until(lambda: pt.active_name() == ssb), "USB carga el preset de SSB"
+        assert tick_until(lambda: pt.active_name() == ssb), \
+            "USB carga el preset de SSB aunque el activo estuviera modificado"
+        msg = w._status_bar.currentMessage()
+        assert "se descartaron" in msg or "discarded" in msg, msg
         assert ssb in w.windowTitle() and tr("{name}  (modificado)").format(name=ssb) \
             not in w.windowTitle(), f"el título muestra el preset del CAT: {w.windowTitle()}"
         assert "USB" in w._lbl_cat.text() and "7.074,0 kHz" in w._lbl_cat.text(), w._lbl_cat.text()
@@ -2020,11 +2025,9 @@ def test_cat_auto_preset_and_eibi_follow():
         w._config.dsp.noise_alpha = 0.9                 # cambios sin guardar
         rig.mode, rig.freq = "LSB", 3700000
         assert tick_until(lambda: spin.value() == 3700)
-        for _ in range(6):
-            w._tick_cat()
-            _app.processEvents()
-        assert pt.active_name() == am and w._config.dsp.noise_alpha == 0.9, \
-            "un preset modificado no se pisa"
+        assert tick_until(lambda: pt.active_name() == ssb), "LSB carga SSB pisando lo modificado"
+        assert w._config.dsp.noise_alpha == 0.55 and not pt.active_modified()
+        assert tr("{name}  (modificado)").format(name=ssb) not in w.windowTitle()
     finally:
         w._cat_panel._chk_enabled.setChecked(False)
         rig.close()
@@ -2032,7 +2035,7 @@ def test_cat_auto_preset_and_eibi_follow():
     assert not w._eibi_tab._spin_freq.isReadOnly(), "sin CAT el spin vuelve a ser editable"
     for n in (ssb, am):
         w._preset_manager.delete(n)
-    print("CAT: preset por modo, no pisa modificado, EiBi sigue  OK")
+    print("CAT: preset por modo (pisa modificado y avisa), EiBi sigue  OK")
 
 
 def test_noise_fall_slider():

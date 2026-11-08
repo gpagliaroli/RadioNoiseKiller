@@ -193,24 +193,26 @@ class AutoPresetSwitcher:
 
 
 # Resultados de choose_preset (el segundo elemento): lo que muestra la UI.
-LOAD, UNMAPPED, MISSING, MODIFIED, ALREADY = "load", "unmapped", "missing", "modified", "already"
+# DISCARD = carga, pero descarta cambios sin guardar del preset activo (la UI avisa).
+LOAD, DISCARD, UNMAPPED, MISSING, ALREADY = "load", "discard", "unmapped", "missing", "already"
 
 
 def choose_preset(group: str, mapping: dict, exists, active: str,
                   active_modified: bool) -> "tuple[str | None, str]":
     """(preset a cargar o None, motivo). `exists(nombre) -> bool`.
 
-    Nunca pisa un preset activo con cambios sin guardar ("(modificado)"): el
-    usuario estaba ajustando y perdería el trabajo. Sin preset activo sí carga:
-    activar el CAT con una tabla configurada ya es pedirlo.
+    El cambio de modo de la radio MANDA: carga el preset del modo aunque el
+    activo tenga cambios sin guardar ("(modificado)") — decisión del usuario
+    tras probarlo en el aire: el primer diseño no lo pisaba y en la práctica el
+    preset "nunca cambiaba", porque casi siempre hay algún ajuste suelto. Se
+    devuelve DISCARD para que la UI avise que esos cambios se perdieron.
     """
     name = (mapping.get(group) or "").strip()
     if not name:
         return None, UNMAPPED
     if not exists(name):
         return None, MISSING
-    if active and active_modified:
-        return None, MODIFIED
-    if name == active:
+    modified = bool(active) and active_modified
+    if name == active and not modified:
         return None, ALREADY
-    return name, LOAD
+    return name, DISCARD if modified else LOAD

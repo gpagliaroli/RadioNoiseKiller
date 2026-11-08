@@ -1375,7 +1375,7 @@ Out of the box the table points to the factory presets: SSB → *SSB - Ruido Med
 
 - When the radio's **mode changes** and the new one **holds for 1 second**. While you turn the mode knob the radio passes through intermediate modes, which load nothing.
 - On connecting, the preset for the radio's current mode is loaded.
-- **If the active preset has unsaved changes** (*modified*), **it is not replaced**: you were adjusting it and would lose your work. The status bar says so. Save it (or reload the preset) and the next mode change works normally.
+- **The mode change wins, even if the active preset has unsaved changes** (*modified*): those adjustments are discarded and the status bar says which preset lost them. If you have been fine-tuning a preset and want to keep it, **save it before changing mode** on the radio (*Overwrite selected* or *Save as new*).
 - If you load another preset by hand, it is kept until the next mode change.
 - Changing frequency without changing mode does not change the preset.
 

@@ -54,8 +54,15 @@ revisión post-v2.7 (junto con el build en 22.04 y el lanzador). Decisiones, tod
 - **Cuándo cambia el preset** (`AutoPresetSwitcher`, pura): sólo al cambiar el grupo, y cuando el nuevo
   se sostiene **1 s** (girar el selector pasa por modos intermedios). Un modo desconocido no dispara
   ni borra el último aplicado. Desconectar resetea, así que al reconectar se aplica el modo actual.
-- **Nunca pisa un preset "(modificado)"** (`choose_preset`): el usuario estaba ajustando. Sin preset
-  activo sí carga (activar el CAT con la tabla configurada ya es pedirlo). Una carga manual se respeta
+- **El cambio de modo manda, aunque el preset activo esté "(modificado)"** (`choose_preset` → `DISCARD`,
+  y la barra de estado dice de qué preset se descartaron cambios). El primer diseño NO lo pisaba ("el
+  usuario estaba ajustando") y el usuario lo reportó en la primera prueba con su radio: *"veo que cambia
+  de usb a am pero no veo cambiar el preset"*. Su preset activo tenía 5 ajustes sueltos sin guardar
+  (Intensidad, Freno de bajada, umbral del gate, pasabanda), que es el estado NORMAL de operación, así que
+  el preset no cambiaba nunca y el aviso de 8 s pasaba desapercibido. Opciones que se le ofrecieron:
+  cambiar igual, preguntar con un diálogo, casilla opcional, o dejarlo y hacer más visible el aviso.
+  Eligió **cambiar igual**: el cambio de modo en la radio ya es la orden. Lección: una protección que
+  bloquea en el estado normal de uso se vive como un bug. Una carga manual se respeta
   hasta el próximo cambio de modo. La carga pasa por `PresetsTab.load_preset()`, el mismo camino que el
   botón Cargar (extraído de `_on_load`).
 - **Hilos**: `RigctldClient` corre en un hilo daemon con timeouts de 1 s y reintento, y publica un
