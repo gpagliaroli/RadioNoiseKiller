@@ -42,6 +42,17 @@ regla de método nueva.
 
 _(Los bloques nuevos de la próxima versión van acá, el más reciente arriba.)_
 
+**Post-v2.7: lanzador de escritorio para Linux y la Pi.** Con el paquete o con `./run` la app no
+aparecía en el menú: había que abrir una terminal cada vez. `--install-desktop` escribe
+`~/.local/share/applications/radionoisekiller.desktop` (respeta `XDG_DATA_HOME`), con `Exec` e
+`Icon` absolutos, y sale. `--uninstall-desktop` lo quita. `main.py` atiende los flags **antes de
+importar Qt**, así que funcionan sin display (por SSH, por ejemplo). Desde el fuente, `Exec` apunta
+al script `run` y no a `src/main.py`, para que el lanzador pase por el `.venv` y lo cree si falta.
+`Exec` va entre comillas con el escape de la spec Desktop Entry (las carpetas con espacios son comunes).
+Se agregó `app.setDesktopFileName("radionoisekiller")`: en Wayland es el app_id, y es lo que asocia la
+ventana con el lanzador (ícono en el panel). El chmod 755 del .desktop es porque GNOME no confía en
+lanzadores sin el bit. Test: `test_desktop` (en `run_all`), siempre sobre carpetas temporales.
+
 **Post-v2.7: el paquete Linux x86_64 vuelve a arrancar en Ubuntu 22.04 y Debian 12.** El job
 x86_64 corría en `ubuntu-latest` (24.04) y el zip de la v2.7 pedía **glibc 2.38**: el Python de
 `setup-python` (los módulos de `lib-dynload`), `libxkbcommon` y `libxcb-cursor` vienen compilados

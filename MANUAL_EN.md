@@ -1364,6 +1364,8 @@ The file is capped at a few errors per session, so it does not grow without boun
 
 > **Raspberry Pi 4 (new in 2.7: its own package).** Tested with the `RadioNoiseKiller_v2.7-linux-aarch64.zip` package and from source, on **64-bit** Raspberry Pi OS (it does not work on 32-bit). Requires `sudo apt install libportaudio2 libxcb-xinerama0`. Use **block size 960** (480 has dropouts; on ARM it is the factory default, but an earlier `settings.json` keeps its block size): that way every module can be on at the same time without dropouts, with the CPU meter around 55 %. **Do not use the Spectrum tab** (or the waterfall) while processing: it uses too much CPU on the Pi. For the output pick a USB card or the headphone jack: the Pi's direct HDMI output is not listed because it will not open.
 
+**Menu launcher (Linux and Raspberry Pi).** To have RadioNoiseKiller show up in the applications menu with its icon, run `./RadioNoiseKiller/RadioNoiseKiller --install-desktop` once (package) or `./run --install-desktop` (from source). It creates `~/.local/share/applications/radionoisekiller.desktop` and exits without opening the window. If you later move the app folder, run it again. To remove it, use `--uninstall-desktop`.
+
 ---
 
 *RadioNoiseKiller — version 2.7*

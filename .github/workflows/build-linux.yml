@@ -143,6 +143,10 @@ jobs:
           Ejecutar:  ./RadioNoiseKiller/RadioNoiseKiller
           (si dice "Permission denied": chmod +x RadioNoiseKiller/RadioNoiseKiller)
 
+          Para que aparezca en el menu de aplicaciones con su icono:
+              ./RadioNoiseKiller/RadioNoiseKiller --install-desktop
+          (--uninstall-desktop lo quita; si moves la carpeta, volver a correrlo)
+
           Restricciones medidas en la Pi 4:
             - Bloque de audio 960 (viene asi de fabrica en ARM). Con 480 corta.
             - Con 960 funcionan todos los modulos a la vez (~55 % de CPU).

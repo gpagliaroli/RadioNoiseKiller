@@ -54,6 +54,10 @@ cd RadioNoiseKiller
 `./run` crea el entorno virtual e instala las dependencias la primera vez (tarda unos minutos), y
 después sólo arranca la app. Para actualizar: `git pull` y `./run`.
 
+**Lanzador en el menú** (Linux y Pi): `./run --install-desktop` (o
+`./RadioNoiseKiller/RadioNoiseKiller --install-desktop` con el paquete) agrega RadioNoiseKiller al
+menú de aplicaciones con su ícono. `--uninstall-desktop` lo quita.
+
 Restricciones que encontramos en la prueba:
 
 - **Sistema de 64 bits obligatorio** (`uname -m` debe decir `aarch64`): en 32 bits no hay PySide6.
@@ -188,7 +192,7 @@ En Windows hay wrappers en la raíz: `run.cmd` (lanza la aplicación) y `test.cm
 python tests/run_all.py
 ```
 
-Corre las 11 suites de regresión headless en subprocesos aislados. Los datos escribibles se redirigen
+Corre las 12 suites de regresión headless en subprocesos aislados. Los datos escribibles se redirigen
 a una carpeta temporal vía la variable `RNK_DATA_DIR`, así que **los tests nunca tocan tu
 `settings.json` ni tus presets**. `test_devices.py` y `test_hostapis.py` quedan fuera del runner:
 requieren hardware de audio y son diagnósticos. `test_cpu_profile.py` tampoco, es un benchmark.
@@ -222,6 +226,7 @@ src/
 ├── utils.py              # Rutas de recursos y de datos escribibles (RNK_DATA_DIR)
 ├── version.py            # APP_VERSION: única fuente de la versión
 ├── updater.py            # Aviso de versión nueva (GitHub Releases), sin Qt
+├── desktop_entry.py      # Lanzador .desktop de Linux/Pi (--install-desktop), sin Qt
 ├── eibi_db.py            # Base EiBi: parseo, búsqueda "en el aire ahora", descarga con vencimiento
 ├── eibi_codes.py         # Nombres de idioma/país/zona de EiBi (generado por tools/gen_eibi_codes.py)
 ├── translate_client.py   # Cliente del worker de Traducción (proceso aparte, stdin/stdout)

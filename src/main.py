@@ -8,6 +8,13 @@ os.environ.setdefault("OMP_NUM_THREADS", "1")
 os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
 os.environ.setdefault("MKL_NUM_THREADS", "1")
 
+# --install-desktop / --uninstall-desktop (Linux/Pi): escribe o quita el lanzador
+# del menú y sale, sin crear ventana (ni necesitar display).
+import desktop_entry                      # noqa: E402  (sin Qt: import barato)
+_rc = desktop_entry.handle_cli(sys.argv[1:])
+if _rc is not None:
+    sys.exit(_rc)
+
 # Escala de la interfaz elegida por el usuario. QT_SCALE_FACTOR solo tiene efecto
 # si esta definida ANTES de crear el QApplication, asi que la leemos del
 # settings.json aca — antes incluso de importar Qt. setdefault: si el usuario ya
@@ -28,6 +35,9 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("RadioNoiseKiller")
     app.setApplicationVersion(APP_VERSION)
+    # En Wayland es el app_id: asocia la ventana con el lanzador instalado
+    # (ícono en el dock/panel). Sin efecto en Windows.
+    app.setDesktopFileName(desktop_entry.DESKTOP_ID)
     icon_path = resource_path(os.path.join("Images", "RNK_ico.png"))
     if os.path.exists(icon_path):
         app.setWindowIcon(QIcon(icon_path))
