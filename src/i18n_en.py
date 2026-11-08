@@ -1353,4 +1353,50 @@ CATALOG = {
         "slowest processing time of a single frame — if it exceeds the\n"
         "block length (480 = 10 ms, 960 = 20 ms) there is a dropout.\n"
         "Details go to errores_dsp.log and to Export diagnostics.",
+
+    # --- Control de la radio (CAT, rigctld) ---
+    "Radio (CAT — rigctld de Hamlib)": "Radio (CAT — Hamlib rigctld)",
+    "Activar": "Enable",
+    "Lee la frecuencia y el modo de la radio desde rigctld (Hamlib).\n"
+    "Al cambiar de modo carga el preset de la tabla. rigctld tiene que\n"
+    "estar corriendo: ver el capítulo Control de la radio del manual.":
+        "Reads the radio's frequency and mode from rigctld (Hamlib).\n"
+        "When the mode changes it loads the preset from the table. rigctld\n"
+        "must be running: see the Radio control chapter of the manual.",
+    "Equipo donde corre rigctld (127.0.0.1 = esta misma PC).":
+        "Computer where rigctld runs (127.0.0.1 = this same PC).",
+    "Puerto TCP de rigctld (4532 por defecto).": "rigctld TCP port (4532 by default).",
+    "El preset se carga cuando el modo nuevo se mantiene 1 segundo. Si el preset "
+    "activo tiene cambios sin guardar (modificado), no se reemplaza.":
+        "The preset is loaded once the new mode has held for 1 second. If the active "
+        "preset has unsaved changes (modified), it is not replaced.",
+    "Host:": "Host:",
+    "Puerto:": "Port:",
+    "Modo de la radio": "Radio mode",
+    "Preset que se carga": "Preset to load",
+    "(no cambiar)": "(don't change)",
+    "Desactivado.": "Disabled.",
+    "{name} (no existe)": "{name} (missing)",
+    "FM ancha (WFM)": "Wide FM (WFM)",
+    "Frecuencia y modo leídos de la radio por CAT (rigctld).\n"
+    "Se configura en la pestaña Presets.":
+        "Frequency and mode read from the radio over CAT (rigctld).\n"
+        "Set it up in the Presets tab.",
+    "Radio:": "Radio:",
+    "conectando con rigctld...": "connecting to rigctld...",
+    "sin conexión con rigctld": "no connection to rigctld",
+    "Conectando con {host}:{port}...": "Connecting to {host}:{port}...",
+    "Sin conexión con rigctld en {host}:{port}. Reintentando...":
+        "No connection to rigctld at {host}:{port}. Retrying...",
+    "{freq}  ·  {mode}  ·  CAT": "{freq}  ·  {mode}  ·  CAT",
+    "Conectado a rigctld en {host}:{port}.": "Connected to rigctld at {host}:{port}.",
+    "Radio en {group}: el preset activo tiene cambios sin guardar, no se cambió.":
+        "Radio in {group}: the active preset has unsaved changes, it was not switched.",
+    'Radio en {group}: el preset "{name}" no existe.': 'Radio in {group}: preset "{name}" does not exist.',
+    'Radio en {group}: preset "{name}" cargado.': 'Radio in {group}: preset "{name}" loaded.',
+    "Seguir la frecuencia de la radio (CAT)": "Follow the radio's frequency (CAT)",
+    "Con el CAT activo y conectado (pestaña Presets), la frecuencia se toma\n"
+    "de la radio y se actualiza sola al sintonizar.":
+        "With CAT enabled and connected (Presets tab), the frequency is taken\n"
+        "from the radio and follows it as you tune.",
 }

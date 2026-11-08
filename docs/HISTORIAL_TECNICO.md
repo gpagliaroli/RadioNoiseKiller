@@ -42,6 +42,36 @@ regla de método nueva.
 
 _(Los bloques nuevos de la próxima versión van acá, el más reciente arriba.)_
 
+**Post-v2.7: control de la radio (CAT) por rigctld.** El usuario eligió esta ampliación en la
+revisión post-v2.7 (junto con el build en 22.04 y el lanzador). Decisiones, todas tomadas con él:
+- **rigctld por TCP y no el puerto serie directo**: un protocolo de texto (`f` → Hz, `m` → modo +
+  passband, `RPRT n` = error) cubre cientos de radios sin un driver por marca, no agrega dependencias
+  (es un socket) y deja la radio compartible con WSJT-X/fldigi. flrig quedó afuera por ahora.
+- **Solo lectura.** La app nunca escribe en la radio.
+- **Qué se hace con el dato**: preset por **grupo** de modo (SSB = USB/LSB/PKT*, AM = AM/SAM/AMS/DSB,
+  FM, WFM, CW), la solapa EiBi sigue la frecuencia (casilla, `cat.eibi_follow`), y la fila "Radio" en
+  Dispositivos de Audio. El pasabanda solo por modo se descartó: el preset ya lo trae.
+- **Cuándo cambia el preset** (`AutoPresetSwitcher`, pura): sólo al cambiar el grupo, y cuando el nuevo
+  se sostiene **1 s** (girar el selector pasa por modos intermedios). Un modo desconocido no dispara
+  ni borra el último aplicado. Desconectar resetea, así que al reconectar se aplica el modo actual.
+- **Nunca pisa un preset "(modificado)"** (`choose_preset`): el usuario estaba ajustando. Sin preset
+  activo sí carga (activar el CAT con la tabla configurada ya es pedirlo). Una carga manual se respeta
+  hasta el próximo cambio de modo. La carga pasa por `PresetsTab.load_preset()`, el mismo camino que el
+  botón Cargar (extraído de `_on_load`).
+- **Hilos**: `RigctldClient` corre en un hilo daemon con timeouts de 1 s y reintento, y publica un
+  `CatState` frozen que se reemplaza de un golpe (sin lock). `MainWindow._tick_cat` lo lee con un QTimer
+  de 500 ms separado de `_tick_levels`, porque el CAT anda también con el procesamiento detenido.
+  Ninguna llamada de red ocurre en el hilo de la GUI. El tick no re-aplica stylesheets si nada cambió
+  (en la Pi, recalcular estilos le roba tiempo al hilo del DSP).
+- La config va en `settings.json` bajo `"cat"` y **no forma parte de los presets**.
+- UI: grupo en la pestaña **Presets** y no en una solapa nueva (ya son 10 con 770 px fijos). Mientras está
+  activo, host y puerto no se editan, así que reiniciar el cliente solo depende de la casilla.
+Tests: `test_cat` (rigctld falso: lectura, `RPRT`, caída y vuelta del servidor, puerto cerrado, reglas)
+y `test_ui::test_cat_auto_preset_and_eibi_follow` de punta a punta. Dos tropiezos del banco: un
+`socketserver` cerrado con `shutdown()` deja vivas las conexiones abiertas (el falso tiene que
+cortarlas, como un rigctld que muere), y en Windows conectar a un puerto cerrado de localhost tarda
+~1 s en fallar en vez de rechazar al instante (por eso el estado puede decir "timed out").
+
 **Post-v2.7: lanzador de escritorio para Linux y la Pi.** Con el paquete o con `./run` la app no
 aparecía en el menú: había que abrir una terminal cada vez. `--install-desktop` escribe
 `~/.local/share/applications/radionoisekiller.desktop` (respeta `XDG_DATA_HOME`), con `Exec` e

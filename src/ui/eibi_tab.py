@@ -47,6 +47,7 @@ class EibiTab(QWidget):
         self._last_updater_state = eibi_db.EibiUpdater.IDLE
         self._last_minute = None
         self._clock_ticks = 0
+        self._radio_khz: "float | None" = None   # última frecuencia del CAT (None = sin CAT)
         self._build_ui()
         self._load_values()
         self._timer = QTimer(self)
@@ -87,6 +88,12 @@ class EibiTab(QWidget):
         row.addWidget(self._spin_tol)
         row.addStretch()
         root.addLayout(row)
+
+        self._chk_follow = QCheckBox(tr("Seguir la frecuencia de la radio (CAT)"))
+        self._chk_follow.setToolTip(tr(
+            "Con el CAT activo y conectado (pestaña Presets), la frecuencia se toma\n"
+            "de la radio y se actualiza sola al sintonizar."))
+        root.addWidget(self._chk_follow)
 
         time_row = QHBoxLayout()
         self._chk_now = QCheckBox(tr("Usar hora actual (UTC)"))
@@ -159,17 +166,20 @@ class EibiTab(QWidget):
         self._edit_time.timeChanged.connect(self._refresh_results)
         self._combo_day.currentIndexChanged.connect(self._refresh_results)
         self._chk_auto.toggled.connect(self._on_auto_changed)
+        self._chk_follow.toggled.connect(self._on_follow_changed)
         self._btn_update.clicked.connect(self._on_update_clicked)
 
     def _load_values(self) -> None:
         e = self._config.eibi
-        for w in (self._spin_freq, self._spin_tol, self._chk_auto):
+        for w in (self._spin_freq, self._spin_tol, self._chk_auto, self._chk_follow):
             w.blockSignals(True)
         self._spin_freq.setValue(e.freq_khz)
         self._spin_tol.setValue(e.tol_khz)
         self._chk_auto.setChecked(e.auto_update)
-        for w in (self._spin_freq, self._spin_tol, self._chk_auto):
+        self._chk_follow.setChecked(self._config.cat.eibi_follow)
+        for w in (self._spin_freq, self._spin_tol, self._chk_auto, self._chk_follow):
             w.blockSignals(False)
+        self._update_follow_state()
         self._on_time_mode_changed(self._chk_now.isChecked())
 
     # ------------------------------------------------------------------
@@ -195,6 +205,33 @@ class EibiTab(QWidget):
     def _on_auto_changed(self, checked: bool) -> None:
         self._config.eibi.auto_update = bool(checked)
         self.state_changed.emit()
+
+    def _on_follow_changed(self, checked: bool) -> None:
+        self._config.cat.eibi_follow = bool(checked)
+        self.state_changed.emit()
+        self._update_follow_state()
+        if checked and self._radio_khz is not None:
+            self.set_radio_freq(self._radio_khz)
+
+    def set_radio_freq(self, khz: "float | None") -> None:
+        """Frecuencia de la radio desde el CAT (None = CAT apagado o sin conexión).
+        Con la casilla activa mueve el spin (redondeado a kHz); el refresco de la
+        tabla lo dispara valueChanged sólo si cambió."""
+        self._radio_khz = khz
+        self._update_follow_state()
+        if khz is None or not self._chk_follow.isChecked():
+            return
+        lo, hi = self._spin_freq.minimum(), self._spin_freq.maximum()
+        val = float(min(max(round(khz), lo), hi))
+        if val != self._spin_freq.value():
+            self._spin_freq.setValue(val)
+
+    def _update_follow_state(self) -> None:
+        following = self._chk_follow.isChecked() and self._radio_khz is not None
+        self._spin_freq.setReadOnly(following)
+        self._spin_freq.setButtonSymbols(
+            QDoubleSpinBox.ButtonSymbols.NoButtons if following
+            else QDoubleSpinBox.ButtonSymbols.UpDownArrows)
 
     def _on_time_mode_changed(self, use_now: bool) -> None:
         self._edit_time.setEnabled(not use_now)

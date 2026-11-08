@@ -42,6 +42,7 @@ SUITES = [
     "test_eibi",
     "test_updater",
     "test_desktop",
+    "test_cat",
     "test_ui",          # requiere QT_QPA_PLATFORM=offscreen
 ]
 

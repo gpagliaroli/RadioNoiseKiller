@@ -123,6 +123,9 @@ En ARM la configuración de fábrica ya trae bloque 960. Si venís de una instal
 - **EiBi** — identifica qué emisora de onda corta es la que estás sintonizando: busca la frecuencia en la
   grilla EiBi y marca las que están en el aire a la hora UTC actual. La base se baja sola (≈0,5 MB) al
   abrir la solapa si venció, solo si cambió en el servidor, y también con un botón
+- **Control de la radio (CAT)** — lee frecuencia y modo de la radio por **rigctld** (Hamlib, cientos
+  de modelos) y carga solo el preset de cada modo (SSB, AM, FM...); la solapa EiBi sigue la
+  frecuencia. Solo lectura: nunca le cambia nada a la radio
 - **Traducción** *(experimental)* — transcribe y traduce en vivo lo que sale del cancelador, todo
   local. Se instala con un clic desde la pestaña (≈600 MB, solo si lo pedís); sin instalar no
   se descarga nada
@@ -134,7 +137,8 @@ En ARM la configuración de fábrica ya trae bloque 960. Si venís de una instal
   tardó el frame más lento: dice si la configuración aguanta en tu equipo
 - **Tamaño de interfaz ajustable** (100 / 125 / 150 %) y ayuda contextual en todos los sliders
 - **Standalone** — sin instalación de Python ni GPU; el procesamiento no usa internet (solo el
-  aviso de versión, EiBi y la instalación de la Traducción se conectan)
+  aviso de versión, EiBi y la instalación de la Traducción se conectan; el CAT habla con rigctld
+  por TCP local)
 - **Windows, Linux y Raspberry Pi 4** — paquetes listos para las tres plataformas
 - **Robusta ante el hardware** — si la interfaz de audio se desconecta o el driver se traba, la
   aplicación lo detecta, detiene sola y sigue respondiendo (nunca queda congelada en PortAudio)
@@ -192,7 +196,7 @@ En Windows hay wrappers en la raíz: `run.cmd` (lanza la aplicación) y `test.cm
 python tests/run_all.py
 ```
 
-Corre las 12 suites de regresión headless en subprocesos aislados. Los datos escribibles se redirigen
+Corre las 13 suites de regresión headless en subprocesos aislados. Los datos escribibles se redirigen
 a una carpeta temporal vía la variable `RNK_DATA_DIR`, así que **los tests nunca tocan tu
 `settings.json` ni tus presets**. `test_devices.py` y `test_hostapis.py` quedan fuera del runner:
 requieren hardware de audio y son diagnósticos. `test_cpu_profile.py` tampoco, es un benchmark.
@@ -229,6 +233,7 @@ src/
 ├── desktop_entry.py      # Lanzador .desktop de Linux/Pi (--install-desktop), sin Qt
 ├── eibi_db.py            # Base EiBi: parseo, búsqueda "en el aire ahora", descarga con vencimiento
 ├── eibi_codes.py         # Nombres de idioma/país/zona de EiBi (generado por tools/gen_eibi_codes.py)
+├── cat.py                # CAT por rigctld (Hamlib): cliente TCP en su hilo + preset automático por modo
 ├── translate_client.py   # Cliente del worker de Traducción (proceso aparte, stdin/stdout)
 ├── translate_protocol.py # Protocolo IPC JSON del módulo de Traducción
 ├── translate_installer.py# Instalación en un clic del módulo (Python + pip + modelos)
@@ -255,6 +260,7 @@ src/
     ├── presets_tab.py    # Gestión de presets
     ├── update_dialog.py  # Diálogo "hay una versión nueva"
     ├── eibi_tab.py       # Solapa EiBi (qué emisora es)
+    ├── cat_panel.py      # Grupo del CAT en la pestaña Presets (conexión y tabla modo → preset)
     ├── translate_tab.py  # Pestaña Traducción (transcripción + traducción en vivo)
     ├── cpu_meter.py      # Medidor de carga del hilo de audio
     ├── slider_row.py     # Widget: label + QSlider escalado a float + valor

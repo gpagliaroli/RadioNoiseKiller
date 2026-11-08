@@ -333,6 +333,7 @@ En bundle: junto al `.exe` / `.bin`
 | `tests/test_integration.py` | Pipeline headless (`start(headless=True)`) con TODOS los módulos activos: warmup MCRA, ciclo squelch, cambios de modo en caliente, cambio de block size con reinicio |
 | `tests/test_cpu_profile.py` | **Diagnóstico, no regresión** (fuera de `run_all`): µs/frame y % de un núcleo por módulo y del pipeline completo en 3 configuraciones. Medir el pipeline con `process_time`, no cronometrando `_process()` |
 | `tests/test_ui.py` | UI offscreen (`QT_QPA_PLATFORM=offscreen` + `MainWindow`): orden de pestañas (Módulos en pos 1), "Módulos activos" en su pestaña, visibilidad de botones de perfiles por modo estático/MCRA, gating de controles Avanzados por módulo (invariante 2), restauración de checkboxes desde config (invariante 8), aviso proactivo de dispositivos de APIs incompatibles (ACTIVAR deshabilitado + combos marcados). **SliderRow deshabilita los hijos — testear con `row._slider.isEnabled()`, no `row.isEnabled()`** |
+| `tests/test_cat.py` | CAT contra un **rigctld falso** (socketserver en 127.0.0.1): lectura f/m, `RPRT`, reconexión, puerto cerrado; `mode_group`; `AutoPresetSwitcher` (1 s estable, no repite); `choose_preset` (no pisa "(modificado)"); tabla de fábrica apunta a presets existentes; `CatConfig` tolerante. El falso tiene que CORTAR sus conexiones al cerrarse (un `shutdown()` del server las deja vivas) |
 | `tests/test_desktop.py` | Lanzador `.desktop` de Linux/Pi (`desktop_entry.py`): install/uninstall en carpetas temporales, comillas de `Exec`, `./run` desde el fuente, flags de la CLI |
 
 
@@ -590,6 +591,7 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
 
 - Build Linux x86_64 en Ubuntu 22.04 (glibc 2.35; la v2.7 pedía 2.38) + `tools/check_glibc.py` en los dos jobs del CI — CI verde (run 42499386671, los dos zips en 2.35); pendiente de validar en la notebook Ubuntu
 - Lanzador de escritorio Linux/Pi: `--install-desktop` / `--uninstall-desktop` (paquete y `./run`), `src/desktop_entry.py` — pendiente de validar en la Pi y en Ubuntu
+- **Control de la radio (CAT) por rigctld**: preset automático por grupo de modo (SSB/AM/FM/WFM/CW, 1 s estable, nunca pisa un preset "(modificado)"), EiBi sigue la frecuencia, fila "Radio" en Dispositivos; `src/cat.py` + `ui/cat_panel.py` (grupo en Presets), cap. 16 de los manuales — probado contra rigctld falso en tests; pendiente de validar con `rigctld -m 1` y en el aire con la radio del usuario
 
 Formato al acumular: una línea por cambio con su estado de validación (`validado en el aire` /
 `pendiente de validar`), y el bloque narrativo completo en el historial, sección "En curso". El

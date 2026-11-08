@@ -1313,6 +1313,8 @@ La solapa **EiBi** responde a la pregunta de siempre en onda corta: *"estoy escu
 
 El idioma `-MX` de EiBi significa música; `-CW`, telegrafía; `-TY`, teletipo digital.
 
+Con el **control de la radio** activo (cap. 16), la casilla **Seguir la frecuencia de la radio (CAT)** hace que la frecuencia se tome sola de la radio: al sintonizar, la tabla se actualiza. Mientras la sigue, el campo Frecuencia no se puede editar; destildá la casilla para buscar otra.
+
 ### La base de datos: descarga y vencimiento
 
 - La base **no viene en el instalador**: se baja de eibispace.de (≈0,5 MB) y se guarda en la carpeta `EiBi/`, junto a `settings.json`. Después funciona **sin conexión**.
@@ -1325,6 +1327,56 @@ El idioma `-MX` de EiBi significa música; `-CW`, telegrafía; `-TY`, teletipo d
 > **Por qué la descarga es por HTTP y no HTTPS:** el sitio de EiBi tiene el certificado HTTPS vencido, así que solo responde por HTTP. La aplicación valida el contenido (formato y cantidad de filas) antes de reemplazar la base guardada.
 
 *Los datos de EiBi son de uso libre, incluso dentro de software de terceros. Créditos: Eike Bierwirth — eibispace.de.*
+
+---
+
+## Capítulo 16 — Control de la radio (CAT)
+
+### Descripción
+
+RadioNoiseKiller puede leer la **frecuencia y el modo** de tu radio por CAT. Con eso:
+
+- **Carga el preset que corresponde al modo**: pasás la radio de LSB a AM y se carga tu preset de AM, sin tocar la aplicación.
+- La solapa **EiBi** sigue la frecuencia sintonizada (cap. 15).
+- En la pestaña Principal, bajo *Dispositivos de Audio*, la fila **Radio** muestra la frecuencia y el modo (`7.074,0 kHz · LSB · CAT`).
+
+La aplicación **no habla directamente con la radio**: lo hace a través de **rigctld**, el programa de Hamlib que maneja el puerto serie o USB de cientos de modelos (Icom, Yaesu, Kenwood, Elecraft, Xiegu, SDR...). Así no hace falta un protocolo por marca, y la radio se puede compartir con otros programas. Por ahora **solo se lee**: la aplicación nunca cambia la frecuencia ni el modo de la radio.
+
+> **Función nueva (novedad 2.8).** Probada contra la radio simulada de Hamlib; la prueba en el aire con radios reales está en curso. Si tu modelo no responde bien, mandá el diagnóstico.
+
+### Preparar rigctld
+
+1. Instalá **Hamlib**. En Linux y Raspberry Pi: `sudo apt install libhamlib-utils`. En Windows: bajá el zip de [hamlib.github.io](https://hamlib.github.io/) y descomprimilo; `rigctld.exe` está en la carpeta `bin`.
+2. Buscá el número de modelo de tu radio: `rigctl -l` lista todos (por ejemplo, 3073 = Icom IC-7300, 1035 = Yaesu FT-991).
+3. Arrancá rigctld con el modelo, el puerto y la velocidad que tenga configurados la radio:
+   - Windows: `rigctld -m 3073 -r COM3 -s 19200`
+   - Linux / Pi: `rigctld -m 3073 -r /dev/ttyUSB0 -s 19200`
+4. Dejalo abierto mientras usás la aplicación. Escucha en el puerto TCP **4532**.
+
+Para probar sin radio: `rigctld -m 1` arranca una radio **simulada**.
+
+> **Si ya usás WSJT-X, fldigi u otro programa con la radio**, no abras dos rigctld sobre el mismo puerto serie: arrancá **uno solo** y configurá todos los programas para que se conecten a él (en WSJT-X: *Rig* → *Hamlib NET rigctl*, servidor `localhost:4532`).
+
+### Activarlo en la aplicación
+
+En la pestaña **Presets**, grupo **Radio (CAT — rigctld de Hamlib)**:
+
+| Control | Qué hace |
+|---------|----------|
+| **Activar** | Conecta con rigctld. Mientras está activo, Host y Puerto no se editan: destildalo para cambiarlos |
+| **Host / Puerto** | Dónde corre rigctld. `127.0.0.1` y `4532` si está en la misma PC. Puede estar en otra máquina de la red (por ejemplo, la Pi conectada a la radio) |
+| **Estado** | Conectado (verde), o sin conexión con el motivo (ámbar). Si rigctld se cae, la aplicación reintenta sola cada pocos segundos; **el audio nunca se corta por el CAT** |
+| **Tabla Modo → Preset** | Qué preset se carga en cada grupo de modos: **SSB** (USB, LSB y sus variantes de datos), **AM** (AM, AM sincrónico), **FM**, **FM ancha** y **CW**. *(no cambiar)* deja el preset como esté |
+
+De fábrica, la tabla apunta a los presets de fábrica: SSB → *SSB - Ruido Medio*, AM → *AM SW - Ruido Medio y Fading*, FM → *FM - Narrow*, FM ancha → *FM - Broadcast*, y CW sin cambio.
+
+### Cuándo cambia el preset (y cuándo no)
+
+- Cuando **cambia el modo** de la radio y el nuevo **se mantiene 1 segundo**. Al girar el selector, la radio pasa por modos intermedios que no cargan nada.
+- Al conectar, se carga el preset del modo en el que está la radio.
+- **Si el preset activo tiene cambios sin guardar** (*modificado*), **no se reemplaza**: estabas ajustando y perderías el trabajo. La barra de estado lo avisa. Guardá (o volvé a cargar el preset) y el próximo cambio de modo funciona normalmente.
+- Si cargás otro preset a mano, se respeta hasta el próximo cambio de modo.
+- Cambiar de frecuencia sin cambiar de modo no cambia el preset.
 
 ---
 

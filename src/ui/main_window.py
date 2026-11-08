@@ -1,4 +1,5 @@
 import os
+import time
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QComboBox, QSlider, QPushButton, QStatusBar,
@@ -16,7 +17,7 @@ from audio.devices import (
 )
 from config import (AppConfig, GainConfig, DSPConfig, UI_SCALES,
                     BANDPASS_PRESETS, BANDPASS_CUSTOM)
-from i18n import tr, set_language
+from i18n import tr, set_language, get_language
 from pipeline import ProcessingPipeline
 from ui.vu_meter import VuMeter
 from ui.cpu_meter import CpuMeter
@@ -24,6 +25,8 @@ from ui.advanced_tab import AdvancedAudioTab, AdvancedImpulseTab, AdvancedCancel
 from ui.presets_tab import PresetsTab
 from ui.translate_tab import TranslateTab
 from ui.eibi_tab import EibiTab
+from ui.cat_panel import CatPanel
+import cat
 from translate_client import TranslateClient
 from ui.slider_row import SliderRow
 from ui.tooltips import apply_tooltips
@@ -148,7 +151,14 @@ class MainWindow(QMainWindow):
         self._update_timer = QTimer(self)
         self._update_timer.setInterval(300)
         self._update_timer.timeout.connect(self._poll_update)
+        # CAT (rigctld): el cliente corre en su hilo; _tick_cat lee el estado.
+        self._cat_client: "cat.RigctldClient | None" = None
+        self._cat_switcher = cat.AutoPresetSwitcher()
+        self._cat_timer = QTimer(self)
+        self._cat_timer.setInterval(500)
+        self._cat_timer.timeout.connect(self._tick_cat)
         self._build_ui()
+        self._restart_cat()
         QTimer.singleShot(5000, self._auto_check_updates)
         self._saved_input_device  = self._config.audio.input_device
         self._saved_output_device = self._config.audio.output_device
@@ -217,6 +227,14 @@ class MainWindow(QMainWindow):
         self._presets_tab.preset_loaded.connect(self._refresh_title)
         self._presets_tab.state_changed.connect(self._schedule_save)
         self._presets_tab.state_changed.connect(self._refresh_title)
+        self._cat_panel = CatPanel(self._config)
+        self._cat_panel.set_preset_names(self._presets_tab.preset_names())
+        self._presets_tab.list_changed.connect(
+            lambda: self._cat_panel.set_preset_names(self._presets_tab.preset_names()))
+        self._cat_panel.connection_changed.connect(self._restart_cat)
+        self._cat_panel.connection_changed.connect(self._schedule_save)
+        self._cat_panel.mapping_changed.connect(self._schedule_save)
+        self._presets_tab.add_section(self._cat_panel)
         self._tabs.addTab(self._presets_tab, tr("Presets"))
         self._translate_client = TranslateClient()
         self._translate_tab = TranslateTab(
@@ -351,6 +369,19 @@ class MainWindow(QMainWindow):
         chan_row.addWidget(self._combo_channel)
         chan_row.addStretch()
         layout.addLayout(chan_row)
+
+        # Frecuencia y modo de la radio por CAT: oculto con el CAT apagado.
+        self._lbl_cat = QLabel("")
+        self._lbl_cat.setStyleSheet(self._IDLE_LBL_STYLE)
+        self._lbl_cat.setToolTip(tr(
+            "Frecuencia y modo leídos de la radio por CAT (rigctld).\n"
+            "Se configura en la pestaña Presets."))
+        self._lbl_cat.setVisible(False)
+        cat_row = self._labeled_row(tr("Radio:"), self._lbl_cat)
+        cat_row.addStretch()
+        self._cat_row_label = cat_row.itemAt(0).widget()
+        self._cat_row_label.setVisible(False)
+        layout.addLayout(cat_row)
         return group
 
     def _build_control_group(self) -> QGroupBox:
@@ -2281,6 +2312,96 @@ class MainWindow(QMainWindow):
     # Estado en reposo de los indicadores que sólo pinta _tick_levels.
     _IDLE_LBL_STYLE = "color: #555; font-size: 8pt; font-weight: bold;"
 
+    # ------------------------------------------------------------------
+    # CAT (rigctld)
+    # ------------------------------------------------------------------
+
+    def _restart_cat(self) -> None:
+        """(Re)arranca el cliente con la config actual, o lo apaga."""
+        if self._cat_client is not None:
+            self._cat_client.stop()
+            self._cat_client = None
+        self._cat_switcher.reset()
+        c = self._config.cat
+        self._lbl_cat.setVisible(c.enabled)
+        self._cat_row_label.setVisible(c.enabled)
+        if not c.enabled:
+            self._cat_timer.stop()
+            self._eibi_tab.set_radio_freq(None)
+            return
+        self._cat_client = cat.RigctldClient(c.host, c.port)
+        self._cat_client.start()
+        self._set_cat_label(tr("conectando con rigctld..."), self._IDLE_LBL_STYLE)
+        self._cat_panel.set_status(
+            tr("Conectando con {host}:{port}...").format(host=c.host, port=c.port), "#777777")
+        self._cat_timer.start()
+
+    def _set_cat_label(self, text: str, style: str) -> None:
+        """Sólo toca el label si cambió: lo llama un timer cada 500 ms."""
+        if self._lbl_cat.text() != text:
+            self._lbl_cat.setText(text)
+        if self._lbl_cat.styleSheet() != style:
+            self._lbl_cat.setStyleSheet(style)
+
+    @staticmethod
+    def _format_freq(hz: int) -> str:
+        """14074000 -> '14.074,0 kHz' en castellano, '14,074.0 kHz' en inglés."""
+        txt = f"{hz / 1000:,.1f}"
+        if get_language() != "en":
+            txt = txt.replace(",", "#").replace(".", ",").replace("#", ".")
+        return txt + " kHz"
+
+    def _tick_cat(self) -> None:
+        if self._cat_client is None:
+            return
+        st = self._cat_client.state
+        c = self._config.cat
+        if not st.connected:
+            self._cat_switcher.reset()
+            self._set_cat_label(tr("sin conexión con rigctld"), self._IDLE_LBL_STYLE)
+            msg = tr("Sin conexión con rigctld en {host}:{port}. Reintentando...").format(
+                host=c.host, port=c.port)
+            if st.error:
+                msg += "  (" + st.error + ")"
+            self._cat_panel.set_status(msg, "#ffb74d")
+            self._eibi_tab.set_radio_freq(None)
+            return
+        mode = st.mode or "?"
+        self._set_cat_label(tr("{freq}  ·  {mode}  ·  CAT").format(
+            freq=self._format_freq(st.freq_hz or 0), mode=mode),
+            "color: #69f0ae; font-weight: bold;")
+        self._cat_panel.set_status(
+            tr("Conectado a rigctld en {host}:{port}.").format(host=c.host, port=c.port),
+            "#69f0ae")
+        if st.freq_hz:
+            self._eibi_tab.set_radio_freq(st.freq_hz / 1000.0)
+        group = self._cat_switcher.update(cat.mode_group(st.mode), time.monotonic())
+        if group is not None:
+            self._apply_cat_group(group)
+
+    def _apply_cat_group(self, group: str) -> None:
+        """El modo de la radio cambió (y se sostuvo): cargar el preset de la tabla."""
+        pt = self._presets_tab
+        name, why = cat.choose_preset(
+            group, self._config.cat.mode_presets, pt.preset_exists,
+            pt.active_name(), pt.active_modified())
+        if why == cat.MODIFIED:
+            self._status_bar.showMessage(tr(
+                "Radio en {group}: el preset activo tiene cambios sin guardar, no se cambió.").format(
+                group=group), 8000)
+        elif why == cat.MISSING:
+            self._status_bar.showMessage(tr(
+                "Radio en {group}: el preset \"{name}\" no existe.").format(
+                group=group, name=self._config.cat.mode_presets.get(group, "")), 8000)
+        elif why == cat.LOAD:
+            try:
+                pt.load_preset(name)
+            except Exception as e:
+                self._status_bar.showMessage(tr("Error al cargar preset") + f": {e}", 8000)
+                return
+            self._status_bar.showMessage(tr(
+                "Radio en {group}: preset \"{name}\" cargado.").format(group=group, name=name), 8000)
+
     def _reset_live_indicators(self) -> None:
         """Deja en reposo TODO lo que sólo se actualiza en `_tick_levels`.
 
@@ -2601,6 +2722,8 @@ class MainWindow(QMainWindow):
         self._config.window.w = self.width()
         self._pipeline.stop()
         self._translate_client.stop()
+        if self._cat_client is not None:
+            self._cat_client.stop()
         self._save_settings()
         event.accept()
 

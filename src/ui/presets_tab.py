@@ -18,6 +18,7 @@ class PresetsTab(QWidget):
     """
     preset_loaded = Signal()
     state_changed = Signal()   # cambió last_preset → MainWindow agenda el guardado
+    list_changed  = Signal()   # se creó, borró o renombró un preset (combos del CAT)
 
     def __init__(self, config: AppConfig, pipeline: ProcessingPipeline,
                  manager: PresetManager, parent=None):
@@ -111,6 +112,7 @@ class PresetsTab(QWidget):
         )
         note.setStyleSheet("color: #888; font-size: 8pt;")
         root.addWidget(note)
+        self._root = root
 
         self._btn_save_new.clicked.connect(self._on_save_new)
         self._btn_overwrite.clicked.connect(self._on_overwrite)
@@ -165,12 +167,8 @@ class PresetsTab(QWidget):
         item = self._list.currentItem()
         if not item:
             return
-        name = item.text()
         try:
-            self._manager.load_into(name, self._config)
-            self._pipeline.apply_config(self._config)
-            self._set_active(name)
-            self.preset_loaded.emit()
+            self.load_preset(item.text())
         except Exception as e:
             QMessageBox.warning(self, tr("Error al cargar preset"), str(e))
 
@@ -281,6 +279,36 @@ class PresetsTab(QWidget):
         self._select_by_name(final_name)
 
     # ------------------------------------------------------------------ #
+    # API para MainWindow (preset automático del CAT)                      #
+    # ------------------------------------------------------------------ #
+
+    def load_preset(self, name: str) -> None:
+        """Carga un preset en caliente: el mismo camino que el botón Cargar.
+        Lanza si el archivo no existe o no se puede leer."""
+        self._manager.load_into(name, self._config)
+        self._pipeline.apply_config(self._config)
+        self._set_active(name)
+        self._select_by_name(name)
+        self.preset_loaded.emit()
+
+    def active_name(self) -> str:
+        return self._active or ""
+
+    def active_modified(self) -> bool:
+        """True si hay un preset activo y la config difiere de lo guardado."""
+        return bool(self._active) and not self._manager.matches(self._active, self._config)
+
+    def preset_names(self) -> list:
+        return self._manager.list_names()
+
+    def preset_exists(self, name: str) -> bool:
+        return self._manager.exists(name)
+
+    def add_section(self, widget: QWidget) -> None:
+        """Agrega un bloque al pie de la pestaña (el grupo del CAT)."""
+        self._root.addWidget(widget)
+
+    # ------------------------------------------------------------------ #
     # Helpers                                                              #
     # ------------------------------------------------------------------ #
 
@@ -300,6 +328,7 @@ class PresetsTab(QWidget):
         if current_name:
             self._select_by_name(current_name)
         self._update_button_states()
+        self.list_changed.emit()
 
     def _select_by_name(self, name: str) -> None:
         for i in range(self._list.count()):

@@ -1314,6 +1314,8 @@ The **EiBi** tab answers the eternal shortwave question: *"I'm hearing something
 
 EiBi's `-MX` language means music; `-CW`, telegraphy; `-TY`, digital teletype.
 
+With **radio control** enabled (ch. 16), the **Follow the radio's frequency (CAT)** checkbox takes the frequency straight from the radio: the table updates as you tune. While it follows the radio the Frequency field cannot be edited; untick the box to look up a different one.
+
 ### The database: download and expiry
 
 - The database is **not in the installer**: it is downloaded from eibispace.de (≈0.5 MB) and stored in the `EiBi/` folder next to `settings.json`. After that it works **offline**.
@@ -1326,6 +1328,56 @@ EiBi's `-MX` language means music; `-CW`, telegraphy; `-TY`, digital teletype.
 > **Why HTTP and not HTTPS:** the EiBi site has an expired HTTPS certificate, so it only answers over HTTP. The application validates the content (format and number of rows) before replacing the stored database.
 
 *EiBi data is free to use, including within third-party software. Credits: Eike Bierwirth — eibispace.de.*
+
+---
+
+## Chapter 16 — Radio control (CAT)
+
+### Description
+
+RadioNoiseKiller can read your radio's **frequency and mode** over CAT. With that it:
+
+- **Loads the preset that matches the mode**: switch the radio from LSB to AM and your AM preset is loaded, without touching the app.
+- Makes the **EiBi** tab follow the tuned frequency (ch. 15).
+- Shows the frequency and mode in the **Radio** row of the Main tab, under *Audio Devices* (`7,074.0 kHz · LSB · CAT`).
+
+The app **does not talk to the radio directly**: it goes through **rigctld**, the Hamlib program that drives the serial or USB port of hundreds of models (Icom, Yaesu, Kenwood, Elecraft, Xiegu, SDRs...). No per-brand protocol is needed, and the radio can be shared with other programs. For now it **only reads**: the app never changes the radio's frequency or mode.
+
+> **New feature (new in 2.8).** Tested against Hamlib's simulated radio; on-air testing with real radios is under way. If your model does not respond properly, send the diagnostics file.
+
+### Setting up rigctld
+
+1. Install **Hamlib**. On Linux and Raspberry Pi: `sudo apt install libhamlib-utils`. On Windows: download the zip from [hamlib.github.io](https://hamlib.github.io/) and unzip it; `rigctld.exe` is in the `bin` folder.
+2. Find your radio's model number: `rigctl -l` lists them all (for example, 3073 = Icom IC-7300, 1035 = Yaesu FT-991).
+3. Start rigctld with the model, port and baud rate configured on the radio:
+   - Windows: `rigctld -m 3073 -r COM3 -s 19200`
+   - Linux / Pi: `rigctld -m 3073 -r /dev/ttyUSB0 -s 19200`
+4. Leave it running while you use the app. It listens on TCP port **4532**.
+
+To try it without a radio: `rigctld -m 1` starts a **simulated** radio.
+
+> **If you already use WSJT-X, fldigi or another program with the radio**, do not open two rigctld instances on the same serial port: start **just one** and point every program at it (in WSJT-X: *Rig* → *Hamlib NET rigctl*, server `localhost:4532`).
+
+### Enabling it in the app
+
+In the **Presets** tab, **Radio (CAT — Hamlib rigctld)** group:
+
+| Control | What it does |
+|---------|--------------|
+| **Enable** | Connects to rigctld. While enabled, Host and Port cannot be edited: untick it to change them |
+| **Host / Port** | Where rigctld runs. `127.0.0.1` and `4532` if it is on the same PC. It can be on another machine on the network (for example, the Pi attached to the radio) |
+| **Status** | Connected (green), or not connected with the reason (amber). If rigctld goes down the app retries on its own every few seconds; **audio is never interrupted by CAT** |
+| **Mode → Preset table** | Which preset is loaded for each mode group: **SSB** (USB, LSB and their data variants), **AM** (AM, synchronous AM), **FM**, **Wide FM** and **CW**. *(don't change)* leaves the preset as it is |
+
+Out of the box the table points to the factory presets: SSB → *SSB - Ruido Medio*, AM → *AM SW - Ruido Medio y Fading*, FM → *FM - Narrow*, Wide FM → *FM - Broadcast*, and CW unchanged.
+
+### When the preset changes (and when it does not)
+
+- When the radio's **mode changes** and the new one **holds for 1 second**. While you turn the mode knob the radio passes through intermediate modes, which load nothing.
+- On connecting, the preset for the radio's current mode is loaded.
+- **If the active preset has unsaved changes** (*modified*), **it is not replaced**: you were adjusting it and would lose your work. The status bar says so. Save it (or reload the preset) and the next mode change works normally.
+- If you load another preset by hand, it is kept until the next mode change.
+- Changing frequency without changing mode does not change the preset.
 
 ---
 

@@ -1951,6 +1951,81 @@ def test_read_ui_scale_tolerante():
     print("read_ui_scale tolerante a settings roto    OK")
 
 
+def test_cat_auto_preset_and_eibi_follow():
+    """CAT de punta a punta contra un rigctld falso: el indicador aparece sólo con
+    el CAT activo, el cambio de modo carga el preset de la tabla, un preset
+    modificado NO se pisa, y la solapa EiBi sigue la frecuencia de la radio."""
+    import time as _t
+    from test_cat import _FakeRig
+    import cat
+
+    def tick_until(cond, timeout=6.0):
+        t0 = _t.monotonic()
+        while _t.monotonic() - t0 < timeout:
+            w._tick_cat()
+            _app.processEvents()
+            if cond():
+                return True
+            _t.sleep(0.05)
+        return False
+
+    w = _win()
+    pt = w._presets_tab
+    assert w._cat_panel.parent() is not None and pt.isAncestorOf(w._cat_panel), \
+        "el grupo del CAT vive en la pestaña Presets"
+    assert w._lbl_cat.isHidden(), "con el CAT apagado el indicador no se ve"
+
+    ssb, am = "___cat_ssb___", "___cat_am___"
+    cfg = AppConfig()
+    cfg.dsp.noise_alpha = 0.55
+    w._preset_manager.save(ssb, cfg)
+    cfg.dsp.noise_alpha = 0.65
+    w._preset_manager.save(am, cfg)
+    pt._refresh_list()
+    combo = w._cat_panel._combos["SSB"]
+    assert combo.findData(ssb) >= 0, "los combos se refrescan al cambiar la lista de presets"
+
+    rig = _FakeRig()
+    rig.freq, rig.mode = 7074000, "USB"
+    c = w._config.cat
+    # Host y puerto por los widgets, como el usuario: el panel los lee de ahí.
+    w._cat_panel._edit_host.setText("127.0.0.1")
+    w._cat_panel._spin_port.setValue(rig.port)
+    assert c.port == rig.port, "el spin del puerto escribe la config"
+    c.mode_presets.update({"SSB": ssb, "AM": am})
+    c.eibi_follow = True
+    w._eibi_tab._load_values()
+    w._cat_switcher = cat.AutoPresetSwitcher(stable_s=0.0)
+    w._cat_panel._chk_enabled.setChecked(True)      # -> connection_changed -> _restart_cat
+    try:
+        assert not w._lbl_cat.isHidden(), "con el CAT activo el indicador se ve"
+        assert tick_until(lambda: pt.active_name() == ssb), "USB carga el preset de SSB"
+        assert "USB" in w._lbl_cat.text() and "7.074,0 kHz" in w._lbl_cat.text(), w._lbl_cat.text()
+        assert w._config.dsp.noise_alpha == 0.55
+        spin = w._eibi_tab._spin_freq
+        assert spin.value() == 7074 and spin.isReadOnly(), "EiBi sigue a la radio"
+
+        rig.mode = "AM"
+        assert tick_until(lambda: pt.active_name() == am), "AM carga el preset de AM"
+
+        w._config.dsp.noise_alpha = 0.9                 # cambios sin guardar
+        rig.mode, rig.freq = "LSB", 3700000
+        assert tick_until(lambda: spin.value() == 3700)
+        for _ in range(6):
+            w._tick_cat()
+            _app.processEvents()
+        assert pt.active_name() == am and w._config.dsp.noise_alpha == 0.9, \
+            "un preset modificado no se pisa"
+    finally:
+        w._cat_panel._chk_enabled.setChecked(False)
+        rig.close()
+    assert w._cat_client is None and w._lbl_cat.isHidden()
+    assert not w._eibi_tab._spin_freq.isReadOnly(), "sin CAT el spin vuelve a ser editable"
+    for n in (ssb, am):
+        w._preset_manager.delete(n)
+    print("CAT: preset por modo, no pisa modificado, EiBi sigue  OK")
+
+
 def test_noise_fall_slider():
     """El slider del freno de caida del piso llega al DSP y respeta su gating.
 
@@ -2320,5 +2395,6 @@ if __name__ == "__main__":
     test_ui_scale_combo()
     test_ui_scales_that_fit()
     test_read_ui_scale_tolerante()
+    test_cat_auto_preset_and_eibi_follow()
     print()
     print("test_ui: OK")

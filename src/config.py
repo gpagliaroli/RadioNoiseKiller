@@ -1,6 +1,8 @@
 import json
 from dataclasses import dataclass, field
 
+import cat
+
 
 # Pasabandas predefinidos del combo de la pestaña Principal. Reemplazan al viejo
 # selector de modo AM/SSB: con los presets de la app, elegir "modo" y después el
@@ -244,6 +246,17 @@ class UpdateConfig:
 
 
 @dataclass
+class CatConfig:
+    """Control de la radio por rigctld (ver cat.py). No forma parte de los presets."""
+    enabled: bool = False
+    host: str = cat.DEFAULT_HOST
+    port: int = cat.DEFAULT_PORT
+    # grupo de modo (cat.MODE_GROUPS) -> nombre de preset; "" = no cambiar
+    mode_presets: dict = field(default_factory=lambda: dict(cat.DEFAULT_MODE_PRESETS))
+    eibi_follow: bool = True     # la solapa EiBi toma la frecuencia de la radio
+
+
+@dataclass
 class AppConfig:
     audio:     AudioConfig     = field(default_factory=AudioConfig)
     dsp:       DSPConfig       = field(default_factory=DSPConfig)
@@ -252,6 +265,7 @@ class AppConfig:
     translate: TranslateConfig = field(default_factory=TranslateConfig)
     eibi:      EibiConfig      = field(default_factory=EibiConfig)
     update:    UpdateConfig    = field(default_factory=UpdateConfig)
+    cat:       CatConfig       = field(default_factory=CatConfig)
     last_preset: str = ""   # nombre del último preset cargado/guardado (solo informativo)
     last_noise_profile: str = ""  # último perfil de ruido cargado/guardado (auto-recarga)
     language: str = "es"    # idioma de la UI ("es"/"en"); aplicar requiere reinicio
@@ -359,6 +373,13 @@ class AppConfig:
                 "auto_check": self.update.auto_check,
                 "last_check": self.update.last_check,
                 "skipped_version": self.update.skipped_version,
+            },
+            "cat": {
+                "enabled": self.cat.enabled,
+                "host": self.cat.host,
+                "port": self.cat.port,
+                "mode_presets": dict(self.cat.mode_presets),
+                "eibi_follow": self.cat.eibi_follow,
             },
         }
         with open(path, "w", encoding="utf-8") as f:
@@ -501,3 +522,19 @@ class AppConfig:
         self.update.auto_check = bool(u.get("auto_check", self.update.auto_check))
         self.update.last_check = str(u.get("last_check", self.update.last_check) or "")
         self.update.skipped_version = str(u.get("skipped_version", self.update.skipped_version) or "")
+
+        c = data.get("cat", {})
+        if not isinstance(c, dict):
+            c = {}
+        self.cat.enabled = bool(c.get("enabled", self.cat.enabled))
+        _host = c.get("host")
+        self.cat.host = _host.strip() if isinstance(_host, str) and _host.strip() else self.cat.host
+        self.cat.port = int(_clamp_float(c.get("port"), (1, 65535), self.cat.port))
+        # Solo grupos conocidos con nombre de texto; un grupo ausente conserva el
+        # default de fábrica (un settings viejo no pierde la tabla entera).
+        _mp = c.get("mode_presets")
+        if isinstance(_mp, dict):
+            for g in cat.MODE_GROUPS:
+                if isinstance(_mp.get(g), str):
+                    self.cat.mode_presets[g] = _mp[g]
+        self.cat.eibi_follow = bool(c.get("eibi_follow", self.cat.eibi_follow))
