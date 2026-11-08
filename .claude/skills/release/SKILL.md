@@ -95,8 +95,8 @@ diagnósticos — correrlos a mano si el release tocó enumeración de dispositi
 - Commit `release: vX.Y — <resumen>` (sin comillas dobles en el mensaje — el quoting de
   PowerShell 5.1 hacia git las rompe). Co-Authored-By de rigor.
 - `git tag vX.Y && git push origin main vX.Y` — **el tag dispara el build Linux en CI**
-  (`.github/workflows/build-linux.yml`): **dos jobs, x86_64 y ARM64 / Raspberry Pi**. El de ARM
-  corre en un runner pago (repo privado, ~1,5 min por corrida).
+  (`.github/workflows/build-linux.yml`): **dos jobs, x86_64 y ARM64 / Raspberry Pi**, los dos en
+  Ubuntu 22.04 (glibc 2.35). El repo es público, así que el runner ARM es gratis.
 
 ## 5. Build Windows (local, en paralelo con el CI)
 
@@ -144,14 +144,16 @@ diagnósticos — correrlos a mano si el release tocó enumeración de dispositi
     ponga el spec): contar contra `git ls-files Presets/*.json`;
   - `libportaudio.so.2` **adentro** y ningún `libasound` (invariante 2 de empaquetado);
   - plugins `wayland-decoration-client` (`libbradient.so`) y `wayland-shell-integration`;
-  - ARM64: `LEEME_RASPBERRY_PI.txt` presente, y la **glibc máxima requerida ≤ 2.36** (Bookworm)
-    leyendo `.gnu.version_r` de todos los `.so` y del binario. Si sube, el runner cambió de
-    versión de Ubuntu y el paquete deja de arrancar en Bookworm.
+  - **glibc máxima requerida ≤ 2.35 en los dos**: `.venv\Scripts\python.exe tools\check_glibc.py
+    <zip>` (el CI ya lo corre antes de zipear; repetirlo sobre el zip final no cuesta nada). Si sube,
+    el runner cambió de versión de Ubuntu: el x86_64 deja de arrancar en Ubuntu 22.04 / Debian 12
+    (le pasó a la v2.7, que pedía 2.38) y el ARM64 en Bookworm.
+  - ARM64: `LEEME_RASPBERRY_PI.txt` presente.
   - `scipy/signal/_sosfilt*.so` presente (la vía rápida de `dsp/iir.py`; sin él anda igual, pero
     más lento — y en la Pi eso son cortes).
 - **Validación en hardware antes de publicar** (invariante 5 de empaquetado): pasarle al usuario
-  el link del run para que baje el ARM64 desde el browser de la Pi (repo privado: hace falta
-  sesión de GitHub en la Pi), lo arranque y confirme ventana, dispositivos USB, presets y
+  el link del run para que baje el ARM64 desde el browser de la Pi (los artifacts de Actions
+  piden sesión de GitHub aunque el repo sea público), lo arranque y confirme ventana, dispositivos USB, presets y
   "Cortes" en 0 con bloque 960 y todos los módulos. Sin ese OK, preguntarle si se publica igual.
 
 ## 7. Release en GitHub

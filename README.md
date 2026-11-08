@@ -18,7 +18,7 @@ Los paquetes listos para usar están en la [página de releases](https://github.
 | Archivo | Para |
 |---|---|
 | `RadioNoiseKiller_vX.Y.zip` | Windows 10/11 (64 bits) |
-| `RadioNoiseKiller_vX.Y-linux-x86_64.zip` | Linux x86_64 |
+| `RadioNoiseKiller_vX.Y-linux-x86_64.zip` | Linux x86_64 (Ubuntu 22.04+, Debian 12+ o equivalente; desde la v2.8 — la v2.7 pedía Ubuntu 24.04) |
 | `RadioNoiseKiller_vX.Y-linux-aarch64.zip` | Raspberry Pi 4 (Raspberry Pi OS de 64 bits) |
 | `MANUAL_RadioNoiseKiller_vX.Y.pdf` | Manual completo en español |
 | `MANUAL_RadioNoiseKiller_vX.Y_EN.pdf` | Manual completo en inglés |
@@ -262,7 +262,8 @@ Presets/                  # 8 presets de fábrica (JSON) + Presets.zip
 translate_worker/         # Worker de Traducción (faster-whisper + argostranslate), proceso aparte
 tests/                    # Suites de regresión (run_all.py) y diagnósticos
 tools/                    # Generadores del manual PDF, el diagrama y el zip de presets;
-                          # replay_recording.py pasa una grabación por la cadena real
+                          # replay_recording.py pasa una grabación por la cadena real;
+                          # check_glibc.py verifica que el bundle Linux no pida una glibc > 2.35
 Images/                   # Logo, ícono y diagramas del pipeline
 .github/workflows/        # Build de Linux (x86_64 y ARM64) en Actions
 ```

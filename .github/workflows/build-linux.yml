@@ -6,14 +6,18 @@ on:
   workflow_dispatch:     # o manualmente desde la pestana Actions
     inputs:
       arm64:
-        description: 'Compilar tambien para ARM64 / Raspberry Pi (runner pago; en los tags corre siempre)'
+        description: 'Compilar tambien para ARM64 / Raspberry Pi (en los tags corre siempre)'
         type: boolean
         default: false
 
 jobs:
   build:
     name: Linux x86_64
-    runs-on: ubuntu-latest
+    # 22.04 y no ubuntu-latest: el paquete de la v2.7 salio de 24.04 y pedia
+    # glibc 2.38 (el Python de setup-python, libxkbcommon, libxcb-cursor), asi
+    # que no arrancaba en Ubuntu 22.04 ni en Debian 12. Con 22.04 el tope es 2.35,
+    # igual que el job ARM. El paso "Check glibc" falla si vuelve a subir.
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout
@@ -44,6 +48,11 @@ jobs:
         run: |
           python -m PyInstaller reductor-linux.spec --clean --noconfirm
 
+      - name: Check glibc
+        run: |
+          pip install pyelftools
+          python tools/check_glibc.py dist/RadioNoiseKiller --max 2.35
+
       - name: Create ZIP
         run: |
           cd dist
@@ -63,10 +72,9 @@ jobs:
   #
   # CORRE EN CADA TAG de version (decision del usuario, 25/10/2026: el release
   # publica el paquete de la Pi junto con los de Windows y Linux x86_64), y a mano
-  # con la opcion del Run workflow. Ojo con el costo: este repo es PRIVADO y los
-  # runners ARM64 solo son gratis en repos PUBLICOS — en privados se facturan por
-  # minuto (~1,5 min por corrida). Sin continue-on-error: si falla, el release
-  # tiene que enterarse.
+  # con la opcion del Run workflow. El repo es PUBLICO, asi que el runner ARM64
+  # es gratis (en un repo privado se factura por minuto). Sin continue-on-error:
+  # si falla, el release tiene que enterarse.
   #
   # Tarda ~1,5 min. Python 3.12 en aarch64 tiene wheels de PySide6/scipy/numpy,
   # asi que no hay que compilar nada desde fuente.
@@ -147,6 +155,11 @@ jobs:
           Reportes en: https://github.com/gpagliaroli/RadioNoiseKiller/issues
           EOF
           cat dist/RadioNoiseKiller/LEEME_RASPBERRY_PI.txt
+
+      - name: Check glibc
+        run: |
+          pip install pyelftools
+          python tools/check_glibc.py dist/RadioNoiseKiller --max 2.35
 
       - name: Create ZIP
         run: |

@@ -587,7 +587,7 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
 
 ### Cambios pendientes de release
 
-(ninguno)
+- Build Linux x86_64 en Ubuntu 22.04 (glibc 2.35; la v2.7 pedía 2.38) + `tools/check_glibc.py` en los dos jobs del CI — pendiente de validar (run del CI + notebook Ubuntu)
 
 Formato al acumular: una línea por cambio con su estado de validación (`validado en el aire` /
 `pendiente de validar`), y el bloque narrativo completo en el historial, sección "En curso". El

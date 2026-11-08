@@ -42,6 +42,19 @@ regla de método nueva.
 
 _(Los bloques nuevos de la próxima versión van acá, el más reciente arriba.)_
 
+**Post-v2.7: el paquete Linux x86_64 vuelve a arrancar en Ubuntu 22.04 y Debian 12.** El job
+x86_64 corría en `ubuntu-latest` (24.04) y el zip de la v2.7 pedía **glibc 2.38**: el Python de
+`setup-python` (los módulos de `lib-dynload`), `libxkbcommon` y `libxcb-cursor` vienen compilados
+contra la glibc del runner, y un binario que pide una glibc más nueva que la del sistema no arranca.
+Ubuntu 22.04 tiene 2.35 y Debian 12 tiene 2.36, así que en los dos fallaba. El ARM64 ya estaba en 22.04
+por el mismo motivo (Bookworm), y medido sobre el zip publicado da 2.35. Arreglo: el job x86_64 pasa a
+`ubuntu-22.04`, y `tools/check_glibc.py` (lee `.gnu.version_r` con pyelftools, sobre una carpeta o un
+zip) corre al final de **los dos** jobs con tope 2.35, así que si un runner o un wheel la sube, el
+build falla en lugar de enterarse el usuario. Medido sobre los zips de la v2.7: aarch64 322 ELF,
+máxima 2.35 (OK); x86_64 325 ELF, máxima 2.38 (falla, con la lista de culpables). De paso se corrigieron
+los comentarios del workflow y del skill `release` que decían que el repo era privado y el runner ARM
+pago: el repo es público y el runner es gratis.
+
 ---
 
 ## v2.7 (octubre 2026)
