@@ -94,17 +94,17 @@ def _set_combo(combo, data) -> None:
 # ---------------------------------------------------------------------- #
 
 def test_tab_order():
-    """9 pestanas en orden fijo, con 'Modulos' en la 2da posicion."""
+    """10 pestanas en orden fijo, con 'Modulos' en la 2da posicion."""
     w = _win()
     tabs = w._tabs
     expected = [
         tr("Principal"), tr("Módulos"), tr("Avanz. Audio"),
         tr("Avanz. Impulsos"), tr("Avanz. Cancelador"),
-        tr("Espectro"), tr("EiBi"), tr("Presets"), tr("Traducción"),
+        tr("Espectro"), tr("EiBi"), tr("Presets"), tr("Traducción"), tr("CAT"),
     ]
     got = [tabs.tabText(i) for i in range(tabs.count())]
     assert got == expected, f"Orden de pestanas inesperado: {got}"
-    print("Orden de pestanas (9, Modulos en pos 1)   OK")
+    print("Orden de pestanas (10, Modulos en pos 1)  OK")
 
 
 def test_modules_group_moved_to_own_tab():
@@ -1971,8 +1971,10 @@ def test_cat_auto_preset_and_eibi_follow():
 
     w = _win()
     pt = w._presets_tab
-    assert w._cat_panel.parent() is not None and pt.isAncestorOf(w._cat_panel), \
-        "el grupo del CAT vive en la pestaña Presets"
+    cat_idx = w._tabs.count() - 1
+    assert w._tabs.tabText(cat_idx) == tr("CAT") and \
+        w._tabs.widget(cat_idx).isAncestorOf(w._cat_panel), "el CAT tiene solapa propia, la última"
+    assert not pt.isAncestorOf(w._cat_panel), "ya no vive en la pestaña Presets"
     assert w._lbl_cat.isHidden(), "con el CAT apagado el indicador no se ve"
 
     ssb, am = "___cat_ssb___", "___cat_am___"
@@ -1996,6 +1998,10 @@ def test_cat_auto_preset_and_eibi_follow():
     c.eibi_follow = True
     w._eibi_tab._load_values()
     w._cat_switcher = cat.AutoPresetSwitcher(stable_s=0.0)
+    # Estado de partida conocido: un test anterior deja otro preset activo y
+    # MODIFICADO en el settings.json temporal, y el CAT (bien) no lo pisaría.
+    pt.load_preset(am)
+    assert pt.active_name() == am and not pt.active_modified()
     w._cat_panel._chk_enabled.setChecked(True)      # -> connection_changed -> _restart_cat
     try:
         assert not w._lbl_cat.isHidden(), "con el CAT activo el indicador se ve"

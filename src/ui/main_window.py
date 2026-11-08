@@ -234,7 +234,6 @@ class MainWindow(QMainWindow):
         self._cat_panel.connection_changed.connect(self._restart_cat)
         self._cat_panel.connection_changed.connect(self._schedule_save)
         self._cat_panel.mapping_changed.connect(self._schedule_save)
-        self._presets_tab.add_section(self._cat_panel)
         self._tabs.addTab(self._presets_tab, tr("Presets"))
         self._translate_client = TranslateClient()
         self._translate_tab = TranslateTab(
@@ -242,9 +241,15 @@ class MainWindow(QMainWindow):
         )
         self._translate_tab.state_changed.connect(self._schedule_save)
         self._tabs.addTab(self._translate_tab, tr("Traducción"))
+        cat_tab = QWidget()
+        cat_layout = QVBoxLayout(cat_tab)
+        cat_layout.setContentsMargins(12, 12, 12, 12)
+        cat_layout.addWidget(self._cat_panel)
+        cat_layout.addStretch()
+        self._tabs.addTab(cat_tab, tr("CAT"))
         self._tabs.currentChanged.connect(self._on_tab_changed)
         # Todas las solapas visibles a la vez: sin botones de scroll y repartidas
-        # a lo ancho (el padding del stylesheet es chico para que entren las 8).
+        # a lo ancho (el padding del stylesheet es chico para que entren las 10).
         self._tabs.setUsesScrollButtons(False)
         self._tabs.tabBar().setExpanding(True)
 
@@ -375,7 +380,7 @@ class MainWindow(QMainWindow):
         self._lbl_cat.setStyleSheet(self._IDLE_LBL_STYLE)
         self._lbl_cat.setToolTip(tr(
             "Frecuencia y modo leídos de la radio por CAT (rigctld).\n"
-            "Se configura en la pestaña Presets."))
+            "Se configura en la solapa CAT."))
         self._lbl_cat.setVisible(False)
         cat_row = self._labeled_row(tr("Radio:"), self._lbl_cat)
         cat_row.addStretch()

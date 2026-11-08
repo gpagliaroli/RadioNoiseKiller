@@ -64,7 +64,9 @@ revisión post-v2.7 (junto con el build en 22.04 y el lanzador). Decisiones, tod
   Ninguna llamada de red ocurre en el hilo de la GUI. El tick no re-aplica stylesheets si nada cambió
   (en la Pi, recalcular estilos le roba tiempo al hilo del DSP).
 - La config va en `settings.json` bajo `"cat"` y **no forma parte de los presets**.
-- UI: grupo en la pestaña **Presets** y no en una solapa nueva (ya son 10 con 770 px fijos). Mientras está
+- UI: **solapa propia "CAT", la última, después de Traducción** (pedido del usuario: primero había quedado
+  como un grupo dentro de Presets). Con 10 solapas en 770 px fijos entra sin recortar: medido, la barra
+  ocupa 708 px en castellano y 643 en inglés. Mientras está
   activo, host y puerto no se editan, así que reiniciar el cliente solo depende de la casilla.
 Tests: `test_cat` (rigctld falso: lectura, `RPRT`, caída y vuelta del servidor, puerto cerrado, reglas)
 y `test_ui::test_cat_auto_preset_and_eibi_follow` de punta a punta. Dos tropiezos del banco: un

@@ -1,5 +1,5 @@
 """
-Grupo "Radio (CAT — rigctld)" de la pestaña Presets: activar, host/puerto,
+Grupo "Radio (CAT — rigctld)" de la solapa CAT: activar, host/puerto,
 estado de la conexión y la tabla grupo de modo -> preset.
 
 Sólo UI y config: el cliente (cat.RigctldClient) y la decisión de cargar un

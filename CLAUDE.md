@@ -591,7 +591,7 @@ Lo que define el producto hoy, en una línea cada uno (el detalle está en el hi
 
 - Build Linux x86_64 en Ubuntu 22.04 (glibc 2.35; la v2.7 pedía 2.38) + `tools/check_glibc.py` en los dos jobs del CI — CI verde (run 42499386671, los dos zips en 2.35); pendiente de validar en la notebook Ubuntu
 - Lanzador de escritorio Linux/Pi: `--install-desktop` / `--uninstall-desktop` (paquete y `./run`), `src/desktop_entry.py` — pendiente de validar en la Pi y en Ubuntu
-- **Control de la radio (CAT) por rigctld**: preset automático por grupo de modo (SSB/AM/FM/WFM/CW, 1 s estable, nunca pisa un preset "(modificado)"), EiBi sigue la frecuencia, fila "Radio" en Dispositivos; `src/cat.py` + `ui/cat_panel.py` (grupo en Presets), cap. 16 de los manuales — probado contra rigctld falso en tests; pendiente de validar con `rigctld -m 1` y en el aire con la radio del usuario
+- **Control de la radio (CAT) por rigctld**: preset automático por grupo de modo (SSB/AM/FM/WFM/CW, 1 s estable, nunca pisa un preset "(modificado)"), EiBi sigue la frecuencia, fila "Radio" en Dispositivos; `src/cat.py` + `ui/cat_panel.py` (solapa CAT, la última), cap. 16 de los manuales — probado contra rigctld falso en tests; pendiente de validar con `rigctld -m 1` y en el aire con la radio del usuario
 
 Formato al acumular: una línea por cambio con su estado de validación (`validado en el aire` /
 `pendiente de validar`), y el bloque narrativo completo en el historial, sección "En curso". El

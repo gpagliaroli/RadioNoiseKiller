@@ -255,12 +255,12 @@ src/
 │   ├── gain.py           # GainLimiter: limitador de picos con rodilla suave
 │   └── level.py          # LevelMeter: RMS con decaimiento
 └── ui/
-    ├── main_window.py    # Ventana principal: 9 pestañas + barra de estado
+    ├── main_window.py    # Ventana principal: 10 pestañas + barra de estado
     ├── advanced_tab.py   # Pestañas Avanzada Audio / Impulsos / Cancelador
     ├── presets_tab.py    # Gestión de presets
     ├── update_dialog.py  # Diálogo "hay una versión nueva"
     ├── eibi_tab.py       # Solapa EiBi (qué emisora es)
-    ├── cat_panel.py      # Grupo del CAT en la pestaña Presets (conexión y tabla modo → preset)
+    ├── cat_panel.py      # Solapa CAT: conexión con rigctld y tabla modo → preset
     ├── translate_tab.py  # Pestaña Traducción (transcripción + traducción en vivo)
     ├── cpu_meter.py      # Medidor de carga del hilo de audio
     ├── slider_row.py     # Widget: label + QSlider escalado a float + valor

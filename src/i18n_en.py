@@ -1379,9 +1379,9 @@ CATALOG = {
     "{name} (no existe)": "{name} (missing)",
     "FM ancha (WFM)": "Wide FM (WFM)",
     "Frecuencia y modo leídos de la radio por CAT (rigctld).\n"
-    "Se configura en la pestaña Presets.":
+    "Se configura en la solapa CAT.":
         "Frequency and mode read from the radio over CAT (rigctld).\n"
-        "Set it up in the Presets tab.",
+        "Set it up in the CAT tab.",
     "Radio:": "Radio:",
     "conectando con rigctld...": "connecting to rigctld...",
     "sin conexión con rigctld": "no connection to rigctld",
@@ -1395,8 +1395,8 @@ CATALOG = {
     'Radio en {group}: el preset "{name}" no existe.': 'Radio in {group}: preset "{name}" does not exist.',
     'Radio en {group}: preset "{name}" cargado.': 'Radio in {group}: preset "{name}" loaded.',
     "Seguir la frecuencia de la radio (CAT)": "Follow the radio's frequency (CAT)",
-    "Con el CAT activo y conectado (pestaña Presets), la frecuencia se toma\n"
+    "Con el CAT activo y conectado (solapa CAT), la frecuencia se toma\n"
     "de la radio y se actualiza sola al sintonizar.":
-        "With CAT enabled and connected (Presets tab), the frequency is taken\n"
+        "With CAT enabled and connected (CAT tab), the frequency is taken\n"
         "from the radio and follows it as you tune.",
 }

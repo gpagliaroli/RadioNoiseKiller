@@ -91,7 +91,7 @@ class EibiTab(QWidget):
 
         self._chk_follow = QCheckBox(tr("Seguir la frecuencia de la radio (CAT)"))
         self._chk_follow.setToolTip(tr(
-            "Con el CAT activo y conectado (pestaña Presets), la frecuencia se toma\n"
+            "Con el CAT activo y conectado (solapa CAT), la frecuencia se toma\n"
             "de la radio y se actualiza sola al sintonizar."))
         root.addWidget(self._chk_follow)
 

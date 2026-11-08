@@ -1359,7 +1359,7 @@ Para probar sin radio: `rigctld -m 1` arranca una radio **simulada**.
 
 ### Activarlo en la aplicación
 
-En la pestaña **Presets**, grupo **Radio (CAT — rigctld de Hamlib)**:
+En la solapa **CAT** (la última, después de Traducción), grupo **Radio (CAT — rigctld de Hamlib)**:
 
 | Control | Qué hace |
 |---------|----------|

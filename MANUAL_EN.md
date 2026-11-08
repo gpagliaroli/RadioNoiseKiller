@@ -1360,7 +1360,7 @@ To try it without a radio: `rigctld -m 1` starts a **simulated** radio.
 
 ### Enabling it in the app
 
-In the **Presets** tab, **Radio (CAT — Hamlib rigctld)** group:
+In the **CAT** tab (the last one, after Translation), **Radio (CAT — Hamlib rigctld)** group:
 
 | Control | What it does |
 |---------|--------------|

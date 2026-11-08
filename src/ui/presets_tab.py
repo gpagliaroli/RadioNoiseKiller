@@ -112,7 +112,6 @@ class PresetsTab(QWidget):
         )
         note.setStyleSheet("color: #888; font-size: 8pt;")
         root.addWidget(note)
-        self._root = root
 
         self._btn_save_new.clicked.connect(self._on_save_new)
         self._btn_overwrite.clicked.connect(self._on_overwrite)
@@ -303,10 +302,6 @@ class PresetsTab(QWidget):
 
     def preset_exists(self, name: str) -> bool:
         return self._manager.exists(name)
-
-    def add_section(self, widget: QWidget) -> None:
-        """Agrega un bloque al pie de la pestaña (el grupo del CAT)."""
-        self._root.addWidget(widget)
 
     # ------------------------------------------------------------------ #
     # Helpers                                                              #
