@@ -2006,6 +2006,8 @@ def test_cat_auto_preset_and_eibi_follow():
     try:
         assert not w._lbl_cat.isHidden(), "con el CAT activo el indicador se ve"
         assert tick_until(lambda: pt.active_name() == ssb), "USB carga el preset de SSB"
+        assert ssb in w.windowTitle() and tr("{name}  (modificado)").format(name=ssb) \
+            not in w.windowTitle(), f"el título muestra el preset del CAT: {w.windowTitle()}"
         assert "USB" in w._lbl_cat.text() and "7.074,0 kHz" in w._lbl_cat.text(), w._lbl_cat.text()
         assert w._config.dsp.noise_alpha == 0.55
         spin = w._eibi_tab._spin_freq
@@ -2013,6 +2015,7 @@ def test_cat_auto_preset_and_eibi_follow():
 
         rig.mode = "AM"
         assert tick_until(lambda: pt.active_name() == am), "AM carga el preset de AM"
+        assert am in w.windowTitle() and ssb not in w.windowTitle(), w.windowTitle()
 
         w._config.dsp.noise_alpha = 0.9                 # cambios sin guardar
         rig.mode, rig.freq = "LSB", 3700000
