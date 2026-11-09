@@ -2067,6 +2067,7 @@ def test_cat_memories():
     import cat
     import eibi_db
     from memories import MemoryStore
+    from PySide6.QtCore import Qt
 
     def tick_until(cond, timeout=6.0):
         t0 = _t.monotonic()
@@ -2082,6 +2083,7 @@ def test_cat_memories():
     mp, et, pt = w._memories_panel, w._eibi_tab, w._presets_tab
     assert w._tabs.widget(w._tabs.count() - 1).isAncestorOf(mp), "en la solapa CAT"
     mp._store.items.clear()
+    mp._store.sort_key, mp._store.sort_desc = "freq", False
     mp._refresh()
     assert not mp._btn_save.isEnabled() and not mp._btn_tune.isEnabled(), "sin CAT: deshabilitados"
 
@@ -2155,6 +2157,36 @@ def test_cat_memories():
         assert tick_until(lambda: tr("La radio rechazó") in w._status_bar.currentMessage()), \
             w._status_bar.currentMessage()
         assert w._cat_client.state.connected and rig.freq == 8291000
+
+        # Orden tocando el encabezado: Nombre asc -> desc, con la selección
+        # conservada, y el doble clic sintoniza la memoria de ESA fila.
+        col_names = lambda: [mp._table.item(r, 0).text() for r in range(mp._table.rowCount())]
+        hdr = mp._table.horizontalHeader()
+        assert col_names() == ["7.074,0 kHz USB", "Coast Guard", "RAE Argentina"], "por frecuencia"
+        hdr.sectionClicked.emit(0)
+        assert col_names() == ["7.074,0 kHz USB", "Coast Guard", "RAE Argentina"]
+        assert hdr.sortIndicatorSection() == 0 and hdr.sortIndicatorOrder() == Qt.SortOrder.AscendingOrder
+        assert mp._store.items[mp._current()].name == "Coast Guard", "la selección sigue a la memoria"
+        hdr.sectionClicked.emit(0)
+        assert col_names() == ["RAE Argentina", "Coast Guard", "7.074,0 kHz USB"], "segundo clic invierte"
+        assert hdr.sortIndicatorOrder() == Qt.SortOrder.DescendingOrder
+        assert mp._table.selectionModel().selectedRows()[0].row() == 1
+        rig.reject_modes = set()
+        mp._table.selectRow(2)
+        mp._table.itemDoubleClicked.emit(mp._table.item(2, 0))
+        assert tick_until(lambda: rig.freq == 7074000 and rig.mode == "USB"), (rig.freq, rig.mode)
+        hdr.sectionClicked.emit(2)
+        assert col_names() == ["RAE Argentina", "7.074,0 kHz USB", "Coast Guard"], "modo y después freq"
+        assert col_names()[mp._table.selectionModel().selectedRows()[0].row()] == "7.074,0 kHz USB"
+        disk = MemoryStore(mp._store.path)
+        disk.load()
+        assert (disk.sort_key, disk.sort_desc) == ("mode", False), "el orden se guarda en el archivo"
+        # Renombrar con orden por nombre: la memoria cambia de lugar y sigue elegida.
+        hdr.sectionClicked.emit(0)
+        assert col_names()[1] == "Coast Guard"
+        mp._table.item(1, 0).setText("AAA Guardacostas")      # pasa delante de RAE, detrás de "7.074"
+        assert col_names() == ["7.074,0 kHz USB", "AAA Guardacostas", "RAE Argentina"], col_names()
+        assert mp._store.items[mp._current()].name == "AAA Guardacostas"
     finally:
         w._cat_panel._chk_enabled.setChecked(False)
         rig.close()

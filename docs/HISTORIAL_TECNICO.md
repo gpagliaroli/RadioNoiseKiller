@@ -55,6 +55,11 @@ los canales de la radio). No se duplica una memoria con la misma frecuencia y el
   **antes del próximo sondeo**: `F <hz>` y después `M <MODO> 0` (passband 0 = el de la radio). Sigue
   sin haber red en la GUI. Un `RPRT` ≠ 0 en un set **no** reconecta (hay radios sin SAM): queda en
   `CatState.cmd_error` y la barra de estado lo muestra una vez; un timeout o socket caído sí.
+- **Orden por columna** (pedido del usuario): clic en Nombre / Frecuencia / Modo, otro clic invierte,
+  se recuerda en `Memorias.json` (`"sort"`). NO con `setSortingEnabled` de Qt: reordena las filas por su
+  cuenta (rompe fila ↔ índice del store) y re-ordena en medio de un F2. El panel arma `_order` (fila →
+  store) con `memories.sort_order()`, y la selección se recuerda por `Memory`, no por índice (agregar,
+  borrar e importar corren los índices del store).
 - El bloque de abajo decía "Solo lectura. La app nunca escribe en la radio": deja de ser cierto sólo
   al sintonizar una memoria, y los manuales lo dicen así.
 Tests: `test_memories` (nuevo, suite 14), `test_cat` (+3: orden F/M, último pedido gana, modo

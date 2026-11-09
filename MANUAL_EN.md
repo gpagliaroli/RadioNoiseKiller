@@ -1390,6 +1390,7 @@ The **Memories** group, below the radio group, stores stations with a **name, fr
 - **From the EiBi tab**: pick a row and press **Save to memories** (also on right-click). It is saved in **AM**, or USB for utility stations. CAT does not need to be connected.
 - **Double-click** (or **Tune**) sends the radio to that frequency and mode. **The preset comes from the mode table**: if the memory is AM and you were on SSB, your AM preset loads, just as if you had turned the mode knob.
 - **F2** (or right-click → *Rename*) renames it. **Delete** asks for confirmation.
+- **Sorting**: click a column title (*Name*, *Frequency* or *Mode*) to sort by it; click it again to reverse the order. The small arrow on the title shows which one is in use, and the order is remembered.
 - No duplicates: a station on the same frequency and mode group as one already saved is not added twice.
 - If the radio rejects the mode (some rigs have no synchronous AM, for example), the status bar says so; the frequency is still changed.
 - They are saved automatically to **`Memorias.json`**, next to `settings.json`. To move them to another PC or the Pi, copy that file or use **Export… / Import…** (CSV format). The CSV has the columns `name;freq_khz;mode`, and importing skips the ones that already exist.

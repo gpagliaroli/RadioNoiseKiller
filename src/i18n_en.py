@@ -1407,6 +1407,8 @@ CATALOG = {
         "({lo:.0f}–{hi:.0f} kHz).",
     # Memorias (solapa CAT)
     "Memorias": "Memories",
+    "Clic en el título de una columna para ordenar; otro clic invierte el orden.":
+        "Click a column title to sort by it; click again to reverse the order.",
     "Nombre": "Name",
     "Frecuencia": "Frequency",
     "Modo": "Mode",

@@ -16,6 +16,7 @@ from i18n import get_language, tr
 from utils import data_dir
 
 _COLUMNS = ["Nombre", "Frecuencia", "Modo"]
+_COL_KEYS = ("name", "freq", "mode")       # columna -> memories.SORT_KEYS
 
 
 class MemoriesPanel(QGroupBox):
@@ -27,6 +28,11 @@ class MemoriesPanel(QGroupBox):
         self._store = store or memories.MemoryStore()
         self._store.load()
         self._connected = None
+        # Orden de la vista: fila -> índice en el store. No se usa el sorting de
+        # QTableWidget porque reordena las filas solo (rompe fila <-> store) y
+        # re-ordena en medio de un renombre con F2.
+        self._order: "list[int]" = []
+        self._row_items: "list[memories.Memory]" = []
         self._build_ui()
         self._refresh()
         self.set_connected(False)
@@ -47,6 +53,10 @@ class MemoriesPanel(QGroupBox):
         hdr.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         hdr.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         hdr.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        hdr.setSectionsClickable(True)
+        hdr.setSortIndicatorShown(True)
+        hdr.setToolTip(tr("Clic en el título de una columna para ordenar; otro clic invierte el orden."))
+        hdr.sectionClicked.connect(self._on_header_clicked)
         root.addWidget(self._table, 1)
 
         row = QHBoxLayout()
@@ -107,8 +117,7 @@ class MemoriesPanel(QGroupBox):
         if new:
             self._save()
             self._refresh()
-        self._table.selectRow(i)
-        self._table.scrollToItem(self._table.item(i, 0))
+        self._select_store(i)
         return new
 
     def memory_names(self) -> list:
@@ -116,10 +125,33 @@ class MemoriesPanel(QGroupBox):
 
     # ------------------------------------------------------------------
 
+    def _on_header_clicked(self, col: int) -> None:
+        key = _COL_KEYS[col]
+        s = self._store
+        s.sort_desc = (not s.sort_desc) if key == s.sort_key else False
+        s.sort_key = key
+        self._save()
+        self._refresh()
+
+    def _select_store(self, i: int) -> None:
+        """Selecciona la memoria i del store, esté en la fila que esté."""
+        if 0 <= i < len(self._order):
+            row = self._order.index(i)
+            self._table.selectRow(row)
+            self._table.scrollToItem(self._table.item(row, 0))
+
     def _refresh(self) -> None:
+        s = self._store
+        # La selección se recuerda por MEMORIA, no por índice: tras agregar,
+        # borrar o importar, los índices del store ya cambiaron.
+        sel = self._table.selectionModel().selectedRows()
+        keep = self._row_items[sel[0].row()] if sel and sel[0].row() < len(self._row_items) else None
+        self._order = memories.sort_order(s.items, s.sort_key, s.sort_desc)
+        self._row_items = [s.items[i] for i in self._order]
         self._table.blockSignals(True)
-        self._table.setRowCount(len(self._store.items))
-        for r, m in enumerate(self._store.items):
+        self._table.setRowCount(len(s.items))
+        for r, idx in enumerate(self._order):
+            m = s.items[idx]
             name = QTableWidgetItem(m.name)
             freq = QTableWidgetItem(memories.default_name(m.freq_hz, "", get_language()))
             mode = QTableWidgetItem(m.mode)
@@ -129,7 +161,13 @@ class MemoriesPanel(QGroupBox):
             self._table.setItem(r, 0, name)
             self._table.setItem(r, 1, freq)
             self._table.setItem(r, 2, mode)
+        self._table.horizontalHeader().setSortIndicator(
+            _COL_KEYS.index(s.sort_key),
+            Qt.SortOrder.DescendingOrder if s.sort_desc else Qt.SortOrder.AscendingOrder)
+        self._table.clearSelection()
         self._table.blockSignals(False)
+        if keep is not None and keep in s.items:
+            self._select_store(s.items.index(keep))
         self._update_buttons()
 
     def _save(self) -> None:
@@ -139,8 +177,11 @@ class MemoriesPanel(QGroupBox):
             QMessageBox.warning(self, tr("Error al guardar las memorias"), str(e))
 
     def _current(self) -> int:
+        """Índice en el STORE de la memoria seleccionada, o -1."""
         rows = self._table.selectionModel().selectedRows()
-        return rows[0].row() if rows else -1
+        if not rows or rows[0].row() >= len(self._order):
+            return -1
+        return self._order[rows[0].row()]
 
     def _update_buttons(self) -> None:
         sel = self._current() >= 0
@@ -157,14 +198,18 @@ class MemoriesPanel(QGroupBox):
         self.tune_requested.emit(m.freq_hz, m.mode, m.name)
 
     def _on_item_changed(self, item: QTableWidgetItem) -> None:
-        if item.column() != 0:
+        if item.column() != 0 or item.row() >= len(self._order):
             return
-        r = item.row()
-        self._store.rename(r, item.text())
+        i = self._order[item.row()]
+        self._store.rename(i, item.text())
         self._save()
-        self._table.blockSignals(True)
-        item.setText(self._store.items[r].name)
-        self._table.blockSignals(False)
+        if self._store.sort_key == "name":
+            self._refresh()                      # cambia de lugar: re-seleccionarla
+            self._select_store(i)                # (rename no reordena el store)
+        else:
+            self._table.blockSignals(True)
+            item.setText(self._store.items[i].name)
+            self._table.blockSignals(False)
 
     def _on_delete(self) -> None:
         i = self._current()

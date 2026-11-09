@@ -114,6 +114,35 @@ def test_csv_roundtrip_and_import():
     print("Memorias: CSV ida y vuelta, import tolerante  OK")
 
 
+def test_sort_order_and_persistence():
+    items = [Memory("rae", 9560000, "AM"), Memory("Baja", 530000, "AM"),
+             Memory("FT8", 7074000, "USB"), Memory("baja", 1000000, "AM"),
+             Memory("CW", 7030000, "CW")]
+    names = lambda key, desc: [items[i].name for i in memories.sort_order(items, key, desc)]
+    assert names("name", False) == ["Baja", "baja", "CW", "FT8", "rae"], "sin mayúsculas, desempata por freq"
+    assert names("name", True) == ["rae", "FT8", "CW", "baja", "Baja"]
+    assert names("freq", False) == ["Baja", "baja", "CW", "FT8", "rae"]
+    assert names("freq", True) == ["rae", "FT8", "CW", "baja", "Baja"]
+    assert names("mode", False) == ["Baja", "baja", "rae", "CW", "FT8"], "dentro del modo, por freq"
+    assert names("mode", True) == ["FT8", "CW", "rae", "baja", "Baja"]
+    assert names("xx", False) == names("freq", False), "clave desconocida = frecuencia"
+    p = _tmp()
+    s = MemoryStore(p)
+    assert (s.sort_key, s.sort_desc) == memories.DEFAULT_SORT == ("freq", False)
+    s.add(items[0])
+    s.sort_key, s.sort_desc = "mode", True
+    s.save()
+    t = MemoryStore(p)
+    t.load()
+    assert (t.sort_key, t.sort_desc) == ("mode", True), "el orden se recuerda"
+    data = json.load(open(p, encoding="utf-8"))
+    data["sort"] = {"key": "bogus", "desc": "si"}
+    json.dump(data, open(p, "w"))
+    t.load()
+    assert (t.sort_key, t.sort_desc) == memories.DEFAULT_SORT and len(t) == 1
+    print("Memorias: orden por nombre/frecuencia/modo, asc/desc, persistido  OK")
+
+
 def test_default_name():
     assert memories.default_name(7074000, "USB") == "7.074,0 kHz USB"
     assert memories.default_name(7074000, "USB", "en") == "7,074.0 kHz USB"
@@ -128,6 +157,7 @@ if __name__ == "__main__":
     test_rename_and_remove()
     test_tolerant_load()
     test_csv_roundtrip_and_import()
+    test_sort_order_and_persistence()
     test_default_name()
     print()
     print("Todos los tests pasaron.")

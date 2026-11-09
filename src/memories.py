@@ -19,6 +19,10 @@ from utils import data_dir
 
 FILE_NAME = "Memorias.json"
 
+# Orden de la tabla (tocando el encabezado). Se recuerda en el archivo.
+SORT_KEYS = ("name", "freq", "mode")
+DEFAULT_SORT = ("freq", False)
+
 
 @dataclass(frozen=True)
 class Memory:
@@ -33,6 +37,17 @@ def default_name(freq_hz: int, mode: str, lang: str = "es") -> str:
     if lang != "en":
         txt = txt.replace(",", "#").replace(".", ",").replace("#", ".")
     return f"{txt} kHz {mode}".strip()
+
+
+def sort_order(items: list, key: str, desc: bool) -> "list[int]":
+    """Índices de `items` en el orden de la vista. Los empates se desempatan por
+    frecuencia (o modo), así dentro de un mismo modo quedan por frecuencia."""
+    keyfn = {
+        "name": lambda m: (m.name.casefold(), m.freq_hz),
+        "freq": lambda m: (m.freq_hz, m.mode),
+        "mode": lambda m: (m.mode, m.freq_hz),
+    }.get(key, lambda m: (m.freq_hz, m.mode))
+    return sorted(range(len(items)), key=lambda i: keyfn(items[i]), reverse=bool(desc))
 
 
 def _clean(name, freq_hz, mode) -> "Memory | None":
@@ -52,17 +67,22 @@ class MemoryStore:
     def __init__(self, path: "str | None" = None):
         self.path = path or os.path.join(data_dir(), FILE_NAME)
         self.items: "list[Memory]" = []
+        self.sort_key, self.sort_desc = DEFAULT_SORT
 
     def __len__(self) -> int:
         return len(self.items)
 
     def load(self) -> None:
         self.items = []
+        self.sort_key, self.sort_desc = DEFAULT_SORT
         try:
             with open(self.path, encoding="utf-8") as fh:
                 data = json.load(fh)
         except (OSError, ValueError):
             return
+        srt = data.get("sort") if isinstance(data, dict) else None
+        if isinstance(srt, dict) and srt.get("key") in SORT_KEYS:
+            self.sort_key, self.sort_desc = srt["key"], srt.get("desc") is True
         rows = data.get("memories") if isinstance(data, dict) else None
         for r in rows if isinstance(rows, list) else []:
             if isinstance(r, dict):
@@ -73,6 +93,7 @@ class MemoryStore:
 
     def save(self) -> None:
         data = {"version": 1,
+                "sort": {"key": self.sort_key, "desc": self.sort_desc},
                 "memories": [{"name": m.name, "freq_hz": m.freq_hz, "mode": m.mode}
                              for m in self.items]}
         tmp = self.path + ".tmp"

@@ -1389,6 +1389,7 @@ El grupo **Memorias**, debajo del de la radio, guarda emisoras con **nombre, fre
 - **Desde la solapa EiBi**: elegí una fila y apretá **Guardar en memorias** (también con clic derecho). Se guarda en **AM**, o en USB si es una estación utilitaria. No hace falta tener el CAT conectado.
 - **Doble clic** (o **Sintonizar**) lleva la radio a esa frecuencia y modo. **El preset lo pone la tabla de modos**: si la memoria está en AM y venías de SSB, se carga tu preset de AM, igual que si giraras el selector.
 - **F2** (o clic derecho → *Renombrar*) cambia el nombre. **Borrar** pide confirmación.
+- **Ordenar**: tocá el título de una columna (*Nombre*, *Frecuencia* o *Modo*) para ordenar por ella; tocalo otra vez para invertir el orden. La flechita del título indica cuál se usa, y el orden se recuerda.
 - No se repiten: una emisora en la misma frecuencia y el mismo grupo de modo que otra ya guardada no se duplica.
 - Si la radio rechaza el modo (algunos equipos no tienen AM sincrónico, por ejemplo), la barra de estado lo avisa; la frecuencia sí se cambia.
 - Se guardan solas en **`Memorias.json`**, junto a `settings.json`. Para pasarlas a otra PC o a la Pi, copiá ese archivo o usá **Exportar… / Importar…** (formato CSV). El CSV tiene las columnas `name;freq_khz;mode`, y al importar se saltean las que ya existen.
