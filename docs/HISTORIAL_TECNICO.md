@@ -42,6 +42,15 @@ regla de método nueva.
 
 _(Los bloques nuevos de la próxima versión van acá, el más reciente arriba.)_
 
+**Post-v2.7: Traducción — el idioma detectado se nombra en el idioma de Destino.** Pedido del usuario:
+el indicador mostraba el nombre nativo de `_SRC_LANGS` ("中文 (zh)"), inútil justamente para quien no
+lee ese idioma. Ahora `translate_langs.lang_name(code, lang_dst)` → "Chino (zh)" / "Chinese (zh)".
+Tabla propia de 36 idiomas (los 11 de Origen + los frecuentes en onda corta que Whisper detecta con
+Auto) × los 5 destinos; un destino sin nombre cae al inglés y un idioma fuera de la tabla muestra el
+código. Cambiar el Destino re-nombra en el momento. Los combos siguen con nombres nativos (convención
+de selectores de idioma). Tests: `test_translate::test_detected_lang_named_in_destination` (cobertura
+de la tabla contra los combos) y `test_ui::test_translate_tab_detected_lang_and_avg_latency`.
+
 **Post-v2.7: memorias de emisoras en la solapa CAT (primera escritura a la radio).** Pedido del
 usuario: guardar frecuencia + modo + nombre (el nombre de EiBi) y cambiar de emisora eligiéndola.
 Decisiones con él: **el preset sale siempre del modo** (sin preset por memoria: al sintonizar cambia

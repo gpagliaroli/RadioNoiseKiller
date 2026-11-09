@@ -11,6 +11,7 @@ from config import AppConfig
 from pipeline import ProcessingPipeline
 from translate_client import TranslateClient
 import translate_installer as inst
+import translate_langs
 from i18n import tr
 from ui.slider_row import SliderRow
 from ui.tooltips import apply_tooltips
@@ -213,6 +214,7 @@ class TranslateTab(QWidget):
         self._config.translate.lang_src = self._combo_src.currentData()
         self._config.translate.lang_dst = self._combo_dst.currentData()
         self.state_changed.emit()
+        self._refresh_stats_label()      # el idioma detectado se nombra en el Destino
 
     def _on_show_mode_changed(self, *_) -> None:
         self._config.translate.show_mode = self._combo_show.currentData()
@@ -449,7 +451,9 @@ class TranslateTab(QWidget):
         if not self._recent:
             return
         lang = next((l for l, _ in reversed(self._recent) if l), None)
-        lang_name = dict(_SRC_LANGS).get(lang, lang) if lang else "—"
+        # El nombre en el idioma de Destino ("Chino", no "中文"): el nativo no le
+        # sirve a quien no lee ese idioma, que es justamente el caso.
+        lang_name = translate_langs.lang_name(lang, self._config.translate.lang_dst) if lang else "—"
         lat_values = [lat for _, lat in self._recent if lat is not None]
         avg_txt = f"{sum(lat_values) / len(lat_values):.1f}s" if lat_values else "—"
         self._lbl_stats.setText(tr(

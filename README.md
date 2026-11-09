@@ -238,6 +238,7 @@ src/
 ├── memories.py           # Memorias de emisoras (Memorias.json, CSV), sin Qt
 ├── translate_client.py   # Cliente del worker de Traducción (proceso aparte, stdin/stdout)
 ├── translate_protocol.py # Protocolo IPC JSON del módulo de Traducción
+├── translate_langs.py    # Nombres de idiomas en cada idioma de Destino (indicador "Idioma detectado")
 ├── translate_installer.py# Instalación en un clic del módulo (Python + pip + modelos)
 ├── buildinfo.py          # BUILD_ID, estampado en el empaquetado
 ├── audio/

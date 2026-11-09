@@ -1554,6 +1554,13 @@ def test_translate_tab_detected_lang_and_avg_latency():
     texto = tab._lbl_stats.text()
     assert "zh" in texto, f"deberia mostrar el idioma mas reciente (zh): {texto!r}"
     assert "5.0" in texto, f"promedio esperado (4+6+5)/3=5.0: {texto!r}"
+    # El nombre va en el idioma de Destino, y cambia al cambiar el Destino.
+    tab._combo_dst.setCurrentIndex(tab._combo_dst.findData("es"))
+    assert "Chino (zh)" in tab._lbl_stats.text(), tab._lbl_stats.text()
+    tab._combo_dst.setCurrentIndex(tab._combo_dst.findData("en"))
+    assert "Chinese (zh)" in tab._lbl_stats.text(), tab._lbl_stats.text()
+    assert "中文" not in tab._lbl_stats.text()
+    tab._combo_dst.setCurrentIndex(tab._combo_dst.findData("es"))
 
     tab._config.translate.worker_python_path = 'x'
     tab._config.translate.worker_script_path = 'y'

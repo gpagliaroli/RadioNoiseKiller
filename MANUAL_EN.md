@@ -1276,7 +1276,7 @@ The installation downloads the languages selected at that moment (source and tar
 
 Lines can be selected and copied with **Ctrl+C** or the right-click menu (with no selection it copies everything).
 
-The **Detected language · Average** indicator shows the latest language and the average time each audio segment takes (audio is processed in ~8-second pieces, so text arrives with that delay plus processing time).
+The **Detected language · Average** indicator shows the latest language, **named in the Target language** (with Target English a Chinese station shows as *Chinese (zh)*; with Español, as *Chino (zh)*), and the average time each audio segment takes (audio is processed in ~8-second pieces, so text arrives with that delay plus processing time).
 
 ### Tips
 

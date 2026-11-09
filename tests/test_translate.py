@@ -412,6 +412,22 @@ def test_installer_estimate_scales_with_pairs():
     print("TranslateInstaller: estimacion de descarga  OK")
 
 
+def test_detected_lang_named_in_destination():
+    import translate_langs as tl
+    from ui.translate_tab import _DST_LANGS, _SRC_LANGS
+    assert [tl.lang_name("zh", d) for d in ("es", "en", "pt", "fr", "de")] == \
+        ["Chino", "Chinese", "Chinês", "Chinois", "Chinesisch"]
+    assert tl.lang_name("xx", "es") == "xx", "fuera de la tabla: el código"
+    assert tl.lang_name("ru", "it") == "Russian", "destino sin nombres: inglés"
+    assert tl.lang_name(None, "es") == "" and tl.lang_name("en", None) == "English"
+    dsts = {c for c, _ in _DST_LANGS}
+    for code, names in tl.LANG_NAMES.items():
+        assert dsts <= set(names) and all(names.values()), f"{code}: faltan destinos"
+    missing = [c for c, _ in _SRC_LANGS if c != "auto" and c not in tl.LANG_NAMES]
+    assert not missing, f"idiomas de Origen sin nombre: {missing}"
+    print("Traduccion: idioma detectado nombrado en el idioma de Destino  OK")
+
+
 
 if __name__ == "__main__":
     test_protocol_roundtrip()
@@ -429,5 +445,6 @@ if __name__ == "__main__":
     test_installer_error_rolls_back()
     test_installer_cancel()
     test_installer_estimate_scales_with_pairs()
+    test_detected_lang_named_in_destination()
     print()
     print("Todos los tests pasaron.")

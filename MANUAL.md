@@ -1275,7 +1275,7 @@ La instalación baja los idiomas que estén elegidos en ese momento (origen y de
 
 Las líneas se pueden seleccionar y copiar con **Ctrl+C** o con el menú del botón derecho (sin selección copia todo).
 
-El indicador **Idioma detectado · Promedio** muestra el idioma más reciente y cuánto tarda en promedio cada tramo de audio (se procesa de a ~8 segundos, así que el texto llega con ese retraso más el tiempo de proceso).
+El indicador **Idioma detectado · Promedio** muestra el idioma más reciente, **nombrado en el idioma de Destino** (con Destino Español, una emisora china aparece como *Chino (zh)*; con English, como *Chinese (zh)*), y cuánto tarda en promedio cada tramo de audio (se procesa de a ~8 segundos, así que el texto llega con ese retraso más el tiempo de proceso).
 
 ### Consejos
 
