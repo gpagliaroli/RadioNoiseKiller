@@ -1345,7 +1345,7 @@ RadioNoiseKiller puede leer la **frecuencia y el modo** de tu radio por CAT. Con
 
 La aplicación **no habla directamente con la radio**: lo hace a través de **rigctld**, el programa de Hamlib que maneja el puerto serie o USB de cientos de modelos (Icom, Yaesu, Kenwood, Elecraft, Xiegu, SDR...). Así no hace falta un protocolo por marca, y la radio se puede compartir con otros programas. La aplicación **solo cambia la frecuencia y el modo de la radio cuando sintonizás una memoria**; el resto del tiempo solo los lee.
 
-> **Función nueva (novedad 2.8).** Probada contra la radio simulada de Hamlib; la prueba en el aire con radios reales está en curso. Si tu modelo no responde bien, mandá el diagnóstico.
+> **Función nueva (novedad 2.8).** Probada en el aire con la radio del autor y contra la radio simulada de Hamlib. Cada modelo responde a su manera a rigctld: si el tuyo no anda bien, mandá el diagnóstico.
 
 ### Preparar rigctld
 

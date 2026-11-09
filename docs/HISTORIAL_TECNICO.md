@@ -65,6 +65,8 @@ los canales de la radio). No se duplica una memoria con la misma frecuencia y el
 Tests: `test_memories` (nuevo, suite 14), `test_cat` (+3: orden F/M, último pedido gana, modo
 rechazado sin reconectar; el `_FakeRig` acepta `F`/`M`) y `test_ui::test_cat_memories` de punta a
 punta (EiBi → memoria, guardar actual, doble clic → la radio falsa cambia → se carga el preset del modo).
+**Validado en el aire** por el usuario con su radio (noviembre 2026): todo lo del CAT —preset por modo,
+EiBi sigue la frecuencia y `----- kHz`, memorias, sintonía y orden— "probado y todo ok".
 
 **Post-v2.7: control de la radio (CAT) por rigctld.** El usuario eligió esta ampliación en la
 revisión post-v2.7 (junto con el build en 22.04 y el lanzador). Decisiones, todas tomadas con él:
